@@ -1,1 +1,23 @@
 # open-seed
+
+A template repository for new projects that ships standardized, checked-in tooling for
+multi-agent orchestration, task tracking, and guardrails.
+
+## Status: design phase
+
+A survey of the multi-agent orchestration ecosystem (all 180 projects in
+[awesome-agent-orchestrators](https://github.com/andyrewlee/awesome-agent-orchestrators)
+plus the current SOTA in harness-native primitives, task tracking, and guardrails)
+was completed to ground the design.
+
+- **[Design options](docs/design-options.md)** — synthesis, recommendations, and open questions
+- **[Research reports](docs/research/)** — per-category evidence:
+  1. [Terminal TUI orchestrators](docs/research/01-terminal-tui-orchestrators.md)
+  2. [Desktop & web orchestrators (A)](docs/research/02-desktop-web-orchestrators-a.md)
+  3. [Desktop & web orchestrators (B)](docs/research/03-desktop-web-orchestrators-b.md)
+  4. [Autonomous loop runners (Ralph family)](docs/research/04-autonomous-loop-runners.md)
+  5. [Multi-agent swarms](docs/research/05-multi-agent-swarms.md)
+  6. [Autonomous task runners (issue/CI-driven)](docs/research/06-autonomous-task-runners.md)
+  7. [Agent infrastructure & primitives](docs/research/07-infrastructure-primitives.md)
+  8. [Personal assistants & inactive projects](docs/research/08-assistants-and-inactive.md)
+  9. [SOTA landscape (harnesses, beads, guardrails, methodology)](docs/research/09-sota-landscape.md)
