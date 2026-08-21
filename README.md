@@ -21,3 +21,4 @@ was completed to ground the design.
   7. [Agent infrastructure & primitives](docs/research/07-infrastructure-primitives.md)
   8. [Personal assistants & inactive projects](docs/research/08-assistants-and-inactive.md)
   9. [SOTA landscape (harnesses, beads, guardrails, methodology)](docs/research/09-sota-landscape.md)
+  10. [Org control planes: Paperclip vs Gas Town vs build-your-own](docs/research/10-org-control-planes.md)
