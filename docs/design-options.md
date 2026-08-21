@@ -138,10 +138,14 @@ Closest prior art, per the research: **tutti** (committed org-code declaring rol
 2. The **task↔plan↔evidence chain**: task card → gated plan → implementation → fresh-evidence receipt, all as diffable files.
 3. **Runner-agnostic degradation**: the same repo works with a lone human, one Claude Code session, Claude agent teams, a Ralph loop in CI, or any of the 60+ external orchestrators surveyed — because the contract is files.
 
-## 6. Open questions to resolve next
+## 6. Decisions made
+
+1. **Backend adapter pattern (decided 2026-08-21).** Whatever coordination server/backend is used — markdown task files, beads, GitHub Issues, Paperclip, Gas Town, or anything future — it sits behind a stable adapter interface, and nothing else in the template (scripts, skills, hooks, CI, agent instructions) may talk to a backend directly. Backends must be interchangeable per-project without touching the rest of the seed. Precedents from the research: sortie/lalph/ralph-tui's pluggable task sources ("the task-source abstraction, not the tracker, is the design decision"), ORCH's shell adapter, ouijit's JSON task CLI. The concrete adapter interface (port operations, per-backend mappings, CLI-vs-MCP form) is being specified from the org-control-plane deep dive; see `docs/research/10-org-control-planes.md` when it lands.
+
+## 7. Open questions to resolve next
 
 1. **Harness posture:** Claude-Code-first with portable shims (recommended — richest primitive set: hooks, subagents, sandbox, workflows), or strictly harness-neutral from day one (more work, lower ceiling)?
-2. **Task substrate default:** markdown-first with beads opt-in (recommended), or beads-first (heavier, stronger under parallelism)?
+2. **Task substrate default (behind the adapter):** markdown-first with beads opt-in (recommended), or beads-first (heavier, stronger under parallelism)?
 3. **How much automation ships enabled?** Conventions + scripts only, vs. CI workflows live from clone (dispatcher, scheduled maintenance) — the latter needs secrets setup and a decision on claude-code-action vs gh-aw.
 4. **Scope of the loop runner:** ship `loop.sh` (crosses from "conventions" into "runtime"), or document the pattern and point at ralphex/dex?
 5. **Language/stack coupling:** is open-seed language-agnostic (Makefile contract only), or does it ship opinionated stacks (e.g. a TS variant with lint/test wired)?
