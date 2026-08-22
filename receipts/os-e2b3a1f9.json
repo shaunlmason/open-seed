@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "task": "os-e2b3a1f9",
+  "merge_base": "14852dd2f2d92bcc12c3f2ce0aee2ee738f6c55b",
+  "head": "ad37784aeebb35e7d48ad0a75871b060faf8e029",
+  "plan_path": "plans/os-e2b3a1f9.md",
+  "plan_sha256": "a26cf933c9cf02c51b5abfc3c5edd68695fd9054cfd5c09d84bcf106001b36af",
+  "diff_files": [
+    ".seed/backends.lock.json",
+    ".seed/backends/paperclip/README.md",
+    ".seed/backends/paperclip/backend.toml",
+    ".seed/backends/paperclip/bin/seed-backend",
+    ".seed/backends/paperclip/test.sh",
+    ".seed/backends/paperclip/testdata/fake-paperclip",
+    "docs/handbook.md",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "2fc2553c83982ab63811c8b4ce77031624af1a0bc11e8aebf6f60263c75e8f2e",
+  "validation": [
+    {
+      "cmd": "test -x .seed/backends/paperclip/bin/seed-backend",
+      "exit": 0
+    },
+    {
+      "cmd": "sh .seed/backends/paperclip/test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}

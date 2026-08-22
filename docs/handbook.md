@@ -153,6 +153,13 @@ requirements:
   and editing an issue's labels changes nothing — treat issues as a read-only
   dashboard (label edits become *requests* only once the dispatcher lane is
   active).
+- **When budgets must be enforced, not advised** — the control-plane rung:
+  the **paperclip backend** (`.seed/backends/paperclip/`) puts cards on a
+  Paperclip server with DB-atomic checkouts, server-validated transitions,
+  and **native hard budget stops** (the platform pauses over-budget agents
+  — the enforcement R6 says a repo alone can never provide). Server is
+  truth: no offline, no fork portability; read its README for setup and
+  the declared variances.
 - **Merge throughput:** don't enable repo-wide "require branches up to
   date" — stale-plan safety is already per-PR in verify. At scale, enable a
   GitHub **merge queue**; the verify workflow already handles `merge_group`
