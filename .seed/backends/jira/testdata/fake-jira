@@ -72,7 +72,11 @@ class Handler(BaseHTTPRequestHandler):
         if re.match(r"^/rest/api/3/project/[^/]+/statuses$", self.path):
             return self.reply(200, [{"name": "Task", "statuses": [{"name": n} for n in STATUSES]}])
         if self.path.startswith("/rest/api/3/search"):
-            return self.reply(200, {"issues": [issue_json(i) for i in issues.values()]})
+            all_nodes = [issue_json(i) for i in issues.values()]
+            m = re.search(r"startAt=(\d+)", self.path)
+            start = int(m.group(1)) if m else 0
+            return self.reply(200, {"issues": all_nodes[start:start + 2],
+                                    "startAt": start, "maxResults": 2, "total": len(all_nodes)})
         m = re.match(r"^/rest/api/3/issue/([^/]+)/transitions$", self.path)
         if m:
             i = issues.get(m.group(1))

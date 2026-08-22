@@ -28,7 +28,7 @@ case "${1:-}" in
   *) id=$1; shift ;;
 esac
 
-title="" body="" priority="P2" actor="" token="" to="" resolution="" kind="" ref="" event="" pr="" blocked_on_arg="" blocked_by=""
+title="" body="" priority="P2" actor="" token="" to="" resolution="" kind="" ref="" event="" pr="" blocked_on_arg="" blocked_by="" state_filter=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --title) title=$2; shift 2 ;;
@@ -42,6 +42,7 @@ while [ $# -gt 0 ]; do
     --ref) ref=$2; shift 2 ;;
     --event) event=$2; shift 2 ;;
     --pr) pr=$2; shift 2 ;;
+    --state) state_filter=$2; shift 2 ;;
     --blocked-on) blocked_on_arg=$2; shift 2 ;;
     --blocked-by) blocked_by="$blocked_by $2"; shift 2 ;;
     --lease) shift 2 ;;
@@ -181,14 +182,31 @@ comment_on() { # KEY TEXT (ADF body)
   case "$(rc)" in 200|201) ;; *) fail 5 backend_unavailable "comment HTTP $(rc)";; esac
 }
 
-all_issues() { api GET "/search?jql=project%20%3D%20$JIRA_PROJECT_KEY" | jq -c '.issues // []'; }
+# load_issues sets $ISSUES_JSON (every page of the search) and fail()s in
+# the PARENT shell on an HTTP failure — an expired token or rate limit must
+# exit 5, never masquerade as an empty queue or a dependent-less cascade.
+load_issues() {
+  ISSUES_JSON="[]"
+  start=0
+  while :; do
+    page=$(api GET "/search?jql=project%20%3D%20$JIRA_PROJECT_KEY&startAt=$start&maxResults=100")
+    [ "$(rc)" = "200" ] || fail 5 backend_unavailable "search HTTP $(rc)"
+    nodes=$(printf '%s' "$page" | jq -c '.issues // []')
+    n=$(printf '%s' "$nodes" | jq 'length')
+    ISSUES_JSON=$(jq -nc --argjson a "$ISSUES_JSON" --argjson b "$nodes" '$a + $b')
+    total=$(printf '%s' "$page" | jq -r '.total // 0')
+    start=$((start + n))
+    [ "$n" -gt 0 ] && [ "$start" -lt "$total" ] || break
+  done
+}
 
 # cascade FROM_KEY — close AND cancel edges both carry the effect: remove
 # seed:bo:dep:<key> everywhere; Blocked issues left with an empty set go
 # back to To Do. Sets $cascaded.
 cascade() {
   cascaded="[]"
-  for dep in $(all_issues | jq -r --arg l "seed:bo:dep:$1" '.[] | select(.fields.labels | index($l)) | .key'); do
+  load_issues
+  for dep in $(printf '%s' "$ISSUES_JSON" | jq -r --arg l "seed:bo:dep:$1" '.[] | select(.fields.labels | index($l)) | .key'); do
     require_issue "$dep"; cur=$CUR
     relabel "$dep" "$cur" "" "seed:bo:dep:$1"
     require_issue "$dep"; cur=$CUR
@@ -226,7 +244,8 @@ case "$verb" in
     ;;
 
   ready)
-    tasks=$(all_issues | jq -c --arg a "$actor" "$JJQ"'[ .[]
+    load_issues
+    tasks=$(printf '%s' "$ISSUES_JSON" | jq -c --arg a "$actor" "$JJQ"'[ .[]
       | select(.fields.status.name == "To Do")
       | select((.fields.assignee.accountId // "") == "")
       | select((.fields.labels | map(select(. == ("seed:rejected:" + $a))) | length) == 0)
@@ -248,11 +267,13 @@ case "$verb" in
     ;;
 
   list)
-    tasks=$(all_issues | jq -c "$JJQ"'
+    load_issues
+    tasks=$(printf '%s' "$ISSUES_JSON" | jq -c --arg f "$state_filter" "$JJQ"'
       def pst: if .fields.status.name == "Done"
                then (if (.fields.resolution.name // "") == "Won'"'"'t Do" then "cancelled" else "done" end)
                else ({"Backlog":"backlog","To Do":"ready","In Progress":"in_progress","In Review":"review","Blocked":"blocked"}[.fields.status.name] // "unknown") end;
-      [ .[] | {task: .key, title: .fields.summary, state: pst, priority: (.fields.priority.name | pport)}]')
+      [ .[] | {task: .key, title: .fields.summary, state: pst, priority: (.fields.priority.name | pport)}
+      | select(($f == "") or (.state == $f))]')
     envelope ",\"tasks\":$tasks"
     ;;
 
@@ -270,7 +291,7 @@ case "$verb" in
     relabel "$id" "$CUR" "seed:tok:$tok" "seed:tok:"
     assign "$id" "$AID"
     do_transition "$id" in_progress
-    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"claim_token\":\"$tok\",\"lease_expires\":\"\""
+    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"claim_token\":\"$tok\""
     ;;
 
   release)
@@ -339,7 +360,7 @@ case "$verb" in
   unblock|plan-unblock)
     require_issue "$id"; cur=$CUR
     [ "$(istatus "$cur")" = "Blocked" ] || fail 3 invalid_transition "not blocked"
-    if [ "$verb" = "plan-unblock" ]; then entry="plan:$pr"; else entry="$blocked_on_arg"; fi
+    if [ "$verb" = "plan-unblock" ]; then entry="plan:$pr"; else entry="${blocked_on_arg:-manual:$actor}"; fi
     bo_entries "$cur" | grep -qxF "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
     relabel "$id" "$cur" "" "seed:bo:$entry"
     require_issue "$id"
@@ -375,6 +396,11 @@ case "$verb" in
   cancel)
     require_issue "$id"
     case "$(port_state_of "$CUR")" in done|cancelled) fail 3 invalid_transition "already terminal" ;; esac
+    # The in_progress → cancelled edge carries the claim-ending side effect:
+    # a reinstated card must be claimable, not stranded behind a dead holder.
+    if [ -n "$(iassignee_id "$CUR")" ]; then
+      release_claim "$id" "$CUR"
+    fi
     do_transition "$id" cancelled "Won't Do"
     cascade "$id"
     envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"cascaded\":$cascaded"
@@ -388,7 +414,12 @@ case "$verb" in
     ;;
 
   comment)
-    require_fence "$id"
+    # Fenced only while a live claim exists — the port permits unfenced
+    # comments on unclaimed cards (backlog/ready/blocked/review).
+    require_issue "$id"
+    if [ -n "$(iassignee_id "$CUR")" ] || [ "$(istatus "$CUR")" = "In Progress" ]; then
+      require_fence "$id"
+    fi
     comment_on "$id" "[$actor] $body"
     envelope ",\"task\":\"$id\""
     ;;
@@ -411,7 +442,8 @@ case "$verb" in
     if [ -n "$id" ]; then
       comment_on "$id" "seed:event: $event"
     else
-      audit=$(all_issues | jq -r '.[] | select(.fields.summary == "seed: audit log") | .key' | head -1)
+      load_issues
+      audit=$(printf '%s' "$ISSUES_JSON" | jq -r '.[] | select(.fields.summary == "seed: audit log") | .key' | head -1)
       if [ -z "$audit" ]; then
         payload=$(jq -nc --arg k "$JIRA_PROJECT_KEY" '{fields:{project:{key:$k}, issuetype:{name:"Task"}, summary:"seed: audit log", description:"taskless seed events land here", priority:{name:"Low"}}}')
         out=$(api POST "/issue" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "audit issue create HTTP $(rc)"
