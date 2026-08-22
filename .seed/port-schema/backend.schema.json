@@ -23,7 +23,8 @@
         },
         "atomic_claim": {"enum": ["native", "emulated", "none"]},
         "offline": {"enum": ["native", "emulated", "none"]},
-        "budget": {"enum": ["native", "advisory", "none"]}
+        "budget": {"enum": ["native", "advisory", "none"]},
+        "state_portability": {"enum": ["repo", "replica", "server", "machine"], "description": "Where coordination state travels: repo = rides a git ref (filecards), replica = syncs between machines (beads), server = a control plane holds it (paperclip), machine = local only (fastcards). Machine-readable so negotiation can inspect the variance instead of reading README prose."}
       },
       "additionalProperties": false
     }
