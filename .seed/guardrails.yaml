@@ -1,0 +1,37 @@
+# Guardrails vocabulary (D4). Enforced three ways: hooks locally, CODEOWNERS +
+# branch protection server-side, validators in CI (R9). Budgets on the file
+# backend are advisory circuit breakers, not hard walls (R6) — say so, don't
+# imply more.
+
+autonomy:
+  # A squad's tier must satisfy tier <= max_tier (validator-checked, §6).
+  default_tier: L1
+  max_tier: L2
+
+tiers:
+  L1: report-only — the agent explores and proposes; no merges without a human
+  L2: assisted-in-worktree — agent implements against an approved plan; human merges
+  L3: unattended-with-gates — agent merges via required checks + reviewer identity (activates with pr-review, §7.3)
+
+budgets:
+  # Run-local, enforceable in-repo (loop.sh); org-wide stops need a platform (R6).
+  max_attempts_per_task: 3
+  loop_max_iterations: 20
+  lease: 60m
+
+# Control surface (D4.1): never auto-mergeable, always CODEOWNERS-reviewed.
+protected_paths:
+  - .seed/**
+  - .github/**
+  - .claude/**
+  - scripts/**
+  - CODEOWNERS
+  - AGENTS.md
+  - CLAUDE.md
+  - .mcp.json
+  - Makefile
+
+# Auto-merge allowlist: paths where an L3 agent may enable auto-merge once
+# activated. The validator rejects any entry intersecting protected_paths or
+# plans/** (D3 — a work order must never approve itself).
+auto_merge_allowlist: []

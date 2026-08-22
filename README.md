@@ -9,7 +9,7 @@ A survey of the multi-agent orchestration ecosystem (all 180 projects in
 [awesome-agent-orchestrators](https://github.com/andyrewlee/awesome-agent-orchestrators)
 plus the current SOTA in harness-native primitives, task tracking, and guardrails)
 grounded the design; the design is settled and v1 implementation follows the build plan.
-Agents working in this repo: read [`AGENTS.md`](AGENTS.md) first (authority order, binding decisions).
+Agents building open-seed itself: read [`docs/CONTRIBUTING-AGENTS.md`](docs/CONTRIBUTING-AGENTS.md) first (authority order, binding decisions). The root [`AGENTS.md`](AGENTS.md) is the template's user-facing agent contract (a Phase 3 artifact).
 
 - **[Design](docs/design-options.md)** — the design authority: decisions, team layer, risks, glossary, resolved defaults
 - **[Build plan](docs/build-plan.md)** — v1 phase ordering and per-phase acceptance criteria

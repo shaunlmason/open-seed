@@ -1,0 +1,13 @@
+# Engine pin (decision 7.5). The bootstrap shim (scripts/seed, scripts/seed.ps1)
+# downloads this exact release, verifies the archive SHA-256, caches it outside
+# the repo, and execs it. Change only via a reviewed PR (control surface).
+# Optional: a `vendor <path>` line points at a pre-installed binary for
+# air-gapped use (SEED_ENGINE env var overrides everything).
+version v0.3.0
+repo shaunlmason/open-seed-engine
+sha256_darwin_amd64 8f8e9c4765ea286d874d01452cd04a1d1a0bd22173482eceb2cfb24aa03aef52
+sha256_darwin_arm64 97a51d882d05e2c9585493462da2dc630f5894d3baf00ba671366bfa2538c8c7
+sha256_linux_amd64 ec8854fc57c75a97f0ffb8bfc0fd3a90595115175ba28a137d4d4bba9cb0c223
+sha256_linux_arm64 9f86d65f188d4624eb4dcc4cbdf0ca5ec69f6d746fd2f4459ce6a49e3a11eea1
+sha256_windows_amd64 10d1199c4c1f260f699fd9772bfbd2e8e16bad9bf5b28a22af0e80263260e6b6
+sha256_windows_arm64 b9b3ced21c3245db654ea6449415310d5a7abc648a4263040628914f09a5797e

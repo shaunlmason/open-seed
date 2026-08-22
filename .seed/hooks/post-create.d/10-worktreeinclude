@@ -1,0 +1,14 @@
+#!/bin/sh
+# Propagate gitignored files listed in .worktreeinclude from the main checkout
+# into this new worktree (agent-deck convention). $SEED_MAIN_CHECKOUT is set
+# by the caller; defaults to the primary worktree.
+set -eu
+main="${SEED_MAIN_CHECKOUT:-$(git rev-parse --path-format=absolute --git-common-dir)/..}"
+[ -f "$main/.worktreeinclude" ] || exit 0
+while IFS= read -r line; do
+  case "$line" in ''|'#'*) continue ;; esac
+  if [ -e "$main/$line" ]; then
+    mkdir -p "$(dirname "$line")"
+    cp -R "$main/$line" "$line"
+  fi
+done < "$main/.worktreeinclude"

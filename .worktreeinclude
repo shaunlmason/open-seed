@@ -1,0 +1,5 @@
+# Gitignored files propagated into each task worktree at creation
+# (agent-deck format; consumed by .seed/hooks/post-create.d/). One path per
+# line. Typical entries: local env files and per-machine harness settings.
+.env
+.claude/settings.local.json

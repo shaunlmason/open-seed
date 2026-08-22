@@ -1,0 +1,19 @@
+# Control-surface review (D4.1): these paths are never auto-mergeable and
+# always require an owner's review. Replace @shaunlmason with your leads when
+# instantiating the template.
+#
+# Chapter leads (§6): each role definition names its chapter lead here; the
+# entry covers all frontmatter-only variants of the role.
+
+/.seed/           @shaunlmason
+/.github/         @shaunlmason
+/.claude/         @shaunlmason
+/scripts/         @shaunlmason
+/CODEOWNERS       @shaunlmason
+/AGENTS.md        @shaunlmason
+/CLAUDE.md        @shaunlmason
+/.mcp.json        @shaunlmason
+/Makefile         @shaunlmason
+
+# Chapter leads — one line per role file; variants share the lead.
+/.seed/agents/    @shaunlmason
