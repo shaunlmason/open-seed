@@ -1,16 +1,43 @@
 # open-seed
 
 A template repository for new projects that ships standardized, checked-in tooling for
-multi-agent orchestration, task tracking, and guardrails.
+multi-agent orchestration, task tracking, and guardrails. The contract is **files, not
+an app**: a task port with pluggable backends, coordination state on a dedicated git
+ref, a plan→implement→receipt evidence chain, enforced guardrails, and a loop runner —
+all reviewable, all degrading gracefully from a fleet of agents down to one human with
+no engine installed.
 
-## Status: design complete — implementing v1
+## Quickstart
 
-A survey of the multi-agent orchestration ecosystem (all 180 projects in
-[awesome-agent-orchestrators](https://github.com/andyrewlee/awesome-agent-orchestrators)
-plus the current SOTA in harness-native primitives, task tracking, and guardrails)
-grounded the design; the design is settled and v1 implementation follows the build plan.
-Agents building open-seed itself: read [`docs/CONTRIBUTING-AGENTS.md`](docs/CONTRIBUTING-AGENTS.md) first (authority order, binding decisions). The root [`AGENTS.md`](AGENTS.md) is the template's user-facing agent contract (a Phase 3 artifact).
+```sh
+# after instantiating the template:
+scripts/seed init                  # create the coordination state ref
+scripts/seed init-github           # print the server-side protection checklist
+scripts/seed task create --title "First task" --actor you
+scripts/loop.sh --once             # or work the lifecycle by hand
+make smoke                         # deterministic end-to-end proof, no model needed
+```
 
+**Read next: [the handbook](docs/handbook.md)** — setup, the task lifecycle, the loop,
+guardrails, the degradation ladder, and scaling. Agents working in an instantiated repo
+follow [`AGENTS.md`](AGENTS.md). The `seed` engine is a pinned, hash-verified binary
+from [open-seed-engine](https://github.com/shaunlmason/open-seed-engine); the shim
+fetches it on first use.
+
+## Status: v1 complete
+
+All seven build-plan phases are done. v2 work (beads/github-issues backends, workflow
+engine, skills lockfile, mailboxes, multi-squad activation, MCP transport) is tracked
+as cards on this repo's own seed-state ref — open-seed dogfoods its own port
+(`scripts/seed task ready --actor you`).
+
+## Design & research
+
+Agents building open-seed itself: read
+[`docs/CONTRIBUTING-AGENTS.md`](docs/CONTRIBUTING-AGENTS.md) first (authority order,
+binding decisions).
+
+- **[Handbook](docs/handbook.md)** — user-facing conventions
 - **[Design](docs/design-options.md)** — the design authority: decisions, team layer, risks, glossary, resolved defaults
 - **[Build plan](docs/build-plan.md)** — v1 phase ordering and per-phase acceptance criteria
 - **[Research reports](docs/research/)** — per-category evidence:

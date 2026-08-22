@@ -241,6 +241,18 @@ check+validate.
 loop scenario using only shipped docs — no knowledge from this repo's history
 required.
 
+> **Status: complete (2026-08-22) — v1 done.** `docs/handbook.md` is the user-facing
+> conventions handbook (setup + protections, lifecycle walkthrough with real
+> commands, the loop, guardrails honesty, the degradation ladder, scaling/upgrade
+> guidance incl. the beads path and merge-queue note); README rewritten as the
+> template front page with a quickstart. Dogfood is live: the remaining work — three
+> P1 tasks (server-side protections, first live CI runs, template v0.1.0 tag) and
+> the eight v2 items — are cards on this repo's own seed-state ref, created through
+> the port. The done-when is `make smoke`: the shipped scripts + docs take a fresh
+> instantiation to the unattended ready→review cycle with no repo-history knowledge.
+> Note: the template release tag itself is a card (session credentials cannot push
+> tags); tag `v0.1.0` on main after the v1 branch merges.
+
 ## Standing constraints (all phases)
 
 - Every shipped convention ships with its validator (R9) — they are one deliverable.
