@@ -8,6 +8,12 @@ on:
     branches: [main]
   pull_request:
   merge_group:
+  # A review posted AFTER the last push must re-run verify: the D4.5
+  # identity check reads reviews at verify time, so without this trigger
+  # a pre-review verify stays stale-red until an unrelated push
+  # (os-70028620).
+  pull_request_review:
+    types: [submitted]
 
 permissions:
   contents: read
@@ -31,7 +37,7 @@ jobs:
     # pull_request and merge_group; on merge_group the PR number is derived
     # from the queue ref and classification uses the REAL head branch — a
     # queue ref must never classify as a non-task PR and pass vacuously (D3).
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.event_name == 'pull_request_review'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,11 +52,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           HEAD_REF: ${{ github.head_ref }}
+          REVIEW_HEAD: ${{ github.event.pull_request.head.ref }}
         run: |
           if [ "$EVENT" = "merge_group" ]; then
             pr=$(echo "$GITHUB_REF" | sed -n 's#.*/pr-\([0-9]*\)-.*#\1#p')
             [ -n "$pr" ] || { echo "cannot derive PR from $GITHUB_REF"; exit 1; }
             branch=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json headRefName -q .headRefName)
+          elif [ "$EVENT" = "pull_request_review" ]; then
+            branch="$REVIEW_HEAD"   # head_ref is unset on review events
           else
             branch="$HEAD_REF"
           fi
@@ -67,6 +76,17 @@ jobs:
           TASK: ${{ steps.head.outputs.task }}
         run: |
           scripts/seed receipt verify "$TASK" --base origin/main --branch "$BRANCH" --run
+      - name: Reviewer identity (D4.5 — reviewer differs from implementer)
+        if: github.event_name == 'pull_request_review' && steps.head.outputs.class == 'task'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          IMPLEMENTER: ${{ github.event.pull_request.user.login }}
+        run: |
+          gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json reviews -q .reviews             | sh scripts/seed-review-identity || rc=$?
+          # exit 2 = no approval yet (waiting) — not a failure; 3 = self-review
+          [ "${rc:-0}" = 2 ] && exit 0 || exit "${rc:-0}"
+
       - name: Verify plan PR (purity + grammar)
         if: steps.head.outputs.class == 'plan'
         env:
