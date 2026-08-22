@@ -13,8 +13,11 @@ case "${SEED_PERMISSION:-safe-edit}" in
   yolo)      mode="bypassPermissions" ;;
   *) echo "unknown SEED_PERMISSION '${SEED_PERMISSION}'" >&2; exit 3 ;;
 esac
-timeout "${SEED_TIMEOUT:-1800}" claude -p --output-format json \
-  --permission-mode "$mode" --settings .claude/ci-settings.json <&0
+# Per-step model selection (workflow engine): SEED_MODEL maps to the
+# CLI's --model; unset inherits the CLI's configured default.
+set -- -p --output-format json --permission-mode "$mode" --settings .claude/ci-settings.json
+[ -n "${SEED_MODEL:-}" ] && set -- "$@" --model "$SEED_MODEL"
+timeout "${SEED_TIMEOUT:-1800}" claude "$@" <&0
 rc=$?
 [ $rc -eq 124 ] && exit 124
 exit $rc

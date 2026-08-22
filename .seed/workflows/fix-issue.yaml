@@ -10,7 +10,7 @@ description: |
 inputs:
   - {name: issue, type: string, required: true, description: "Issue number or URL"}
   - {name: repo, type: string, required: true, description: "owner/name for the checks gate"}
-  - {name: ref, type: string, required: true, description: "Head ref the checks gate polls"}
+  - {name: head_sha, type: string, required: true, description: "The PR head commit SHA — the ONE revision both the checks gate and the merge bind to (gh pr view <pr> --json headRefOid)"}
   - {name: pr, type: string, required: true, description: "PR number for the unresolved-threads query"}
 defaults: {harness: claude, model: sonnet}
 budgets: {max_wall_clock_minutes: 120, max_step_retries: 2}
@@ -46,5 +46,8 @@ steps:
     prompt: "The reviewer returned REVISE. Read the verdict at gates/review.review.json in the run directory, address every note, and update the change summary."
   - id: land
     depends_on: [review]
-    run: "gh pr merge --squash {{inputs.pr}}"
-    gate: {type: checks, required_ci: true, unresolved_threads: 0, repo: "{{inputs.repo}}", ref: "{{inputs.ref}}", pr: "{{inputs.pr}}"}
+    # --match-head-commit binds the merge to the SAME revision the checks
+    # gate just validated: a push landing between gate and merge is
+    # refused by the server instead of merging unvalidated code.
+    run: "gh pr merge --squash --match-head-commit {{inputs.head_sha}} {{inputs.pr}}"
+    gate: {type: checks, required_ci: true, unresolved_threads: 0, repo: "{{inputs.repo}}", ref: "{{inputs.head_sha}}", pr: "{{inputs.pr}}"}

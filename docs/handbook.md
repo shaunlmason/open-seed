@@ -106,7 +106,8 @@ loop groups, and `approval|review|checks` gates; the format is
 ```sh
 scripts/seed workflow validate --all      # thirteen preflight rules; runs in CI
 scripts/seed workflow run smoke --mock    # end-to-end, zero credentials, zero side effects
-scripts/seed workflow run fix-issue --input issue=42 --input repo=o/r --input ref=main --input pr=7
+scripts/seed workflow run fix-issue --input issue=42 --input repo=o/r --input pr=7 \
+  --input head_sha=$(gh pr view 7 --json headRefOid -q .headRefOid)
 ```
 
 Independent steps run in parallel waves; AI steps ride the same

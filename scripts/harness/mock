@@ -12,10 +12,19 @@ python3 - <<'PYEOF'
 import json, os
 
 def stub(sch):
-    t = (sch or {}).get("type")
+    sch = sch or {}
+    # const/enum/default pin exact values; anything stricter (pattern,
+    # minLength, ...) cannot be guessed — the executor's schema check
+    # then fails the mock run visibly, telling the author to pin one.
+    if "const" in sch:
+        return sch["const"]
+    if sch.get("enum"):
+        return sch["enum"][0]
+    if "default" in sch:
+        return sch["default"]
+    t = sch.get("type")
     if t == "string":
-        enum = (sch or {}).get("enum") or []
-        return enum[0] if enum else "mock"
+        return "mock"
     if t in ("integer", "number"):
         return 0
     if t == "boolean":
@@ -23,13 +32,15 @@ def stub(sch):
     if t == "array":
         return []
     out = {}
-    props = (sch or {}).get("properties", {})
-    for k in (sch or {}).get("required", []):
+    props = sch.get("properties", {})
+    for k in sch.get("required", []):
         out[k] = stub(props.get(k, {}))
     return out
 
 for e in json.loads(os.environ.get("SEED_PRODUCES") or "[]"):
-    os.makedirs(os.path.dirname(e["file"]), exist_ok=True)
+    d = os.path.dirname(e["file"])
+    if d:
+        os.makedirs(d, exist_ok=True)
     sch = e.get("schema")
     if sch or e["file"].endswith(".json"):
         with open(e["file"], "w") as f:
