@@ -159,7 +159,10 @@ requirements:
   the declared variances. For teams already living in a tracker, the
   **linear backend** (`.seed/backends/linear/`) puts cards on a Linear
   team's workflow (one required custom `Blocked` state, states mapped by
-  name; emulated claim and cascade, declared).
+  name; emulated claim and cascade, declared), and the **jira backend**
+  (`.seed/backends/jira/`) does the same for Jira Cloud (status-name
+  convention incl. `Backlog` + `Blocked`, transitions arbitrated by the
+  workflow, actors mapped to accountIds in `actors.json`).
 - **Human visibility — the issues mirror:** set `[mirror] enabled = true` in
   `.seed/config.toml` and the maintenance workflow renders every card as a
   labeled GitHub issue (`seed:ready`, `seed:in_progress`, `seed:review`,

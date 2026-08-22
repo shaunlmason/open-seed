@@ -1,0 +1,5 @@
+{
+  "_comment": "actor → Jira accountId mapping (plan os-25958b27). Replace the examples with your real actors; unknown actors are refused with exit 5. The reverse mapping renders envelope holder fields.",
+  "example-operator": "5b10a2844c20165700ede21g",
+  "example-agent": "5b10a2844c20165700ede22h"
+}

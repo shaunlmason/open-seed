@@ -20,5 +20,9 @@
   "linear": {
     "source": "in-template",
     "note": "Ships in-template; PR + owner review is the pin (control surface). Server-backed (GraphQL): requires_env credentials, no offline; requires the custom Blocked workflow state."
+  },
+  "jira": {
+    "source": "in-template",
+    "note": "Ships in-template; PR + owner review is the pin (control surface). Server-backed (REST v3): requires_env credentials + actors.json accountId mapping, no offline; requires the Backlog and Blocked statuses."
   }
 }

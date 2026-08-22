@@ -1,0 +1,22 @@
+# jira — external backend over Jira Cloud REST v3 (plan os-25958b27).
+# The enterprise-reach adapter: statuses are workflow-specific, so every
+# move resolves its transition BY TARGET STATUS NAME at call time — Jira's
+# workflow is the arbiter (unavailable → exit 3), and a status missing from
+# the workflow entirely is the declared convention gap (exit 5 +
+# remediation). Actor identity rides the checked-in accountId mapping
+# (actors.json). Declared variances (README.md): emulated claim, no leases,
+# server is truth.
+name = "jira"
+version = "0.1.0"
+schema_version = "1.0"
+entry = "bin/seed-backend"
+requires = ["curl", "jq"]
+requires_env = ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_PROJECT_KEY"]
+
+[capabilities]
+required = true
+optional = ["lease-renew"]
+atomic_claim = "emulated"
+offline = "none"
+budget = "none"
+state_portability = "server"

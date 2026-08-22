@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""Offline stand-in for Jira Cloud REST v3 (contract-test substrate).
+
+Models the subset the adapter uses: issue CRUD, transitions-by-id resolved
+from the CURRENT status (the workflow is the arbiter — unavailable target →
+not offered), assignee by accountId, labels, comments, and a JQL search that
+returns the project's issues (the adapter filters client-side).
+
+Deliberate quirks that the adapter must handle:
+- The workflow's INITIAL status is "To Do" (a common company-managed
+  default), so `create` must actively transition new issues to Backlog.
+- Set FAKE_JIRA_NO_BLOCKED=1 to serve a workflow missing the required
+  Blocked status (the adapter must refuse with exit 5 + remediation).
+- Done is terminal-ish: the only transition offered from Done is Backlog
+  (reopen) — closing again is unavailable → the adapter maps that to 3.
+"""
+import json
+import os
+import re
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+STATUSES = ["Backlog", "To Do", "In Progress", "In Review", "Blocked", "Done"]
+if os.environ.get("FAKE_JIRA_NO_BLOCKED"):
+    STATUSES.remove("Blocked")
+INITIAL = "To Do"
+
+issues = {}
+seq = {"issue": 0}
+
+
+def transitions_from(status):
+    if status == "Done":
+        targets = ["Backlog"]
+    else:
+        targets = [s for s in STATUSES if s != status]
+    if os.environ.get("FAKE_JIRA_NO_TODO_FROM_BLOCKED") and status == "Blocked":
+        targets = [t for t in targets if t != "To Do"]
+    return [{"id": f"t-{i}", "name": t, "to": {"name": t}} for i, t in enumerate(targets)]
+
+
+def issue_json(i):
+    return {
+        "key": i["key"],
+        "fields": {
+            "summary": i["summary"], "description": i.get("description"),
+            "status": {"name": i["status"]},
+            "assignee": ({"accountId": i["assigneeId"]} if i.get("assigneeId") else None),
+            "labels": i.get("labels", []),
+            "priority": {"name": i.get("priority", "Medium")},
+            "resolution": ({"name": i["resolution"]} if i.get("resolution") else None),
+            "created": i["created"],
+        },
+    }
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def reply(self, code, data=None):
+        body = json.dumps(data if data is not None else {}).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def read_body(self):
+        n = int(self.headers.get("Content-Length", 0))
+        return json.loads(self.rfile.read(n) or b"{}")
+
+    def do_GET(self):
+        if re.match(r"^/rest/api/3/project/[^/]+/statuses$", self.path):
+            return self.reply(200, [{"name": "Task", "statuses": [{"name": n} for n in STATUSES]}])
+        if self.path.startswith("/rest/api/3/search"):
+            all_nodes = [issue_json(i) for i in issues.values()]
+            m = re.search(r"startAt=(\d+)", self.path)
+            start = int(m.group(1)) if m else 0
+            return self.reply(200, {"issues": all_nodes[start:start + 2],
+                                    "startAt": start, "maxResults": 2, "total": len(all_nodes)})
+        m = re.match(r"^/rest/api/3/issue/([^/]+)/transitions$", self.path)
+        if m:
+            i = issues.get(m.group(1))
+            if not i:
+                return self.reply(404, {"errorMessages": ["issue not found"]})
+            return self.reply(200, {"transitions": transitions_from(i["status"])})
+        m = re.match(r"^/rest/api/3/issue/([^/?]+)", self.path)
+        if m:
+            i = issues.get(m.group(1))
+            if not i:
+                return self.reply(404, {"errorMessages": ["issue not found"]})
+            return self.reply(200, issue_json(i))
+        self.reply(404, {"errorMessages": ["no route"]})
+
+    def do_POST(self):
+        if self.path == "/rest/api/3/issue":
+            d = self.read_body()
+            f = d.get("fields", {})
+            seq["issue"] += 1
+            key = f"{f.get('project', {}).get('key', 'SEED')}-{seq['issue']}"
+            issues[key] = {
+                "key": key, "summary": f.get("summary", ""),
+                "description": f.get("description"),
+                "status": INITIAL,  # the workflow decides, not the caller
+                "assigneeId": (f.get("assignee") or {}).get("accountId"),
+                "labels": list(f.get("labels", [])),
+                "priority": (f.get("priority") or {}).get("name", "Medium"),
+                "created": f"2026-01-01T00:00:{seq['issue']:02d}.000+0000",
+            }
+            return self.reply(201, {"key": key})
+        m = re.match(r"^/rest/api/3/issue/([^/]+)/transitions$", self.path)
+        if m:
+            i = issues.get(m.group(1))
+            if not i:
+                return self.reply(404, {"errorMessages": ["issue not found"]})
+            d = self.read_body()
+            tid = (d.get("transition") or {}).get("id")
+            match = [t for t in transitions_from(i["status"]) if t["id"] == tid]
+            if not match:
+                return self.reply(400, {"errorMessages": ["transition is not available from the current status"]})
+            i["status"] = match[0]["to"]["name"]
+            res = ((d.get("fields") or {}).get("resolution") or {}).get("name")
+            if res:
+                i["resolution"] = res
+            if i["status"] not in ("Done",):
+                i["resolution"] = i.get("resolution") if i["status"] == "Done" else None
+            return self.reply(204)
+        m = re.match(r"^/rest/api/3/issue/([^/]+)/comment$", self.path)
+        if m:
+            i = issues.get(m.group(1))
+            if not i:
+                return self.reply(404, {"errorMessages": ["issue not found"]})
+            i.setdefault("comments", []).append(self.read_body())
+            return self.reply(201, {"id": str(len(i["comments"]))})
+        self.reply(404, {"errorMessages": ["no route"]})
+
+    def do_PUT(self):
+        m = re.match(r"^/rest/api/3/issue/([^/?]+)", self.path)
+        if m:
+            i = issues.get(m.group(1))
+            if not i:
+                return self.reply(404, {"errorMessages": ["issue not found"]})
+            d = self.read_body()
+            # Atomic label update operations (the adapter never replaces
+            # the whole array).
+            for op in (d.get("update") or {}).get("labels", []):
+                if "add" in op and op["add"] not in i.setdefault("labels", []):
+                    i["labels"].append(op["add"])
+                if "remove" in op:
+                    i["labels"] = [l for l in i.get("labels", []) if l != op["remove"]]
+            f = d.get("fields", {})
+            if "labels" in f:
+                i["labels"] = list(f["labels"])
+            if "assignee" in f:
+                i["assigneeId"] = (f["assignee"] or {}).get("accountId")
+                rival = os.environ.get("FAKE_JIRA_RACE_ACTOR")
+                if rival and i["assigneeId"] and i["assigneeId"] != rival:
+                    # Deterministic interleave: a rival's later write lands
+                    # right after ours (last-write-wins, like real Jira).
+                    i["assigneeId"] = rival
+                    i["labels"] = [l for l in i.get("labels", []) if not l.startswith("seed:tok:")] + ["seed:tok:c-rival"]
+            if "priority" in f:
+                i["priority"] = (f["priority"] or {}).get("name", i.get("priority"))
+            return self.reply(204)
+        self.reply(404, {"errorMessages": ["no route"]})
+
+
+if __name__ == "__main__":
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8392
+    HTTPServer(("127.0.0.1", port), Handler).serve_forever()
