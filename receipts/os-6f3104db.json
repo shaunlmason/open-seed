@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "task": "os-6f3104db",
+  "merge_base": "43924da75a648ef2934bb0cca7e58d78c4f58f9d",
+  "head": "d11cb645bd0a51127889f609dc15eb7fe6d59ea1",
+  "plan_path": "plans/os-6f3104db.md",
+  "plan_sha256": "b5dcc1534dfec19aa3b402f1e2f6fe4655a624c15e9994bbff66ebbb3b82b81f",
+  "diff_files": [
+    ".github/workflows/check-validate.yml",
+    ".seed/engine.lock",
+    ".seed/guardrails.yaml",
+    "CODEOWNERS",
+    "docs/handbook.md",
+    "seed.lock",
+    "seed.yaml"
+  ],
+  "diff_sha256": "70527269b109b4f94050ecca4c4cbfbde1f0fee196173398bcb5fc49a07d57e4",
+  "validation": [
+    {
+      "cmd": "test -f seed.yaml",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/seed skills install --frozen",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"skills install --frozen\" .github/workflows/check-validate.yml",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}

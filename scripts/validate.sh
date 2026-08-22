@@ -59,6 +59,18 @@ else
   say "WARNING: jq unavailable, skipped backend contract tests"
 fi
 
+# Live beads validation (os-435d7b61): same corpus against a real bd
+# install; self-skips (exit 0, explicit message) when bd is absent, so
+# CI needs no new binaries.
+if command -v jq >/dev/null 2>&1; then
+  if out=$(sh "$root/.seed/backends/beads/live-test.sh" 2>&1); then
+    say "$out"
+  else
+    say "FAIL: beads live test: $out"
+    fail=1
+  fi
+fi
+
 # Lifecycle shim structure (os-7792a002): every shim dir ships a README;
 # fragments may reference only contract-defined hook paths; a README-only
 # shim must declare the no-hook-point finding.

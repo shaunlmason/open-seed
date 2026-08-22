@@ -30,6 +30,8 @@ protected_paths:
   - CLAUDE.md
   - .mcp.json
   - Makefile
+  - seed.yaml
+  - seed.lock
 
 # Auto-merge allowlist: paths where an L3 agent may enable auto-merge once
 # activated. The validator rejects any entry intersecting protected_paths or
