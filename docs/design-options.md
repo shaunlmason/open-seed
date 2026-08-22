@@ -223,7 +223,7 @@ Closest prior art, per the research: **tutti** (committed org-code TOML — with
 |---|---|---|
 | **Squad** | `.seed/teams/<squad>.yaml`: `mission`, `lead` (a human), `members` (role refs, mixing humans and agents), `scope` (globs), `backlog` (card filter), `priority` (unique int), `rituals`, `tier` (≤ ceiling), `review: codeowners\|agent` (default `agent`) | squad's team.md; tutti scope; kodo team.json |
 | **Tribe** | The repo (or org overlay); repo-level `guardrails.yaml` is the floor | qm overlays; corellis |
-| **Chapter** | Role definitions (`.seed/agents/*.md`): one canonical definition per role; chapter lead = human CODEOWNER of that file | sub-agents-skills; opengoat; antfarm |
+| **Chapter** | Role definitions (`.seed/agents/*.md`): one canonical definition per role; chapter lead = human CODEOWNER of that file. **Per-squad harness variance is allowed in *binding*, never in *craft***: a role may have variants (`reviewer.codex.md`, `reviewer.gemini.md`) that differ **only in frontmatter** (`run-agent`, `model`, `effort`) — the validator enforces body-identity across a role's variants by hash, so the chapter's standard (`## Task`/`## Done When`) stays uniform while squads pick engines; the chapter lead's CODEOWNERS entry covers all variants. Caveat the validator surfaces: permission-tier semantics differ per harness (the same `safe-edit` maps to materially different sandbox flags per CLI — inspirations/05), so a variant is also a *guardrails* variance and the tier mapping table (inspirations/09, forthcoming) is the reference for what each harness can faithfully enforce | sub-agents-skills; opengoat; antfarm |
 | **Guild** | Shared skills library (+ v2 manifest/lockfile) | skillfold; plugin marketplaces |
 | **Mission/OKR alignment** | Goal ancestry on cards (`parent` links to the squad mission) | Paperclip; beads epics |
 | **Autonomy within alignment** | Squads own *how*; tribe owns *what* (missions, guardrails, quality bar) | kodo; Fusion levels |
@@ -277,7 +277,29 @@ The squad model's documented failure modes (per the [ideaplan case study](https:
 - **R11 — The gate runs on the implementer's credentials.** Local receipts and local pre-merge results are forgeable by the agent that produced the work. Mitigation: above L1, the CI verify check is the author of record for receipts and required checks are configured server-side (D4.3/D4.5); the local gate is a fast pre-check, not the authority.
 - **R12 — Default-branch merge throughput is its own ceiling.** N parallel task PRs against one protected branch contend at landing: every merge advances the base, and required checks (including verify's command execution) re-run on update. Mitigation: no repo-wide "require branches up to date" (stale-plan safety is per-PR in verify — D3); document GitHub merge queue as the scale option (batched rebasing behind the same checks — the platform version of gastown's Refinery); keep `make check` fast because it is the term that multiplies.
 
-## 9. Open questions to resolve next
+## 9. Glossary (normative)
+
+Terms below have exactly one meaning in this design and its research corpus. Where a quoted third-party project uses a term differently (notably sub-agents-skills, which calls harnesses "backends"), the quote keeps its original wording and this glossary governs open-seed's own usage.
+
+| Term | Meaning — and only this |
+|---|---|
+| **Harness** | An agent CLI/runtime that executes model turns: claude-code, codex, gemini-cli, opencode, cursor-agent, … The role frontmatter field `run-agent:` names a harness. |
+| **Backend** | A coordination-storage plugin behind the port (`.seed/backends/<name>/`): filecards, beads, github-issues, paperclip. Never a harness. |
+| **Port / shim / verb** | The port is the JSON-over-CLI task contract (nine required verbs); the shim is `scripts/seed`, the only code that invokes a backend; a verb is one port operation (`claim`, `transition`, …). |
+| **Role** | A definition file in `.seed/agents/*.md` (frontmatter: harness binding + permission tier; body: craft — `## Task`, `## Done When`). A chapter artifact. A role **variant** shares the body, differs only in frontmatter (§6). |
+| **Agent (instance)** | A live harness session bound to a role. **Sub-agent**: a session spawned by another agent, inheriting the parent's claim and credentials. |
+| **Member / squad / lead** | Member: an entry in a team file (human or a role ref). Squad: a team file in `.seed/teams/`. Lead: the squad's named human. |
+| **Runner** | Avoided as a bare term. Qualified uses only: the **loop runner** (`scripts/loop.sh`), the **spawn runner** (the cross-harness sub-agent script, D8), an **external runner tool** (superset, dmux, …). |
+| **Claim / lease / fence** | Claim: exclusive right to work a card (`ready → in_progress`). Lease: the claim's expiry, renewed while the agent lives. Fence: the claim token worker verbs must present (exit 6 when stale). |
+| **Worker vs operator verb** | Worker: fenced verbs the claimant performs. Operator: credentialed verbs a lead or workflow identity performs (accept/reject/cancel/unblock/…). |
+| **Gate** | Always qualified: the **plan gate** (plan-PR review before implementation), the **pre-merge gate** (`.seed/hooks/pre-merge.d/`, blocking, local), the **verify check** (`seed receipt verify`, required CI status), the **merge gate** (server-side branch protection + review). |
+| **Control surface** | The path set in D4.1 that is never auto-mergeable and always CODEOWNERS-protected. **Work product**: paths with their own gates instead (plans, receipts, memory, decisions, code). |
+| **State ref** | The `seed-state` branch holding machine-written coordination state (cards, run-log, handoff, mail). Push-access-deep trust (R10). |
+| **Card / plan / receipt** | Card: a task record on the state ref (untrusted work order). Plan: the reviewed work authorization at `plans/<id>.md` (trust root = merge-base blob). Receipt: the evidence record at `receipts/<id>.json` (CI is author of record above L1). |
+| **Tier (L1/L2/L3)** | Autonomy levels in guardrails.yaml: report-only / assisted-in-worktree / unattended-with-gates. Distinct from a role's **permission tier** (`read-only|safe-edit|yolo`), which is a harness sandbox setting. |
+| **Mirror** | The one-way exporter rendering card state to GitHub issue labels (v2). Never a source of truth. |
+
+## 10. Open questions to resolve next
 
 1. **Harness posture:** Claude-Code-first with portable shims (recommended — richest primitive set), or strictly harness-neutral from day one (more work, lower ceiling)?
 2. **Automation-on-clone:** §7.3 proposes check+validate and maintenance live, dispatcher inert until secrets, `claude-code-action` default with gh-aw documented. Needs your confirmation.
