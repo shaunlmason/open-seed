@@ -41,12 +41,14 @@ fi
 
 # Backend plugin contract tests (offline, fake substrates).
 if command -v jq >/dev/null 2>&1; then
-  if out=$(sh "$root/.seed/backends/beads/test.sh" 2>&1); then
-    say "$out"
-  else
-    say "FAIL: beads contract test: $out"
-    fail=1
-  fi
+  for b in beads paperclip; do
+    if out=$(sh "$root/.seed/backends/$b/test.sh" 2>&1); then
+      say "$out"
+    else
+      say "FAIL: $b contract test: $out"
+      fail=1
+    fi
+  done
 else
   say "WARNING: jq unavailable, skipped backend contract tests"
 fi
