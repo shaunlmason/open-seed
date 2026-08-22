@@ -1,0 +1,7 @@
+{
+  "filecards": {
+    "source": "builtin",
+    "engine": ">=0.3.0",
+    "note": "Implemented inside the pinned engine binary; the manifest declares capabilities. External plugin dirs are hash-pinned here when installed (seed backend verify)."
+  }
+}

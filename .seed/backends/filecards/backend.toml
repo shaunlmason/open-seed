@@ -1,0 +1,14 @@
+# filecards — the in-template default backend (D1 option A).
+# Implemented natively by the engine ("builtin" entry): task cards and the
+# run log live on the seed-state ref, written one commit per verb (§7.2).
+name = "filecards"
+version = "0.1.0"
+schema_version = "1.0"
+entry = "builtin"
+
+[capabilities]
+required = true
+optional = ["lease-renew"]
+atomic_claim = "emulated"   # push-wins; loser re-fetches and exits 2 (§7.1)
+offline = "native"
+budget = "none"
