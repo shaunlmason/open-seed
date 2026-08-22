@@ -151,8 +151,9 @@ requirements:
   **beads backend** (ships in `.seed/backends/beads/`): install `bd` + `jq`,
   `bd init`, native atomic claim and close-cascade, replicated state. Either
   switch is a reviewed config line **plus the state move**:
-  `seed state export > cards.json`, flip `backend =` in `.seed/config.toml`,
-  `seed init`, `seed state import cards.json` — ids, states, dep edges,
+  `scripts/seed state export > cards.json`, flip `backend =` in
+  `.seed/config.toml`, `scripts/seed init`, then
+  `scripts/seed state import cards.json` — ids, states, dep edges,
   rejections, and the run log all travel; import refuses a non-empty
   target. Then `scripts/seed backend verify <name>`. Read each README for
   the declared variances.
