@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(scripts/seed *)",
+      "Bash(make check)",
+      "Bash(make validate)"
+    ],
+    "deny": []
+  }
+}

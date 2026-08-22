@@ -1,0 +1,3 @@
+# merge=union ONLY on decisions/** (append-only ADRs, R5). Never widen this:
+# union merges silently interleave on any file that is ever rewritten.
+decisions/** merge=union

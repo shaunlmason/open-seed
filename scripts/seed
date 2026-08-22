@@ -1,0 +1,80 @@
+#!/bin/sh
+# open-seed bootstrap shim (decision 7.5). Downloads the pinned engine release,
+# verifies its SHA-256 against .seed/engine.lock, caches it outside the repo,
+# and execs it. The engine binary is never committed. POSIX sh; Windows uses
+# scripts/seed.ps1.
+#
+# Overrides:
+#   SEED_ENGINE=<path>          use this engine binary (skips download+verify)
+#   `vendor <path>` in the lock use a vendored binary path (air-gapped)
+set -eu
+
+die() { printf 'seed bootstrap: %s\n' "$*" >&2; exit 1; }
+
+# Locate the repo root (the directory containing .seed/).
+root=$(pwd)
+while [ ! -d "$root/.seed" ]; do
+  parent=$(dirname "$root")
+  [ "$parent" = "$root" ] && die "no .seed directory found above $(pwd)"
+  root=$parent
+done
+lock="$root/.seed/engine.lock"
+[ -f "$lock" ] || die "missing $lock (the engine pin)"
+
+lockval() { awk -v k="$1" '$1==k {print $2; exit}' "$lock"; }
+
+if [ -n "${SEED_ENGINE:-}" ]; then
+  [ -x "$SEED_ENGINE" ] || die "SEED_ENGINE=$SEED_ENGINE is not executable"
+  exec "$SEED_ENGINE" "$@"
+fi
+vendor=$(lockval vendor || true)
+if [ -n "$vendor" ]; then
+  [ -x "$vendor" ] || die "vendored engine $vendor (from engine.lock) is not executable"
+  exec "$vendor" "$@"
+fi
+
+version=$(lockval version)
+repo=$(lockval repo)
+[ -n "$version" ] && [ -n "$repo" ] || die "engine.lock missing version/repo"
+
+case "$(uname -s)" in
+  Linux)  os=linux ;;
+  Darwin) os=darwin ;;
+  *) die "unsupported OS $(uname -s) — use scripts/seed.ps1 on Windows, or set SEED_ENGINE" ;;
+esac
+case "$(uname -m)" in
+  x86_64|amd64)  arch=amd64 ;;
+  aarch64|arm64) arch=arm64 ;;
+  *) die "unsupported architecture $(uname -m) — set SEED_ENGINE" ;;
+esac
+
+want=$(lockval "sha256_${os}_${arch}")
+[ -n "$want" ] || die "engine.lock has no sha256 for ${os}_${arch}"
+
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/open-seed/engine/$version/${os}_${arch}"
+bin="$cache/seed"
+if [ ! -x "$bin" ]; then
+  mkdir -p "$cache"
+  ver_num=${version#v}
+  archive="seed_${ver_num}_${os}_${arch}.tar.gz"
+  url="https://github.com/$repo/releases/download/$version/$archive"
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL -o "$tmp/$archive" "$url" \
+      || die "download failed: $url — check network access, or vendor the binary (engine.lock 'vendor <path>' / SEED_ENGINE)"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q -O "$tmp/$archive" "$url" \
+      || die "download failed: $url — check network access, or vendor the binary (engine.lock 'vendor <path>' / SEED_ENGINE)"
+  else
+    die "neither curl nor wget available"
+  fi
+  got=$( (sha256sum "$tmp/$archive" 2>/dev/null || shasum -a 256 "$tmp/$archive") | awk '{print $1}')
+  [ "$got" = "$want" ] || die "SHA-256 mismatch for $archive: got $got, lock says $want — refusing to run an unverified engine"
+  tar -xzf "$tmp/$archive" -C "$tmp" seed
+  mv "$tmp/seed" "$bin"
+  chmod +x "$bin"
+  rm -rf "$tmp"
+  trap - EXIT
+fi
+exec "$bin" "$@"

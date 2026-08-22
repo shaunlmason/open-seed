@@ -1,0 +1,16 @@
+# The one v1 squad (§7.3): every routing rule in §6 is trivially satisfied by
+# it. Multi-squad activation is v2. Replace the lead when instantiating.
+name: core
+mission: Ship the project # replace with your mission; cards link to it via parent
+lead: shaunlmason         # a human; CODEOWNERS entry for this squad's scope
+members:
+  - human: shaunlmason
+  - role: planner
+  - role: implementer
+  - role: reviewer
+scope: ["**"]             # files matching no other squad's scope belong to core
+backlog: {}               # default filter: everything routes here
+priority: 1               # unique int; lowest wins on scope overlap (v2)
+tier: L2                  # must be <= autonomy.max_tier (guardrails.yaml)
+review: codeowners        # v1 review is human-only (§7.3)
+rituals: []

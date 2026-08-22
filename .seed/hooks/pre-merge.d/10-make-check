@@ -1,0 +1,6 @@
+#!/bin/sh
+# The blocking local pre-merge gate (differentiator #3): make check must pass
+# before a task branch merges. This is a fast pre-check on the implementer's
+# credentials — the CI verify check remains the author of record (R11).
+set -eu
+exec make check
