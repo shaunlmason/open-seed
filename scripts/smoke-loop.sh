@@ -95,4 +95,46 @@ body=$(scripts/seed task get "$id" | jq -r .card.body)
 echo "$body" | grep -q "$cid" || { say "FAIL: comment_id not stamped into the card body"; exit 1; }
 echo "$body" | grep -q "$eid" || { say "FAIL: evidence_id not stamped into the card body"; exit 1; }
 
-say "OK: $id ready→review unattended — implementation, receipt, memory append, evidence + record ids all present"
+# Two-squad routing (os-10c10aae): a second team file activates §6 —
+# explicit/label routing, ready --squad filtering, and the overlap
+# refusal, all against the live instantiation.
+say "two-squad scenario: routing + ready --squad + overlap refusal"
+mkdir -p web
+cat > .seed/teams/web.yaml <<'TEOF'
+name: web
+lead: smoke-lead
+members:
+  - human: smoke-lead
+scope: ["web/**"]
+backlog: {labels: [frontend]}
+priority: 2
+tier: L2
+review: codeowners
+TEOF
+scripts/seed validate >/dev/null || { say "FAIL: core ** + web squad should validate (fallback exemption)"; exit 1; }
+wid=$(scripts/seed task create --title "Web card" --actor shaunlmason --label frontend | jq -r .task)
+fid=$(scripts/seed task create --title "Fallback card" --actor shaunlmason | jq -r .task)
+scripts/seed task promote "$wid" --actor shaunlmason >/dev/null
+scripts/seed task promote "$fid" --actor shaunlmason >/dev/null
+[ "$(scripts/seed task get "$wid" | jq -r .squad)" = "web" ] || { say "FAIL: labeled card did not route to web"; exit 1; }
+[ "$(scripts/seed task get "$fid" | jq -r .squad)" = "core" ] || { say "FAIL: unmatched card did not fall back to core"; exit 1; }
+webq=$(scripts/seed task ready --actor smoke-agent-2 --squad web)
+echo "$webq" | jq -e --arg t "$wid" '.tasks | map(.task) | index($t)' >/dev/null || { say "FAIL: ready --squad web missing the web card"; exit 1; }
+echo "$webq" | jq -e --arg t "$fid" '.tasks | map(.task) | index($t) | not' >/dev/null || { say "FAIL: ready --squad web leaked the core card"; exit 1; }
+cat > .seed/teams/api.yaml <<'TEOF'
+name: api
+lead: smoke-lead
+members:
+  - human: smoke-lead
+scope: ["web/shared/**"]
+backlog: {}
+priority: 3
+tier: L2
+review: codeowners
+TEOF
+if scripts/seed validate >/dev/null 2>&1; then
+  say "FAIL: specific scope overlap without shared_scope accepted"; exit 1
+fi
+rm .seed/teams/api.yaml
+
+say "OK: $id ready→review unattended — implementation, receipt, memory append, evidence + record ids all present; two-squad routing + overlap refusal enforced"

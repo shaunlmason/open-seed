@@ -5,7 +5,7 @@
 # context per task; state lives in the repo (§2.5).
 #
 #   scripts/loop.sh [--actor NAME] [--harness claude] [--role implementer]
-#                   [--once] [--tier L2]
+#                   [--once] [--tier L2] [--squad NAME]
 #
 # Budgets come from .seed/guardrails.yaml (advisory circuit breakers, R6):
 # loop_max_iterations, max_attempts_per_task (consecutive-failure breaker),
@@ -23,6 +23,7 @@ harness="claude"
 role="implementer"
 once=false
 tier="L2"
+squad=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --actor) actor=$2; shift 2 ;;
@@ -30,6 +31,7 @@ while [ $# -gt 0 ]; do
     --role) role=$2; shift 2 ;;
     --once) once=true; shift ;;
     --tier) tier=$2; shift 2 ;;
+    --squad) squad=$2; shift 2 ;;
     *) echo "loop: unknown arg $1" >&2; exit 64 ;;
   esac
 done
@@ -54,7 +56,7 @@ iteration=0
 while [ "$iteration" -lt "$max_iterations" ]; do
   iteration=$((iteration + 1))
 
-  id=$("$seed" task ready --actor "$actor" | jq -r --arg skip "$skipped" \
+  id=$("$seed" task ready --actor "$actor" ${squad:+--squad "$squad"} | jq -r --arg skip "$skipped" \
     '.tasks[]? | select((.task | inside($skip)) | not) | .task' | head -1)
   if [ -z "$id" ]; then
     say "queue empty after $((iteration - 1)) iteration(s) — dual-gate exit"
