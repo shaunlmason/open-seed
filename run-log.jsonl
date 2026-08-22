@@ -160,3 +160,4 @@
 {"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-435d7b61","ts":"2026-08-22T21:58:02Z","verb":"transition"}
 {"actor":"claude-session","data":{"lease_expires":"2026-08-22T23:00:21Z"},"task":"os-7792a002","ts":"2026-08-22T22:00:21Z","verb":"claim"}
 {"actor":"claude-session","data":{"kind":"pr"},"task":"os-7792a002","ts":"2026-08-22T22:06:09Z","verb":"attach-evidence"}
+{"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-7792a002","ts":"2026-08-22T22:06:11Z","verb":"transition"}
