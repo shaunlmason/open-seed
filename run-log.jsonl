@@ -106,3 +106,4 @@
 {"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-23494e11","ts":"2026-08-22T19:08:21Z","verb":"transition"}
 {"actor":"claude-session","data":{"kind":"pr"},"task":"os-23494e11","ts":"2026-08-22T19:08:23Z","verb":"attach-evidence"}
 {"actor":"shaunlmason","data":{"title":"v2: remaining lifecycle shims — worktree-tool integrations beyond the v1 three (§131, §7.3)"},"task":"os-7792a002","ts":"2026-08-22T19:33:18Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"Activate + validate the seed-dispatch and pr-review lanes (§7.3 activation, D4.5 reviewer lane)"},"task":"os-70028620","ts":"2026-08-22T19:33:35Z","verb":"create"}
