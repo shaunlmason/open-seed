@@ -152,3 +152,4 @@
 {"actor":"claude-session","data":{"lease_expires":"2026-08-22T22:43:34Z"},"task":"os-61967950","ts":"2026-08-22T21:43:34Z","verb":"claim"}
 {"actor":"claude-session","data":{"lease_expires":"2026-08-22T23:14:57Z"},"task":"os-61967950","ts":"2026-08-22T21:44:57Z","verb":"lease-renew"}
 {"actor":"claude-session","data":{"kind":"pr"},"task":"os-61967950","ts":"2026-08-22T21:50:03Z","verb":"attach-evidence"}
+{"actor":"claude-session","data":{"kind":"commit"},"task":"os-61967950","ts":"2026-08-22T21:50:05Z","verb":"attach-evidence"}
