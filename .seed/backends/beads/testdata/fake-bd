@@ -56,7 +56,9 @@ case "$cmd" in
     j -c --arg id "$id" '.issues[$id]'
     ;;
   reopen) save --arg id "$1" '.issues[$id].status = "open"'; echo '{}' ;;
-  defer)  save --arg id "$1" '.issues[$id].status = "deferred"'; echo '{}' ;;
+  defer)
+    if [ "${FAKE_BD_FAIL_DEFER:-}" = "1" ]; then echo "defer failed (forced)" >&2; exit 1; fi
+    save --arg id "$1" '.issues[$id].status = "deferred"'; echo '{}' ;;
   undefer) save --arg id "$1" '.issues[$id].status = "open"'; echo '{}' ;;
   label)
     op=$1; id=$2; lab=$3
