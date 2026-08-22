@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "task": "os-25958b27",
+  "merge_base": "8f35dbbea61dc9c8550fde4c439c34e4a338fa70",
+  "head": "30d06f813c0e5bafd3b449be5250f07c210b425e",
+  "plan_path": "plans/os-25958b27.md",
+  "plan_sha256": "3776874c84c245733313310039aa77eca351f8b581f795304035a4ee9c6adc9c",
+  "diff_files": [
+    ".seed/backends.lock.json",
+    ".seed/backends/jira/README.md",
+    ".seed/backends/jira/actors.json",
+    ".seed/backends/jira/backend.toml",
+    ".seed/backends/jira/bin/seed-backend",
+    ".seed/backends/jira/test.sh",
+    ".seed/backends/jira/testdata/fake-jira",
+    "docs/handbook.md",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "cf673159f1db1344c95ad3828e2f3e52ebbe60e37437f811c0eb2514ef080b0b",
+  "validation": [
+    {
+      "cmd": "test -x .seed/backends/jira/bin/seed-backend",
+      "exit": 0
+    },
+    {
+      "cmd": "sh .seed/backends/jira/test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
