@@ -1,0 +1,403 @@
+#!/bin/sh
+# linear backend plugin: the port over Linear's GraphQL API.
+# Invoked by the engine as: seed-backend <verb> [id] [flags] --json
+# State mapping (plan os-73814c53) is BY WORKFLOW STATE NAME against the
+# documented convention: Backlog=backlog, Todo=ready, In Progress=in_progress,
+# In Review=review, Blocked=blocked (required custom state), Done=done,
+# Canceled=cancelled. A workflow missing a required state → exit 5 with
+# remediation. Seed bookkeeping rides labels: seed:bo:<entry> (blocked_on),
+# seed:author:<actor>, seed:rejected:<actor>, seed:tok:<hex> (the minted
+# per-claim fence token — D1 binding, same posture as beads/paperclip: the
+# API key alone cannot tell a reaped predecessor from the same actor's new
+# claim; the rotating token can).
+set -u
+for c in curl jq; do
+  command -v "$c" >/dev/null 2>&1 || { printf '{"ok":false,"schema_version":"1.0","error":"backend_unavailable","message":"%s not installed"}\n' "$c"; exit 5; }
+done
+: "${LINEAR_API_KEY:?}" "${LINEAR_TEAM_ID:?}"
+url="${LINEAR_API_URL:-https://api.linear.app/graphql}"
+
+verb=${1:-}; [ $# -gt 0 ] && shift
+id=""
+case "${1:-}" in
+  ""|-*) ;;
+  *) id=$1; shift ;;
+esac
+
+title="" body="" priority="P2" actor="" token="" to="" resolution="" kind="" ref="" event="" pr="" blocked_on_arg="" blocked_by=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --title) title=$2; shift 2 ;;
+    --body) body=$2; shift 2 ;;
+    --priority) priority=$2; shift 2 ;;
+    --actor) actor=$2; shift 2 ;;
+    --token) token=$2; shift 2 ;;
+    --to) to=$2; shift 2 ;;
+    --resolution) resolution=$2; shift 2 ;;
+    --kind) kind=$2; shift 2 ;;
+    --ref) ref=$2; shift 2 ;;
+    --event) event=$2; shift 2 ;;
+    --pr) pr=$2; shift 2 ;;
+    --blocked-on) blocked_on_arg=$2; shift 2 ;;
+    --blocked-by) blocked_by="$blocked_by $2"; shift 2 ;;
+    --lease) shift 2 ;;
+    --json|--no-pr) shift ;;
+    --*) [ $# -ge 2 ] && case "$2" in -*) shift ;; *) shift 2 ;; esac || shift ;;
+    *) shift ;;
+  esac
+done
+
+fail() {
+  printf '{"ok":false,"schema_version":"1.0","verb":"%s","error":"%s","message":"%s"}\n' "$verb" "$2" "${3:-}"
+  exit "$1"
+}
+envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
+
+# gql OPNAME QUERY VARIABLES_JSON — one GraphQL call; .errors → caller sees
+# empty data. The response body is printed; rc-style checks read .errors.
+SEED_LN_ERR=$(mktemp)
+trap 'rm -f "$SEED_LN_ERR"' EXIT
+gql() {
+  req=$(jq -nc --arg q "$2" --argjson v "${3:-{\}}" '{query:$q, variables:$v}')
+  out=$(curl -sS -X POST -H "Authorization: $LINEAR_API_KEY" -H "Content-Type: application/json" \
+    -d "$req" "$url" 2>/dev/null) || { echo network >"$SEED_LN_ERR"; return 1; }
+  printf '%s' "$out" | jq -r '(.errors // []) | map(.message) | join("; ")' >"$SEED_LN_ERR"
+  printf '%s' "$out"
+}
+gqlerr() { cat "$SEED_LN_ERR"; }
+
+# --- state mapping (by name; refuse with remediation when missing) --------
+ln_name() { # port state → Linear workflow state name
+  case "$1" in backlog) echo "Backlog";; ready) echo "Todo";; in_progress) echo "In Progress";;
+    review) echo "In Review";; blocked) echo "Blocked";; done) echo "Done";; cancelled) echo "Canceled";; *) echo "";; esac
+}
+STATES_JSON=""
+states() {
+  [ -n "$STATES_JSON" ] && { printf '%s' "$STATES_JSON"; return; }
+  STATES_JSON=$(gql WorkflowStates 'query WorkflowStates($teamId: String!) { team(id: $teamId) { states { nodes { id name } } } }' \
+    "{\"teamId\":\"$LINEAR_TEAM_ID\"}" | jq -c '.data.team.states.nodes // []')
+  printf '%s' "$STATES_JSON"
+}
+# state_id sets $SID and fail()s in the PARENT shell — never call it inside
+# a command substitution: the exit-5 remediation must terminate the verb,
+# not get embedded into a JSON payload as text.
+state_id() {
+  name=$(ln_name "$1")
+  SID=$(states | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
+  [ -n "$SID" ] || fail 5 backend_unavailable "team workflow has no '$name' state — add it once in Linear team settings (required convention, see .seed/backends/linear/README.md)"
+}
+port_state() { # Linear state name → port state
+  case "$1" in Backlog) echo backlog;; Todo) echo ready;; "In Progress") echo in_progress;;
+    "In Review") echo review;; Blocked) echo blocked;; Done) echo done;; Canceled) echo cancelled;; *) echo unknown;; esac
+}
+prio_ln() { case "$1" in P0) echo 1;; P1) echo 2;; P2) echo 3;; P3) echo 4;; *) echo 3;; esac; }
+LJQ='def pport: {"1":"P0","2":"P1","3":"P2","4":"P3"}[(.|tostring)] // "P2";
+     def prank: . // 3;
+     def pstate: {"Backlog":"backlog","Todo":"ready","In Progress":"in_progress","In Review":"review","Blocked":"blocked","Done":"done","Canceled":"cancelled"}[.] // "unknown";'
+
+get_issue() {
+  gql Issue 'query Issue($id: String!) { issue(id: $id) { id identifier title description priority createdAt state { id name } assignee { id name } labels { nodes { id name } } } }' \
+    "{\"id\":\"$1\"}" | jq -c '.data.issue'
+}
+# require_issue/require_fence set $CUR and fail() in the PARENT shell —
+# never call them inside a command substitution (a subshell exit cannot
+# propagate the port exit code).
+require_issue() {
+  CUR=$(get_issue "$1")
+  [ "$CUR" != "null" ] && [ -n "$CUR" ] || fail 4 not_found "no issue $1"
+}
+istate() { printf '%s' "$1" | jq -r '.state.name'; }
+iassignee() { printf '%s' "$1" | jq -r '.assignee.name // ""'; }
+ilabels() { printf '%s' "$1" | jq -r '.labels.nodes[].name'; }
+ilabel_ids() { printf '%s' "$1" | jq -r '[.labels.nodes[].id] | join(",")'; }
+
+label_id() { # find-or-create a team label by name → id
+  lid=$(gql TeamLabels 'query TeamLabels($teamId: String!) { team(id: $teamId) { labels { nodes { id name } } } }' \
+    "{\"teamId\":\"$LINEAR_TEAM_ID\"}" | jq -r --arg n "$1" '.data.team.labels.nodes[] | select(.name == $n) | .id')
+  [ -n "$lid" ] && { echo "$lid"; return; }
+  gql LabelCreate 'mutation LabelCreate($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { success issueLabel { id name } } }' \
+    "$(jq -nc --arg n "$1" --arg t "$LINEAR_TEAM_ID" '{input:{name:$n, teamId:$t}}')" | jq -r '.data.issueLabelCreate.issueLabel.id'
+}
+
+update_issue() { # ID INPUT_JSON — issueUpdate; GraphQL errors → exit 5
+  out=$(gql IssueUpdate 'mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id } } }' \
+    "$(jq -nc --arg id "$1" --argjson i "$2" '{id:$id, input:$i}')")
+  [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "issueUpdate: $(gqlerr)"
+  printf '%s' "$out" >/dev/null
+}
+
+# set_labels ID CURRENT_ISSUE add=NAME... del=PREFIX...  (space-separated
+# add names / del prefixes) — one issueUpdate with the recomputed labelIds.
+relabel() {
+  iid=$1; cur=$2; adds=$3; delpfx=$4
+  keep=$(printf '%s' "$cur" | jq -c --arg d "$delpfx" '[.labels.nodes[] | select((.name | startswith($d)) | not) | .id]')
+  [ -n "$delpfx" ] || keep=$(printf '%s' "$cur" | jq -c '[.labels.nodes[].id]')
+  for n in $adds; do
+    lid=$(label_id "$n")
+    keep=$(printf '%s' "$keep" | jq -c --arg l "$lid" '. + [$l] | unique')
+  done
+  update_issue "$iid" "{\"labelIds\": $keep}"
+}
+
+# The fence: assignee-match AND the minted seed:tok:<token> label. Both
+# rotate on every claim; stale tokens (a reaped predecessor, even the same
+# actor) exit 6.
+require_fence() {
+  require_issue "$1"
+  holder=$(iassignee "$CUR")
+  [ -n "$token" ] || fail 6 fenced_out "no claim token presented"
+  printf '%s\n' "$(ilabels "$CUR")" | grep -qx "seed:tok:$token" || fail 6 fenced_out "token does not match the live claim"
+  [ "$actor" = "$holder" ] || fail 6 fenced_out "actor is not the assignee of record"
+}
+
+mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1 /dev/urandom | tr -d ' \n'; }
+
+bo_entries() { printf '%s\n' "$(ilabels "$1")" | sed -n 's/^seed:bo://p'; }
+bo_json() { bo_entries "$1" | jq -R . | jq -cs .; }
+
+comment_on() { # ID BODY
+  gql CommentCreate 'mutation CommentCreate($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id } } }' \
+    "$(jq -nc --arg i "$1" --arg b "$2" '{input:{issueId:$i, body:$b}}')" >/dev/null
+  [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "commentCreate: $(gqlerr)"
+}
+
+# cascade FROM_ID — remove dep:<id> everywhere (close AND cancel edges carry
+# the effect, per the transition table); release issues left blocked on
+# nothing back to Todo. Sets $cascaded (JSON array).
+all_issues() {
+  gql Issues 'query Issues($teamId: String!) { team(id: $teamId) { issues { nodes { id identifier title description priority createdAt state { id name } assignee { id name } labels { nodes { id name } } } } } }' \
+    "{\"teamId\":\"$LINEAR_TEAM_ID\"}" | jq -c '.data.team.issues.nodes // []'
+}
+cascade() {
+  cascaded="[]"
+  state_id ready; todo_id=$SID
+  for dep in $(all_issues | jq -r --arg l "seed:bo:dep:$1" '.[] | select([.labels.nodes[].name] | index($l)) | .id'); do
+    require_issue "$dep"; cur=$CUR
+    relabel "$dep" "$cur" "" "seed:bo:dep:$1"
+    require_issue "$dep"; cur=$CUR
+    if [ "$(istate "$cur")" = "Blocked" ] && [ -z "$(bo_entries "$cur")" ]; then
+      update_issue "$dep" "{\"stateId\": \"$todo_id\"}"
+      cascaded=$(printf '%s' "$cascaded" | jq -c --arg d "$dep" '. + [$d]')
+    fi
+  done
+}
+
+release_claim() { # ID CUR — clear assignee + token label
+  relabel "$1" "$2" "" "seed:tok:"
+  update_issue "$1" '{"assigneeId": null}'
+}
+
+case "$verb" in
+  create)
+    state_id backlog; sid=$SID
+    out=$(gql IssueCreate 'mutation IssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier } } }' \
+      "$(jq -nc --arg t "$title" --arg d "$body" --arg s "$sid" --arg team "$LINEAR_TEAM_ID" \
+        --argjson p "$(prio_ln "$priority")" '{input:{title:$t, description:$d, stateId:$s, teamId:$team, priority:$p}}')")
+    [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "issueCreate: $(gqlerr)"
+    nid=$(printf '%s' "$out" | jq -r '.data.issueCreate.issue.id')
+    for d in $blocked_by; do
+      require_issue "$nid"; cur=$CUR
+      relabel "$nid" "$cur" "seed:bo:dep:$d" ""
+    done
+    envelope ",\"task\":\"$nid\",\"state\":\"backlog\""
+    ;;
+
+  ready)
+    tasks=$(all_issues | jq -c --arg a "$actor" "$LJQ"'[ .[]
+      | select(.state.name == "Todo")
+      | select((.assignee.name // "") == "")
+      | select(([.labels.nodes[].name] | map(select(. == ("seed:rejected:" + $a))) | length) == 0)
+      | select(([.labels.nodes[].name] | map(select(startswith("seed:bo:"))) | length) == 0)
+      | {task: .id, title: .title, priority: (.priority | pport), created_at: .createdAt}]
+      | sort_by(.priority)')
+    envelope ",\"tasks\":$tasks"
+    ;;
+
+  get)
+    require_issue "$id"; cur=$CUR
+    card=$(printf '%s' "$cur" | jq -c --arg bo "$(bo_json "$cur")" "$LJQ"'{
+      task: .id, title: .title, priority: (.priority | pport),
+      state: (.state.name | pstate), holder: (.assignee.name // ""),
+      blocked_on: ($bo | fromjson),
+      rejected_authors: [.labels.nodes[].name | select(startswith("seed:rejected:")) | ltrimstr("seed:rejected:")]}')
+    envelope ",\"task\":\"$id\",\"state\":$(printf '%s' "$card" | jq .state),\"card\":$card"
+    ;;
+
+  list)
+    tasks=$(all_issues | jq -c "$LJQ"'[ .[] | {task: .id, title: .title, state: (.state.name | pstate), priority: (.priority | pport)}]')
+    envelope ",\"tasks\":$tasks"
+    ;;
+
+  claim)
+    require_issue "$id"; cur=$CUR
+    st=$(istate "$cur"); holder=$(iassignee "$cur")
+    printf '%s\n' "$(ilabels "$cur")" | grep -qx "seed:rejected:$actor" \
+      && fail 2 claim_not_granted "rejected_author: $actor was the rejected implementer"
+    [ -n "$holder" ] && fail 2 claim_not_granted "held by $holder"
+    [ "$st" = "Todo" ] || fail 3 invalid_transition "claim requires ready (Todo); issue is '$st'"
+    tok="c-$(mint)"
+    # Declared variance: two GraphQL writes, last-write-wins — the read-check
+    # window is real (no server arbitration; weaker than filecards push-wins).
+    relabel "$id" "$cur" "seed:tok:$tok" "seed:tok:"
+    state_id in_progress
+    update_issue "$id" "$(jq -nc --arg a "$actor" --arg s "$SID" '{assigneeId:$a, stateId:$s}')"
+    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"claim_token\":\"$tok\",\"lease_expires\":\"\""
+    ;;
+
+  release)
+    require_fence "$id"; cur=$CUR
+    [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "release requires in_progress"
+    release_claim "$id" "$cur"
+    state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    ;;
+
+  transition)
+    case "$to" in
+      review)
+        require_fence "$id"; cur=$CUR
+        [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "review requires in_progress"
+        relabel "$id" "$cur" "seed:author:$actor" "seed:author:"
+        require_issue "$id"; cur=$CUR
+        release_claim "$id" "$cur"
+        state_id review; update_issue "$id" "{\"stateId\": \"$SID\"}"
+        [ -n "$resolution" ] && comment_on "$id" "seed:evidence: $resolution"
+        envelope ",\"task\":\"$id\",\"state\":\"review\",\"transitioned\":true"
+        ;;
+      blocked)
+        require_fence "$id"; cur=$CUR
+        [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "parking requires in_progress"
+        [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "blocked requires --blocked-on"
+        relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
+        require_issue "$id"; cur=$CUR
+        release_claim "$id" "$cur"
+        state_id blocked; update_issue "$id" "{\"stateId\": \"$SID\"}"
+        envelope ",\"task\":\"$id\",\"state\":\"blocked\",\"transitioned\":true"
+        ;;
+      ready)
+        require_fence "$id"; cur=$CUR
+        [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "release-shaped transition requires in_progress"
+        release_claim "$id" "$cur"
+        state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
+        envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true"
+        ;;
+      *) fail 3 invalid_transition "worker transition to '$to' is not a port edge" ;;
+    esac
+    ;;
+
+  promote)
+    require_issue "$id"; cur=$CUR
+    [ "$(istate "$cur")" = "Backlog" ] || fail 3 invalid_transition "promote requires backlog"
+    state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    ;;
+  deprioritize)
+    require_issue "$id"; cur=$CUR
+    [ "$(istate "$cur")" = "Todo" ] || fail 3 invalid_transition "deprioritize requires ready"
+    state_id backlog; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    envelope ",\"task\":\"$id\",\"state\":\"backlog\""
+    ;;
+
+  block)
+    require_issue "$id"; cur=$CUR
+    [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "block requires --blocked-on"
+    case "$(istate "$cur")" in Backlog|Todo|Blocked) ;; *) fail 3 invalid_transition "operator block from '$(istate "$cur")'";; esac
+    relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
+    state_id blocked; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    envelope ",\"task\":\"$id\",\"state\":\"blocked\""
+    ;;
+
+  unblock|plan-unblock)
+    require_issue "$id"; cur=$CUR
+    [ "$(istate "$cur")" = "Blocked" ] || fail 3 invalid_transition "not blocked"
+    if [ "$verb" = "plan-unblock" ]; then
+      entry="plan:$pr"
+    else
+      entry="$blocked_on_arg"
+    fi
+    bo_entries "$cur" | grep -qx "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
+    relabel "$id" "$cur" "" "seed:bo:$entry"
+    require_issue "$id"; cur=$CUR
+    if [ -z "$(bo_entries "$cur")" ]; then
+      state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
+      envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    else
+      envelope ",\"task\":\"$id\",\"state\":\"blocked\""
+    fi
+    ;;
+
+  accept|close)
+    require_issue "$id"; cur=$CUR
+    [ "$(istate "$cur")" = "In Review" ] || fail 3 invalid_transition "close is accept+cascade: review → done only (issue is '$(istate "$cur")')"
+    state_id done; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    [ -n "$resolution" ] && comment_on "$id" "seed:resolution: $resolution"
+    cascade "$id"
+    envelope ",\"task\":\"$id\",\"state\":\"done\",\"cascaded\":$cascaded"
+    ;;
+
+  reject)
+    require_issue "$id"; cur=$CUR
+    [ "$(istate "$cur")" = "In Review" ] || fail 3 invalid_transition "reject requires review"
+    author=$(printf '%s\n' "$(ilabels "$cur")" | sed -n 's/^seed:author://p' | head -1)
+    adds=""
+    [ -n "$author" ] && adds="seed:rejected:$author"
+    relabel "$id" "$cur" "$adds" "seed:author:"
+    state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    [ -n "$resolution" ] && comment_on "$id" "seed:rejection: $resolution"
+    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    ;;
+
+  cancel)
+    require_issue "$id"; cur=$CUR
+    case "$(istate "$cur")" in Done|Canceled) fail 3 invalid_transition "already terminal" ;; esac
+    state_id cancelled; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    cascade "$id"
+    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"cascaded\":$cascaded"
+    ;;
+
+  reinstate)
+    require_issue "$id"; cur=$CUR
+    [ "$(istate "$cur")" = "Canceled" ] || fail 3 invalid_transition "reinstate requires cancelled"
+    state_id backlog; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    envelope ",\"task\":\"$id\",\"state\":\"backlog\""
+    ;;
+
+  comment)
+    require_fence "$id"; cur=$CUR
+    comment_on "$id" "[$actor] $body"
+    envelope ",\"task\":\"$id\""
+    ;;
+
+  attach-evidence)
+    require_issue "$id"; cur=$CUR
+    holder=$(iassignee "$cur")
+    if [ -n "$holder" ] || [ "$(istate "$cur")" = "In Progress" ]; then
+      require_fence "$id"; cur=$CUR
+    fi
+    comment_on "$id" "seed:evidence ($kind): $ref"
+    envelope ",\"task\":\"$id\""
+    ;;
+
+  lease-renew)
+    require_fence "$id"
+    envelope ",\"task\":\"$id\",\"note\":\"no lease concept in Linear (declared variance); fence validated\""
+    ;;
+
+  event-append)
+    if [ -n "$id" ]; then
+      comment_on "$id" "seed:event: $event"
+    else
+      audit=$(all_issues | jq -r '.[] | select(.title == "seed: audit log") | .id' | head -1)
+      if [ -z "$audit" ]; then
+        state_id backlog; sid=$SID
+        audit=$(gql IssueCreate 'mutation IssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier } } }' \
+          "$(jq -nc --arg s "$sid" --arg team "$LINEAR_TEAM_ID" '{input:{title:"seed: audit log", description:"taskless seed events land here", stateId:$s, teamId:$team, priority:4}}')" \
+          | jq -r '.data.issueCreate.issue.id')
+      fi
+      comment_on "$audit" "seed:event: $event"
+    fi
+    envelope ""
+    ;;
+
+  *) fail 64 usage "unknown verb '$verb'" ;;
+esac

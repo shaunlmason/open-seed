@@ -7,7 +7,7 @@
   "fastcards": {
     "source": "builtin",
     "engine": ">=0.9.0",
-    "note": "SQLite store inside the pinned engine binary (§7.1 builtin-store amendment). Machine-local state — see the manifest's state_portability and the README."
+    "note": "SQLite store inside the pinned engine binary (\u00a77.1 builtin-store amendment). Machine-local state \u2014 see the manifest's state_portability and the README."
   },
   "beads": {
     "source": "in-template",
@@ -16,5 +16,9 @@
   "paperclip": {
     "source": "in-template",
     "note": "Ships in-template; PR + owner review is the pin (control surface). Server-backed: requires_env credentials, no offline."
+  },
+  "linear": {
+    "source": "in-template",
+    "note": "Ships in-template; PR + owner review is the pin (control surface). Server-backed (GraphQL): requires_env credentials, no offline; requires the custom Blocked workflow state."
   }
 }

@@ -1,0 +1,19 @@
+# linear — external backend over Linear's GraphQL API (plan os-73814c53).
+# The cleanest external state-model fit surveyed: the default team workflow
+# plus one required custom state (Blocked) maps onto the port states by
+# NAME, no label tricks for states at all. Declared variances (README.md):
+# emulated claim (last-write-wins window), no leases, server is truth.
+name = "linear"
+version = "0.1.0"
+schema_version = "1.0"
+entry = "bin/seed-backend"
+requires = ["curl", "jq"]
+requires_env = ["LINEAR_API_KEY", "LINEAR_TEAM_ID"]
+
+[capabilities]
+required = true
+optional = ["lease-renew"]
+atomic_claim = "emulated"
+offline = "none"
+budget = "none"
+state_portability = "server"

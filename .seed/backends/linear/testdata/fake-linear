@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""Offline stand-in for Linear's GraphQL API (contract-test substrate).
+
+Models the subset the adapter uses: team workflow states (by NAME — the
+adapter's whole state mapping is name-based), issues with assignee/priority/
+labels, team labels (created on demand), comments, and issueUpdate. Set
+FAKE_LINEAR_NO_BLOCKED=1 to serve a workflow missing the required custom
+Blocked state (the adapter must refuse with exit 5 + remediation).
+
+GraphQL is dispatched by operation name — the adapter sends named
+operations, so no query parsing is needed.
+"""
+import json
+import os
+import re
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+STATE_NAMES = ["Backlog", "Todo", "In Progress", "In Review", "Blocked", "Done", "Canceled"]
+if os.environ.get("FAKE_LINEAR_NO_BLOCKED"):
+    STATE_NAMES.remove("Blocked")
+STATES = [{"id": f"st-{i}", "name": n} for i, n in enumerate(STATE_NAMES)]
+BY_STATE_ID = {s["id"]: s for s in STATES}
+
+issues = {}
+labels = {}   # id -> {id, name}
+comments = {} # issue id -> [..]
+seq = {"issue": 0, "label": 0, "comment": 0}
+
+
+def new_id(kind):
+    seq[kind] += 1
+    return f"{kind[:3]}-{seq[kind]}"
+
+
+def issue_node(i):
+    return {
+        "id": i["id"], "identifier": i["id"], "title": i["title"],
+        "description": i.get("description", ""), "priority": i.get("priority", 0),
+        "createdAt": i["createdAt"],
+        "state": BY_STATE_ID[i["stateId"]],
+        "assignee": ({"id": i["assigneeId"], "name": i["assigneeId"]} if i.get("assigneeId") else None),
+        "labels": {"nodes": [labels[lid] for lid in i.get("labelIds", []) if lid in labels]},
+    }
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def reply(self, data, errors=None):
+        body = json.dumps({"data": data} if not errors else {"data": data, "errors": errors}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):  # readiness probe
+        self.reply({"ok": True})
+
+    def do_POST(self):
+        n = int(self.headers.get("Content-Length", 0))
+        req = json.loads(self.rfile.read(n) or b"{}")
+        q = req.get("query", "")
+        v = req.get("variables", {})
+        m = re.search(r"(query|mutation)\s+(\w+)", q)
+        op = m.group(2) if m else ""
+        fn = getattr(self, "op_" + op, None)
+        if not fn:
+            return self.reply(None, [{"message": f"unknown operation {op!r}"}])
+        return fn(v)
+
+    def op_WorkflowStates(self, v):
+        self.reply({"team": {"states": {"nodes": STATES}}})
+
+    def op_TeamLabels(self, v):
+        self.reply({"team": {"labels": {"nodes": list(labels.values())}}})
+
+    def op_LabelCreate(self, v):
+        name = v["input"]["name"]
+        for l in labels.values():
+            if l["name"] == name:
+                return self.reply({"issueLabelCreate": {"success": True, "issueLabel": l}})
+        l = {"id": new_id("label"), "name": name}
+        labels[l["id"]] = l
+        self.reply({"issueLabelCreate": {"success": True, "issueLabel": l}})
+
+    def op_Issues(self, v):
+        self.reply({"team": {"issues": {"nodes": [issue_node(i) for i in issues.values()]}}})
+
+    def op_Issue(self, v):
+        i = issues.get(v["id"])
+        if not i:
+            return self.reply({"issue": None})
+        self.reply({"issue": issue_node(i)})
+
+    def op_IssueCreate(self, v):
+        inp = v["input"]
+        if inp.get("stateId") not in BY_STATE_ID:
+            return self.reply(None, [{"message": "invalid stateId"}])
+        i = {
+            "id": "LIN-" + str(seq["issue"] + 1), "title": inp.get("title", ""),
+            "description": inp.get("description", ""), "priority": inp.get("priority", 0),
+            "stateId": inp["stateId"], "assigneeId": inp.get("assigneeId"),
+            "labelIds": list(inp.get("labelIds", [])), "createdAt": f"2026-01-01T00:00:{seq['issue']:02d}Z",
+        }
+        seq["issue"] += 1
+        issues[i["id"]] = i
+        self.reply({"issueCreate": {"success": True, "issue": issue_node(i)}})
+
+    def op_IssueUpdate(self, v):
+        if not v.get("id"):
+            return self.reply(None, [{"message": "issueUpdate requires id"}])
+        i = issues.get(v["id"])
+        if not i:
+            return self.reply(None, [{"message": "issue not found"}])
+        inp = v["input"]
+        if "stateId" in inp:
+            if inp["stateId"] not in BY_STATE_ID:
+                return self.reply(None, [{"message": "invalid stateId"}])
+            i["stateId"] = inp["stateId"]
+        if "assigneeId" in inp:
+            i["assigneeId"] = inp["assigneeId"]  # None clears — last write wins, like the real API
+        if "labelIds" in inp:
+            i["labelIds"] = [lid for lid in inp["labelIds"] if lid in labels]
+        if "priority" in inp:
+            i["priority"] = inp["priority"]
+        self.reply({"issueUpdate": {"success": True, "issue": issue_node(i)}})
+
+    def op_CommentCreate(self, v):
+        iid = v["input"]["issueId"]
+        if iid not in issues:
+            return self.reply(None, [{"message": "issue not found"}])
+        c = {"id": new_id("comment"), "body": v["input"]["body"]}
+        comments.setdefault(iid, []).append(c)
+        self.reply({"commentCreate": {"success": True, "comment": c}})
+
+
+if __name__ == "__main__":
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8391
+    HTTPServer(("127.0.0.1", port), Handler).serve_forever()

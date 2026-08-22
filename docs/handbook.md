@@ -156,7 +156,10 @@ requirements:
   `scripts/seed state import cards.json` — ids, states, dep edges,
   rejections, and the run log all travel; import refuses a non-empty
   target. Then `scripts/seed backend verify <name>`. Read each README for
-  the declared variances.
+  the declared variances. For teams already living in a tracker, the
+  **linear backend** (`.seed/backends/linear/`) puts cards on a Linear
+  team's workflow (one required custom `Blocked` state, states mapped by
+  name; emulated claim and cascade, declared).
 - **Human visibility — the issues mirror:** set `[mirror] enabled = true` in
   `.seed/config.toml` and the maintenance workflow renders every card as a
   labeled GitHub issue (`seed:ready`, `seed:in_progress`, `seed:review`,
