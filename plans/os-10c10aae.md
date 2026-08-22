@@ -15,7 +15,12 @@ second squad or a mission appears — a solo clone pays nothing.
    entry naming one owning squad; `priority` ints unique; every squad
    has a human `lead`; `review: codeowners|agent`; `tier` ≤ the
    guardrails ceiling (already checked for core — now for all).
-   Violations fail `seed validate` (and CI).
+   **Core's bare-`**` fallback scope is exempt from the pairwise
+   overlap rule**: `**` is the "matches what nothing else claims"
+   catch-all §6 itself requires, so it necessarily intersects every
+   scope — only two *specific* scopes overlapping (or a second squad
+   also claiming bare `**`) is a violation. Violations fail
+   `seed validate` (and CI).
 2. **Card routing** (engine, `internal/task` + card schema): cards
    gain an optional `squad` field (create `--squad` exists in the
    port spec); resolution order is **explicit `squad:` → the
@@ -30,15 +35,22 @@ second squad or a mission appears — a solo clone pays nothing.
 4. **Cross-squad gate** (validation + docs, no new mechanism): the
    scope owner's gate already grounds in CODEOWNERS + tier — the
    validator now checks that every squad with `review: codeowners`
-   has its lead present in CODEOWNERS for its scope paths (check
-   only; CODEOWNERS stays hand-owned control surface), and the
-   handbook documents that the owning squad's tier governs merges
-   into its scope.
-5. **Goal-ancestry activation rule**: when more than one squad exists
-   or any squad declares a `mission`, cards missing a resolvable
-   `parent` chain to a mission get a validation *warning* (report,
-   not refusal — §6's alignment mitigation); solo/core-only repos
-   see nothing.
+   has its lead present in CODEOWNERS for its scope paths, **as a
+   warning, and only once multi-squad is active** (>1 squad): the
+   shipped single-squad template, whose core.yaml carries a
+   placeholder lead the instantiator replaces, must stay green out of
+   the box (CODEOWNERS stays hand-owned control surface — the engine
+   never edits it). The handbook documents that the owning squad's
+   tier governs merges into its scope.
+5. **Goal-ancestry activation rule**: the activation literal is
+   `len(squads) > 1 || any squad declares a mission` — when it holds,
+   cards missing a resolvable `parent` chain to a mission get a
+   validation *warning* (report, not refusal — §6's alignment
+   mitigation); solo/core-only repos see nothing. The shipped
+   core.yaml currently sets a placeholder `mission:` that would trip
+   this on every fresh clone — the task PR comments it out (the
+   inline comment already tells instantiators to set their own), so
+   activation stays a deliberate act.
 6. **Template + docs**: `.seed/teams/` gains a commented example
    second-squad file (`platform.yaml.example` — inert, not parsed);
    handbook §5's squads rung and §6 routing get the activated story;
@@ -56,6 +68,7 @@ second squad or a mission appears — a solo clone pays nothing.
 - Engine repo: `internal/validate/`, `internal/task/`,
   `internal/card/`, `cmd/seed/`
 - Template: `.seed/teams/platform.yaml.example` (new),
+  `.seed/teams/core.yaml` (comment out the placeholder mission),
   `scripts/loop.sh` (--squad), `scripts/smoke-loop.sh`,
   `docs/handbook.md`, `.seed/engine.lock` (release pin via
   `seed upgrade`)
@@ -64,7 +77,8 @@ second squad or a mission appears — a solo clone pays nothing.
 
 - Overlapping scopes without a shared-scope owner, duplicate
   priorities, or a missing human lead fail validation; the shared-
-  scope exception passes.
+  scope exception passes; core's bare-`**` fallback coexists with
+  any second squad without tripping the overlap rule.
 - Routing resolves explicit → lowest-priority match → core; no card
   is invisible; `ready --squad` and `loop.sh --squad` filter
   correctly.
