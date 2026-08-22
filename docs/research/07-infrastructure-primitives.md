@@ -70,7 +70,42 @@ A single no-arg tool: the agent calls `neuralyzer`, all messages are wiped and t
 Alpha "meta-harness": agents defined in **short YAML files** (prompt + `harness:` + tools); swap harnesses by editing one field. Three-level policies (server/agent/session): shell approval gates, tool-call limits, spend caps. Steal: `harness:` as a one-line executor field; three-scope policy layering.
 
 ### open-multi-agent/open-multi-agent
-TypeScript runtime where **a coordinator plans the task DAG at runtime** from a goal (`runTeam()`), vs. explicit pipelines (`runTasks()`). Guardrails are strong: default-deny tools, per-call gating, token/cost budgets, loop detection, durable approvals, checkpoint/resume, append-only plan repair, execution receipts, offline run viewer. Mixed runtimes on one DAG. 6.8k stars, MIT, production users. Steal: default-deny tool posture; execution receipts; append-only plan repair.
+TypeScript runtime where **a coordinator plans the task DAG at runtime** from a goal (`runTeam()`), vs. explicit pipelines (`runTasks()`). Guardrails are strong: default-deny tools, per-call gating, token/cost budgets, loop detection, durable approvals, checkpoint/resume, plan repair, execution receipts, offline run viewer. Mixed runtimes on one DAG. 6.8k stars, MIT, production users. Steal: default-deny tool posture; execution receipts.
+
+#### Addendum (2026-08-22): open-multi-agent.com site review
+
+A direct review of the project's website, done while evaluating OMA as a
+potential open-seed backend. Findings beyond the survey entry above:
+
+- **SDK-first, not files-first.** OMA is consumed as a TypeScript library:
+  teams, tools, budgets, and approval policies are declared in code at
+  runtime. There are no declarative manifests checked into the repo by
+  default. This is the opposite of open-seed's files-first bet, so OMA is
+  **not a backend candidate** for the `.seed/backends/` plugin system — its
+  state lives in a process, not in git, and there is no CLI port to wrap.
+  It remains a design reference for guardrail semantics.
+- **Honest budget semantics.** The docs state a token/cost budget "can
+  overshoot by one model turn" — the budget is checked between turns, not
+  mid-stream. This is the same honesty posture open-seed adopts for R6
+  (budgets are advisory circuit breakers, not hard walls) and is worth
+  citing as precedent for documenting enforcement gaps instead of implying
+  hard guarantees.
+- **`planOnly` mode.** A run can be executed with `planOnly` to produce and
+  inspect the task DAG without executing any task — a cheap dry-run gate.
+  Analogous to open-seed's plan-before-work parking (`blocked_on: plan:`),
+  but enforced by the runtime rather than by review.
+- **Offline Run Viewer.** Execution receipts render in a local viewer with
+  no server dependency — precedent for open-seed's receipts being
+  self-contained JSON that tooling can render without a service.
+- **ExecutionRouter.** Per-task routing of model/runtime on one DAG —
+  runtime-level precedent for open-seed's per-squad-member harness/model
+  heterogeneity (design doc §6), with the same caveat that permission-tier
+  fidelity varies per runtime.
+- **Correction to the entry above:** the earlier "append-only plan repair"
+  claim is not documented on the site. Plan repair exists (the coordinator
+  can revise the DAG mid-run), but the site does not describe the repair
+  log as append-only. The claim has been softened in the survey entry
+  accordingly.
 
 ### RightNow-AI/openfang
 Rust "Agent OS," single binary. Primitive: **Hands** — autonomous capability packages bundling `HAND.toml` manifest + system prompt + **SKILL.md expertise file** + guardrails, running on schedules. 16 security layers incl. WASM sandboxing, Merkle audit chains, Ed25519 manifest signing. Steal: manifest signing for skill provenance; SKILL.md adopted even outside the Anthropic ecosystem.
