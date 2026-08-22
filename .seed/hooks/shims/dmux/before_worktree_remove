@@ -1,0 +1,5 @@
+#!/bin/sh
+# dmux before_worktree_remove → seed teardown (worktree still exists).
+cd "${DMUX_WORKTREE_PATH:-.}" || exit 0
+[ -x .seed/hooks/teardown ] && .seed/hooks/teardown
+exit 0

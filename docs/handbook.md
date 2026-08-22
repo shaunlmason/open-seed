@@ -130,6 +130,28 @@ cascade already schedule work across agents topologically).
 `.claude/workflows/` remains the home for Claude-native dynamic
 workflows — never under `.seed/`.
 
+**Worktree tool fidelity** (§131 "the rest v2"): `.seed/hooks/` is the
+runner-agnostic lifecycle contract, and `.seed/hooks/shims/<tool>/` ships
+checked-in fragments for the surveyed external tools. Support is declared,
+never silent — the per-tool matrix (README in each shim dir has the full
+table and install steps):
+
+| Tool | Post-create | Teardown | Blocking pre-merge |
+|---|---|---|---|
+| superset | yes (`.superset/config.json`) | yes | no |
+| agent-deck | yes (`worktree-setup.sh`) | best-effort | no |
+| vibe-tree | yes (`.vibetree/hooks/`) | yes | no |
+| octomux | yes (`task_created`) | approximate (`runtime_state_changed`) | no — fire-and-forget hooks |
+| amux | yes (`setup-workspace`) | best-effort (`archive`) | no |
+| dmux | yes (`worktree_created`) | yes (`before_worktree_remove`) | **no — dmux spawns `pre_merge` detached; it cannot veto** |
+| tmux-ide | no | no | no |
+| ouijit | via `start` hook | approximate (`done`) | no |
+| parallel-code | README-only: no hook surface | — | — |
+
+No surveyed tool can honor a blocking pre-merge, which is why the local
+`pre-merge.d/` gate is a convenience pre-check and **CI verify is the
+merge authority everywhere** (R11).
+
 ## 4. Guardrails, honestly
 
 `.seed/guardrails.yaml` is the vocabulary; enforcement is layered — hooks

@@ -14,3 +14,24 @@ directly. All hooks run with the worktree as cwd.
 
 Keep hooks fast and deterministic. They are user-editable convention, not
 control logic — the port and CI gates do the enforcing.
+
+## Tool shims (`shims/`)
+
+Checked-in integration fragments wiring external worktree tools onto this
+contract — one directory per tool, each with a README stating install
+steps and a fidelity table (which contract points the tool can honor,
+which it cannot — declared, never silent). A tool with no usable hook
+point gets a README-only entry instead of a dead file.
+
+| Shim | Post-create | Teardown | Blocking pre-merge |
+|---|---|---|---|
+| `shims/octomux/` | yes | approximate | no (fire-and-forget hooks) |
+| `shims/amux/` | yes | best-effort | no |
+| `shims/dmux/` | yes | yes | **no — detached hooks; declared caveat** |
+| `shims/tmux-ide/` | no | no | no |
+| `shims/ouijit/` | via `start` | approximate | no |
+| `shims/parallel-code/` | README-only: no hook surface | — | — |
+
+v1 guidance for superset, agent-deck, and vibe-tree lives in the handbook's
+lifecycle section. On every tool the rule is the same: local hooks are
+convenience, the CI verify gate is the merge authority (R11).

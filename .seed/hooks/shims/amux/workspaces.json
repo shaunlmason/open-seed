@@ -1,0 +1,8 @@
+{
+  "setup-workspace": [
+    "[ -x .seed/hooks/setup ] && .seed/hooks/setup || true",
+    "for h in .seed/hooks/post-create.d/*; do [ -x \"$h\" ] && \"$h\"; done"
+  ],
+  "run": "[ -x .seed/hooks/run ] && .seed/hooks/run || true",
+  "archive": "[ -x .seed/hooks/teardown ] && .seed/hooks/teardown || true"
+}

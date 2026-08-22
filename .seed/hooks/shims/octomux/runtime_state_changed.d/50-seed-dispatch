@@ -1,0 +1,11 @@
+#!/bin/sh
+# octomux runtime_state_changed → setup/teardown dispatch (approximate:
+# octomux has no worktree-remove event — declared in the shim README).
+state=$(cat | jq -r '.data.state // .data.runtimeState // empty' 2>/dev/null)
+case "$state" in
+  running|starting)
+    [ -x .seed/hooks/setup ] && .seed/hooks/setup ;;
+  stopped|exited|done|failed)
+    [ -x .seed/hooks/teardown ] && .seed/hooks/teardown ;;
+esac
+exit 0

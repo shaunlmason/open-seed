@@ -1,0 +1,8 @@
+#!/bin/sh
+# octomux task_created → seed post-create.d (cwd is the task worktree).
+# Envelope on stdin is consumed but unused: post-create needs no payload.
+cat >/dev/null
+for h in .seed/hooks/post-create.d/*; do
+  [ -x "$h" ] && "$h"
+done
+exit 0
