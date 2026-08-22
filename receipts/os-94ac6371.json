@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "task": "os-94ac6371",
+  "merge_base": "f56f4dacc6acef1b1f244098fe553f7e552c86c8",
+  "head": "7f4ce9a7428f70a54676ee53dd32be3676bf1518",
+  "plan_path": "plans/os-94ac6371.md",
+  "plan_sha256": "39bf067707896111a1fe99e0c2b19f5985d5d12b232950eb149694d806f03d25",
+  "diff_files": [
+    ".seed/backends.lock.json",
+    ".seed/backends/fastcards/README.md",
+    ".seed/backends/fastcards/backend.toml",
+    ".seed/engine.lock",
+    ".seed/port-schema/backend.schema.json",
+    "docs/handbook.md",
+    "memory/LEARNINGS.md"
+  ],
+  "diff_sha256": "ba6ed41f97f806daf400d03c7ca5482d099b6373bf00fd6e30062922fdc47c0e",
+  "validation": [
+    {
+      "cmd": "test -f .seed/backends/fastcards/backend.toml",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed backend verify fastcards",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q fastcards docs/design-options.md",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
