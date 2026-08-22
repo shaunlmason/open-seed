@@ -22,3 +22,10 @@ actors = ["shaunlmason", "seed-maintenance"]
 # authoritative; label edits on issues are requests, never state). Applied by
 # the seed-maintenance workflow when enabled.
 enabled = false
+
+# Workflow-engine registry (validate rule 9, plan os-52b9aed0): harness
+# and model values in .seed/workflows/*.yaml must appear here — a
+# misspelled or unlisted value fails preflight, not the first live run.
+[workflows]
+harnesses = ["claude", "codex", "mock"]
+models = ["sonnet", "opus", "haiku"]

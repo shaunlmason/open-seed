@@ -1,0 +1,50 @@
+# The decided example (inspirations/04 SYNTHESIS): fetch → plan →
+# approval gate → implement → review-and-fix loop → gated land.
+# Validate-only in CI (needs gh + credentials); mock-run it anywhere:
+# `scripts/seed workflow run fix-issue --mock --input issue=1 ...`
+schema_version: "1"
+name: fix-issue
+description: |
+  Use when: a triaged issue needs a fix landed through the full gate set.
+  NOT for: exploratory research or multi-issue batches.
+inputs:
+  - {name: issue, type: string, required: true, description: "Issue number or URL"}
+  - {name: repo, type: string, required: true, description: "owner/name for the checks gate"}
+  - {name: ref, type: string, required: true, description: "Head ref the checks gate polls"}
+  - {name: pr, type: string, required: true, description: "PR number for the unresolved-threads query"}
+defaults: {harness: claude, model: sonnet}
+budgets: {max_wall_clock_minutes: 120, max_step_retries: 2}
+steps:
+  - id: fetch-issue
+    run: "gh issue view {{inputs.issue}} --json title,body,labels,url > $SEED_RUN_DIR/artifacts/issue.json"
+    produces: [{name: issue_json, file: artifacts/issue.json}]
+  - id: plan
+    role: planner
+    tools: readonly
+    model: opus
+    depends_on: [fetch-issue]
+    consumes: [issue_json]
+    prompt_file: prompts/plan.md
+    produces:
+      - {name: plan, file: artifacts/plan.json, schema: schemas/plan.schema.json}
+  - id: plan-gate
+    depends_on: [plan]
+    gate: {type: approval, message: "Review artifacts/plan.json in the run directory. Approve to implement.", capture_response: true}
+  - id: implement
+    role: implementer
+    tools: coding
+    depends_on: [plan-gate]
+    consumes: [plan]
+    prompt_file: prompts/implement.md
+    produces: [{name: change_summary, file: artifacts/change-summary.md}]
+  - id: review
+    depends_on: [implement]
+    gate: {type: review, reviewer_role: reviewer, remediation: remediate, max_revisions: 2}
+  - id: remediate
+    role: implementer
+    tools: coding
+    prompt: "The reviewer returned REVISE. Read the verdict at gates/review.review.json in the run directory, address every note, and update the change summary."
+  - id: land
+    depends_on: [review]
+    run: "gh pr merge --squash {{inputs.pr}}"
+    gate: {type: checks, required_ci: true, unresolved_threads: 0, repo: "{{inputs.repo}}", ref: "{{inputs.ref}}", pr: "{{inputs.pr}}"}

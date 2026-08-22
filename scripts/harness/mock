@@ -1,0 +1,42 @@
+#!/bin/sh
+# Mock harness (crewplane pattern, plan os-52b9aed0): honors the adapter
+# contract with ZERO credentials and zero side effects — reads the prompt,
+# materializes every SEED_PRODUCES entry as a schema-valid stub (required
+# properties get enum[0] or a typed zero value), and emits one envelope.
+# This is what lets `seed workflow run <name> --mock` prove a workflow
+# end-to-end in CI.
+set -eu
+command -v python3 >/dev/null 2>&1 || { echo "mock harness needs python3" >&2; exit 127; }
+cat > /dev/null
+python3 - <<'PYEOF'
+import json, os
+
+def stub(sch):
+    t = (sch or {}).get("type")
+    if t == "string":
+        enum = (sch or {}).get("enum") or []
+        return enum[0] if enum else "mock"
+    if t in ("integer", "number"):
+        return 0
+    if t == "boolean":
+        return False
+    if t == "array":
+        return []
+    out = {}
+    props = (sch or {}).get("properties", {})
+    for k in (sch or {}).get("required", []):
+        out[k] = stub(props.get(k, {}))
+    return out
+
+for e in json.loads(os.environ.get("SEED_PRODUCES") or "[]"):
+    os.makedirs(os.path.dirname(e["file"]), exist_ok=True)
+    sch = e.get("schema")
+    if sch or e["file"].endswith(".json"):
+        with open(e["file"], "w") as f:
+            json.dump(stub(sch), f, indent=2)
+    else:
+        with open(e["file"], "w") as f:
+            f.write("mock artifact %s (role %s, step %s)\n"
+                    % (e["name"], os.environ.get("SEED_ROLE", ""), os.environ.get("SEED_STEP", "")))
+PYEOF
+printf '{"result": "mock: produces materialized, nothing touched"}\n'

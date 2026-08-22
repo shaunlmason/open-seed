@@ -1,0 +1,39 @@
+# Fully offline proof workflow: `scripts/seed workflow run smoke --mock`
+# exercises waves, artifact tokens, output_format, and the mock harness
+# with zero credentials and zero side effects. Runs in CI via validate.
+schema_version: "1"
+name: smoke
+description: |
+  Use when: proving the workflow engine end-to-end (CI, fresh clones).
+  NOT for: real work — every step is mock-safe by construction.
+inputs:
+  - {name: goal, type: string, required: false, description: "Free text echoed into the plan"}
+defaults: {harness: claude, model: sonnet}
+budgets: {max_wall_clock_minutes: 10, max_step_retries: 1}
+steps:
+  - id: fetch
+    run: "git rev-parse HEAD > $SEED_RUN_DIR/artifacts/head.txt"
+    produces: [{name: head, file: artifacts/head.txt}]
+  - id: plan
+    role: planner
+    tools: readonly
+    depends_on: [fetch]
+    consumes: [head]
+    prompt: |
+      Read {{output.head.path}} and draft a short plan for: {{inputs.goal}}
+    produces: [{name: plan, file: artifacts/plan.md}]
+  - id: implement
+    role: implementer
+    tools: coding
+    depends_on: [plan]
+    consumes: [plan]
+    prompt: "Implement the plan at {{output.plan.path}}; summarize the change."
+    produces: [{name: change, file: artifacts/change.md}]
+  - id: verdict
+    role: reviewer
+    tools: readonly
+    depends_on: [implement]
+    consumes: [change]
+    prompt: "Review {{output.change.path}} and emit a JSON verdict."
+    output_format: {type: object, required: [verdict], properties: {verdict: {type: string}}}
+    produces: [{name: verdict, file: artifacts/verdict.json}]
