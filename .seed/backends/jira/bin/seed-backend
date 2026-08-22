@@ -149,9 +149,14 @@ set_labels() { # KEY JSON_ARRAY
   api PUT "/issue/$1" "{\"fields\":{\"labels\": $2}}" >/dev/null
   case "$(rc)" in 200|204) ;; *) fail 5 backend_unavailable "label update HTTP $(rc)";; esac
 }
-relabel() { # KEY CUR add=NAMES del=PREFIX
-  keep=$(printf '%s' "$2" | jq -c --arg d "$4" '[.fields.labels[] | select(($d != "") and (startswith($d)) | not)]')
-  [ -n "$4" ] || keep=$(printf '%s' "$2" | jq -c '.fields.labels')
+# relabel KEY CUR add=NAMES del=SELECTOR — a selector ending in ":" deletes
+# the whole namespace (seed:tok:, seed:author:); anything else deletes ONLY
+# the exact label, so removing dep:SEED-1 can never strip dep:SEED-10.
+relabel() {
+  keep=$(printf '%s' "$2" | jq -c --arg d "$4" '[.fields.labels[]
+    | select(if $d == "" then true
+             elif ($d | endswith(":")) then (startswith($d) | not)
+             else (. != $d) end)]')
   for n in $3; do keep=$(printf '%s' "$keep" | jq -c --arg l "$n" '. + [$l] | unique'); done
   set_labels "$1" "$keep"
 }
@@ -250,6 +255,7 @@ case "$verb" in
       | select((.fields.assignee.accountId // "") == "")
       | select((.fields.labels | map(select(. == ("seed:rejected:" + $a))) | length) == 0)
       | select((.fields.labels | map(select(startswith("seed:bo:"))) | length) == 0)
+      | select((.fields.labels | index("seed:audit")) | not)
       | {task: .key, title: .fields.summary, priority: (.fields.priority.name | pport), created_at: .fields.created}]
       | sort_by((.priority | prank), .created_at)')
     envelope ",\"tasks\":$tasks"
@@ -279,6 +285,8 @@ case "$verb" in
 
   claim)
     require_issue "$id"
+    printf '%s\n' "$(ilabels "$CUR")" | grep -qxF "seed:audit" \
+      && fail 3 invalid_transition "the seed:audit issue is the audit substrate, not a card"
     account_id "$actor"
     printf '%s\n' "$(ilabels "$CUR")" | grep -qxF "seed:rejected:$actor" \
       && fail 2 claim_not_granted "rejected_author: $actor was the rejected implementer"
@@ -297,8 +305,9 @@ case "$verb" in
   release)
     require_fence "$id"; cur=$CUR
     [ "$(istatus "$cur")" = "In Progress" ] || fail 3 invalid_transition "release requires in_progress"
-    release_claim "$id" "$cur"
     do_transition "$id" ready
+    require_issue "$id"
+    release_claim "$id" "$CUR"
     envelope ",\"task\":\"$id\",\"state\":\"ready\""
     ;;
 
@@ -307,10 +316,13 @@ case "$verb" in
       review)
         require_fence "$id"; cur=$CUR
         [ "$(istatus "$cur")" = "In Progress" ] || fail 3 invalid_transition "review requires in_progress"
-        relabel "$id" "$cur" "seed:author:$actor" "seed:author:"
+        # The fallible transition runs FIRST: a workflow refusal (exit 3)
+        # must leave the claim intact so the worker can retry or park.
+        do_transition "$id" review
+        require_issue "$id"
+        relabel "$id" "$CUR" "seed:author:$actor" "seed:author:"
         require_issue "$id"
         release_claim "$id" "$CUR"
-        do_transition "$id" review
         [ -n "$resolution" ] && comment_on "$id" "seed:evidence: $resolution"
         envelope ",\"task\":\"$id\",\"state\":\"review\",\"transitioned\":true"
         ;;
@@ -318,17 +330,19 @@ case "$verb" in
         require_fence "$id"; cur=$CUR
         [ "$(istatus "$cur")" = "In Progress" ] || fail 3 invalid_transition "parking requires in_progress"
         [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "blocked requires --blocked-on"
-        relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
+        do_transition "$id" blocked
+        require_issue "$id"
+        relabel "$id" "$CUR" "seed:bo:$blocked_on_arg" ""
         require_issue "$id"
         release_claim "$id" "$CUR"
-        do_transition "$id" blocked
         envelope ",\"task\":\"$id\",\"state\":\"blocked\",\"transitioned\":true"
         ;;
       ready)
         require_fence "$id"; cur=$CUR
         [ "$(istatus "$cur")" = "In Progress" ] || fail 3 invalid_transition "release-shaped transition requires in_progress"
-        release_claim "$id" "$cur"
         do_transition "$id" ready
+        require_issue "$id"
+        release_claim "$id" "$CUR"
         envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true"
         ;;
       *) fail 3 invalid_transition "worker transition to '$to' is not a port edge" ;;
@@ -443,11 +457,14 @@ case "$verb" in
       comment_on "$id" "seed:event: $event"
     else
       load_issues
-      audit=$(printf '%s' "$ISSUES_JSON" | jq -r '.[] | select(.fields.summary == "seed: audit log") | .key' | head -1)
+      audit=$(printf '%s' "$ISSUES_JSON" | jq -r '.[] | select(.fields.labels | index("seed:audit")) | .key' | head -1)
       if [ -z "$audit" ]; then
-        payload=$(jq -nc --arg k "$JIRA_PROJECT_KEY" '{fields:{project:{key:$k}, issuetype:{name:"Task"}, summary:"seed: audit log", description:"taskless seed events land here", priority:{name:"Low"}}}')
+        payload=$(jq -nc --arg k "$JIRA_PROJECT_KEY" '{fields:{project:{key:$k}, issuetype:{name:"Task"}, summary:"seed: audit log", priority:{name:"Low"}, labels:["seed:audit"],
+          description:{type:"doc",version:1,content:[{type:"paragraph",content:[{type:"text",text:"taskless seed events land here"}]}]}}}')
         out=$(api POST "/issue" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "audit issue create HTTP $(rc)"
         audit=$(printf '%s' "$out" | jq -r .key)
+        require_issue "$audit"
+        [ "$(istatus "$CUR")" = "Backlog" ] || do_transition "$audit" backlog
       fi
       comment_on "$audit" "seed:event: $event"
     fi

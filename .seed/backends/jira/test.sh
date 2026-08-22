@@ -132,6 +132,21 @@ out=$("$sb" list --state ready --json); ok "$out" "list filtered"
 [ "$(echo "$out" | jq '[.tasks[] | select(.state != "ready")] | length')" = "0" ] || die "list --state leaked other states"
 
 out=$("$sb" event-append --event '{"ts":"t","verb":"probe"}' --json); ok "$out" event-append
+# The audit issue is the audit substrate, never a card: absent from ready,
+# refused at claim.
+out=$("$sb" ready --actor agent-1 --json)
+echo "$out" | jq -e '[.tasks[].title] | index("seed: audit log") | not' >/dev/null || die "audit issue leaked into ready"
+audit_key=$("$sb" list --json | jq -r '.tasks[] | select(.title == "seed: audit log") | .task')
+expect_rc 3 "claiming the audit issue" "$sb" claim "$audit_key" --actor agent-1 --json
+
+# Exact-match blocked_on release: removing manual:x must not strip manual:xy.
+xb=$("$sb" create --title "Exact match" --actor a --json | jq -r .task)
+"$sb" promote "$xb" --actor lead --json >/dev/null
+"$sb" block "$xb" --actor lead --blocked-on manual:x --json >/dev/null
+"$sb" block "$xb" --actor lead --blocked-on manual:xy --json >/dev/null
+out=$("$sb" unblock "$xb" --actor lead --blocked-on manual:x --json); ok "$out" "exact unblock"
+[ "$(echo "$out" | jq -r .state)" = "blocked" ] || die "prefix deletion stripped manual:xy too"
+[ "$("$sb" get "$xb" --json | jq -r '.card.blocked_on[0]')" = "manual:xy" ] || die "manual:xy lost"
 out=$("$sb" list --json); ok "$out" list
 expect_rc 4 "missing issue" "$sb" get SEED-999 --json
 
