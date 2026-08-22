@@ -1,0 +1,21 @@
+#!/bin/sh
+# Codex CLI adapter (v1 cut, inspirations/09). Prompt on stdin → one JSON
+# envelope on stdout. Permission-tier mapping (faithful for codex per the
+# tier-fidelity table):
+#   read-only → --sandbox read-only
+#   safe-edit → --sandbox workspace-write
+#   yolo      → --dangerously-bypass-approvals-and-sandbox
+set -eu
+command -v codex >/dev/null 2>&1 || { echo "codex CLI not installed" >&2; exit 127; }
+case "${SEED_PERMISSION:-safe-edit}" in
+  read-only) args="--sandbox read-only" ;;
+  safe-edit) args="--sandbox workspace-write" ;;
+  yolo)      args="--dangerously-bypass-approvals-and-sandbox" ;;
+  *) echo "unknown SEED_PERMISSION '${SEED_PERMISSION}'" >&2; exit 3 ;;
+esac
+prompt=$(cat)
+# codex exec emits JSONL; reduce to the adapter envelope (last agent message).
+out=$(timeout "${SEED_TIMEOUT:-1800}" codex exec $args --json "$prompt") || {
+  rc=$?; [ $rc -eq 124 ] && exit 124; exit $rc
+}
+printf '%s\n' "$out" | awk 'BEGIN{last=""} /"type":"agent_message"/{last=$0} END{if (last=="") print "{\"result\":\"\"}"; else print last}'
