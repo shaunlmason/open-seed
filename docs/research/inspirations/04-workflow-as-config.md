@@ -3,6 +3,12 @@
 > Implementation-grade deep dive for the open-seed design study, researched 2026-08-22.
 > Covers tutti, agent-runbook, crewplane, Fusion, and Archon. All read at source level
 > (config structs, validators, executors), not just READMEs.
+>
+> **Erratum (design review, 2026-08-22):** superseded by `docs/design-options.md` on run-state
+> placement: this file's synthesis puts workflow checkpoints at `.seed/state/runs/<run-id>.json`,
+> but `.seed/**` is human-owned control surface in the final design — workflow-run scratch
+> (checkpoints, artifacts) is **uncommitted local state**, excluded via `.git/info/exclude`,
+> never under `.seed/`. The workflow engine itself is v2 (§7.3).
 
 ## 1. nutthouse/tutti — `tutti.toml` (Rust)
 
