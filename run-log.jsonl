@@ -12,3 +12,4 @@
 {"actor":"shaunlmason","data":{"title":"v2: skills manifest + lockfile (seed.yaml/seed.lock, D8)"},"task":"os-6f3104db","ts":"2026-08-22T06:26:17Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"v2: mailboxes + handoff-packet automation (§7.2)"},"task":"os-499c5978","ts":"2026-08-22T06:26:19Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"v2: multi-squad routing activation (§6)"},"task":"os-10c10aae","ts":"2026-08-22T06:26:22Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"v2: MCP transport wrapper (research/10 §5.4)"},"task":"os-67a1bf14","ts":"2026-08-22T06:26:24Z","verb":"create"}
