@@ -53,19 +53,24 @@ jobs:
             branch="$HEAD_REF"
           fi
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
-          scripts/seed pr classify "$branch" | tee -a "$GITHUB_OUTPUT"
+          # classify prints "class=X task=Y" on one line; GITHUB_OUTPUT is
+          # parsed per line, so split before appending.
+          cls=$(scripts/seed pr classify "$branch")
+          echo "$cls"
+          echo "$cls" | tr ' ' '\n' >> "$GITHUB_OUTPUT"
       - name: Verify task PR (receipt + purity + stale-plan)
-        if: startsWith(steps.head.outputs.class, 'task')
+        if: steps.head.outputs.class == 'task'
         env:
           BRANCH: ${{ steps.head.outputs.branch }}
           TASK: ${{ steps.head.outputs.task }}
         run: |
           scripts/seed receipt verify "$TASK" --base origin/main --branch "$BRANCH" --run
       - name: Verify plan PR (purity + grammar)
-        if: startsWith(steps.head.outputs.class, 'plan')
+        if: steps.head.outputs.class == 'plan'
         env:
+          BRANCH: ${{ steps.head.outputs.branch }}
           TASK: ${{ steps.head.outputs.task }}
         run: |
           files=$(git diff --name-only "origin/${{ github.base_ref || 'main' }}...HEAD" | paste -sd, -)
-          scripts/seed pr classify "seed/$TASK-plan" --files "$files"
+          scripts/seed pr classify "$BRANCH" --files "$files"
           scripts/seed plan lint "plans/$TASK.md"
