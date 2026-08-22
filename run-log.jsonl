@@ -41,3 +41,4 @@
 {"actor":"claude-session","data":{"title":"fastcards backend: SQLite builtin for single-machine throughput"},"task":"os-94ac6371","ts":"2026-08-22T13:25:27Z","verb":"create"}
 {"actor":"claude-session","data":{"title":"Linear backend adapter"},"task":"os-73814c53","ts":"2026-08-22T13:25:30Z","verb":"create"}
 {"actor":"claude-session","data":{"title":"Jira backend adapter"},"task":"os-25958b27","ts":"2026-08-22T13:25:32Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-94ac6371","ts":"2026-08-22T13:25:35Z","verb":"promote"}
