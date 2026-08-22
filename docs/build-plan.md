@@ -59,6 +59,15 @@ all six targets, and `go install .../cmd/seed@v0.1.0` works.
 **Done when:** the conformance suite passes and a schema/table edit changes engine
 behavior with no engine code change.
 
+> **Status: complete (2026-08-22), engine v0.2.0.** `.seed/port-schema/` authored
+> (16-edge D1 table with classes/effects/overrides as data; nine verbs; exit-code
+> registry; envelope/card/backend schemas). Engine `internal/spec` +
+> `internal/port` implement the port table-driven with zero per-edge branching;
+> the conformance suite sweeps state × verb × credential × token × lease against
+> an independent interpreter of the same tables, asserts the design-doc
+> invariants directly, and proves spec edits flip behavior with no code change.
+> `seed spec lint` validates a repo's spec (exit 10 on mismatch).
+
 ## Phase 2 — Filecards backend + `seed-state` ref
 
 - `filecards` backend plugin (ships in-template): card files, `backend.toml`
