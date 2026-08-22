@@ -130,6 +130,34 @@ cascade already schedule work across agents topologically).
 `.claude/workflows/` remains the home for Claude-native dynamic
 workflows — never under `.seed/`.
 
+**The MCP transport** (research/10 §5.4 — v2): `seed mcp serve` is an
+MCP stdio server exposing one tool per port verb — the worker surface
+(create/ready/get/list/claim/lease-renew/release/transition/comment/
+attach-evidence) and one tool per operator verb (close, promote,
+deprioritize, reject, cancel, reinstate, block, unblock, plan-unblock).
+`.mcp.json` ships the registration (strict JSON — the format admits no
+comments, so the entry is live but inert until a harness loads the
+file):
+
+```json
+{ "mcpServers": { "seed": { "command": "sh", "args": ["-c", "exec scripts/seed mcp serve"] } } }
+```
+
+MCP is an ADDITIONAL transport, never a replacement: `tools/call`
+dispatches through the identical service path the CLI uses — same
+fencing, same transition table, same run-log events, same envelopes.
+Port failures come back as tool results with `isError: true` carrying
+the refusal envelope and exit class (contention, invalid transition,
+fenced out, halted) — JSON-RPC errors stay reserved for transport
+faults. The wrapper adds no authority: `--actor` remains an asserted
+tool argument, operator tools still check the `[operators]` roster, and
+a HALT marker refuses mutating tools exactly as it refuses CLI verbs.
+
+Prefer the MCP surface for tool-native harnesses (schema'd calls beat
+shell strings) and for MCP-gateway governance in the Paperclip style;
+CI, cron, and bare shells stay on the CLI, which remains the source of
+truth — no verb exists MCP-only.
+
 ## 4. Guardrails, honestly
 
 `.seed/guardrails.yaml` is the vocabulary; enforcement is layered — hooks
