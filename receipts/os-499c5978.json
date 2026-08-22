@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-499c5978",
   "merge_base": "6c4b3d8eb8f207adab7cc1d607465bbc9a03b5bb",
-  "head": "0e4036248e22c378df7a804769dd79ee17bb82b9",
+  "head": "2a5d8ba3e95c5408d5ab40950bf55442f46b33f4",
   "plan_path": "plans/os-499c5978.md",
   "plan_sha256": "5f7f9dee1739bb0b2e03927de646c1a63f9dc71cfeb1d28dc93ec7b6dc22f18b",
   "diff_files": [
@@ -10,9 +10,10 @@
     ".seed/engine.lock",
     "AGENTS.md",
     "docs/handbook.md",
+    "rules/00-coordination.md",
     "scripts/loop.sh"
   ],
-  "diff_sha256": "791fef8d04cb7aa654c43dca631c45d03847523a6cab60a53ca8c8bf62cbb378",
+  "diff_sha256": "d6669c6fe36ccc0b09ddc6b9f33bda71c069e662fb2c5960115331d531ad4ea1",
   "validation": [
     {
       "cmd": "grep -q \"mailbox\" AGENTS.md",
@@ -24,11 +25,11 @@
     },
     {
       "cmd": "make smoke",
-      "exit": 2
+      "exit": 0
     },
     {
       "cmd": "sh scripts/validate.sh",
-      "exit": 1
+      "exit": 0
     }
   ],
   "generated_by": "local"
