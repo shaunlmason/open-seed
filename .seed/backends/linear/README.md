@@ -37,7 +37,7 @@ P0–P3 → urgent / high / medium / low.
 
 - **Claim** assigns the caller and moves to In Progress; a held issue is
   contention (exit 2, `error: "claim_contention"`, top-level `holder`).
-  **The fence is a minted per-claim token** riding a `seed:tok:<hex>`
+  **The fence is a minted per-claim token** riding a `seed:tok:c-<hex>`
   label, validated on every fenced verb *in addition to* the assignee
   match — the API key alone cannot tell a reaped predecessor from the
   same actor's new claim; the rotating token can (D1 binding, exceeding
@@ -54,11 +54,12 @@ P0–P3 → urgent / high / medium / low.
 - **Both close and cancel run the emulated cascade**: dep edges ride
   `seed:bo:dep:<id>` labels; the terminal transition removes its entry
   everywhere and moves issues left blocked on nothing back to Todo,
-  returning the released ids in `cascaded`. Per-dependent release
-  failures **skip-and-report**: the dependency label is kept, the
-  dependent is listed in `cascade_skipped`, the rest of the cascade
-  continues, and recovery is an operator `unblock` once the substrate
-  allows the move.
+  returning the released ids in `cascaded`. Per-dependent failures —
+  the release move OR the label bookkeeping — **skip-and-report**: the
+  dependency entry is preserved (a failed post-release label write rolls
+  the state back to Blocked), the dependent is listed in
+  `cascade_skipped`, the rest of the cascade continues, and recovery is
+  an operator `unblock` once the substrate allows the moves.
 - **Envelope parity**: `get` carries the issue description as the card
   `body`; `comment`/`attach-evidence` return `comment_id`/`evidence_id`;
   `event-append` honors a `.task` reference inside the event JSON before
@@ -79,7 +80,11 @@ P0–P3 → urgent / high / medium / low.
   (no server arbitration). Post-claim verification narrows the window to
   the moment between the verifying read and the next fenced verb (a race
   lost after verification surfaces as exit 6 on that verb); the window
-  itself is declared, never hidden.
+  itself is declared, never hidden. A **torn interleave** (one rival
+  write landing without the other, leaving assignee and token from
+  different claimants) is reported as contention naming the torn tuple —
+  no one holds a usable claim; an operator release/reap recovers, and
+  the next claim rotates both fields.
 - **Label writes replace the whole array**: Linear's `issueUpdate` has no
   atomic add/remove label operations (unlike Jira's update ops), so every
   label write recomputes `labelIds` from a fresh read immediately before
@@ -107,7 +112,8 @@ P0–P3 → urgent / high / medium / low.
 `sh test.sh` runs the offline contract test against `testdata/fake-linear`
 (Python3 stdlib HTTP server modeling the GraphQL subset: workflow states by
 name, assignee, labels-on-demand, last-write-wins updates, plus fault hooks
-for the deterministic claim race, the refused assign, and the refused
+for the deterministic claim race, the torn token-only interleave, the
+refused assign, the refused dep-label removal, and the refused
 Blocked→Todo move). It covers every required verb, the body round-trip,
 token rotation on reclaim, the contention envelope with its holder, the
 compensated failed claim, the lost-race post-claim verification, plan

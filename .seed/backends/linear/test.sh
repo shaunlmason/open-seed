@@ -167,6 +167,41 @@ rc=0; out=$("$sb" claim "$rc_card" --actor agent-1 --json) || rc=$?
 echo "$out" | jq -e '.error == "claim_contention"' >/dev/null || die "lost race envelope: $out"
 [ "$("$sb" get "$rc_card" --json | jq -r .card.holder)" = "agent-2" ] || die "race winner not recorded"
 
+# A TORN interleave (rival token landed, rival assignee did not) is no
+# usable claim for anyone: the verifier must report contention naming the
+# torn tuple, never hand back a token the assignee cannot use.
+kill $srv 2>/dev/null || true; wait $srv 2>/dev/null || true
+portt=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
+FAKE_LINEAR_RACE_TOKEN_ONLY=1 python3 "$dir/testdata/fake-linear" "$portt" & srv=$!
+export LINEAR_API_URL="http://127.0.0.1:$portt"
+for i in $(seq 1 50); do curl -sf "$LINEAR_API_URL" >/dev/null 2>&1 && break; sleep 0.1; done
+tc=$("$sb" create --title "Torn race" --actor a --json | jq -r .task)
+"$sb" promote "$tc" --actor lead --json >/dev/null
+rc=0; out=$("$sb" claim "$tc" --actor agent-1 --json) || rc=$?
+[ "$rc" = "2" ] || die "torn race: exit $rc, want 2"
+echo "$out" | jq -e '.error == "claim_contention" and (.message | test("torn"))' >/dev/null || die "torn race envelope: $out"
+
+# A refused post-release label write rolls the cascade release back:
+# Blocked + recorded entry stays the truth, the dependent is reported in
+# cascade_skipped, never a Todo issue hidden from ready by a stale label.
+kill $srv 2>/dev/null || true; wait $srv 2>/dev/null || true
+portl=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
+FAKE_LINEAR_FAIL_DEP_RELABEL=1 python3 "$dir/testdata/fake-linear" "$portl" & srv=$!
+export LINEAR_API_URL="http://127.0.0.1:$portl"
+for i in $(seq 1 50); do curl -sf "$LINEAR_API_URL" >/dev/null 2>&1 && break; sleep 0.1; done
+lb=$("$sb" create --title "Relabel blocker" --actor a --json | jq -r .task)
+"$sb" promote "$lb" --actor lead --json >/dev/null
+ld=$("$sb" create --title "Relabel dependent" --actor a --blocked-by "$lb" --json | jq -r .task)
+"$sb" promote "$ld" --actor lead --json >/dev/null
+"$sb" block "$ld" --actor lead --blocked-on "dep:$lb" --json >/dev/null
+[ "$("$sb" get "$ld" --json | jq -r .state)" = "blocked" ] || die "relabel-cascade setup: dependent not blocked"
+tokl=$("$sb" claim "$lb" --actor agent-1 --json | jq -r .claim_token)
+"$sb" transition "$lb" --to review --actor agent-1 --token "$tokl" --json >/dev/null
+out=$("$sb" close "$lb" --actor lead --json); ok "$out" "close with refused cascade relabel"
+echo "$out" | jq -e --arg d "$ld" '.cascade_skipped | index($d)' >/dev/null || die "relabel-skipped dependent not reported"
+[ "$("$sb" get "$ld" --json | jq -r .state)" = "blocked" ] || die "failed relabel left the dependent released (state not rolled back)"
+[ "$("$sb" get "$ld" --json | jq -r '.card.blocked_on[0]')" = "dep:$lb" ] || die "failed relabel dropped the dependency entry"
+
 # A failed claim is compensated: the assign+move refusal rolls the minted
 # token back and the issue is left unchanged — unheld, still claimable.
 kill $srv 2>/dev/null || true; wait $srv 2>/dev/null || true
