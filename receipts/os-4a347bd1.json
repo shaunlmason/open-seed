@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "task": "os-4a347bd1",
+  "merge_base": "84411bbe0b8058ae853089f9b9a3d838d06abbec",
+  "head": "b23844c0df0c3da7f2b5f80eadb688d30bd02d46",
+  "plan_path": "plans/os-4a347bd1.md",
+  "plan_sha256": "aa9128bd3e9f18c1d73b017764b8b995acc7da137d6c5708a10c89bb1e2000fa",
+  "diff_files": [
+    ".seed/engine.lock",
+    "docs/handbook.md"
+  ],
+  "diff_sha256": "c53fd19bd775df663add8cc48e4b5fa379f318d878ad09069cf4a5de3257c8e4",
+  "validation": [
+    {
+      "cmd": "scripts/seed version",
+      "exit": 0
+    },
+    {
+      "cmd": "SEED_UPGRADE_BASE_URL=http://127.0.0.1:9 scripts/seed upgrade --check; test $? -eq 7",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"seed upgrade\" docs/handbook.md",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
