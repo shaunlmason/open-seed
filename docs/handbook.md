@@ -198,6 +198,35 @@ that diff, never at install time. Treat upstream skill text like any
 other third-party code contribution: the lock pins what you reviewed,
 and `--frozen` guarantees CI runs only that.
 
+**Mail and handoff packets** (§7.2, inspirations/08 as amended by its
+erratum): inter-agent messages are one never-rewritten file per message
+at `mail/<recipient>/<msg-id>.yaml` on the seed-state ref — trust =
+push access, like every coordination artifact; no daemon. Verbs:
+
+```sh
+scripts/seed mail send --actor you --to agent-2 --type request --text "..." [--task id]
+scripts/seed mail read --actor you --unread
+scripts/seed mail ack  --actor you --id msg-...
+scripts/seed mail nudge agent-2     # tmux-only, content-free "you have mail"
+```
+
+Direct ack is a file MOVE into `mail/<you>/acked/`; a `_all` broadcast
+is COPIED there instead (the shared file stays for other readers) and
+maintenance prunes acked history to the newest 30 per recipient.
+Mailboxes are read at natural checkpoints, not watched: the loop
+injects unread mail into the harness prompt **fenced as untrusted
+data** and acks it only after the iteration succeeds; AGENTS.md carries
+the same checkpoint rule for interactive agents. `seed maintain
+report` surfaces unread counts per actor.
+
+`seed handoff generate <task> [--write]` renders the bounded (≤8KB)
+mechanical continuation packet — card goal/criteria, claim block,
+evidence trail, branch/HEAD/dirty-file anchors from git — at
+`handoff/<task-id>.md` on the state ref. Worker release/park writes one
+automatically with real workspace anchors; a maintenance **reap** runs
+in its own checkout, so reap-written packets mark the anchors
+unavailable instead of recording the reaper's git state.
+
 **Worktree tool fidelity** (§131 "the rest v2"): `.seed/hooks/` is the
 runner-agnostic lifecycle contract, and `.seed/hooks/shims/<tool>/` ships
 checked-in fragments for the surveyed external tools. Support is declared,
