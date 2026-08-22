@@ -112,3 +112,4 @@
 {"actor":"shaunlmason","data":{"kind":"comment"},"task":"os-6f3104db","ts":"2026-08-22T19:52:28Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"title":"Builtin backends: emit comment_id/evidence_id per verbs.json (port conformance)"},"task":"os-61967950","ts":"2026-08-22T19:52:42Z","verb":"create"}
 {"actor":"claude-session","data":{"lease_expires":"2026-08-22T22:01:50Z"},"task":"os-52b9aed0","ts":"2026-08-22T20:01:50Z","verb":"claim"}
+{"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-52b9aed0","ts":"2026-08-22T20:18:27Z","verb":"transition"}
