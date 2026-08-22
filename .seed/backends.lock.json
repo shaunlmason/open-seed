@@ -7,5 +7,9 @@
   "beads": {
     "source": "in-template",
     "note": "Ships in-template; PR + owner review is the pin (control surface). Externally installed copies must carry a sha256 (seed backend verify)."
+  },
+  "paperclip": {
+    "source": "in-template",
+    "note": "Ships in-template; PR + owner review is the pin (control surface). Server-backed: requires_env credentials, no offline."
   }
 }

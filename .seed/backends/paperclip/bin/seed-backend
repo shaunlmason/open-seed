@@ -1,0 +1,290 @@
+#!/bin/sh
+# paperclip backend plugin: the port over Paperclip's REST API.
+# Invoked by the engine as: seed-backend <verb> [id] [flags] --json
+# State mapping (plan os-e2b3a1f9): backlog=backlog, ready=todo,
+# in_progress=in_progress, review=in_review, blocked=blocked, done=done,
+# cancelled=cancelled — Paperclip's seven states are the port's, near
+# verbatim; the server's assertTransition() refusals map to exit 3.
+# Seed bookkeeping (minted claim token, blocked_on entries, implementer of
+# record, reviewer lockout) rides issue `metadata` (free JSON).
+set -u
+for c in curl jq; do
+  command -v "$c" >/dev/null 2>&1 || { printf '{"ok":false,"schema_version":"1.0","error":"backend_unavailable","message":"%s not installed"}\n' "$c"; exit 5; }
+done
+: "${PAPERCLIP_API_URL:?}" "${PAPERCLIP_API_KEY:?}" "${PAPERCLIP_COMPANY_ID:?}"
+base="$PAPERCLIP_API_URL/api/companies/$PAPERCLIP_COMPANY_ID"
+
+verb=${1:-}; [ $# -gt 0 ] && shift
+id=""
+case "${1:-}" in
+  ""|-*) ;;
+  *) id=$1; shift ;;
+esac
+
+title="" body="" priority="P2" squad="" actor="" token="" to="" resolution="" kind="" ref="" event="" pr="" blocked_on_arg="" blocked_by="" parent=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --title) title=$2; shift 2 ;;
+    --body) body=$2; shift 2 ;;
+    --priority) priority=$2; shift 2 ;;
+    --squad) squad=$2; shift 2 ;;
+    --actor) actor=$2; shift 2 ;;
+    --token) token=$2; shift 2 ;;
+    --to) to=$2; shift 2 ;;
+    --resolution) resolution=$2; shift 2 ;;
+    --kind) kind=$2; shift 2 ;;
+    --ref) ref=$2; shift 2 ;;
+    --event) event=$2; shift 2 ;;
+    --pr) pr=$2; shift 2 ;;
+    --parent) parent=$2; shift 2 ;;
+    --blocked-on) blocked_on_arg=$2; shift 2 ;;
+    --blocked-by) blocked_by="$blocked_by $2"; shift 2 ;;
+    --lease) shift 2 ;;
+    --state) state_filter=$2; shift 2 ;;
+    --json|--no-pr) shift ;;
+    --*) [ $# -ge 2 ] && case "$2" in -*) shift ;; *) shift 2 ;; esac || shift ;;
+    *) shift ;;
+  esac
+done
+
+fail() {
+  printf '{"ok":false,"schema_version":"1.0","verb":"%s","error":"%s","message":"%s"}\n' "$verb" "$2" "${3:-}"
+  exit "$1"
+}
+envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
+
+# api METHOD PATH [JSON_BODY] — prints the body. The HTTP code is persisted
+# to a temp file because callers invoke api inside command substitutions
+# (subshells), where a plain variable would be lost; rc() reads it back.
+SEED_PC_CODE=$(mktemp)
+trap 'rm -f "$SEED_PC_CODE"' EXIT
+api() {
+  m=$1; p=$2; d=${3:-}
+  out=$(curl -sS -w '\n%{http_code}' -X "$m" -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+    -H "Content-Type: application/json" ${d:+-d "$d"} "$base$p" 2>/dev/null) \
+    || { printf '000' > "$SEED_PC_CODE"; return 1; }
+  printf '%s' "$out" | tail -1 > "$SEED_PC_CODE"
+  printf '%s' "$out" | sed '$d'
+}
+rc() { cat "$SEED_PC_CODE"; }
+
+port_state() { # paperclip state → port state
+  case "$1" in todo) echo ready ;; in_review) echo review ;; *) echo "$1" ;; esac
+}
+pc_state() { # port state → paperclip state
+  case "$1" in ready) echo todo ;; review) echo in_review ;; *) echo "$1" ;; esac
+}
+prio_pc() { case "$1" in P0) echo critical;; P1) echo high;; P2) echo medium;; P3) echo low;; *) echo medium;; esac; }
+
+get_issue() { api GET "/issues/$1"; }
+
+# patch_meta ID JQ_META_TRANSFORM — read-modify-write the metadata blob.
+patch_meta() {
+  cur=$(get_issue "$1"); [ "$(rc)" = "200" ] || return 1
+  newmeta=$(printf '%s' "$cur" | jq -c "(.metadata // {}) | $2")
+  api PATCH "/issues/$1" "{\"metadata\": $newmeta}" >/dev/null
+  [ "$(rc)" = "200" ]
+}
+
+# The fence (D1 binding): a minted per-claim token stored in metadata,
+# validated in addition to the server's checkout-ownership enforcement — the
+# bearer key alone cannot distinguish a reaped predecessor from the same
+# actor's new claim; the rotating token can.
+require_fence() {
+  cur=$(get_issue "$1"); [ "$(rc)" = "200" ] || fail 4 not_found
+  stored=$(printf '%s' "$cur" | jq -r '.metadata.seedToken // ""')
+  holder=$(printf '%s' "$cur" | jq -r '.checkoutAgent // ""')
+  [ -n "$stored" ] || fail 6 fenced_out "no live claim token"
+  [ "$token" = "$stored" ] || fail 6 fenced_out "token does not match current claim"
+  [ -n "$holder" ] && [ "$actor" != "$holder" ] && fail 6 fenced_out "actor is not the checkout owner"
+  true
+}
+
+mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1 /dev/urandom | tr -d ' \n'; }
+
+case "$verb" in
+  create)
+    [ -n "$title" ] || fail 3 invalid_transition "title required"
+    goal=${parent:-${PAPERCLIP_DEFAULT_GOAL_ID:-}}
+    [ -n "$goal" ] || fail 5 backend_unavailable "goal ancestry required: pass --parent or set PAPERCLIP_DEFAULT_GOAL_ID (Paperclip mandates ancestry)"
+    bo=$(for d in $blocked_by; do printf '"dep:%s",' "$d"; done)
+    payload=$(jq -nc --arg t "$title" --arg d "$body" --arg p "$(prio_pc "$priority")" --arg g "$goal" \
+      "{title: \$t, description: \$d, priority: \$p, state: \"backlog\", goalId: \$g, metadata: {blockedOn: [${bo%,}]}}")
+    out=$(api POST "/issues" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "create HTTP $(rc)"
+    new=$(printf '%s' "$out" | jq -r '.id // empty'); [ -n "$new" ] || fail 10 version_mismatch "no id in create response"
+    envelope ",\"task\":\"$new\",\"state\":\"backlog\""
+    ;;
+  ready)
+    out=$(api GET "/issues?state=todo"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable "list HTTP $(rc)"
+    # Claimable = todo, no checkout lock, unassigned or assigned to the
+    # caller (assignment is routing; checkout is the claim), not rejected,
+    # no open blocked_on entries.
+    tasks=$(printf '%s' "$out" | jq -c --arg a "$actor" '[(. // []) | .[]
+      | select((.checkoutAgent // "") == "")
+      | select(((.assignee // "") == "") or (.assignee == $a))
+      | select(((.metadata.rejected // []) | index($a)) | not)
+      | select(((.metadata.blockedOn // []) | length) == 0)
+      | {task: .id, title: .title, priority: .priority, created_at: (.createdAt // "")}]')
+    envelope ",\"tasks\":$tasks"
+    ;;
+  get)
+    out=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
+    st=$(port_state "$(printf '%s' "$out" | jq -r .state)")
+    card=$(printf '%s' "$out" | jq -c --arg st "$st" '{id: .id, title: .title, state: $st, priority: .priority, author: (.metadata.seedAuthor // ""), body: (.description // ""), blocked_on: (.metadata.blockedOn // []), rejected_authors: (.metadata.rejected // [])}')
+    envelope ",\"task\":\"$id\",\"state\":\"$st\",\"card\":$card"
+    ;;
+  list)
+    out=$(api GET "/issues"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable
+    tasks=$(printf '%s' "$out" | jq -c '[(. // []) | .[] | {task: .id, title: .title, state: .state, priority: .priority}]')
+    envelope ",\"tasks\":$tasks"
+    ;;
+  claim)
+    cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
+    if printf '%s' "$cur" | jq -e --arg a "$actor" '(.metadata.rejected // []) | index($a)' >/dev/null; then
+      printf '{"ok":false,"schema_version":"1.0","error":"rejected_author"}\n'; exit 2
+    fi
+    out=$(api POST "/issues/$id/checkout" "{\"agent\": \"$actor\"}")
+    if [ "$(rc)" = "409" ]; then
+      holder=$(printf '%s' "$out" | jq -r '.holder // ""')
+      printf '{"ok":false,"schema_version":"1.0","error":"claim_contention","holder":"%s"}\n' "$holder"; exit 2
+    fi
+    [ "$(rc)" = "200" ] || fail 5 backend_unavailable "checkout HTTP $(rc)"
+    new_token="c-$(mint)"
+    patch_meta "$id" ". + {seedToken: \"$new_token\"}" || fail 5 backend_unavailable "token store failed"
+    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"actor\":\"$actor\",\"claim_token\":\"$new_token\""
+    ;;
+  release)
+    require_fence "$id"
+    api POST "/issues/$id/release" "{}" >/dev/null; [ "$(rc)" = "200" ] || fail 5 backend_unavailable
+    api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
+    patch_meta "$id" 'del(.seedToken)'
+    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    ;;
+  transition)
+    case "$to" in
+      review)
+        require_fence "$id"
+        patch_meta "$id" ". + {seedAuthor: \"$actor\"} | del(.seedToken)"
+        api POST "/issues/$id/release" "{}" >/dev/null
+        api PATCH "/issues/$id" '{"state":"in_review"}' >/dev/null
+        [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+        ;;
+      ready)
+        api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
+        [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+        ;;
+      blocked)
+        require_fence "$id"
+        entry=${blocked_on_arg:-manual:$actor}
+        patch_meta "$id" ".blockedOn = ((.blockedOn // []) + [\"$entry\"] | unique) | del(.seedToken)"
+        api POST "/issues/$id/release" "{}" >/dev/null
+        api PATCH "/issues/$id" '{"state":"blocked"}' >/dev/null
+        [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+        ;;
+      *) fail 3 invalid_transition "unsupported --to $to" ;;
+    esac
+    envelope ",\"task\":\"$id\",\"state\":\"$to\",\"transitioned\":true"
+    ;;
+  promote|deprioritize|unblock|plan-unblock|block)
+    case "$verb" in
+      promote) api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null ;;
+      deprioritize) api PATCH "/issues/$id" '{"state":"backlog"}' >/dev/null ;;
+      block)
+        entry=${blocked_on_arg:-manual:$actor}
+        patch_meta "$id" ".blockedOn = ((.blockedOn // []) + [\"$entry\"] | unique)"
+        api PATCH "/issues/$id" '{"state":"blocked"}' >/dev/null ;;
+      unblock|plan-unblock)
+        [ "$verb" = "plan-unblock" ] && entry="plan:$pr" || entry="manual:$actor"
+        cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
+        printf '%s' "$cur" | jq -e --arg e "$entry" '(.metadata.blockedOn // []) | index($e)' >/dev/null \
+          || fail 3 invalid_transition "no $entry entry"
+        patch_meta "$id" ".blockedOn = ((.blockedOn // []) - [\"$entry\"])"
+        left=$(get_issue "$id" | jq -r '(.metadata.blockedOn // []) | length')
+        if [ "$left" = "0" ]; then
+          api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
+        else
+          envelope ",\"task\":\"$id\",\"state\":\"blocked\",\"transitioned\":false"; exit 0
+        fi ;;
+    esac
+    [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+    case "$verb" in
+      deprioritize) st=backlog ;;
+      block) st=blocked ;;
+      *) st=ready ;;
+    esac
+    envelope ",\"task\":\"$id\",\"state\":\"$st\",\"transitioned\":true"
+    ;;
+  accept|close)
+    api PATCH "/issues/$id" '{"state":"done"}' >/dev/null
+    case "$(rc)" in
+      200) ;;
+      404) fail 4 not_found ;;
+      *) fail 3 invalid_transition "server assertTransition refused (HTTP $(rc))" ;;
+    esac
+    # Cascade over seed dep entries: release dependents whose set empties.
+    cascaded=""
+    all=$(api GET "/issues")
+    for other in $(printf '%s' "$all" | jq -r --arg dep "dep:$id" '(. // [])[] | select((.metadata.blockedOn // []) | index($dep)) | .id'); do
+      patch_meta "$other" ".blockedOn = ((.blockedOn // []) - [\"dep:$id\"])"
+      ost=$(get_issue "$other" | jq -r .state)
+      left=$(get_issue "$other" | jq -r '(.metadata.blockedOn // []) | length')
+      if [ "$ost" = "blocked" ] && [ "$left" = "0" ]; then
+        api PATCH "/issues/$other" '{"state":"todo"}' >/dev/null
+        cascaded="$cascaded\"$other\","
+      fi
+    done
+    envelope ",\"task\":\"$id\",\"state\":\"done\",\"transitioned\":true,\"cascaded\":[${cascaded%,}]"
+    ;;
+  reject)
+    cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
+    [ "$(printf '%s' "$cur" | jq -r .state)" = "in_review" ] || fail 3 invalid_transition "reject is review→ready only"
+    author=$(printf '%s' "$cur" | jq -r '.metadata.seedAuthor // ""')
+    [ -n "$author" ] && patch_meta "$id" ".rejected = ((.rejected // []) + [\"$author\"] | unique) | del(.seedAuthor)"
+    api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
+    [ "$(rc)" = "200" ] || fail 3 invalid_transition
+    api POST "/issues/$id/comments" "{\"body\": \"rejected by $actor: ${resolution:-}\"}" >/dev/null
+    envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true"
+    ;;
+  cancel)
+    api PATCH "/issues/$id" '{"state":"cancelled"}' >/dev/null
+    case "$(rc)" in
+      200) ;;
+      404) fail 4 not_found ;;
+      *) fail 3 invalid_transition "server assertTransition refused (HTTP $(rc))" ;;
+    esac
+    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"transitioned\":true"
+    ;;
+  reinstate)
+    api PATCH "/issues/$id" '{"state":"backlog"}' >/dev/null
+    [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+    envelope ",\"task\":\"$id\",\"state\":\"backlog\",\"transitioned\":true"
+    ;;
+  comment|attach-evidence)
+    cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
+    [ -n "$(printf '%s' "$cur" | jq -r '.metadata.seedToken // ""')" ] && require_fence "$id"
+    text=$body; [ "$verb" = "attach-evidence" ] && text="evidence ($kind): $ref"
+    api POST "/issues/$id/comments" "$(jq -nc --arg b "$text" '{body: $b}')" >/dev/null
+    [ "$(rc)" = "201" ] || fail 5 backend_unavailable "comment HTTP $(rc)"
+    envelope ",\"task\":\"$id\""
+    ;;
+  lease-renew)
+    require_fence "$id"
+    # Liveness is Paperclip's watchdogs' job (declared variance); a comment
+    # is unnecessary — validate the fence and succeed.
+    envelope ",\"task\":\"$id\",\"note\":\"leases ride issueWatchdogs (declared)\""
+    ;;
+  event-append)
+    payload=${event:-$body}
+    target=$id
+    [ -z "$target" ] && [ -n "$event" ] && target=$(printf '%s' "$event" | jq -r '.task // empty' 2>/dev/null)
+    if [ -n "$target" ]; then
+      api POST "/issues/$target/comments" "$(jq -nc --arg b "event: $payload" '{body: $b}')" >/dev/null
+      [ "$(rc)" = "201" ] || fail 4 not_found
+    else
+      api POST "/events" "$(jq -nc --arg b "$payload" '{event: $b}')" >/dev/null
+      [ "$(rc)" = "201" ] || fail 5 backend_unavailable "activity-log HTTP $(rc)"
+    fi
+    envelope ",\"note\":\"audit rides Paperclip's immutable activity log\""
+    ;;
+  *) fail 64 usage "unknown verb $verb" ;;
+esac
