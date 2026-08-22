@@ -115,3 +115,4 @@
 {"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-52b9aed0","ts":"2026-08-22T20:18:27Z","verb":"transition"}
 {"actor":"claude-session","data":{"kind":"pr"},"task":"os-52b9aed0","ts":"2026-08-22T20:18:29Z","verb":"attach-evidence"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-23494e11","ts":"2026-08-22T20:28:27Z","verb":"close"}
+{"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-69bd5a64","ts":"2026-08-22T20:28:30Z","verb":"close"}
