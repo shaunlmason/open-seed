@@ -9,7 +9,7 @@ on:
     types: [opened, synchronize, ready_for_review]
 
 permissions:
-  contents: read
+  contents: write   # seed task reject on REQUEST_CHANGES pushes seed-state
   pull-requests: write
 
 jobs:

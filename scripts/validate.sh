@@ -111,7 +111,13 @@ if command -v jq >/dev/null 2>&1; then
   out=$(ev state:done | DISPATCH_SENDER_ASSOC=OWNER sh "$route") || { say "FAIL: dispatch-route mirror edit errored"; fail=1; }
   echo "$out" | grep -q 'REQUEST' || { say "FAIL: dispatch-route mirror edit not treated as request"; fail=1; }
   echo "$out" | grep -q '^scripts/seed task' && { say "FAIL: dispatch-route mirror edit produced a state write"; fail=1; }
-  say "dispatch-route: OK — authorized mapping, refusal, unknown-cmd ignore, mirror-edit-as-request"
+  rc=0; out=$(ev cmd:close | DISPATCH_SENDER_ASSOC=OWNER sh "$route") || rc=$?
+  { [ "$rc" = 0 ] && echo "$out" | grep -q 'not label-routable' && ! echo "$out" | grep -q '^scripts/seed task'; } \
+    || { say "FAIL: dispatch-route cmd:close must be refused with a comment, never routed (rc=$rc out=$out)"; fail=1; }
+  evil='{"action":"labeled","label":{"name":"cmd:promote"},"sender":{"login":"alice"},"issue":{"number":7,"title":"x","labels":[{"name":"seed:os-12; rm -rf /"}]}}'
+  rc=0; out=$(printf '%s' "$evil" | DISPATCH_SENDER_ASSOC=OWNER sh "$route" 2>/dev/null) || rc=$?
+  { [ "$rc" = 3 ] && [ -z "$out" ]; } || { say "FAIL: dispatch-route crafted card id not refused (rc=$rc out=$out)"; fail=1; }
+  say "dispatch-route: OK — authorized mapping, refusal, unknown-cmd ignore, mirror-edit-as-request, close-not-routable, injection refused"
 
   # Reviewer-lane conformance (D4.5): an app-identity approval satisfies
   # reviewer != implementer; a self-approval is refused; none = waiting.

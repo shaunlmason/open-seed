@@ -44,6 +44,19 @@ card=$(jget '(.issue.labels // []) | map(.name) | map(select(startswith("seed:os
 if [ -z "$card" ]; then
   card=$(jget '.issue.title // ""' | grep -oE 'os-[0-9a-f]{4,}' | head -1 || true)
 fi
+# Every field later interpolated into a printed command is STRICTLY
+# validated — the workflow executes router output, so issue-derived text
+# (a crafted seed:os-* label included) must never smuggle shell
+# metacharacters.
+if [ -n "$card" ] && ! printf '%s' "$card" | grep -qE '^os-[0-9a-f]{4,16}$'; then
+  echo "seed-dispatch-route: refused: card id fails validation" >&2
+  exit 3
+fi
+if [ -n "$issue" ] && ! printf '%s' "$issue" | grep -qE '^[0-9]+$'; then
+  echo "seed-dispatch-route: refused: non-numeric issue number" >&2
+  exit 3
+fi
+printf '%s' "$sender" | grep -qE '^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$' || { echo "seed-dispatch-route: refused: sender login fails validation" >&2; exit 3; }
 
 sticky='<!-- seed-dispatch -->'
 
@@ -69,7 +82,16 @@ esac
 
 verb=${label#cmd:}
 case "$verb" in
-  promote|deprioritize|close|cancel|reinstate|reject) ;;
+  promote|deprioritize|cancel|reinstate|reject) ;;
+  close)
+    # close is deliberately NOT routable: review→done must follow the
+    # approve → merge → close ordering (merged-PR maintenance path or
+    # the server-attributed no-PR workflow), or the cascade could
+    # unblock dependents on work absent from the default branch.
+    printf 'gh issue comment %s --body "%s \`cmd:close\` is not label-routable: closing follows the merged-PR path (maintenance) or the no-PR workflow_dispatch (D7). Label removed."\n' "$issue" "$sticky"
+    printf 'gh issue edit %s --remove-label cmd:close\n' "$issue"
+    exit 0
+    ;;
   *) exit 0 ;; # unknown command: ignored, the label stays for a human to see
 esac
 
