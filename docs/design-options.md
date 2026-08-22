@@ -151,7 +151,15 @@ Closest prior art, per the research: **tutti** (committed org-code declaring rol
 | **Mission/OKR alignment** | Goal ancestry on every task card (`parent`/goal links tracing to the squad mission) — agents always see the "why" | Paperclip's mandatory goal ancestry; beads epics |
 | **Autonomy within alignment** | Squads own *how* (agents choose implementation; squad picks its workflows); tribe owns *what* (missions, guardrails, quality bar via CI + evidence receipts) | kodo's "Tell them WHAT, never HOW"; Fusion automation levels |
 
-The squad model's documented failure modes also have direct mitigations in the substrate: **cross-squad dependencies** (its classic weakness) become typed `blocks`/`waits-for` edges between task cards plus mailbox messages, visible in `ready` queries rather than discovered in standups; **alignment drift** is countered by goal ancestry + tribe-level guardrails validated in CI; **chapter erosion** is countered by making role definitions reviewable files with owners rather than tribal knowledge.
+The squad model's documented failure modes (per the [ideaplan case study](https://www.ideaplan.io/case-studies/spotify-squad-model): "the model as described in the whitepaper never fully existed in practice" — even Spotify moved away from it) map to mitigations that are *mechanical* in an agent org where they were only aspirational in a human one:
+
+- **Fragmentation** (excessive autonomy → technical inconsistency across codebases): tribe-level guardrails, lint/test config, and chapter role definitions are enforced by CI and hooks — agents cannot drift on standards the way human squads did, because the standards are executable.
+- **Chapter-lead dysfunction** (line-management duties consuming the lead's IC time): the chapter lead here is just a CODEOWNERS entry on a role-definition file — reviewing changes to the craft's canonical definition, with zero people-management burden.
+- **Tribal silos / resistance to cross-tribe work**: cross-squad dependencies become typed `blocks`/`waits-for` edges between task cards plus mailbox messages, visible in `ready` queries rather than discovered in standups; Spotify's "internal open source" practice maps directly — any squad's agents may PR into another squad's scope, subject to that squad's review gate.
+- **Guild decline** (voluntary participation failing at scale): the guild is a versioned skills library with a manifest/lockfile — it doesn't depend on volunteer energy to stay alive.
+- **Alignment** ("each musician improvises, but they are all playing the same song in the same key"): squad missions connect to repo-level objectives via goal ancestry on every task card, validated in CI.
+
+The article's real lesson — adopt the principles (aligned autonomy, small mission-owning teams, horizontal craft standards), not the org chart — is exactly the posture for the template: team files are conventions a project tunes, not a mandated hierarchy. Tribe sizing concerns (Dunbar's number) translate to a practical cap on squads-per-repo before splitting into an org overlay.
 
 This also resolves the topology question (D2) more concretely: the paved road is *squad-shaped* — a small named team with a mission and a lead role — rather than a single anonymous loop, with the loop remaining the degenerate one-member squad.
 
