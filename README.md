@@ -31,3 +31,4 @@ was completed to ground the design.
   6. [CI-native automation (gh-aw, aeon, sortie, contrabass, claude-code-action)](docs/research/inspirations/06-ci-native-automation.md)
   7. [Lifecycle contracts (superset, octomux, vibe-tree, amux, dmux, agent-deck, tmux-ide)](docs/research/inspirations/07-lifecycle-contracts.md)
   8. [Coordination mechanics (swarm-protocol, wit, hcom, shogun, CCB, claudexor)](docs/research/inspirations/08-coordination-mechanics.md)
+  9. [Harness CLIs: headless surfaces, adapter contract, permission-tier fidelity](docs/research/inspirations/09-harnesses.md)
