@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "task": "os-67a1bf14",
+  "merge_base": "5860778d2b87b1778737f613deebdddd63394c02",
+  "head": "38e5718f55caefe7c1062db7a78f2a69886de673",
+  "plan_path": "plans/os-67a1bf14.md",
+  "plan_sha256": "4a2a3f5feab1789a38c8b853be89acb73f03b592eb1227bfd360817fd60e218f",
+  "diff_files": [
+    ".mcp.json",
+    ".seed/engine.lock",
+    "docs/handbook.md",
+    "scripts/smoke-loop.sh"
+  ],
+  "diff_sha256": "e86120df071fde0d602eb6c052c82d81c6b421602eedebf2b1f50fd507f5e32f",
+  "validation": [
+    {
+      "cmd": "grep -q \"seed mcp serve\" .mcp.json",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -qi \"mcp\" docs/handbook.md",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
