@@ -34,3 +34,4 @@
 {"actor":"claude-session","data":{"kind":"pr"},"task":"os-50995779","ts":"2026-08-22T07:38:26Z","verb":"attach-evidence"}
 {"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-50995779","ts":"2026-08-22T07:38:28Z","verb":"transition"}
 {"actor":"claude-session","data":{"kind":"log"},"task":"os-72722779","ts":"2026-08-22T08:30:03Z","verb":"attach-evidence"}
+{"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-72722779","ts":"2026-08-22T08:30:05Z","verb":"transition"}
