@@ -11,7 +11,7 @@ requires_env = ["PAPERCLIP_API_URL", "PAPERCLIP_API_KEY", "PAPERCLIP_COMPANY_ID"
 
 [capabilities]
 required = true
-optional = ["ancestry", "budget"]
+optional = ["lease-renew", "ancestry", "budget"]
 atomic_claim = "native"
 offline = "none"
 budget = "native"

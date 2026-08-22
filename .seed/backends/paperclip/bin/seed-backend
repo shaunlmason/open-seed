@@ -75,6 +75,12 @@ pc_state() { # port state → paperclip state
   case "$1" in ready) echo todo ;; review) echo in_review ;; *) echo "$1" ;; esac
 }
 prio_pc() { case "$1" in P0) echo critical;; P1) echo high;; P2) echo medium;; P3) echo low;; *) echo medium;; esac; }
+# jq prelude: normalize Paperclip vocabulary back to the port's on the way
+# out (priorities P0-P3, states) — callers like loop.sh sort and act on the
+# port vocabulary, never the backend's.
+PJQ='def pport: {"critical":"P0","high":"P1","medium":"P2","low":"P3"}[.] // "P2";
+     def prank: {"P0":0,"P1":1,"P2":2,"P3":3}[.] // 2;
+     def pstate: {"todo":"ready","in_review":"review"}[.] // .;'
 
 get_issue() { api GET "/issues/$1"; }
 
@@ -102,14 +108,40 @@ require_fence() {
 
 mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1 /dev/urandom | tr -d ' \n'; }
 
+# cascade_deps ID — every nonterminal→done AND nonterminal→cancelled edge
+# carries the cascade effect (transition table): remove dep:ID from all
+# dependents, releasing those left blocked on nothing. Sets $cascaded.
+cascade_deps() {
+  cascaded=""
+  all=$(api GET "/issues")
+  for other in $(printf '%s' "$all" | jq -r --arg dep "dep:$1" '(. // [])[] | select((.metadata.blockedOn // []) | index($dep)) | .id'); do
+    patch_meta "$other" ".blockedOn = ((.blockedOn // []) - [\"dep:$1\"])"
+    ost=$(get_issue "$other" | jq -r .state)
+    left=$(get_issue "$other" | jq -r '(.metadata.blockedOn // []) | length')
+    if [ "$ost" = "blocked" ] && [ "$left" = "0" ]; then
+      api PATCH "/issues/$other" '{"state":"todo"}' >/dev/null
+      cascaded="$cascaded\"$other\","
+    fi
+  done
+}
+
 case "$verb" in
   create)
     [ -n "$title" ] || fail 3 invalid_transition "title required"
-    goal=${parent:-${PAPERCLIP_DEFAULT_GOAL_ID:-}}
+    # --parent is a TASK id (port semantics), never a goal id: resolve the
+    # parent issue, inherit its goal for the mandatory ancestry, and keep
+    # the parent relationship itself on the new issue.
+    goal=""
+    if [ -n "$parent" ]; then
+      pcur=$(get_issue "$parent"); [ "$(rc)" = "200" ] || fail 4 not_found "parent task $parent not found"
+      goal=$(printf '%s' "$pcur" | jq -r '.goalId // ""')
+    fi
+    [ -n "$goal" ] || goal=${PAPERCLIP_DEFAULT_GOAL_ID:-}
     [ -n "$goal" ] || fail 5 backend_unavailable "goal ancestry required: pass --parent or set PAPERCLIP_DEFAULT_GOAL_ID (Paperclip mandates ancestry)"
     bo=$(for d in $blocked_by; do printf '"dep:%s",' "$d"; done)
-    payload=$(jq -nc --arg t "$title" --arg d "$body" --arg p "$(prio_pc "$priority")" --arg g "$goal" \
-      "{title: \$t, description: \$d, priority: \$p, state: \"backlog\", goalId: \$g, metadata: {blockedOn: [${bo%,}]}}")
+    payload=$(jq -nc --arg t "$title" --arg d "$body" --arg p "$(prio_pc "$priority")" --arg g "$goal" --arg pp "$parent" \
+      "{title: \$t, description: \$d, priority: \$p, state: \"backlog\", goalId: \$g, metadata: {blockedOn: [${bo%,}]}}
+       + (if \$pp != \"\" then {parentId: \$pp} else {} end)")
     out=$(api POST "/issues" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "create HTTP $(rc)"
     new=$(printf '%s' "$out" | jq -r '.id // empty'); [ -n "$new" ] || fail 10 version_mismatch "no id in create response"
     envelope ",\"task\":\"$new\",\"state\":\"backlog\""
@@ -119,29 +151,40 @@ case "$verb" in
     # Claimable = todo, no checkout lock, unassigned or assigned to the
     # caller (assignment is routing; checkout is the claim), not rejected,
     # no open blocked_on entries.
-    tasks=$(printf '%s' "$out" | jq -c --arg a "$actor" '[(. // []) | .[]
+    tasks=$(printf '%s' "$out" | jq -c --arg a "$actor" "$PJQ"'[(. // []) | .[]
       | select((.checkoutAgent // "") == "")
       | select(((.assignee // "") == "") or (.assignee == $a))
       | select(((.metadata.rejected // []) | index($a)) | not)
       | select(((.metadata.blockedOn // []) | length) == 0)
-      | {task: .id, title: .title, priority: .priority, created_at: (.createdAt // "")}]')
+      | {task: .id, title: .title, priority: (.priority | pport), created_at: (.createdAt // "")}]
+      | sort_by((.priority | prank), .created_at)')
     envelope ",\"tasks\":$tasks"
     ;;
   get)
     out=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
     st=$(port_state "$(printf '%s' "$out" | jq -r .state)")
-    card=$(printf '%s' "$out" | jq -c --arg st "$st" '{id: .id, title: .title, state: $st, priority: .priority, author: (.metadata.seedAuthor // ""), body: (.description // ""), blocked_on: (.metadata.blockedOn // []), rejected_authors: (.metadata.rejected // [])}')
+    card=$(printf '%s' "$out" | jq -c --arg st "$st" "$PJQ"'{id: .id, title: .title, state: $st, priority: (.priority | pport), author: (.metadata.seedAuthor // ""), body: (.description // ""), blocked_on: (.metadata.blockedOn // []), rejected_authors: (.metadata.rejected // [])}')
     envelope ",\"task\":\"$id\",\"state\":\"$st\",\"card\":$card"
     ;;
   list)
     out=$(api GET "/issues"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable
-    tasks=$(printf '%s' "$out" | jq -c '[(. // []) | .[] | {task: .id, title: .title, state: .state, priority: .priority}]')
+    tasks=$(printf '%s' "$out" | jq -c "$PJQ"'[(. // []) | .[] | {task: .id, title: .title, state: (.state | pstate), priority: (.priority | pport)}]')
     envelope ",\"tasks\":$tasks"
     ;;
   claim)
     cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
     if printf '%s' "$cur" | jq -e --arg a "$actor" '(.metadata.rejected // []) | index($a)' >/dev/null; then
       printf '{"ok":false,"schema_version":"1.0","error":"rejected_author"}\n'; exit 2
+    fi
+    # A held checkout is contention even for the same actor: checkout +
+    # token mint must be one exclusive claim, or two same-actor processes
+    # both "succeed" and the second silently invalidates the first's fence.
+    # This pre-check is the fast path; the atomic arbiter is the server,
+    # whose checkout endpoint 409s on ANY held lock (same agent included —
+    # the contract the fake encodes; reconcile on API upgrades, see README).
+    holder=$(printf '%s' "$cur" | jq -r '.checkoutAgent // ""')
+    if [ -n "$holder" ]; then
+      printf '{"ok":false,"schema_version":"1.0","error":"claim_contention","holder":"%s"}\n' "$holder"; exit 2
     fi
     out=$(api POST "/issues/$id/checkout" "{\"agent\": \"$actor\"}")
     if [ "$(rc)" = "409" ]; then
@@ -156,18 +199,27 @@ case "$verb" in
   release)
     require_fence "$id"
     api POST "/issues/$id/release" "{}" >/dev/null; [ "$(rc)" = "200" ] || fail 5 backend_unavailable
+    # The state PATCH is checked BEFORE the token is cleared and success is
+    # emitted: a failed PATCH must surface, not be masked by patch_meta.
     api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
-    patch_meta "$id" 'del(.seedToken)'
+    case "$(rc)" in
+      200) ;;
+      409) fail 3 invalid_transition "server refused release transition" ;;
+      *) fail 5 backend_unavailable "release state PATCH HTTP $(rc)" ;;
+    esac
+    patch_meta "$id" 'del(.seedToken)' || fail 5 backend_unavailable "token clear failed"
     envelope ",\"task\":\"$id\",\"state\":\"ready\""
     ;;
   transition)
     case "$to" in
       review)
         require_fence "$id"
-        patch_meta "$id" ". + {seedAuthor: \"$actor\"} | del(.seedToken)"
         api POST "/issues/$id/release" "{}" >/dev/null
         api PATCH "/issues/$id" '{"state":"in_review"}' >/dev/null
         [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+        # Bookkeeping only after the server accepted the transition: a
+        # refused PATCH must not have already burned the claim token.
+        patch_meta "$id" ". + {seedAuthor: \"$actor\"} | del(.seedToken)" || fail 5 backend_unavailable "bookkeeping failed"
         ;;
       ready)
         api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
@@ -176,10 +228,10 @@ case "$verb" in
       blocked)
         require_fence "$id"
         entry=${blocked_on_arg:-manual:$actor}
-        patch_meta "$id" ".blockedOn = ((.blockedOn // []) + [\"$entry\"] | unique) | del(.seedToken)"
         api POST "/issues/$id/release" "{}" >/dev/null
         api PATCH "/issues/$id" '{"state":"blocked"}' >/dev/null
         [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+        patch_meta "$id" ".blockedOn = ((.blockedOn // []) + [\"$entry\"] | unique) | del(.seedToken)" || fail 5 backend_unavailable "bookkeeping failed"
         ;;
       *) fail 3 invalid_transition "unsupported --to $to" ;;
     esac
@@ -221,18 +273,7 @@ case "$verb" in
       404) fail 4 not_found ;;
       *) fail 3 invalid_transition "server assertTransition refused (HTTP $(rc))" ;;
     esac
-    # Cascade over seed dep entries: release dependents whose set empties.
-    cascaded=""
-    all=$(api GET "/issues")
-    for other in $(printf '%s' "$all" | jq -r --arg dep "dep:$id" '(. // [])[] | select((.metadata.blockedOn // []) | index($dep)) | .id'); do
-      patch_meta "$other" ".blockedOn = ((.blockedOn // []) - [\"dep:$id\"])"
-      ost=$(get_issue "$other" | jq -r .state)
-      left=$(get_issue "$other" | jq -r '(.metadata.blockedOn // []) | length')
-      if [ "$ost" = "blocked" ] && [ "$left" = "0" ]; then
-        api PATCH "/issues/$other" '{"state":"todo"}' >/dev/null
-        cascaded="$cascaded\"$other\","
-      fi
-    done
+    cascade_deps "$id"
     envelope ",\"task\":\"$id\",\"state\":\"done\",\"transitioned\":true,\"cascaded\":[${cascaded%,}]"
     ;;
   reject)
@@ -252,7 +293,10 @@ case "$verb" in
       404) fail 4 not_found ;;
       *) fail 3 invalid_transition "server assertTransition refused (HTTP $(rc))" ;;
     esac
-    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"transitioned\":true"
+    # Cancellation cascades exactly like close: dependents blocked solely
+    # on a cancelled task must not stay blocked forever.
+    cascade_deps "$id"
+    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"transitioned\":true,\"cascaded\":[${cascaded%,}]"
     ;;
   reinstate)
     api PATCH "/issues/$id" '{"state":"backlog"}' >/dev/null
@@ -272,6 +316,36 @@ case "$verb" in
     # Liveness is Paperclip's watchdogs' job (declared variance); a comment
     # is unnecessary — validate the fence and succeed.
     envelope ",\"task\":\"$id\",\"note\":\"leases ride issueWatchdogs (declared)\""
+    ;;
+  ancestry)
+    # Optional capability: walk the parent-issue chain up to the goal.
+    cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
+    chain="" node=$cur depth=0
+    while :; do
+      p=$(printf '%s' "$node" | jq -r '.parentId // ""')
+      [ -n "$p" ] || break
+      depth=$((depth + 1)); [ "$depth" -le 25 ] || fail 3 invalid_transition "ancestry deeper than 25 (cycle?)"
+      node=$(get_issue "$p"); [ "$(rc)" = "200" ] || fail 4 not_found "ancestor $p not found"
+      chain="$chain{\"id\":\"$p\",\"kind\":\"task\"},"
+    done
+    goal=$(printf '%s' "$node" | jq -r '.goalId // ""')
+    [ -n "$goal" ] && chain="$chain{\"id\":\"$goal\",\"kind\":\"goal\"},"
+    envelope ",\"task\":\"$id\",\"ancestors\":[${chain%,}]"
+    ;;
+  budget)
+    # Optional capability, budget="native": report the issue's goal budget
+    # as the platform enforces it (alert at 80%, hard pause at 100% — the
+    # R6 enforcement a repo alone can never provide).
+    cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
+    goal=$(printf '%s' "$cur" | jq -r '.goalId // ""')
+    [ -n "$goal" ] || fail 5 backend_unavailable "issue has no goal"
+    out=$(api GET "/goals/$goal"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable "goal fetch HTTP $(rc)"
+    budget=$(printf '%s' "$out" | jq -c '{limit: (.budgetUsd // 0), spent: (.spentUsd // 0),
+      state: (if (.budgetUsd // 0) <= 0 then "ok"
+              elif (.spentUsd // 0) >= .budgetUsd then "paused"
+              elif (.spentUsd // 0) >= (.budgetUsd * 0.8) then "alert"
+              else "ok" end)}')
+    envelope ",\"task\":\"$id\",\"goal\":\"$goal\",\"budget\":$budget"
     ;;
   event-append)
     payload=${event:-$body}
