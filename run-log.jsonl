@@ -69,3 +69,4 @@
 {"actor":"claude-session","data":{"lease_expires":"2026-08-22T18:27:00Z"},"task":"os-73814c53","ts":"2026-08-22T16:57:00Z","verb":"claim"}
 {"actor":"claude-session","data":{"kind":"pr"},"task":"os-73814c53","ts":"2026-08-22T17:05:25Z","verb":"attach-evidence"}
 {"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-73814c53","ts":"2026-08-22T17:05:28Z","verb":"transition"}
+{"actor":"claude-session","data":{"lease_expires":"2026-08-22T18:36:01Z"},"task":"os-25958b27","ts":"2026-08-22T17:06:01Z","verb":"claim"}
