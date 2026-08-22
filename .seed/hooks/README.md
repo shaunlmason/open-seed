@@ -15,6 +15,14 @@ directly. All hooks run with the worktree as cwd.
 Keep hooks fast and deterministic. They are user-editable convention, not
 control logic — the port and CI gates do the enforcing.
 
+Portable context: runners and shims export what they know of
+`SEED_WORKTREE`, `SEED_REPO_ROOT`, `SEED_BRANCH`, `SEED_TARGET_BRANCH`
+(merge hooks), `SEED_TASK`, `SEED_TASK_TITLE`, `SEED_TASK_DESCRIPTION`,
+and `SEED_PORT` before invoking a hook, so a hook reads one env surface
+under every tool. Absent values stay unset — hooks must tolerate that.
+(`scripts/loop.sh` additionally exports `SEED_MAIN_CHECKOUT`, its
+pre-shim name for the main checkout path.)
+
 ## Tool shims (`shims/`)
 
 Checked-in integration fragments wiring external worktree tools onto this

@@ -1,8 +1,8 @@
 {
   "setup-workspace": [
-    "[ -x .seed/hooks/setup ] && .seed/hooks/setup || true",
-    "for h in .seed/hooks/post-create.d/*; do [ -x \"$h\" ] && \"$h\"; done"
+    "export SEED_WORKTREE=\"$AMUX_WORKSPACE_ROOT\" SEED_BRANCH=\"$AMUX_WORKSPACE_BRANCH\" SEED_REPO_ROOT=\"$ROOT_WORKSPACE_PATH\" SEED_PORT=\"$AMUX_PORT\"; [ -x .seed/hooks/setup ] && .seed/hooks/setup || true",
+    "export SEED_WORKTREE=\"$AMUX_WORKSPACE_ROOT\" SEED_BRANCH=\"$AMUX_WORKSPACE_BRANCH\" SEED_REPO_ROOT=\"$ROOT_WORKSPACE_PATH\" SEED_PORT=\"$AMUX_PORT\"; for h in .seed/hooks/post-create.d/*; do [ -x \"$h\" ] && \"$h\"; done"
   ],
-  "run": "[ -x .seed/hooks/run ] && .seed/hooks/run || true",
-  "archive": "[ -x .seed/hooks/teardown ] && .seed/hooks/teardown || true"
+  "run": "export SEED_WORKTREE=\"$AMUX_WORKSPACE_ROOT\" SEED_BRANCH=\"$AMUX_WORKSPACE_BRANCH\" SEED_REPO_ROOT=\"$ROOT_WORKSPACE_PATH\" SEED_PORT=\"$AMUX_PORT\"; [ -x .seed/hooks/run ] && .seed/hooks/run || true",
+  "archive": "export SEED_WORKTREE=\"$AMUX_WORKSPACE_ROOT\" SEED_BRANCH=\"$AMUX_WORKSPACE_BRANCH\" SEED_REPO_ROOT=\"$ROOT_WORKSPACE_PATH\" SEED_PORT=\"$AMUX_PORT\"; [ -x .seed/hooks/teardown ] && .seed/hooks/teardown || true"
 }

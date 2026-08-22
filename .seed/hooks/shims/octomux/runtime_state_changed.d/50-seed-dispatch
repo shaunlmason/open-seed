@@ -1,7 +1,12 @@
 #!/bin/sh
 # octomux runtime_state_changed → setup/teardown dispatch (approximate:
 # octomux has no worktree-remove event — declared in the shim README).
-state=$(cat | jq -r '.data.state // .data.runtimeState // empty' 2>/dev/null)
+env=$(cat)
+state=$(printf '%s' "$env" | jq -r '.data.state // .data.runtimeState // empty' 2>/dev/null)
+wt=$(printf '%s' "$env" | jq -r '.task.worktree // .data.worktree // empty' 2>/dev/null)
+[ -n "$wt" ] && cd "$wt" 2>/dev/null
+export SEED_WORKTREE="$PWD"
+export SEED_TASK="${OCTOMUX_TASK_ID:-}"
 case "$state" in
   running|starting)
     [ -x .seed/hooks/setup ] && .seed/hooks/setup ;;

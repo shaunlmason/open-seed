@@ -1,5 +1,8 @@
 #!/bin/sh
 # dmux before_worktree_remove → seed teardown (worktree still exists).
 cd "${DMUX_WORKTREE_PATH:-.}" || exit 0
+export SEED_WORKTREE="${DMUX_WORKTREE_PATH:-$PWD}"
+export SEED_REPO_ROOT="${DMUX_ROOT:-}"
+export SEED_BRANCH="${DMUX_BRANCH:-}"
 [ -x .seed/hooks/teardown ] && .seed/hooks/teardown
 exit 0
