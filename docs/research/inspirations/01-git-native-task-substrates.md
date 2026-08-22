@@ -3,6 +3,16 @@
 > Implementation-grade deep dive for the open-seed design study, researched 2026-08-21/22.
 > Covers beads, gnap, ORCH, squad, and tick-md. All findings are from cloned source, not READMEs alone.
 > Note: Squad is **`bradygaster/squad`** (MIT), not a github/githubnext org project — correcting the earlier survey.
+>
+> **Erratum (design review, 2026-08-22):** the proposed filecards frontmatter in this file's
+> synthesis is superseded by `docs/design-options.md` on these points: cards live at `tasks/`
+> **on the `seed-state` ref** (§7.2), not `.seed/tasks/` on the default branch (`.seed/**` is
+> human-owned control surface); the card gains `rejected_authors[]` (accumulating list — the
+> singular "next claimant ≠ previous author" note here is too weak) and a shim-managed claim
+> token; there is no `plan:`/`plan_hash` authority on the card (plan pinning is derived from
+> the PR merge-base, D3); `merge=union` applies to `decisions/**` only (not history-bearing
+> card files — one file per task/message makes union unnecessary); and the companion `runs/`
+> NDJSON directory is subsumed by `run-log.jsonl` on the state ref.
 
 ## 1. steveyegge/beads (`bd`) — distributed graph issue tracker, Dolt-backed
 
