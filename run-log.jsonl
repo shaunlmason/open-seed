@@ -5,3 +5,4 @@
 {"actor":"shaunlmason","data":{"title":"Tag template release v0.1.0"},"task":"os-62b64ce8","ts":"2026-08-22T06:26:02Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-18135882","ts":"2026-08-22T06:26:04Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-72722779","ts":"2026-08-22T06:26:06Z","verb":"promote"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-62b64ce8","ts":"2026-08-22T06:26:08Z","verb":"promote"}
