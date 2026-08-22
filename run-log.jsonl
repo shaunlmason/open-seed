@@ -155,3 +155,4 @@
 {"actor":"claude-session","data":{"kind":"commit"},"task":"os-61967950","ts":"2026-08-22T21:50:05Z","verb":"attach-evidence"}
 {"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-61967950","ts":"2026-08-22T21:50:08Z","verb":"transition"}
 {"actor":"claude-session","data":{"lease_expires":"2026-08-22T22:50:22Z"},"task":"os-435d7b61","ts":"2026-08-22T21:50:22Z","verb":"claim"}
+{"actor":"claude-session","data":{"kind":"pr"},"task":"os-435d7b61","ts":"2026-08-22T21:57:57Z","verb":"attach-evidence"}
