@@ -121,6 +121,20 @@ reaches a working claim/transition cycle with only the bootstrap shim checked in
 installed* must still be a workable repo — readable cards, CODEOWNERS + server-side
 gates intact.
 
+> **Status: complete (2026-08-22).** Full §4 tree laid down (guardrails, CODEOWNERS,
+> Makefile/validate.sh, hooks contract with the blocking pre-merge gate, role trio +
+> dispatcher, `core` squad, work-product dirs, fan-out markers, `.worktreeinclude`,
+> `merge=union` on decisions only). Bootstrap shim pair pins engine v0.3.0 via
+> `.seed/engine.lock` (cold download+verify+exec 0.7s; SHA-256 tamper refused;
+> `vendor`/`SEED_ENGINE` escape hatches). AGENTS.md namespace swap done — user-facing
+> contract at root with the `seed:rules` managed block, contributor guidance at
+> `docs/CONTRIBUTING-AGENTS.md`. Done-when verified on a scratch instantiation
+> (create→promote→claim→review→close through the shim only); degradation verified
+> (engine unavailable → validate warns and passes, cards + run log readable with
+> plain git). Note: `.claude` fan-out and rules→AGENTS sync are markers until
+> `seed sync` lands (Phase 6); `seed hooks run` fallback lands with a later engine
+> release.
+
 ## Phase 4 — Plan/receipt chain
 
 - Plan grammar validator (D3): `plans/<task-id>.md`, `## Validation Commands`
