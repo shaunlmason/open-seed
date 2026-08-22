@@ -18,7 +18,7 @@ case "${1:-}" in
   *) id=$1; shift ;;
 esac
 
-title="" body="" priority="P2" squad="" actor="" token="" to="" resolution="" kind="" ref="" event="" pr="" blocked_on_arg="" blocked_by=""
+title="" body="" priority="P2" squad="" actor="" token="" to="" resolution="" kind="" ref="" event="" pr="" blocked_on_arg="" blocked_by="" state_filter=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --title) title=$2; shift 2 ;;
@@ -61,19 +61,39 @@ port_state() {
 
 prio_bd() { case "$1" in P0) echo 0;; P1) echo 1;; P2) echo 2;; P3) echo 3;; *) echo 2;; esac; }
 # Real bd v1.2.2 returns an ARRAY from `bd show --json` (and an error
-# object on a missing id); the fake mirrors it. Normalize to the single
-# issue object every consumer expects — empty output means not found.
-show() { bd show "$1" --json 2>/dev/null | jq -c 'if type == "array" then (.[0] // empty) elif has("error") then empty else . end' 2>/dev/null; }
+# object on a missing id, exit 1); the fake mirrors it. Normalize to the
+# single issue object every consumer expects — empty output with rc 0
+# means not found, while a bd failure WITHOUT the documented missing-id
+# error object returns rc 5 so callers report backend_unavailable, never
+# a bogus not_found/fenced_out.
+show() {
+  _out=$(bd show "$1" --json 2>/dev/null) || {
+    printf '%s' "$_out" | jq -e 'type == "object" and has("error")' >/dev/null 2>&1 && return 0
+    return 5
+  }
+  printf '%s' "$_out" | jq -c 'if type == "array" then (.[0] // empty) elif has("error") then empty else . end' 2>/dev/null
+}
 state_of() { show "$1" | port_state; }
+tok_of() { printf '%s' "$1" | jq -r '(.labels // [])[] | select(startswith("seed:tok:")) | ltrimstr("seed:tok:")' | head -1; }
+clear_tok() { # id issue-json
+  for _t in $(printf '%s' "$2" | jq -r '(.labels // [])[] | select(startswith("seed:tok:"))'); do
+    bd label remove "$1" "$_t" >/dev/null 2>&1
+  done
+}
 bo_entries() { show "$1" | jq -r '(.labels // [])[] | select(startswith("seed:bo:")) | ltrimstr("seed:bo:")'; }
 
-# The fence (declared variance: emulated): a fenced verb must present the
-# token minted at claim ("assignee:<actor>") AND that token must match the
-# card's current assignee. Missing, arbitrary, or stale tokens exit 6.
+# The fence (declared variance: emulated): claim mints a rotating nonce
+# token, persisted as a seed:tok:<nonce> label; a fenced verb must present
+# the CURRENT token and the acting identity must be the holder. Missing,
+# arbitrary, or stale (pre-reclaim) tokens exit 6.
 require_fence() { # id
-  holder=$(show "$1" | jq -r '.assignee // ""')
+  cur=$(show "$1"); rc=$?
+  [ "$rc" = 5 ] && fail 5 backend_unavailable "bd show failed"
+  holder=$(printf '%s' "$cur" | jq -r '.assignee // ""')
   [ -n "$holder" ] || fail 6 fenced_out "no live claim"
-  [ "$token" = "assignee:$holder" ] || fail 6 fenced_out "token does not match current claim"
+  want=$(tok_of "$cur")
+  [ -n "$want" ] || fail 6 fenced_out "no live claim token"
+  [ "$token" = "tok:$want" ] || fail 6 fenced_out "token does not match current claim"
   [ "$actor" = "$holder" ] || fail 6 fenced_out "actor is not the claim holder"
 }
 
@@ -104,20 +124,35 @@ case "$verb" in
     envelope ",\"tasks\":$tasks"
     ;;
   get)
-    out=$(show "$id"); [ -n "$out" ] || fail 4 not_found
+    out=$(show "$id"); rc=$?
+    [ "$rc" = 5 ] && fail 5 backend_unavailable "bd show failed"
+    [ -n "$out" ] || fail 4 not_found
     st=$(printf '%s' "$out" | port_state)
     card=$(printf '%s' "$out" | jq -c --arg st "$st" '{id: .id, title: .title, state: $st, priority: ("P" + (.priority|tostring)), author: (.assignee // ""), body: (.description // ""), blocked_on: [(.labels // [])[] | select(startswith("seed:bo:")) | ltrimstr("seed:bo:")], rejected_authors: [(.labels // [])[] | select(startswith("seed:rejected:")) | ltrimstr("seed:rejected:")], labels: (.labels // [])}')
     envelope ",\"task\":\"$id\",\"state\":\"$st\",\"card\":$card"
     ;;
   list)
     # --all: real bd hides closed issues by default (declared v1.2.2
-    # variance) but the port's list surfaces terminal cards too.
+    # variance) but the port's list surfaces terminal cards too. --state
+    # filters on the PORT state (the same mapping get uses).
     out=$(bd list --all --json) || fail 5 backend_unavailable "bd list failed"
-    tasks=$(printf '%s' "$out" | jq -c '[(. // []) | .[] | {task: .id, title: .title, priority: ("P" + (.priority|tostring)), status: .status, labels: (.labels // [])}]')
+    tasks=$(printf '%s' "$out" | jq -c --arg st "$state_filter" '
+      def pstate:
+        if .status == "closed" then (if ((.labels // []) | index("seed:cancelled")) then "cancelled" else "done" end)
+        elif .status == "deferred" then "backlog"
+        elif .status == "in_progress" then "in_progress"
+        elif .status == "blocked" then "blocked"
+        elif ((.labels // []) | index("seed:review")) then "review"
+        else "ready" end;
+      [(. // []) | .[]
+        | {task: .id, title: .title, priority: ("P" + (.priority|tostring)), state: pstate, labels: (.labels // [])}
+        | select($st == "" or .state == $st)]')
     envelope ",\"tasks\":$tasks"
     ;;
   claim)
-    cur=$(show "$id"); [ -n "$cur" ] || fail 4 not_found
+    cur=$(show "$id"); rc=$?
+    [ "$rc" = 5 ] && fail 5 backend_unavailable "bd show failed"
+    [ -n "$cur" ] || fail 4 not_found
     if printf '%s' "$cur" | jq -e --arg a "$actor" '(.labels // []) | index("seed:rejected:" + $a)' >/dev/null; then
       printf '{"ok":false,"schema_version":"1.0","error":"rejected_author"}\n'; exit 2
     fi
@@ -126,10 +161,15 @@ case "$verb" in
       printf '{"ok":false,"schema_version":"1.0","error":"claim_contention","holder":"%s"}\n' "$holder"; exit 2
     fi
     BD_ACTOR="$actor" bd update "$id" --claim --json >/dev/null 2>&1 || fail 2 claim_contention "bd --claim refused"
-    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"actor\":\"$actor\",\"claim_token\":\"assignee:$actor\""
+    # Mint a fresh fence token (rotation: any pre-reclaim token dies).
+    clear_tok "$id" "$cur"
+    nonce=$(od -An -N4 -tx1 /dev/urandom 2>/dev/null | tr -d " \n"); [ -n "$nonce" ] || nonce=$$$(date +%s)
+    bd label add "$id" "seed:tok:$nonce" >/dev/null 2>&1 || fail 5 backend_unavailable "token label failed"
+    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"actor\":\"$actor\",\"claim_token\":\"tok:$nonce\""
     ;;
   release)
     require_fence "$id"
+    clear_tok "$id" "$cur"
     bd update "$id" --status open --assignee "" --json >/dev/null 2>&1 || fail 5 backend_unavailable
     envelope ",\"task\":\"$id\",\"state\":\"ready\""
     ;;
@@ -140,6 +180,7 @@ case "$verb" in
         # Record the implementer of record before the claim clears (the
         # reject target — reviewer lockout).
         bd label add "$id" "seed:author:$actor" >/dev/null 2>&1
+        clear_tok "$id" "$cur"
         bd update "$id" --status open --assignee "" --json >/dev/null 2>&1 || fail 5 backend_unavailable
         bd label add "$id" seed:review >/dev/null 2>&1
         ;;
@@ -149,6 +190,7 @@ case "$verb" in
         ;;
       blocked)
         require_fence "$id"
+        clear_tok "$id" "$cur"
         entry=${blocked_on_arg:-manual:$actor}
         bd label add "$id" "seed:bo:$entry" >/dev/null 2>&1
         bd update "$id" --status blocked --assignee "" --json >/dev/null 2>&1 || fail 5 backend_unavailable
@@ -219,7 +261,17 @@ case "$verb" in
     case "$st" in done|cancelled) fail 3 invalid_transition "cancel from terminal state $st" ;; esac
     bd close "$id" --reason "cancelled: ${resolution:-}" --json >/dev/null 2>&1 || fail 3 invalid_transition
     bd label add "$id" seed:cancelled >/dev/null 2>&1
-    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"transitioned\":true"
+    # Cancel cascades exactly like close (the transition spec attaches the
+    # cascade effect to every nonterminal→cancelled edge).
+    cascaded=""
+    for other in $(bd list --json | jq -r --arg dep "seed:bo:dep:$id" '(. // [])[] | select((.labels // []) | index($dep)) | .id'); do
+      bd label remove "$other" "seed:bo:dep:$id" >/dev/null 2>&1
+      if [ -z "$(bo_entries "$other")" ] && [ "$(state_of "$other")" = "blocked" ]; then
+        bd update "$other" --status open --json >/dev/null 2>&1
+        cascaded="$cascaded\"$other\","
+      fi
+    done
+    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"transitioned\":true,\"cascaded\":[${cascaded%,}]"
     ;;
   reinstate)
     bd reopen "$id" >/dev/null 2>&1 || fail 3 invalid_transition
@@ -228,16 +280,26 @@ case "$verb" in
     envelope ",\"task\":\"$id\",\"state\":\"backlog\",\"transitioned\":true"
     ;;
   comment)
-    holder=$(show "$id" | jq -r '.assignee // ""') || fail 4 not_found
-    [ -n "$holder" ] && require_fence "$id"
-    bd comment "$id" "$body" --json >/dev/null 2>&1 || fail 4 not_found
-    envelope ",\"task\":\"$id\""
+    cur=$(show "$id"); rc=$?
+    [ "$rc" = 5 ] && fail 5 backend_unavailable "bd show failed"
+    [ -n "$cur" ] || fail 4 not_found
+    [ -n "$(printf '%s' "$cur" | jq -r '.assignee // ""')" ] && require_fence "$id"
+    out=$(bd comment "$id" "$body" --json 2>/dev/null) || fail 4 not_found
+    cid=$(printf '%s' "$out" | jq -r '.id // empty')
+    [ -n "$cid" ] || fail 5 backend_unavailable "bd comment returned no id"
+    envelope ",\"task\":\"$id\",\"comment_id\":\"$cid\""
     ;;
   attach-evidence)
-    holder=$(show "$id" | jq -r '.assignee // ""') || fail 4 not_found
-    [ -n "$holder" ] && require_fence "$id"
-    bd note "$id" "evidence ($kind): $ref" --json >/dev/null 2>&1 || fail 4 not_found
-    envelope ",\"task\":\"$id\""
+    # Evidence rides comments: bd notes are a single id-less string field
+    # (declared v1.2.2 variance), while comments carry stable ids.
+    cur=$(show "$id"); rc=$?
+    [ "$rc" = 5 ] && fail 5 backend_unavailable "bd show failed"
+    [ -n "$cur" ] || fail 4 not_found
+    [ -n "$(printf '%s' "$cur" | jq -r '.assignee // ""')" ] && require_fence "$id"
+    out=$(bd comment "$id" "evidence ($kind): $ref" --json 2>/dev/null) || fail 4 not_found
+    eid=$(printf '%s' "$out" | jq -r '.id // empty')
+    [ -n "$eid" ] || fail 5 backend_unavailable "bd comment returned no id"
+    envelope ",\"task\":\"$id\",\"evidence_id\":\"$eid\""
     ;;
   lease-renew)
     require_fence "$id"

@@ -30,8 +30,10 @@ contention bites (handbook §6).
 
 ## Declared variances (never silent)
 
-- **Fence is emulated**: the claim token is the assignee identity
-  (`assignee:<actor>`), verified by assignee-match — not a rotating token.
+- **Fence is emulated**: claim mints a rotating nonce token
+  (`tok:<nonce>`, persisted as a `seed:tok:<nonce>` label) verified
+  against the current assignee — a pre-reclaim token dies on reclaim
+  (rotation), and stale/missing/foreign tokens exit 6.
   bd's optimistic `revision` can harden this later.
 - **Leases are replica-scoped** (bd semantics): a lease is enforceable only
   on the replica that granted it. `lease-renew` maps to bd's idempotent
@@ -81,7 +83,10 @@ Live-validated behaviors the adapter and fake both encode:
 - Comments are listed via `bd comments <id> --json` (`show` carries only
   `comment_count`).
 - `bd update --claim` is the native atomic claim (assignee from
-  `BD_ACTOR`, idempotent for the holder) — the adapter builds its
-  emulated fence token on top of it.
+  `BD_ACTOR`, idempotent for the holder) — the adapter mints its
+  rotating fence token on top of it.
+- `bd note` writes a single id-less `notes` string, so evidence rides
+  `bd comment` (stable per-comment ids); `comment_id`/`evidence_id` are
+  the created comment's id.
 - `bd label add/remove` are per-label atomic (never whole-array
   replacement); `--set-labels` exists but the adapter never uses it.

@@ -26,7 +26,8 @@ run_corpus() {
   [ "$(echo "$out" | jq -r '.tasks[0].task')" = "$id" ] || die "promoted card not ready"
 
   out=$("$sb" claim "$id" --actor agent-1 --json); ok "$out" claim
-  tok=$(echo "$out" | jq -r .claim_token); [ "$tok" = "assignee:agent-1" ] || die "token shape"
+  tok=$(echo "$out" | jq -r .claim_token)
+  case "$tok" in tok:?*) ;; *) die "token shape: $tok" ;; esac
 
   expect_rc 2 "rival claim" "$sb" claim "$id" --actor agent-2 --json
   # The fence: right actor + wrong/missing token must exit 6 (P1 finding).
@@ -38,6 +39,9 @@ run_corpus() {
   expect_rc 3 "close from in_progress" "$sb" close "$id" --actor lead --resolution x --json
 
   out=$("$sb" comment "$id" --body "progress" --actor agent-1 --token "$tok" --json); ok "$out" comment
+  [ -n "$(echo "$out" | jq -r '.comment_id // empty')" ] || die "comment_id missing from envelope"
+  out=$("$sb" attach-evidence "$id" --kind commit --ref abc123 --actor agent-1 --token "$tok" --json); ok "$out" attach-evidence
+  [ -n "$(echo "$out" | jq -r '.evidence_id // empty')" ] || die "evidence_id missing from envelope"
   out=$("$sb" lease-renew "$id" --actor agent-1 --token "$tok" --json); ok "$out" lease-renew
 
   # Plan parking persists blocked_on (P1 finding), plan-unblock releases it.
@@ -47,8 +51,12 @@ run_corpus() {
   out=$("$sb" plan-unblock "$id" --pr 41 --actor lead --json); ok "$out" plan-unblock
   [ "$(echo "$out" | jq -r .state)" = "ready" ] || die "plan-unblock did not release"
 
+  stale_tok=$tok
   out=$("$sb" claim "$id" --actor agent-1 --json); ok "$out" reclaim
   tok=$(echo "$out" | jq -r .claim_token)
+  # Rotation: the pre-reclaim token is dead even for the same actor.
+  [ "$stale_tok" != "$tok" ] || die "claim token did not rotate on reclaim"
+  expect_rc 6 "stale pre-reclaim token" "$sb" comment "$id" --body late --actor agent-1 --token "$stale_tok" --json
   out=$("$sb" transition "$id" --to review --actor agent-1 --token "$tok" --json); ok "$out" review
   [ "$("$sb" get "$id" --json | jq -r .state)" = "review" ] || die "review state"
 
@@ -69,8 +77,17 @@ run_corpus() {
   [ "$("$sb" get "$id" --json | jq -r .state)" = "done" ] || die "close → done"
   [ "$("$sb" get "$dep" --json | jq -r .state)" = "ready" ] || die "cascade did not release dependent"
 
+  # Cancel cascades like close: a dependent parked on the cancelled
+  # blocker is released (the spec attaches cascade to every
+  # nonterminal→cancelled edge).
   out=$("$sb" create --title "Cancel me" --actor a --json); id2=$(echo "$out" | jq -r .task)
+  "$sb" promote "$id2" --actor lead --json >/dev/null
+  out=$("$sb" create --title "Blocked on cancelled" --actor a --json); dep2=$(echo "$out" | jq -r .task)
+  "$sb" promote "$dep2" --actor lead --json >/dev/null
+  "$sb" block "$dep2" --actor lead --blocked-on "dep:$id2" --json >/dev/null 2>&1 || true
   out=$("$sb" cancel "$id2" --actor lead --json); ok "$out" cancel
+  echo "$out" | jq -e --arg d "$dep2" '.cascaded | index($d)' >/dev/null || die "cancel did not cascade to dependent"
+  [ "$("$sb" get "$dep2" --json | jq -r .state)" = "ready" ] || die "cancel cascade did not release dependent"
   expect_rc 3 "cancel from terminal" "$sb" cancel "$id2" --actor lead --json
   out=$("$sb" reinstate "$id2" --actor lead --json); ok "$out" reinstate
   [ "$("$sb" get "$id2" --json | jq -r .state)" = "backlog" ] || die "reinstate → backlog"
@@ -85,5 +102,12 @@ run_corpus() {
   # The list verb sees terminal cards too (bd list --all; default bd list
   # hides closed — a declared v1.2.2 variance).
   [ "$(echo "$out" | jq --arg id "$id" '[.tasks[] | select(.task == $id)] | length')" = "1" ] || die "closed card missing from list verb"
+  # --state filters on the port state: done includes the closed card,
+  # ready excludes it.
+  out=$("$sb" list --state done --json); ok "$out" list-done
+  [ "$(echo "$out" | jq --arg id "$id" '[.tasks[] | select(.task == $id)] | length')" = "1" ] || die "list --state done missing the closed card"
+  [ "$(echo "$out" | jq '[.tasks[] | select(.state != "done")] | length')" = "0" ] || die "list --state done leaked other states"
+  out=$("$sb" list --state ready --json)
+  [ "$(echo "$out" | jq --arg id "$id" '[.tasks[] | select(.task == $id)] | length')" = "0" ] || die "list --state ready leaked the closed card"
   expect_rc 4 "missing card" "$sb" get bd-nope --json
 }

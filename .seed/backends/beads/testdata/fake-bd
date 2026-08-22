@@ -77,15 +77,19 @@ case "$cmd" in
     echo '{}'
     ;;
   comment|note)
+    # Real bd comment --json returns the CREATED comment object with a
+    # stable id (live-validated); the fake mirrors that.
     id=$1; text=${2:-}
-    save --arg id "$id" --arg t "$text" '.issues[$id].comments += [$t]'
-    echo '{}'
+    n=$(j -r --arg id "$id" '(.issues[$id].comments // []) | length')
+    cid="c-$id-$n"
+    save --arg id "$id" --arg t "$text" --arg cid "$cid" '.issues[$id].comments += [{id: $cid, text: $t}]'
+    printf '{"id":"%s","issue_id":"%s","text":%s}\n' "$cid" "$id" "$(printf '%s' "$text" | jq -Rs .)"
     ;;
   comments)
     # Real bd lists comments via `bd comments <id> --json` (show carries
     # only comment_count there — live-validated).
     id=$1
-    j -c --arg id "$id" '[(.issues[$id].comments // [])[] | {text: .}]'
+    j -c --arg id "$id" '(.issues[$id].comments // [])'
     ;;
   *) echo "fake-bd: unknown command $cmd" >&2; exit 64 ;;
 esac
