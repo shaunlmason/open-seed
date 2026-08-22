@@ -2,16 +2,17 @@
   "schema_version": "1.0",
   "task": "os-23494e11",
   "merge_base": "68008c3ab3d542c5bc04c4e7a3ab3d28ade77efe",
-  "head": "b385f14f9ce5f7cb706fdb2b6549bfc07182d8fc",
+  "head": "97c072807d44b786b6438ac3ff1372495492e401",
   "plan_path": "plans/os-23494e11.md",
   "plan_sha256": "51276d547aeb7a6478c3b42a3f0bbd44e6af8e0ae1a2b1f963f763b025acf9f8",
   "diff_files": [
     ".seed/engine.lock",
     ".seed/template.lock",
     "docs/handbook.md",
-    "memory/LEARNINGS.md"
+    "memory/LEARNINGS.md",
+    "scripts/validate.sh"
   ],
-  "diff_sha256": "e35a930151d3529e2614bf75b397cc8f2056c41f119e32cbe0f0bc5e71e750d4",
+  "diff_sha256": "9efb36fb1cdc497c0e5f769da916b82fae9fee67ca99b9c86a3ee0241ca32eb8",
   "validation": [
     {
       "cmd": "test -f .seed/template.lock",
