@@ -143,6 +143,14 @@ file):
 { "mcpServers": { "seed": { "command": "sh", "args": ["-c", "exec scripts/seed mcp serve"] } } }
 ```
 
+The shipped registration spawns `sh` (the POSIX bootstrap). On a native
+Windows checkout swap the entry for the PowerShell bootstrap — same
+server, same tools:
+
+```json
+{ "mcpServers": { "seed": { "command": "powershell", "args": ["-NoProfile", "-File", "scripts/seed.ps1", "mcp", "serve"] } } }
+```
+
 MCP is an ADDITIONAL transport, never a replacement: `tools/call`
 dispatches through the identical service path the CLI uses — same
 fencing, same transition table, same run-log events, same envelopes.
