@@ -148,3 +148,4 @@
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:32","to":"ready"},"task":"os-6f3104db","ts":"2026-08-22T21:28:12Z","verb":"plan-unblock"}
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:37","to":"ready"},"task":"os-70028620","ts":"2026-08-22T21:28:14Z","verb":"plan-unblock"}
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:36","to":"ready"},"task":"os-7792a002","ts":"2026-08-22T21:28:17Z","verb":"plan-unblock"}
+{"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-52b9aed0","ts":"2026-08-22T21:28:20Z","verb":"close"}
