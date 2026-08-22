@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "task": "os-10c10aae",
+  "merge_base": "1d874b11a1a9e0141befd0b20e1723ad6af1ad9b",
+  "head": "54a56484cc6d7f4df4b003d7ee32b97e392068ea",
+  "plan_path": "plans/os-10c10aae.md",
+  "plan_sha256": "ef2c6b436e48b271f1e93b1583219c86612a608984766aa100048470b75784b9",
+  "diff_files": [
+    ".seed/teams/core.yaml",
+    ".seed/teams/platform.yaml.example",
+    "docs/handbook.md",
+    "memory/LEARNINGS.md",
+    "scripts/loop.sh",
+    "scripts/smoke-loop.sh"
+  ],
+  "diff_sha256": "9f1edc57a39c46770024a387867aaef109d7e8a7093be3099b7a0b2ca0ab9ccf",
+  "validation": [
+    {
+      "cmd": "test -f .seed/teams/platform.yaml.example",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"squad\" scripts/loop.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "make smoke",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}

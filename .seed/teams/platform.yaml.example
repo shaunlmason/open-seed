@@ -1,0 +1,29 @@
+# Second-squad example (§6 multi-squad routing — v2 activated). Rename to
+# platform.yaml to activate; the .example suffix keeps this file inert
+# (team loading only reads *.yaml).
+#
+# Activation effects, all validated by `seed validate`:
+# - scopes may not overlap across squads except (a) core's bare-"**"
+#   fallback, which necessarily intersects everything, and (b) an
+#   explicit shared_scope entry naming ONE owning squad;
+# - priority ints must be unique; lowest wins when backlog filters match;
+# - every squad names a human lead; with review: codeowners the lead
+#   should appear in CODEOWNERS for this scope (warning once >1 squad);
+# - cards route explicit `squad:` → lowest-priority backlog label match
+#   → core; `seed task ready --squad platform` / `loop.sh --squad
+#   platform` filter on the RESOLVED squad, so one loop per squad scales.
+name: platform
+# mission: Keep the platform boring   # any mission activates goal-ancestry
+lead: replace-me          # a human; add to CODEOWNERS for platform/**
+members:
+  - human: replace-me
+  - role: implementer
+  - role: reviewer
+scope: ["platform/**"]    # specific paths; never bare "**" (core owns that)
+# shared_scope:            # the only legal overlap: one owning squad
+#   - {path: "platform/shared/**", owner: platform}
+backlog: {labels: [platform]}   # cards with these labels route here
+priority: 2               # unique int; lowest wins on label-filter ties
+tier: L2                  # <= autonomy.max_tier (guardrails.yaml)
+review: codeowners
+rituals: []
