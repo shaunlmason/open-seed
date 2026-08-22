@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-73814c53",
   "merge_base": "8f35dbbea61dc9c8550fde4c439c34e4a338fa70",
-  "head": "21cdd770d7ee10c4ce9eb0ecb738fd0a1e2e3c53",
+  "head": "fcd25575c50e3c8ba131b2b0c82ddb78c6836df6",
   "plan_path": "plans/os-73814c53.md",
   "plan_sha256": "b105a34463ba8c57fcfeed884bfe5d35b5bf89aee248ded64d176f306bc710ff",
   "diff_files": [
@@ -15,7 +15,7 @@
     "docs/handbook.md",
     "scripts/validate.sh"
   ],
-  "diff_sha256": "ea9ded686fa29a0bbbce7201e579780b40018d87ec98ee5c073d8c830ffdba50",
+  "diff_sha256": "0b40692d2fca9c283b412d3e56de00cdff8b67bf2571bde4602a9933267883fa",
   "validation": [
     {
       "cmd": "test -x .seed/backends/linear/bin/seed-backend",
