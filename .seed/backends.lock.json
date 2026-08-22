@@ -4,6 +4,11 @@
     "engine": ">=0.3.0",
     "note": "Implemented inside the pinned engine binary; the manifest declares capabilities."
   },
+  "fastcards": {
+    "source": "builtin",
+    "engine": ">=0.9.0",
+    "note": "SQLite store inside the pinned engine binary (§7.1 builtin-store amendment). Machine-local state — see the manifest's state_portability and the README."
+  },
   "beads": {
     "source": "in-template",
     "note": "Ships in-template; PR + owner review is the pin (control surface). Externally installed copies must carry a sha256 (seed backend verify)."
