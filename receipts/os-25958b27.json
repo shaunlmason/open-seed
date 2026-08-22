@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-25958b27",
   "merge_base": "73dbe6e52d170f20775939503935302668f11890",
-  "head": "ea1b50d2c0160072907ddd7b31c4494761412b7a",
+  "head": "af9816c4559818e81d90a0647322eb21b535f92f",
   "plan_path": "plans/os-25958b27.md",
   "plan_sha256": "3776874c84c245733313310039aa77eca351f8b581f795304035a4ee9c6adc9c",
   "diff_files": [
@@ -16,7 +16,7 @@
     "docs/handbook.md",
     "scripts/validate.sh"
   ],
-  "diff_sha256": "d44e9836ffad9fd0c860b536fa5b92d7df3605bab7c12ac87b93d1259c822c1a",
+  "diff_sha256": "7fbcbe77303ac5f5a833929a510df6f14388c2f3b768667ebba64ce474e5f356",
   "validation": [
     {
       "cmd": "test -x .seed/backends/jira/bin/seed-backend",
