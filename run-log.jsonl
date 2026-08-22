@@ -1,3 +1,4 @@
 {"actor":"shaunlmason","data":{"title":"First real card"},"task":"os-01d9ceb3","ts":"2026-08-22T05:34:04Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"cancelled","transitioned":true},"task":"os-01d9ceb3","ts":"2026-08-22T05:35:07Z","verb":"cancel"}
 {"actor":"shaunlmason","data":{"title":"Apply server-side protections (branch protection, seed-state rules, seed-anchor tag rule)"},"task":"os-18135882","ts":"2026-08-22T06:25:57Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"Verify first live CI runs after the v1 branch merges to main"},"task":"os-72722779","ts":"2026-08-22T06:25:59Z","verb":"create"}
