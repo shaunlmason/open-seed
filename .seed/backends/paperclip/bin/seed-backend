@@ -138,24 +138,33 @@ case "$verb" in
     fi
     [ -n "$goal" ] || goal=${PAPERCLIP_DEFAULT_GOAL_ID:-}
     [ -n "$goal" ] || fail 5 backend_unavailable "goal ancestry required: pass --parent or set PAPERCLIP_DEFAULT_GOAL_ID (Paperclip mandates ancestry)"
+    # Dep edges are mirrored twice: metadata.blockedOn drives the port's
+    # own cascade bookkeeping; native blockerIds let the platform's
+    # dependency machinery (wakeups, its own views) see the same edge.
     bo=$(for d in $blocked_by; do printf '"dep:%s",' "$d"; done)
+    bids=$(for d in $blocked_by; do printf '"%s",' "$d"; done)
     payload=$(jq -nc --arg t "$title" --arg d "$body" --arg p "$(prio_pc "$priority")" --arg g "$goal" --arg pp "$parent" \
-      "{title: \$t, description: \$d, priority: \$p, state: \"backlog\", goalId: \$g, metadata: {blockedOn: [${bo%,}]}}
+      "{title: \$t, description: \$d, priority: \$p, state: \"backlog\", goalId: \$g, blockerIds: [${bids%,}], metadata: {blockedOn: [${bo%,}]}}
        + (if \$pp != \"\" then {parentId: \$pp} else {} end)")
     out=$(api POST "/issues" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "create HTTP $(rc)"
     new=$(printf '%s' "$out" | jq -r '.id // empty'); [ -n "$new" ] || fail 10 version_mismatch "no id in create response"
     envelope ",\"task\":\"$new\",\"state\":\"backlog\""
     ;;
   ready)
-    out=$(api GET "/issues?state=todo"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable "list HTTP $(rc)"
+    # The full issue list (not just todo): native Paperclip dependencies
+    # (blockerIds) leave a todo issue unclaimable while any blocker is
+    # nonterminal, and resolving blocker STATES needs the whole set.
+    out=$(api GET "/issues"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable "list HTTP $(rc)"
     # Claimable = todo, no checkout lock, unassigned or assigned to the
     # caller (assignment is routing; checkout is the claim), not rejected,
-    # no open blocked_on entries.
-    tasks=$(printf '%s' "$out" | jq -c --arg a "$actor" "$PJQ"'[(. // []) | .[]
+    # no open blocked_on entries, no open NATIVE blockers.
+    tasks=$(printf '%s' "$out" | jq -c --arg a "$actor" "$PJQ"'(. // []) | INDEX(.id) as $by | [.[]
+      | select(.state == "todo")
       | select((.checkoutAgent // "") == "")
       | select(((.assignee // "") == "") or (.assignee == $a))
       | select(((.metadata.rejected // []) | index($a)) | not)
       | select(((.metadata.blockedOn // []) | length) == 0)
+      | select([(.blockerIds // [])[] | ($by[.].state // "cancelled") | select(. != "done" and . != "cancelled")] | length == 0)
       | {task: .id, title: .title, priority: (.priority | pport), created_at: (.createdAt // "")}]
       | sort_by((.priority | prank), .created_at)')
     envelope ",\"tasks\":$tasks"

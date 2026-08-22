@@ -79,10 +79,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(422, {"error": "unknown goal"})
             if d.get("parentId") and d["parentId"] not in issues:
                 return self.reply(422, {"error": "unknown parent issue"})
+            if any(b not in issues for b in d.get("blockerIds", [])):
+                return self.reply(422, {"error": "unknown blocker issue"})
             i = {
                 "id": new_id(), "title": d.get("title", ""), "description": d.get("description", ""),
                 "priority": d.get("priority", "medium"), "state": d.get("state", "backlog"),
                 "goalId": d["goalId"], "parentId": d.get("parentId", ""),
+                "blockerIds": d.get("blockerIds", []),
                 "assignee": d.get("assignee", ""), "checkoutAgent": "",
                 "metadata": d.get("metadata", {}), "comments": [], "createdAt": "2026-08-22T00:00:00Z",
             }

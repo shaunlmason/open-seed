@@ -111,6 +111,23 @@ out=$("$sb" cancel "$blk" --actor lead --json); ok "$out" cancel-cascade
 echo "$out" | jq -e --arg d "$dep2" '.cascaded | index($d)' >/dev/null || die "cancel did not report cascade"
 [ "$("$sb" get "$dep2" --json | jq -r .state)" = "ready" ] || die "cancel cascade did not release dependent"
 
+# NATIVE Paperclip dependencies gate ready too: a todo issue whose
+# blockerIds contain a nonterminal issue is not claimable work, even with
+# no seed metadata.blockedOn entries (e.g. deps created in the Paperclip
+# UI, invisible to seed bookkeeping).
+n1=$(curl -s -X POST "$PAPERCLIP_API_URL/api/companies/co-1/issues" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"native blocker","goalId":"goal-1","state":"backlog"}' | jq -r .id)
+n2=$(curl -s -X POST "$PAPERCLIP_API_URL/api/companies/co-1/issues" \
+  -H 'Content-Type: application/json' \
+  -d "{\"title\":\"natively blocked\",\"goalId\":\"goal-1\",\"state\":\"backlog\",\"blockerIds\":[\"$n1\"]}" | jq -r .id)
+"$sb" promote "$n2" --actor lead --json >/dev/null
+out=$("$sb" ready --actor fresh-agent --json)
+echo "$out" | jq -e --arg t "$n2" '[.tasks[].task] | index($t) | not' >/dev/null || die "natively blocked issue in ready"
+"$sb" cancel "$n1" --actor lead --json >/dev/null
+out=$("$sb" ready --actor fresh-agent --json)
+echo "$out" | jq -e --arg t "$n2" '[.tasks[].task] | index($t)' >/dev/null || die "terminal native blocker still gates ready"
+
 # ready normalizes priorities to P0-P3 and sorts by them: loop.sh claims
 # the FIRST returned task, so a P0 must precede lower priorities.
 out=$("$sb" create --title "Low prio" --priority P3 --actor a --json); lo=$(echo "$out" | jq -r .task)
