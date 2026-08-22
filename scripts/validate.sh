@@ -35,6 +35,12 @@ if out=$(cd "$root" && sh scripts/seed spec lint 2>&1); then
     say "FAIL: $out"
     fail=1
   fi
+  if out=$(cd "$root" && sh scripts/seed workflow validate --all 2>&1); then
+    say "workflows ok"
+  else
+    say "FAIL: workflow validate: $out"
+    fail=1
+  fi
 else
   say "WARNING: engine unavailable, skipped spec lint + validate ($out)"
 fi

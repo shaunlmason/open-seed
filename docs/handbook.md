@@ -97,6 +97,39 @@ and `scripts/harness/codex` ship; add your own by dropping an executable in
 map per-harness and the mapping is **declared, never silent** — see the role
 files' `permission:` frontmatter.
 
+**Checked-in workflows** (v2, §148): multi-step jobs live as step DAGs at
+`.seed/workflows/<name>.yaml` — steps with `depends_on` edges (by id),
+`consumes`/`produces` artifact contracts, `when`/`trigger_rule` branching,
+loop groups, and `approval|review|checks` gates; the format is
+`.seed/workflow-schema/workflow.schema.json`. Two commands run the story:
+
+```sh
+scripts/seed workflow validate --all      # thirteen preflight rules; runs in CI
+scripts/seed workflow run smoke --mock    # end-to-end, zero credentials, zero side effects
+scripts/seed workflow run fix-issue --input issue=42 --input repo=o/r --input pr=7 \
+  --input head_sha=$(gh pr view 7 --json headRefOid -q .headRefOid)
+```
+
+Independent steps run in parallel waves; AI steps ride the same
+`scripts/seed-harness` adapters as the loop, with the step's
+`tools: readonly|coding` mapped onto `SEED_PERMISSION` (`read-only` /
+`safe-edit` — nothing in a workflow file reaches `yolo`), and harness/model
+values validated against the `[workflows]` registry in `.seed/config.toml`.
+Run state (checkpoints, artifacts, gate records) lives under
+`<git-common-dir>/seed-runs/<run-id>/` — local, shared across linked
+worktrees, never committed. An `approval` gate pauses the run until you
+write its response file and `--resume <run-id>`; resuming re-executes only
+incomplete steps and refuses a run whose definition or inputs changed.
+Under `--mock` every AI step goes to `scripts/harness/mock` and every
+`run:` command is recorded, never executed — a mock run can prove any
+workflow, `fix-issue` included, without touching anything. Steps that
+mutate task state do it through `scripts/seed task <verb>` like every
+other caller — workflows are the intra-run DAG; **cards stay the
+inter-agent coordination layer** (dep edges + `ready`-gating + the close
+cascade already schedule work across agents topologically).
+`.claude/workflows/` remains the home for Claude-native dynamic
+workflows — never under `.seed/`.
+
 ## 4. Guardrails, honestly
 
 `.seed/guardrails.yaml` is the vocabulary; enforcement is layered — hooks

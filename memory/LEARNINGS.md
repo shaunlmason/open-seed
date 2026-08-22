@@ -32,3 +32,12 @@ Fresh sessions read this file instead of rediscovering.
   changes the SHA). Record the tag at release time and let the consumer
   stamp the resolved commit after the fact — provenance splits into
   "what the release declares" and "what the consumer verified".
+- 2026-08-22 (os-52b9aed0): a gate is only trustworthy if it runs
+  BEFORE the action it guards, and mock mode is only trustworthy if it
+  stubs side-effecting `run:` steps too — "zero credentials" without
+  "zero side effects" lets a mock run of a landing workflow reach a
+  real merge.
+- 2026-08-22 (os-52b9aed0): a review loop needs a remediation step
+  wired into the gate itself; re-invoking a read-only reviewer on an
+  unchanged implementation converges on nothing and burns
+  max_revisions.

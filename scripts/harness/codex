@@ -13,6 +13,8 @@ case "${SEED_PERMISSION:-safe-edit}" in
   yolo)      args="--dangerously-bypass-approvals-and-sandbox" ;;
   *) echo "unknown SEED_PERMISSION '${SEED_PERMISSION}'" >&2; exit 3 ;;
 esac
+# Per-step model selection (workflow engine): SEED_MODEL maps to -m.
+[ -n "${SEED_MODEL:-}" ] && args="$args -m $SEED_MODEL"
 prompt=$(cat)
 # codex exec emits JSONL; reduce to the adapter envelope (last agent message).
 out=$(timeout "${SEED_TIMEOUT:-1800}" codex exec $args --json "$prompt") || {

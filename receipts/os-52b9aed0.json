@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "task": "os-52b9aed0",
+  "merge_base": "a22ea6ba1f97c440185ff36885dae91977759b53",
+  "head": "7f9f64bd6b79cb87d8ad42c00772fbc5cbef7a81",
+  "plan_path": "plans/os-52b9aed0.md",
+  "plan_sha256": "3c9ab243052c8d43994b6a50b6337d683565c2d5db9669529da5b088d0c5c6d8",
+  "diff_files": [
+    ".seed/config.toml",
+    ".seed/engine.lock",
+    ".seed/workflow-schema/workflow.schema.json",
+    ".seed/workflows/fix-issue.yaml",
+    ".seed/workflows/prompts/implement.md",
+    ".seed/workflows/prompts/plan.md",
+    ".seed/workflows/schemas/plan.schema.json",
+    ".seed/workflows/smoke.yaml",
+    "docs/handbook.md",
+    "memory/LEARNINGS.md",
+    "scripts/harness/claude",
+    "scripts/harness/codex",
+    "scripts/harness/mock",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "9dddaff72e70fe5e575d9e65f717c18bfc9de97360fde54abf4db5dc321395a7",
+  "validation": [
+    {
+      "cmd": "test -f .seed/workflow-schema/workflow.schema.json",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed workflow validate --all",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed workflow run smoke --mock",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"seed workflow validate\" docs/handbook.md",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
