@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task": "os-61967950",
+  "merge_base": "5860778d2b87b1778737f613deebdddd63394c02",
+  "head": "18d116ad27f54fff7c3ae606e4c5aaf8947343f1",
+  "plan_path": "plans/os-61967950.md",
+  "plan_sha256": "34f8ff0f4257f1ed6a22943cbb049ce21b5d1a38d3d2263b8f5d4c042a875a9e",
+  "diff_files": [
+    ".seed/engine.lock",
+    "scripts/smoke-loop.sh"
+  ],
+  "diff_sha256": "4f4ffcaebf3752e7e3fd0eea53c8364fba1ce037c4cf7ccf1988557cd3228558",
+  "validation": [
+    {
+      "cmd": "make smoke",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
