@@ -145,6 +145,14 @@ requirements:
   verbs, native atomic claim and close-cascade, no instruction changes
   anywhere. Read its README for the declared variances (emulated fence,
   replica-scoped leases, audit rides bd).
+- **Human visibility — the issues mirror:** set `[mirror] enabled = true` in
+  `.seed/config.toml` and the maintenance workflow renders every card as a
+  labeled GitHub issue (`seed:ready`, `seed:in_progress`, `seed:review`,
+  `seed:blocked`, `seed:done`; backlog unlabeled; done/cancelled close as
+  completed/not-planned). Strictly **one-way**: cards stay authoritative,
+  and editing an issue's labels changes nothing — treat issues as a read-only
+  dashboard (label edits become *requests* only once the dispatcher lane is
+  active).
 - **Merge throughput:** don't enable repo-wide "require branches up to
   date" — stale-plan safety is already per-PR in verify. At scale, enable a
   GitHub **merge queue**; the verify workflow already handles `merge_group`

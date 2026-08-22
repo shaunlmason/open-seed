@@ -16,3 +16,9 @@ default_lease = "60m"   # leases are mandatory on filecards (§7.1)
 [operators]
 # Humans (squad leads) plus the maintenance workflow's identity (§10 Q5).
 actors = ["shaunlmason", "seed-maintenance"]
+
+[mirror]
+# One-way GitHub Issues export (D1: a component, not a backend — cards stay
+# authoritative; label edits on issues are requests, never state). Applied by
+# the seed-maintenance workflow when enabled.
+enabled = false
