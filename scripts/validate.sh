@@ -9,7 +9,7 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 fail=0
 say() { printf 'validate: %s\n' "$*"; }
 
-for f in .seed/version .seed/engine.lock .seed/config.toml .seed/guardrails.yaml \
+for f in .seed/version .seed/engine.lock .seed/template.lock .seed/config.toml .seed/guardrails.yaml \
          .seed/port-schema/port.json .seed/port-schema/transitions.json \
          CODEOWNERS AGENTS.md CLAUDE.md Makefile; do
   if [ ! -f "$root/$f" ]; then
