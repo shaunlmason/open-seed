@@ -91,3 +91,4 @@
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-25958b27","ts":"2026-08-22T18:29:32Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-4a347bd1","ts":"2026-08-22T18:29:34Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-73814c53","ts":"2026-08-22T18:29:37Z","verb":"close"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-52b9aed0","ts":"2026-08-22T18:40:05Z","verb":"promote"}
