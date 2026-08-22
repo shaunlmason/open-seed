@@ -87,6 +87,19 @@ behavior with no engine code change.
 winner (exit 0) and one loser (exit 2); a fenced-out stale claimant gets exit 6; a
 simulated ref rewrite halts the shim.
 
+> **Status: complete (2026-08-22), engine v0.3.0.** All three done-when scenarios
+> pass as integration tests against real local git remotes, plus: anchor-ancestry
+> failure halting a *fresh* clone, HALT marker blocking mutations until operator
+> `seed state resume`, reject lockout via author-of-record, dep-cascade
+> auto-unblock in the closing verb's own commit, one-commit-per-verb with atomic
+> run-log lines, and the push-race retry loop observing the winner's write.
+> Notes: filecards is implemented inside the engine (`entry = "builtin"` in its
+> manifest — the external-plugin exec seam remains for installed backends);
+> claim on an already-claimed card maps the table's exit 3 to exit 2
+> (contention) per §7.1; `seed init-github` prints the protection checklist
+> (the engine has no GitHub API access) — the API-side verification moves to
+> Phase 5's workflows.
+
 ## Phase 3 — Template scaffold
 
 - Lay down the §4 tree: `.seed/` (config.toml, guardrails.yaml, version, agents/,
