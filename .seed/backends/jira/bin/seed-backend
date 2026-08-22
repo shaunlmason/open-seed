@@ -56,6 +56,12 @@ fail() {
   printf '{"ok":false,"schema_version":"1.0","verb":"%s","error":"%s","message":"%s"}\n' "$verb" "$2" "${3:-}"
   exit "$1"
 }
+# The port contract's contention shape: cause claim_contention plus a
+# top-level holder field an orchestrator can act on.
+fail_contention() {
+  printf '{"ok":false,"schema_version":"1.0","verb":"%s","error":"claim_contention","holder":"%s","message":"held by %s"}\n' "$verb" "$1" "$1"
+  exit 2
+}
 envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
 
 # api METHOD PATH [JSON] — HTTP code persisted to a temp file (callers run
@@ -213,11 +219,18 @@ cascade() {
   load_issues
   for dep in $(printf '%s' "$ISSUES_JSON" | jq -r --arg l "seed:bo:dep:$1" '.[] | select(.fields.labels | index($l)) | .key'); do
     require_issue "$dep"; cur=$CUR
-    relabel "$dep" "$cur" "" "seed:bo:dep:$1"
-    require_issue "$dep"; cur=$CUR
-    if [ "$(istatus "$cur")" = "Blocked" ] && [ -z "$(bo_entries "$cur")" ]; then
+    # When removing this entry empties the set, the fallible release
+    # transition runs FIRST: a refusal leaves the dependency label intact
+    # (recoverable via operator unblock) instead of stranding a Blocked
+    # issue with no recorded blocker.
+    left=$(bo_entries "$cur" | grep -vxF "dep:$1" | head -1)
+    if [ "$(istatus "$cur")" = "Blocked" ] && [ -z "$left" ]; then
       do_transition "$dep" ready
+      require_issue "$dep"; cur=$CUR
+      relabel "$dep" "$cur" "" "seed:bo:dep:$1"
       cascaded=$(printf '%s' "$cascaded" | jq -c --arg d "$dep" '. + [$d]')
+    else
+      relabel "$dep" "$cur" "" "seed:bo:dep:$1"
     fi
   done
 }
@@ -289,16 +302,28 @@ case "$verb" in
       && fail 3 invalid_transition "the seed:audit issue is the audit substrate, not a card"
     account_id "$actor"
     printf '%s\n' "$(ilabels "$CUR")" | grep -qxF "seed:rejected:$actor" \
-      && fail 2 claim_not_granted "rejected_author: $actor was the rejected implementer"
+      && fail 2 rejected_author "$actor was the rejected implementer on this card"
     holder=$(iassignee_id "$CUR")
-    [ -n "$holder" ] && fail 2 claim_not_granted "held by $(actor_name "$holder")"
+    [ -n "$holder" ] && fail_contention "$(actor_name "$holder")"
     [ "$(istatus "$CUR")" = "To Do" ] || fail 3 invalid_transition "claim requires ready (To Do); issue is '$(istatus "$CUR")'"
     tok="c-$(mint)"
-    # Declared variance: read-check then two writes, last-write-wins — no
-    # server arbitration (weaker than filecards' push-wins).
+    # Declared variance: read-check then writes, last-write-wins — no server
+    # arbitration. The post-claim verification below is what keeps an
+    # interleaved race from stranding the card: after every write, re-read
+    # and believe only what the substrate says.
     relabel "$id" "$CUR" "seed:tok:$tok" "seed:tok:"
     assign "$id" "$AID"
-    do_transition "$id" in_progress
+    require_issue "$id"
+    if [ "$(istatus "$CUR")" != "In Progress" ]; then
+      do_transition "$id" in_progress
+    fi
+    # Final verification: we won only if the substrate holds OUR assignee
+    # AND OUR token; a rival's overwrite means they are the usable winner
+    # and we report contention with the real holder.
+    require_issue "$id"
+    if [ "$(iassignee_id "$CUR")" != "$AID" ] || ! printf '%s\n' "$(ilabels "$CUR")" | grep -qxF "seed:tok:$tok"; then
+      fail_contention "$(actor_name "$(iassignee_id "$CUR")")"
+    fi
     envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"claim_token\":\"$tok\""
     ;;
 
@@ -376,12 +401,15 @@ case "$verb" in
     [ "$(istatus "$cur")" = "Blocked" ] || fail 3 invalid_transition "not blocked"
     if [ "$verb" = "plan-unblock" ]; then entry="plan:$pr"; else entry="${blocked_on_arg:-manual:$actor}"; fi
     bo_entries "$cur" | grep -qxF "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
-    relabel "$id" "$cur" "" "seed:bo:$entry"
-    require_issue "$id"
-    if [ -z "$(bo_entries "$CUR")" ]; then
+    left=$(bo_entries "$cur" | grep -vxF "$entry" | head -1)
+    if [ -z "$left" ]; then
+      # Transition first: a refusal keeps the entry recorded for retry.
       do_transition "$id" ready
+      require_issue "$id"
+      relabel "$id" "$CUR" "" "seed:bo:$entry"
       envelope ",\"task\":\"$id\",\"state\":\"ready\""
     else
+      relabel "$id" "$cur" "" "seed:bo:$entry"
       envelope ",\"task\":\"$id\",\"state\":\"blocked\""
     fi
     ;;

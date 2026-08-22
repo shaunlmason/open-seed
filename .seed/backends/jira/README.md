@@ -70,14 +70,22 @@ P0–P3 → Highest / High / Medium / Low.
 ## Declared variances (never silent)
 
 - **Emulated claim**: read-check then assign, last-write-wins — no server
-  arbitration (weaker than filecards' push-wins). Declared.
+  arbitration (weaker than filecards' push-wins). The adapter closes the
+  practical gap with **post-claim verification**: after its writes it
+  re-reads the issue and succeeds only if the substrate holds *its*
+  assignee and token — a lost interleave reports contention with the
+  real holder instead of returning a dead token. Declared.
 - **No leases**: `lease-renew` validates the fence and succeeds; staleness
   is `seed maintain reap` policy.
 - **Server is truth**: no offline operation, no fork portability
   (`state_portability = "server"`).
 - **Cascade is emulated via `seed:bo:*` labels** — implemented and
   contract-tested, never described as absent; its limitation is that label
-  bookkeeping is only as trustworthy as label write access.
+  bookkeeping is only as trustworthy as label write access. The release
+  transition runs before an entry label is removed, so a workflow that
+  refuses `Blocked → To Do` leaves the dependency recorded — recovery is
+  an operator `unblock` once the workflow allows the move, never a
+  Blocked issue with no blocker on record.
 - **Rate limits**: Jira Cloud throttles per-account; `ready`, `list`, and
   the cascade are search-backed — fine for a squad's queue, not bulk.
 - **Jira Server/DC (v2 API) is out of scope** — Cloud REST v3 only.

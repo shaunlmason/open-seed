@@ -34,6 +34,8 @@ def transitions_from(status):
         targets = ["Backlog"]
     else:
         targets = [s for s in STATUSES if s != status]
+    if os.environ.get("FAKE_JIRA_NO_TODO_FROM_BLOCKED") and status == "Blocked":
+        targets = [t for t in targets if t != "To Do"]
     return [{"id": f"t-{i}", "name": t, "to": {"name": t}} for i, t in enumerate(targets)]
 
 
@@ -144,6 +146,12 @@ class Handler(BaseHTTPRequestHandler):
                 i["labels"] = list(f["labels"])
             if "assignee" in f:
                 i["assigneeId"] = (f["assignee"] or {}).get("accountId")
+                rival = os.environ.get("FAKE_JIRA_RACE_ACTOR")
+                if rival and i["assigneeId"] and i["assigneeId"] != rival:
+                    # Deterministic interleave: a rival's later write lands
+                    # right after ours (last-write-wins, like real Jira).
+                    i["assigneeId"] = rival
+                    i["labels"] = [l for l in i.get("labels", []) if not l.startswith("seed:tok:")] + ["seed:tok:c-rival"]
             if "priority" in f:
                 i["priority"] = (f["priority"] or {}).get("name", i.get("priority"))
             return self.reply(204)

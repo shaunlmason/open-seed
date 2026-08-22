@@ -53,6 +53,8 @@ case "$tok1" in c-*) ;; *) die "minted token shape: $tok1" ;; esac
 out=$("$sb" ready --actor agent-2 --json)
 [ "$(echo "$out" | jq '.tasks | length')" = "0" ] || die "claimed issue still in ready"
 expect_rc 2 "rival claim" "$sb" claim "$id" --actor agent-2 --json
+out=$("$sb" claim "$id" --actor agent-2 --json 2>/dev/null || true)
+echo "$out" | jq -e '.error == "claim_contention" and .holder == "agent-1"' >/dev/null || die "contention envelope lacks claim_contention/holder: $out"
 expect_rc 6 "no-token transition" "$sb" transition "$id" --to review --actor agent-1 --json
 expect_rc 6 "wrong-token transition" "$sb" transition "$id" --to review --actor agent-1 --token c-bogus --json
 expect_rc 6 "regex-metachar token cannot bypass the fence" "$sb" transition "$id" --to review --actor agent-1 --token '.*' --json
@@ -149,6 +151,41 @@ out=$("$sb" unblock "$xb" --actor lead --blocked-on manual:x --json); ok "$out" 
 [ "$("$sb" get "$xb" --json | jq -r '.card.blocked_on[0]')" = "manual:xy" ] || die "manual:xy lost"
 out=$("$sb" list --json); ok "$out" list
 expect_rc 4 "missing issue" "$sb" get SEED-999 --json
+
+# A lost claim interleave resolves to the substrate's actual holder: the
+# rival's later write wins, our verification sees it, and we report
+# contention instead of returning a dead token.
+kill $srv 2>/dev/null || true; wait $srv 2>/dev/null || true
+portr=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
+FAKE_JIRA_RACE_ACTOR=acc-2 python3 "$dir/testdata/fake-jira" "$portr" & srv=$!
+export JIRA_BASE_URL="http://127.0.0.1:$portr"
+for i in $(seq 1 50); do curl -sf "$JIRA_BASE_URL/rest/api/3/search?jql=x" >/dev/null 2>&1 && break; sleep 0.1; done
+rc_card=$("$sb" create --title "Race card" --actor a --json | jq -r .task)
+"$sb" promote "$rc_card" --actor lead --json >/dev/null
+rc=0; out=$("$sb" claim "$rc_card" --actor agent-1 --json) || rc=$?
+[ "$rc" = "2" ] || die "lost race: exit $rc, want 2"
+echo "$out" | jq -e '.error == "claim_contention"' >/dev/null || die "lost race envelope: $out"
+[ "$("$sb" get "$rc_card" --json | jq -r .card.holder)" = "agent-2" ] || die "race winner not recorded"
+
+# A refused cascade release keeps the dependency recorded (recoverable via
+# operator unblock once the workflow allows it) — never a Blocked issue
+# with no blocker on record.
+kill $srv 2>/dev/null || true; wait $srv 2>/dev/null || true
+port3=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
+FAKE_JIRA_NO_TODO_FROM_BLOCKED=1 python3 "$dir/testdata/fake-jira" "$port3" & srv=$!
+export JIRA_BASE_URL="http://127.0.0.1:$port3"
+for i in $(seq 1 50); do curl -sf "$JIRA_BASE_URL/rest/api/3/search?jql=x" >/dev/null 2>&1 && break; sleep 0.1; done
+cb=$("$sb" create --title "Cascade blocker" --actor a --json | jq -r .task)
+"$sb" promote "$cb" --actor lead --json >/dev/null
+cd2=$("$sb" create --title "Cascade dependent" --actor a --blocked-by "$cb" --json | jq -r .task)
+"$sb" promote "$cd2" --actor lead --json >/dev/null
+"$sb" block "$cd2" --actor lead --blocked-on "dep:$cb" --json >/dev/null
+tokx=$("$sb" claim "$cb" --actor agent-1 --json | jq -r .claim_token)
+"$sb" transition "$cb" --to review --actor agent-1 --token "$tokx" --json >/dev/null
+expect_rc 3 "cascade release refused by workflow" "$sb" close "$cb" --actor lead --json
+[ "$("$sb" get "$cd2" --json | jq -r '.card.blocked_on[0]')" = "dep:$cb" ] || die "refused cascade dropped the dependency label"
+expect_rc 3 "unblock refused by workflow keeps entry" "$sb" unblock "$cd2" --actor lead --blocked-on "dep:$cb" --json
+[ "$("$sb" get "$cd2" --json | jq -r '.card.blocked_on[0]')" = "dep:$cb" ] || die "refused unblock dropped the entry"
 
 # The required Blocked status is a declared convention: a workflow without
 # it refuses with remediation (exit 5, distinguished from an illegal move).
