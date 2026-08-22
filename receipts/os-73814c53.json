@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "task": "os-73814c53",
+  "merge_base": "8f35dbbea61dc9c8550fde4c439c34e4a338fa70",
+  "head": "a19d763fcc7b780cddf1b553fa9052e22489c47e",
+  "plan_path": "plans/os-73814c53.md",
+  "plan_sha256": "b105a34463ba8c57fcfeed884bfe5d35b5bf89aee248ded64d176f306bc710ff",
+  "diff_files": [
+    ".seed/backends.lock.json",
+    ".seed/backends/linear/README.md",
+    ".seed/backends/linear/backend.toml",
+    ".seed/backends/linear/bin/seed-backend",
+    ".seed/backends/linear/test.sh",
+    ".seed/backends/linear/testdata/fake-linear",
+    "docs/handbook.md",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "5609aa1d0c2c626f6efd677a334ea99e38134da7160ae49d182d17367ecbb8ec",
+  "validation": [
+    {
+      "cmd": "test -x .seed/backends/linear/bin/seed-backend",
+      "exit": 0
+    },
+    {
+      "cmd": "sh .seed/backends/linear/test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
