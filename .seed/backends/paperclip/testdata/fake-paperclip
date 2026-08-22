@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""Deterministic Paperclip API test double (documented surface subset,
+research/10 Part 1): issues with the seven-state machine enforced by
+assertTransition, DB-atomic checkout locks, comments, metadata, and the
+activity log. Not a Paperclip implementation — a contract fixture.
+
+Usage: fake-paperclip <port>
+"""
+import json
+import re
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+TRANSITIONS = {
+    "backlog": {"todo", "cancelled"},
+    "todo": {"in_progress", "backlog", "blocked", "cancelled"},
+    "in_progress": {"in_review", "todo", "blocked", "cancelled"},
+    "blocked": {"todo", "cancelled"},
+    "in_review": {"done", "todo", "cancelled"},
+    "done": set(),
+    "cancelled": {"backlog"},
+}
+
+issues = {}
+goals = {"goal-1": {"id": "goal-1", "title": "Default goal", "budgetUsd": 100.0, "spentUsd": 42.0}}
+events = []
+seq = [0]
+
+
+def new_id():
+    seq[0] += 1
+    return f"PAP-{seq[0]}"
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def reply(self, code, obj=None):
+        body = json.dumps(obj if obj is not None else {}).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def payload(self):
+        n = int(self.headers.get("Content-Length") or 0)
+        return json.loads(self.rfile.read(n) or b"{}")
+
+    def route(self):
+        m = re.match(r"^/api/companies/[^/]+(/.*)$", self.path)
+        return m.group(1) if m else self.path
+
+    def do_GET(self):
+        p = self.route()
+        if p.startswith("/issues?"):
+            state = p.split("state=")[1].split("&")[0]
+            return self.reply(200, [i for i in issues.values() if i["state"] == state])
+        if p == "/issues":
+            return self.reply(200, list(issues.values()))
+        m = re.match(r"^/issues/([^/]+)$", p)
+        if m:
+            i = issues.get(m.group(1))
+            return self.reply(200, i) if i else self.reply(404, {"error": "not found"})
+        m = re.match(r"^/goals/([^/]+)$", p)
+        if m:
+            g = goals.get(m.group(1))
+            return self.reply(200, g) if g else self.reply(404, {"error": "not found"})
+        self.reply(404, {"error": "no route"})
+
+    def do_POST(self):
+        p = self.route()
+        d = self.payload()
+        if p == "/issues":
+            if not d.get("goalId"):
+                return self.reply(422, {"error": "goal ancestry required"})
+            if d["goalId"] not in goals:
+                return self.reply(422, {"error": "unknown goal"})
+            if d.get("parentId") and d["parentId"] not in issues:
+                return self.reply(422, {"error": "unknown parent issue"})
+            if any(b not in issues for b in d.get("blockerIds", [])):
+                return self.reply(422, {"error": "unknown blocker issue"})
+            i = {
+                "id": new_id(), "title": d.get("title", ""), "description": d.get("description", ""),
+                "priority": d.get("priority", "medium"), "state": d.get("state", "backlog"),
+                "goalId": d["goalId"], "parentId": d.get("parentId", ""),
+                "blockerIds": d.get("blockerIds", []),
+                "assignee": d.get("assignee", ""), "checkoutAgent": "",
+                "metadata": d.get("metadata", {}), "comments": [], "createdAt": "2026-08-22T00:00:00Z",
+            }
+            issues[i["id"]] = i
+            return self.reply(201, {"id": i["id"]})
+        m = re.match(r"^/issues/([^/]+)/checkout$", p)
+        if m:
+            i = issues.get(m.group(1))
+            if not i:
+                return self.reply(404, {})
+            # A held checkout is contention for EVERYONE, the same agent
+            # included: checkout + token mint must form one exclusive claim,
+            # so a repeated same-owner checkout may not silently succeed
+            # (it would let two processes of one actor both claim, the
+            # second overwriting the first's fence token).
+            if i["checkoutAgent"]:
+                return self.reply(409, {"holder": i["checkoutAgent"]})
+            if i["state"] not in ("todo", "in_progress"):
+                return self.reply(409, {"error": f"not claimable from {i['state']}"})
+            i["checkoutAgent"] = d.get("agent", "")
+            i["assignee"] = d.get("agent", "")
+            i["state"] = "in_progress"
+            return self.reply(200, {"checkoutRunId": "run-1"})
+        m = re.match(r"^/issues/([^/]+)/release$", p)
+        if m:
+            i = issues.get(m.group(1))
+            if not i:
+                return self.reply(404, {})
+            i["checkoutAgent"] = ""
+            i["assignee"] = ""
+            return self.reply(200, {})
+        m = re.match(r"^/issues/([^/]+)/comments$", p)
+        if m:
+            i = issues.get(m.group(1))
+            if not i:
+                return self.reply(404, {})
+            i["comments"].append(d.get("body", ""))
+            return self.reply(201, {})
+        if p == "/events":
+            events.append(d)
+            return self.reply(201, {})
+        self.reply(404, {"error": "no route"})
+
+    def do_PATCH(self):
+        p = self.route()
+        d = self.payload()
+        m = re.match(r"^/issues/([^/]+)$", p)
+        if not m:
+            return self.reply(404, {})
+        i = issues.get(m.group(1))
+        if not i:
+            return self.reply(404, {})
+        if "state" in d:
+            # assertTransition: the server, not the client, is the arbiter.
+            if d["state"] not in TRANSITIONS.get(i["state"], set()):
+                return self.reply(409, {"error": f"invalid transition {i['state']} -> {d['state']}"})
+            i["state"] = d["state"]
+            if d["state"] in ("done", "cancelled", "todo", "blocked", "in_review"):
+                i["checkoutAgent"] = ""
+        if "metadata" in d:
+            i["metadata"] = d["metadata"]
+        return self.reply(200, i)
+
+
+if __name__ == "__main__":
+    HTTPServer(("127.0.0.1", int(sys.argv[1])), Handler).serve_forever()
