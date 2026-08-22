@@ -8,3 +8,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-62b64ce8","ts":"2026-08-22T06:26:08Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"title":"v2: beads backend plugin (design §7.3; research/10 §5)"},"task":"os-3e2a8d92","ts":"2026-08-22T06:26:11Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"v2: github-issues backend + one-way mirror exporter (D1/D7)"},"task":"os-50995779","ts":"2026-08-22T06:26:13Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"v2: workflow engine + mock harness (§7.3)"},"task":"os-52b9aed0","ts":"2026-08-22T06:26:15Z","verb":"create"}
