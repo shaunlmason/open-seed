@@ -3,14 +3,16 @@
 A template repository for new projects that ships standardized, checked-in tooling for
 multi-agent orchestration, task tracking, and guardrails.
 
-## Status: design phase
+## Status: design complete — implementing v1
 
 A survey of the multi-agent orchestration ecosystem (all 180 projects in
 [awesome-agent-orchestrators](https://github.com/andyrewlee/awesome-agent-orchestrators)
 plus the current SOTA in harness-native primitives, task tracking, and guardrails)
-was completed to ground the design.
+grounded the design; the design is settled and v1 implementation follows the build plan.
+Agents working in this repo: read [`AGENTS.md`](AGENTS.md) first (authority order, binding decisions).
 
-- **[Design options](docs/design-options.md)** — synthesis, recommendations, and open questions
+- **[Design](docs/design-options.md)** — the design authority: decisions, team layer, risks, glossary, resolved defaults
+- **[Build plan](docs/build-plan.md)** — v1 phase ordering and per-phase acceptance criteria
 - **[Research reports](docs/research/)** — per-category evidence:
   1. [Terminal TUI orchestrators](docs/research/01-terminal-tui-orchestrators.md)
   2. [Desktop & web orchestrators (A)](docs/research/02-desktop-web-orchestrators-a.md)
