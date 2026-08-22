@@ -32,6 +32,17 @@ The two-repo split (§7.5) makes this step one, and it happens **outside this re
 **Done when:** a semver tag produces downloadable, checksummed, attested binaries for
 all six targets, and `go install .../cmd/seed@v0.1.0` works.
 
+> **Status: complete (2026-08-22).** Repo:
+> [`shaunlmason/open-seed-engine`](https://github.com/shaunlmason/open-seed-engine)
+> (public, MIT). One refinement over the plan as written: releases are driven by a
+> `VERSION` file (or manual dispatch) — the workflow mints the semver tag at HEAD
+> in-runner, so the tag and the released commit can never disagree and no
+> contributor needs tag-push rights. Verified against
+> [v0.1.1](https://github.com/shaunlmason/open-seed-engine/releases/tag/v0.1.1):
+> six targets released with `checksums.txt`, provenance attestation green,
+> download + sha256 + exec proven (the bootstrap shim's exact path), and
+> `go install` proven via the module proxy.
+
 ## Phase 1 — Port spec as data + protocol core
 
 - Author `.seed/port-schema/` in **this** repo: JSON Schemas for the nine required
