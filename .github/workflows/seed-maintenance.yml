@@ -142,6 +142,10 @@ jobs:
         if: steps.gate.outputs.active == 'true'
         run: scripts/seed state lint --halt-on-fail --actor "$ACTOR"
 
+      - name: Prune acked mail (bounded history, os-499c5978)
+        if: steps.gate.outputs.active == 'true'
+        run: scripts/seed mail prune
+
       - name: Anchor checkpoint tag
         if: steps.gate.outputs.active == 'true'
         run: scripts/seed state anchor
