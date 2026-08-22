@@ -14,4 +14,5 @@ default_lease = "60m"   # leases are mandatory on filecards (§7.1)
 # authenticated — true enforcement is state-ref push access plus the
 # server-attributed gates (R10).
 [operators]
-actors = ["shaunlmason"]
+# Humans (squad leads) plus the maintenance workflow's identity (§10 Q5).
+actors = ["shaunlmason", "seed-maintenance"]

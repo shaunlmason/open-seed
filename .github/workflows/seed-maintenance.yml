@@ -1,0 +1,89 @@
+# seed-maintenance (live, deterministic — no model secrets; §7.3/D7).
+# Runs under the workflow's operator credential ("seed-maintenance", in the
+# .seed/config.toml roster). Scheduled off the hour (aeon debt-model: assume
+# missed ticks). Order matters: reap → unblock → close → lint (halts on
+# conformance failure, stopping the job before anchoring bad state) → anchor.
+name: seed-maintenance
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+  checks: read
+
+concurrency: seed-maintenance
+
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    env:
+      ACTOR: seed-maintenance
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip when no state ref exists yet
+        id: gate
+        run: |
+          if git ls-remote --exit-code origin seed-state >/dev/null 2>&1; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no seed-state ref — run scripts/seed init first"; echo "active=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Reap expired leases (handoff stubs, §7.1)
+        if: steps.gate.outputs.active == 'true'
+        run: scripts/seed maintain reap --actor "$ACTOR"
+
+      - name: Plan-unblock (state-shaped — PR merged or closed, D1)
+        if: steps.gate.outputs.active == 'true'
+        run: |
+          for id in $(scripts/seed task list --state blocked | jq -r '.tasks[].task'); do
+            for entry in $(scripts/seed task get "$id" | jq -r '.card.blocked_on[]? | select(startswith("plan:"))'); do
+              pr="${entry#plan:}"
+              state=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state -q .state 2>/dev/null || echo UNKNOWN)
+              if [ "$state" = "MERGED" ] || [ "$state" = "CLOSED" ]; then
+                scripts/seed task plan-unblock "$id" --pr "$pr" --actor "$ACTOR"
+              fi
+            done
+          done
+
+      - name: Close merged task PRs (accept + cascade after merge, §7.1)
+        if: steps.gate.outputs.active == 'true'
+        run: |
+          for id in $(scripts/seed task list --state review | jq -r '.tasks[].task'); do
+            pr_json=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "seed/$id" --state merged \
+              --json number,url,headRefOid --limit 1)
+            [ "$(echo "$pr_json" | jq length)" = "1" ] || continue
+            url=$(echo "$pr_json" | jq -r '.[0].url')
+            sha=$(echo "$pr_json" | jq -r '.[0].headRefOid')
+            verify=$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs?check_name=verify" \
+              -q '.check_runs[0].conclusion' 2>/dev/null || echo missing)
+            if [ "$verify" = "success" ]; then
+              scripts/seed task close "$id" --actor "$ACTOR" --resolution "$url"
+            else
+              echo "skip $id: merged PR $url but verify check is '$verify'"
+            fi
+          done
+
+      - name: Conformance lint (writes HALT on failure, §7.2)
+        if: steps.gate.outputs.active == 'true'
+        run: scripts/seed state lint --halt-on-fail --actor "$ACTOR"
+
+      - name: Anchor checkpoint tag
+        if: steps.gate.outputs.active == 'true'
+        run: scripts/seed state anchor
+
+      - name: Report
+        if: always() && steps.gate.outputs.active == 'true'
+        run: |
+          echo '## seed-maintenance report' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          scripts/seed maintain report >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
