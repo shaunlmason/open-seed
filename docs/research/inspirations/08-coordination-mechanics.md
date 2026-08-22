@@ -3,6 +3,13 @@
 > Implementation-grade deep dive for the open-seed design study, researched 2026-08-22.
 > Covers swarm-protocol, wit, hcom, multi-agent-shogun, claude_codex_bridge, and claudexor.
 > All six repos cloned and read at source level.
+>
+> **Erratum (design review, 2026-08-22):** the proposed mailbox format (one YAML file per
+> *recipient*, rewritten on ack/prune) is superseded by `docs/design-options.md` §4/R5: one
+> file per *message* (`mail/<agent>/<msg-id>.yaml`, gnap-style, never rewritten), because
+> rewritten structured files under `merge=union` interleave into invalid YAML. Ack/prune
+> becomes file moves/deletes. Mail also lives on the `seed/state` ref (§7.2), not the default
+> branch, and is deferred to v2 (§7.3).
 
 ## 1. phuryn/swarm-protocol
 

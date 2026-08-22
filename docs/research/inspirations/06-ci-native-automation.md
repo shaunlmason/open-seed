@@ -2,6 +2,14 @@
 
 > Implementation-grade deep dive for the open-seed design study, researched 2026-08-22.
 > Sources: full shallow clones of gh-aw, aeon, sortie, contrabass, and claude-code-action.
+>
+> **Erratum (design review, 2026-08-22):** superseded by `docs/design-options.md` D1/D7 on two
+> points: (1) the state label is `seed:in_progress` (not `seed:working`), with the full
+> state↔label mapping defined in D1 (backlog = no state label; cancelled = closed as
+> not-planned); (2) the dispatcher draft's direct `gh issue edit` label swaps should be read
+> as the *mirror-export* step rendering card state — actual task-state mutations in workflows
+> go through `scripts/seed task <verb>` per the port rule (§7.1), with labels as a one-way
+> rendered view (cards authoritative).
 
 ## 1. github/gh-aw (GitHub Agentic Workflows)
 

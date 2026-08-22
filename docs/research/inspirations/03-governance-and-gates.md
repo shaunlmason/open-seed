@@ -2,6 +2,15 @@
 
 > Implementation-grade deep dive for the open-seed design study, researched 2026-08-22.
 > Covers loop-engineering, orc, antfarm, loki-mode, and kodo. Quoted from actual source.
+>
+> **Erratum (design review, 2026-08-22):** the proposed `guardrails.yaml` skeleton in this
+> file's synthesis is superseded by `docs/design-options.md` D4.1 on two points: (1) the
+> `auto_merge_allowlist` example (`"**/*.md"`) is unsafe in open-seed's design, where most of
+> the instruction surface is markdown — the orchestration control surface is never
+> auto-mergeable regardless of allowlist entries; (2) the self-protection entry
+> `"guardrails.yaml"` must be `.seed/guardrails.yaml` (and the rest of `.seed/**`) to match
+> the repository layout. Receipts are additionally written only by the gate, never by agents,
+> and verified by `seed receipt verify` in CI.
 
 ## 1. cobusgreyling/loop-engineering (priority — the pattern book)
 
