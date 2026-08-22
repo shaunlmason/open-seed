@@ -1,0 +1,20 @@
+#!/bin/sh
+# Claude Code adapter (v1 cut, inspirations/09). Prompt on stdin → one JSON
+# envelope on stdout. Permission-tier mapping (declared, not silent —
+# faithful for claude per the tier-fidelity table):
+#   read-only → plan mode (no edits)
+#   safe-edit → acceptEdits (workspace file edits, no arbitrary escalation)
+#   yolo      → bypassPermissions
+set -eu
+command -v claude >/dev/null 2>&1 || { echo "claude CLI not installed" >&2; exit 127; }
+case "${SEED_PERMISSION:-safe-edit}" in
+  read-only) mode="plan" ;;
+  safe-edit) mode="acceptEdits" ;;
+  yolo)      mode="bypassPermissions" ;;
+  *) echo "unknown SEED_PERMISSION '${SEED_PERMISSION}'" >&2; exit 3 ;;
+esac
+timeout "${SEED_TIMEOUT:-1800}" claude -p --output-format json \
+  --permission-mode "$mode" --settings .claude/ci-settings.json <&0
+rc=$?
+[ $rc -eq 124 ] && exit 124
+exit $rc

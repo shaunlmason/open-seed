@@ -3,10 +3,14 @@
 # multiplies at scale (R12). Wire your project's real lint/test/typecheck
 # here when instantiating the template.
 
-.PHONY: check validate
+.PHONY: check validate smoke
 
 check: validate
 	@echo "check: add your project's lint/test/typecheck here (keep it fast)"
 
 validate:
 	@sh scripts/validate.sh
+
+# End-to-end loop smoke in a temp instantiation (no model, no secrets).
+smoke:
+	@bash scripts/smoke-loop.sh

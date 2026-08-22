@@ -1,0 +1,16 @@
+#!/bin/sh
+# seed-harness dispatcher (inspirations/09 adapter contract). Usage:
+#   scripts/seed-harness <name>   with the prompt on stdin and env:
+#     SEED_ROLE        role name (informational)
+#     SEED_TASK        task id
+#     SEED_PERMISSION  read-only | safe-edit | yolo
+#     SEED_TIMEOUT     seconds (default 1800)
+# Output: one JSON envelope on stdout: {"result": "...", ...}
+# Exits: 0 ok, 1 harness error, 3 bad usage, 124 timeout, 127 adapter/binary missing.
+set -eu
+[ $# -ge 1 ] || { echo "usage: seed-harness <name>" >&2; exit 3; }
+name=$1; shift
+dir=$(cd "$(dirname "$0")" && pwd)
+adapter="$dir/harness/$name"
+[ -x "$adapter" ] || { echo "seed-harness: no adapter for '$name' at scripts/harness/$name" >&2; exit 127; }
+exec "$adapter" "$@"
