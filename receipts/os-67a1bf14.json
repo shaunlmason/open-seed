@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task": "os-67a1bf14",
+  "merge_base": "6c4b3d8eb8f207adab7cc1d607465bbc9a03b5bb",
+  "head": "564e19dfd9c406531a4921eaab41c5f20f827ee4",
+  "plan_path": "plans/os-67a1bf14.md",
+  "plan_sha256": "4a2a3f5feab1789a38c8b853be89acb73f03b592eb1227bfd360817fd60e218f",
+  "diff_files": [
+    ".mcp.json",
+    "docs/handbook.md"
+  ],
+  "diff_sha256": "187a9d10158d13855223e1cc67f87072df8ecea38bfb21e4ceb09b4f271b363b",
+  "validation": [
+    {
+      "cmd": "grep -q \"seed mcp serve\" .mcp.json",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -qi \"mcp\" docs/handbook.md",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
