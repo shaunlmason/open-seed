@@ -72,18 +72,23 @@ ln_name() { # port state → Linear workflow state name
     review) echo "In Review";; blocked) echo "Blocked";; done) echo "Done";; cancelled) echo "Canceled";; *) echo "";; esac
 }
 STATES_JSON=""
-states() {
-  [ -n "$STATES_JSON" ] && { printf '%s' "$STATES_JSON"; return; }
+# load_states sets $STATES_JSON and fail()s in the PARENT shell on a query
+# failure — a dead API must surface as backend_unavailable, never as a
+# missing-workflow-state remediation.
+load_states() {
+  [ -n "$STATES_JSON" ] && return
   STATES_JSON=$(gql WorkflowStates 'query WorkflowStates($teamId: String!) { team(id: $teamId) { states { nodes { id name } } } }' \
     "{\"teamId\":\"$LINEAR_TEAM_ID\"}" | jq -c '.data.team.states.nodes // []')
-  printf '%s' "$STATES_JSON"
+  [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "workflow states query: $(gqlerr)"
+  [ "$STATES_JSON" != "[]" ] && [ -n "$STATES_JSON" ] || fail 5 backend_unavailable "workflow states query returned nothing (check LINEAR_TEAM_ID)"
 }
 # state_id sets $SID and fail()s in the PARENT shell — never call it inside
 # a command substitution: the exit-5 remediation must terminate the verb,
 # not get embedded into a JSON payload as text.
 state_id() {
   name=$(ln_name "$1")
-  SID=$(states | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
+  load_states
+  SID=$(printf '%s' "$STATES_JSON" | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
   [ -n "$SID" ] || fail 5 backend_unavailable "team workflow has no '$name' state — add it once in Linear team settings (required convention, see .seed/backends/linear/README.md)"
 }
 port_state() { # Linear state name → port state
@@ -104,6 +109,14 @@ get_issue() {
 # propagate the port exit code).
 require_issue() {
   CUR=$(get_issue "$1")
+  err=$(gqlerr)
+  if [ -n "$err" ]; then
+    # Linear reports unknown ids as errors; anything else is the backend.
+    case "$err" in
+      *[Nn]"ot found"*|*"Entity not found"*) fail 4 not_found "no issue $1" ;;
+      *) fail 5 backend_unavailable "issue query: $err" ;;
+    esac
+  fi
   [ "$CUR" != "null" ] && [ -n "$CUR" ] || fail 4 not_found "no issue $1"
 }
 istate() { printf '%s' "$1" | jq -r '.state.name'; }
@@ -146,7 +159,7 @@ require_fence() {
   require_issue "$1"
   holder=$(iassignee "$CUR")
   [ -n "$token" ] || fail 6 fenced_out "no claim token presented"
-  printf '%s\n' "$(ilabels "$CUR")" | grep -qx "seed:tok:$token" || fail 6 fenced_out "token does not match the live claim"
+  printf '%s\n' "$(ilabels "$CUR")" | grep -qxF "seed:tok:$token" || fail 6 fenced_out "token does not match the live claim"
   [ "$actor" = "$holder" ] || fail 6 fenced_out "actor is not the assignee of record"
 }
 
@@ -231,7 +244,7 @@ case "$verb" in
   claim)
     require_issue "$id"; cur=$CUR
     st=$(istate "$cur"); holder=$(iassignee "$cur")
-    printf '%s\n' "$(ilabels "$cur")" | grep -qx "seed:rejected:$actor" \
+    printf '%s\n' "$(ilabels "$cur")" | grep -qxF "seed:rejected:$actor" \
       && fail 2 claim_not_granted "rejected_author: $actor was the rejected implementer"
     [ -n "$holder" ] && fail 2 claim_not_granted "held by $holder"
     [ "$st" = "Todo" ] || fail 3 invalid_transition "claim requires ready (Todo); issue is '$st'"
@@ -315,7 +328,7 @@ case "$verb" in
     else
       entry="$blocked_on_arg"
     fi
-    bo_entries "$cur" | grep -qx "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
+    bo_entries "$cur" | grep -qxF "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
     relabel "$id" "$cur" "" "seed:bo:$entry"
     require_issue "$id"; cur=$CUR
     if [ -z "$(bo_entries "$cur")" ]; then

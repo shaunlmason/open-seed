@@ -43,6 +43,7 @@ out=$("$sb" ready --actor agent-2 --json)
 expect_rc 2 "rival claim" "$sb" claim "$id" --actor agent-2 --json
 expect_rc 6 "no-token transition" "$sb" transition "$id" --to review --actor agent-1 --json
 expect_rc 6 "wrong-token transition" "$sb" transition "$id" --to review --actor agent-1 --token c-bogus --json
+expect_rc 6 "regex-metachar token cannot bypass the fence" "$sb" transition "$id" --to review --actor agent-1 --token '.*' --json
 expect_rc 3 "close from in_progress" "$sb" close "$id" --actor lead --json
 
 # Token rotation: release, same-actor reclaim — the old token must be dead.
