@@ -45,8 +45,43 @@ contention bites (handbook §6).
 
 ## Testing
 
-`sh test.sh` runs the offline contract test against `testdata/fake-bd` (a
-deterministic double of the documented CLI surface). It exercises every
-required verb's envelope and exit-code mapping and runs in `make check` via
-validate.sh. Validation against a live beads install is tracked as follow-up
-work on the seed queue.
+## Testing
+
+Two suites share one corpus (`corpus.sh`), so they cannot drift apart:
+
+- `sh test.sh` — offline, against `testdata/fake-bd` (a deterministic
+  double of the CLI surface). Runs in `make check` via validate.sh.
+- `sh live-test.sh` — the same corpus against a REAL bd install in a
+  scratch repo. Self-skips (exit 0, explicit message) when `bd` is not
+  on PATH, so CI needs no new binaries; validate.sh runs it after the
+  offline suite.
+
+### Validated bd pin
+
+The adapter is validated against **bd v1.2.2**:
+
+```sh
+sudo apt install -y libicu-dev pkg-config   # CGO dependency
+go install github.com/steveyegge/beads/cmd/bd@v1.2.2
+```
+
+(The module requires Go >= 1.26.2; the toolchain auto-switches.)
+live-test echoes the pin at start and warns — without refusing — when
+the PATH bd differs: drift discovery is the point.
+
+### Declared v1.2.2 variances
+
+Live-validated behaviors the adapter and fake both encode:
+
+- `bd show <id> --json` returns an **array** of issues; a missing id is
+  an error object on stdout with exit 1. The adapter normalizes to the
+  single issue object.
+- `bd list --json` hides closed issues; the adapter's `list` verb uses
+  `--all` so the port surfaces terminal cards too.
+- Comments are listed via `bd comments <id> --json` (`show` carries only
+  `comment_count`).
+- `bd update --claim` is the native atomic claim (assignee from
+  `BD_ACTOR`, idempotent for the holder) — the adapter builds its
+  emulated fence token on top of it.
+- `bd label add/remove` are per-label atomic (never whole-array
+  replacement); `--set-labels` exists but the adapter never uses it.

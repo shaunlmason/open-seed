@@ -60,7 +60,10 @@ port_state() {
 }
 
 prio_bd() { case "$1" in P0) echo 0;; P1) echo 1;; P2) echo 2;; P3) echo 3;; *) echo 2;; esac; }
-show() { bd show "$1" --json 2>/dev/null; }
+# Real bd v1.2.2 returns an ARRAY from `bd show --json` (and an error
+# object on a missing id); the fake mirrors it. Normalize to the single
+# issue object every consumer expects — empty output means not found.
+show() { bd show "$1" --json 2>/dev/null | jq -c 'if type == "array" then (.[0] // empty) elif has("error") then empty else . end' 2>/dev/null; }
 state_of() { show "$1" | port_state; }
 bo_entries() { show "$1" | jq -r '(.labels // [])[] | select(startswith("seed:bo:")) | ltrimstr("seed:bo:")'; }
 
@@ -107,7 +110,9 @@ case "$verb" in
     envelope ",\"task\":\"$id\",\"state\":\"$st\",\"card\":$card"
     ;;
   list)
-    out=$(bd list --json) || fail 5 backend_unavailable "bd list failed"
+    # --all: real bd hides closed issues by default (declared v1.2.2
+    # variance) but the port's list surfaces terminal cards too.
+    out=$(bd list --all --json) || fail 5 backend_unavailable "bd list failed"
     tasks=$(printf '%s' "$out" | jq -c '[(. // []) | .[] | {task: .id, title: .title, priority: ("P" + (.priority|tostring)), status: .status, labels: (.labels // [])}]')
     envelope ",\"tasks\":$tasks"
     ;;

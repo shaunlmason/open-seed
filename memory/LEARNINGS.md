@@ -41,3 +41,11 @@ Fresh sessions read this file instead of rediscovering.
   wired into the gate itself; re-invoking a read-only reviewer on an
   unchanged implementation converges on nothing and burns
   max_revisions.
+- 2026-08-22: bd v1.2.2 live validation (os-435d7b61): real `bd show --json`
+  returns an ARRAY (fake had returned a bare object) — every object-shaped
+  jq read silently fell back, degrading fence-token minting; normalize
+  shapes at ONE adapter seam (`show()`), not per call site. Real `bd list`
+  hides closed issues (use `--all` when the port must surface terminal
+  cards); comments are listed via `bd comments`, not `show`. Shared corpus
+  file (`corpus.sh`) sourced by both offline and live suites is what keeps
+  a fake and its real counterpart from drifting apart silently.
