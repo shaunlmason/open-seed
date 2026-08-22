@@ -13,17 +13,30 @@ enforcement, supplied by a platform through the seam built for it).
 1. **Adapter** — `.seed/backends/paperclip/bin/seed-backend` (POSIX sh +
    curl + jq), REST against `$PAPERCLIP_API_URL` with the agent-scoped
    bearer key. Env via manifest `requires_env`: `PAPERCLIP_API_URL`,
-   `PAPERCLIP_API_KEY`, `PAPERCLIP_COMPANY_ID`. Verb → API mapping:
+   `PAPERCLIP_API_KEY`, `PAPERCLIP_COMPANY_ID`, `PAPERCLIP_DEFAULT_GOAL_ID`. Verb → API mapping:
    - `create` → POST issues (state backlog); priority P0–P3 →
-     critical/high/medium/low
-   - `ready` → GET issues filtered state=todo & unassigned
+     critical/high/medium/low. **Goal ancestry is mandatory in Paperclip**,
+     but the port allows parentless creates: the adapter resolves a
+     configured default (`PAPERCLIP_DEFAULT_GOAL_ID`, or a project id) when
+     no `--parent` is given, and refuses with exit 5 + remediation when
+     neither exists. The contract test covers parentless creation both ways.
+   - `ready` → **claimable work, not merely unassigned work**: state todo,
+     **no checkout lock**, and (unassigned OR assigned to the calling
+     actor) — Paperclip assignment is routing, checkout is the claim, and
+     conflating them would hide assigned-but-unclaimed work while showing
+     issues the caller cannot take. Rejected-author filtering applies as
+     below.
    - `get`/`list` → GET issue(s), states mapped todo→ready,
      in_review→review (others 1:1)
    - `claim` → the checkout endpoint (DB-atomic `checkoutRunId`);
-     contention → exit 2 with holder; the **fence rides the per-agent
-     bearer key** — the server itself refuses non-owner transitions, so
-     exit 6 maps from the server's ownership refusal (stronger than any
-     token we could mint)
+     contention → exit 2 with holder. **The fence is a minted per-claim
+     token, not the bearer key alone** (D1 binding): the adapter generates
+     a fresh token at claim, persists it with the issue (metadata field,
+     or a marker comment where metadata is unavailable), and every fenced
+     verb validates the presented token against the stored one *in
+     addition to* the server's ownership check — the bearer key cannot
+     distinguish a reaped predecessor from the same actor's new claim;
+     the rotating token can. Stale or missing tokens exit 6.
    - `transition`/`release`/operator verbs → state PATCH; the server's
      `assertTransition()` refusal maps to exit 3
    - `close` → done/cancelled transition; blocker cascade is native
@@ -67,7 +80,13 @@ enforcement, supplied by a platform through the seam built for it).
 
 - All nine required verbs round-trip against the fake server with valid
   envelopes and mapped exit codes (0/2/3/4/5/6); checkout contention exits
-  2 with holder; a non-owner transition maps the server refusal to exit 6.
+  2 with holder; a non-owner transition maps the server refusal to exit 6,
+  and a **stale minted token from a reaped-then-reclaimed same-actor
+  session also exits 6** (token rotation covered by the contract test).
+- `ready` returns assigned-but-unclaimed work for the caller and never
+  returns checked-out or other-actor-assigned issues.
+- Parentless `create` succeeds via the configured default goal and fails
+  with remediation without one.
 - `budget` is declared `native` in the manifest; the README documents the
   hard-stop semantics honestly (enforced by the server, not the repo).
 - No engine changes required (the v0.7.0 dispatch seam is sufficient);
