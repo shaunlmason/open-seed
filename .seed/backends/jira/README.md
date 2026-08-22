@@ -81,11 +81,18 @@ P0–P3 → Highest / High / Medium / Low.
   (`state_portability = "server"`).
 - **Cascade is emulated via `seed:bo:*` labels** — implemented and
   contract-tested, never described as absent; its limitation is that label
-  bookkeeping is only as trustworthy as label write access. The release
-  transition runs before an entry label is removed, so a workflow that
-  refuses `Blocked → To Do` leaves the dependency recorded — recovery is
-  an operator `unblock` once the workflow allows the move, never a
-  Blocked issue with no blocker on record.
+  bookkeeping is only as trustworthy as label write access. Label writes
+  use Jira's **atomic add/remove update operations** (never whole-array
+  replacement), so concurrent label edits elsewhere on an issue are not
+  clobbered. The release transition runs before an entry label is
+  removed, and a per-dependent refusal never aborts the terminal verb or
+  the rest of the cascade: the dependency stays recorded, the dependent
+  is reported in the envelope's `cascade_skipped`, and recovery is an
+  operator `unblock` once the workflow allows the move — never a Blocked
+  issue with no blocker on record.
+- **Statuses outside the convention are not seed cards**: `list` skips
+  them, and `get` on one refuses with remediation (exit 5) rather than
+  emitting an invalid port state.
 - **Rate limits**: Jira Cloud throttles per-account; `ready`, `list`, and
   the cascade are search-backed — fine for a squad's queue, not bulk.
 - **Jira Server/DC (v2 API) is out of scope** — Cloud REST v3 only.

@@ -141,7 +141,15 @@ class Handler(BaseHTTPRequestHandler):
             i = issues.get(m.group(1))
             if not i:
                 return self.reply(404, {"errorMessages": ["issue not found"]})
-            f = self.read_body().get("fields", {})
+            d = self.read_body()
+            # Atomic label update operations (the adapter never replaces
+            # the whole array).
+            for op in (d.get("update") or {}).get("labels", []):
+                if "add" in op and op["add"] not in i.setdefault("labels", []):
+                    i["labels"].append(op["add"])
+                if "remove" in op:
+                    i["labels"] = [l for l in i.get("labels", []) if l != op["remove"]]
+            f = d.get("fields", {})
             if "labels" in f:
                 i["labels"] = list(f["labels"])
             if "assignee" in f:

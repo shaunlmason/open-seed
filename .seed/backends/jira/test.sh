@@ -31,6 +31,7 @@ out=$("$sb" create --title "Card A" --body work --priority P1 --actor a --json);
 id=$(echo "$out" | jq -r .task)
 [ "$(echo "$out" | jq -r .state)" = "backlog" ] || die "create state"
 [ "$("$sb" get "$id" --json | jq -r .state)" = "backlog" ] || die "create did not actually land in Backlog"
+[ "$("$sb" get "$id" --json | jq -r .card.body)" = "work" ] || die "card body (ADF description) not round-tripped"
 
 out=$("$sb" promote "$id" --actor lead --json); ok "$out" promote
 out=$("$sb" ready --actor agent-1 --json); ok "$out" ready
@@ -68,6 +69,7 @@ tok2=$(echo "$out" | jq -r .claim_token)
 expect_rc 6 "stale token after reclaim (same actor)" "$sb" comment "$id" --body late --actor agent-1 --token "$tok1" --json
 
 out=$("$sb" comment "$id" --body progress --actor agent-1 --token "$tok2" --json); ok "$out" comment
+[ -n "$(echo "$out" | jq -r .comment_id)" ] || die "comment_id missing from envelope"
 out=$("$sb" lease-renew "$id" --actor agent-1 --token "$tok2" --json); ok "$out" lease-renew
 
 # Park on a plan, entry-by-entry release.
@@ -92,7 +94,8 @@ out=$("$sb" transition "$id" --to review --actor agent-2 --token "$tok4" --json)
 # Cascade on CLOSE.
 dep=$("$sb" create --title "Dependent" --actor a --blocked-by "$id" --json | jq -r .task)
 "$sb" promote "$dep" --actor lead --json >/dev/null
-"$sb" block "$dep" --actor lead --blocked-on "dep:$id" --json >/dev/null 2>&1 || true
+"$sb" block "$dep" --actor lead --blocked-on "dep:$id" --json >/dev/null
+[ "$("$sb" get "$dep" --json | jq -r .state)" = "blocked" ] || die "cascade setup: dependent not blocked"
 out=$("$sb" close "$id" --actor lead --resolution Done --json); ok "$out" close
 [ "$("$sb" get "$id" --json | jq -r .state)" = "done" ] || die "close → done"
 [ "$("$sb" get "$dep" --json | jq -r .state)" = "ready" ] || die "close cascade did not release dependent"
@@ -103,7 +106,8 @@ blk=$("$sb" create --title "Blocker B" --actor a --json | jq -r .task)
 "$sb" promote "$blk" --actor lead --json >/dev/null
 dep2=$("$sb" create --title "Dependent B" --actor a --blocked-by "$blk" --json | jq -r .task)
 "$sb" promote "$dep2" --actor lead --json >/dev/null
-"$sb" block "$dep2" --actor lead --blocked-on "dep:$blk" --json >/dev/null 2>&1 || true
+"$sb" block "$dep2" --actor lead --blocked-on "dep:$blk" --json >/dev/null
+[ "$("$sb" get "$dep2" --json | jq -r .state)" = "blocked" ] || die "cancel-cascade setup: dependent not blocked"
 out=$("$sb" cancel "$blk" --actor lead --json); ok "$out" cancel
 [ "$("$sb" get "$blk" --json | jq -r .state)" = "cancelled" ] || die "cancel → Done + Won't Do"
 echo "$out" | jq -e --arg d "$dep2" '.cascaded | index($d)' >/dev/null || die "cancel cascade missing dependent"
@@ -134,6 +138,7 @@ out=$("$sb" list --state ready --json); ok "$out" "list filtered"
 [ "$(echo "$out" | jq '[.tasks[] | select(.state != "ready")] | length')" = "0" ] || die "list --state leaked other states"
 
 out=$("$sb" event-append --event '{"ts":"t","verb":"probe"}' --json); ok "$out" event-append
+out=$("$sb" event-append --event "{\"ts\":\"t\",\"verb\":\"probe\",\"task\":\"$id\"}" --json); ok "$out" "event-append with task in event JSON"
 # The audit issue is the audit substrate, never a card: absent from ready,
 # refused at claim.
 out=$("$sb" ready --actor agent-1 --json)
@@ -182,7 +187,8 @@ cd2=$("$sb" create --title "Cascade dependent" --actor a --blocked-by "$cb" --js
 "$sb" block "$cd2" --actor lead --blocked-on "dep:$cb" --json >/dev/null
 tokx=$("$sb" claim "$cb" --actor agent-1 --json | jq -r .claim_token)
 "$sb" transition "$cb" --to review --actor agent-1 --token "$tokx" --json >/dev/null
-expect_rc 3 "cascade release refused by workflow" "$sb" close "$cb" --actor lead --json
+out=$("$sb" close "$cb" --actor lead --json); ok "$out" "close with refused cascade release"
+echo "$out" | jq -e --arg d "$cd2" '.cascade_skipped | index($d)' >/dev/null || die "skipped dependent not reported"
 [ "$("$sb" get "$cd2" --json | jq -r '.card.blocked_on[0]')" = "dep:$cb" ] || die "refused cascade dropped the dependency label"
 expect_rc 3 "unblock refused by workflow keeps entry" "$sb" unblock "$cd2" --actor lead --blocked-on "dep:$cb" --json
 [ "$("$sb" get "$cd2" --json | jq -r '.card.blocked_on[0]')" = "dep:$cb" ] || die "refused unblock dropped the entry"
