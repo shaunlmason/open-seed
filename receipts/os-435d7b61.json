@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "task": "os-435d7b61",
+  "merge_base": "5860778d2b87b1778737f613deebdddd63394c02",
+  "head": "00e6220cc369d2c9f9cb2bdeadbdf956fafb5272",
+  "plan_path": "plans/os-435d7b61.md",
+  "plan_sha256": "590421e9b81fd7530788b35a4cde4cbf33cb03b416cc2c900a80deb3d62f4673",
+  "diff_files": [
+    ".seed/backends/beads/README.md",
+    ".seed/backends/beads/bin/seed-backend",
+    ".seed/backends/beads/corpus.sh",
+    ".seed/backends/beads/live-test.sh",
+    ".seed/backends/beads/test.sh",
+    ".seed/backends/beads/testdata/fake-bd",
+    "memory/LEARNINGS.md",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "aef4d31db9e953f987f19e8fbe0043d5b3a8fccd1449c76d93a78199530af184",
+  "validation": [
+    {
+      "cmd": "test -x .seed/backends/beads/live-test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh .seed/backends/beads/live-test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"live-test\" .seed/backends/beads/README.md",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
