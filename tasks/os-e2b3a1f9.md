@@ -9,7 +9,11 @@ claim:
     claimed_at: "2026-08-22T14:50:28Z"
     lease_expires: "2026-08-22T15:50:28Z"
 created_at: "2026-08-22T06:26:26Z"
-updated_at: "2026-08-22T14:50:28Z"
+updated_at: "2026-08-22T14:57:05Z"
 ---
 
 Scoped in docs/design-options.md; leave seams, not implementations, until claimed.
+
+## Evidence (pr, claude-session, 2026-08-22T14:57:05Z)
+
+https://github.com/shaunlmason/open-seed/pull/13
