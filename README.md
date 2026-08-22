@@ -22,3 +22,12 @@ was completed to ground the design.
   8. [Personal assistants & inactive projects](docs/research/08-assistants-and-inactive.md)
   9. [SOTA landscape (harnesses, beads, guardrails, methodology)](docs/research/09-sota-landscape.md)
   10. [Org control planes: Paperclip vs Gas Town vs build-your-own](docs/research/10-org-control-planes.md)
+- **[Inspiration deep dives](docs/research/inspirations/)** — implementation-grade format/schema extraction from the key inspiration projects:
+  1. [Git-native task substrates (beads, gnap, ORCH, squad, tick-md)](docs/research/inspirations/01-git-native-task-substrates.md)
+  2. [Ralph loop implementations (ralphex, ralph-claude-code, dex, wreckit, martin-loop)](docs/research/inspirations/02-ralph-loop-implementations.md)
+  3. [Governance & gates (loop-engineering, orc, antfarm, loki-mode, kodo)](docs/research/inspirations/03-governance-and-gates.md)
+  4. [Workflow-as-config (tutti, agent-runbook, crewplane, Fusion, Archon)](docs/research/inspirations/04-workflow-as-config.md)
+  5. [Skills packaging (skillfold, sub-agents-skills, Agent Skills spec, humanlayer trilogy)](docs/research/inspirations/05-skills-packaging.md)
+  6. [CI-native automation (gh-aw, aeon, sortie, contrabass, claude-code-action)](docs/research/inspirations/06-ci-native-automation.md)
+  7. [Lifecycle contracts (superset, octomux, vibe-tree, amux, dmux, agent-deck, tmux-ide)](docs/research/inspirations/07-lifecycle-contracts.md)
+  8. [Coordination mechanics (swarm-protocol, wit, hcom, shogun, CCB, claudexor)](docs/research/inspirations/08-coordination-mechanics.md)
