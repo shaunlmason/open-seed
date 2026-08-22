@@ -130,6 +130,42 @@ cascade already schedule work across agents topologically).
 `.claude/workflows/` remains the home for Claude-native dynamic
 workflows — never under `.seed/`.
 
+**The MCP transport** (research/10 §5.4 — v2): `seed mcp serve` is an
+MCP stdio server exposing one tool per port verb — the worker surface
+(create/ready/get/list/claim/lease-renew/release/transition/comment/
+attach-evidence) and one tool per operator verb (close, promote,
+deprioritize, reject, cancel, reinstate, block, unblock, plan-unblock).
+`.mcp.json` ships the registration (strict JSON — the format admits no
+comments, so the entry is live but inert until a harness loads the
+file):
+
+```json
+{ "mcpServers": { "seed": { "command": "sh", "args": ["-c", "exec scripts/seed mcp serve"] } } }
+```
+
+The shipped registration spawns `sh` (the POSIX bootstrap). On a native
+Windows checkout swap the entry for the PowerShell bootstrap — same
+server, same tools:
+
+```json
+{ "mcpServers": { "seed": { "command": "powershell", "args": ["-NoProfile", "-File", "scripts/seed.ps1", "mcp", "serve"] } } }
+```
+
+MCP is an ADDITIONAL transport, never a replacement: `tools/call`
+dispatches through the identical service path the CLI uses — same
+fencing, same transition table, same run-log events, same envelopes.
+Port failures come back as tool results with `isError: true` carrying
+the refusal envelope and exit class (contention, invalid transition,
+fenced out, halted) — JSON-RPC errors stay reserved for transport
+faults. The wrapper adds no authority: `--actor` remains an asserted
+tool argument, operator tools still check the `[operators]` roster, and
+a HALT marker refuses mutating tools exactly as it refuses CLI verbs.
+
+Prefer the MCP surface for tool-native harnesses (schema'd calls beat
+shell strings) and for MCP-gateway governance in the Paperclip style;
+CI, cron, and bare shells stay on the CLI, which remains the source of
+truth — no verb exists MCP-only.
+
 **Sharing skills between repos** (D8 §147): `seed.yaml` at the template
 root names upstream skill sources; `seed.lock` pins them (commit SHA +
 content sha256, full source coordinates); both are control surface
@@ -190,6 +226,28 @@ evidence trail, branch/HEAD/dirty-file anchors from git — at
 automatically with real workspace anchors; a maintenance **reap** runs
 in its own checkout, so reap-written packets mark the anchors
 unavailable instead of recording the reaper's git state.
+
+**Worktree tool fidelity** (§131 "the rest v2"): `.seed/hooks/` is the
+runner-agnostic lifecycle contract, and `.seed/hooks/shims/<tool>/` ships
+checked-in fragments for the surveyed external tools. Support is declared,
+never silent — the per-tool matrix (README in each shim dir has the full
+table and install steps):
+
+| Tool | Post-create | Teardown | Blocking pre-merge |
+|---|---|---|---|
+| superset | yes (`.superset/config.json`) | yes | no |
+| agent-deck | yes (`worktree-setup.sh`) | best-effort | no |
+| vibe-tree | yes (`.vibetree/hooks/`) | yes | no |
+| octomux | yes (`task_created`) | approximate (`runtime_state_changed`) | no — fire-and-forget hooks |
+| amux | yes (`setup-workspace`) | best-effort (`archive`) | no |
+| dmux | yes (`worktree_created`) | yes (`before_worktree_remove`) | **no — dmux spawns `pre_merge` detached; it cannot veto** |
+| tmux-ide | no | no | no |
+| ouijit | via `start` hook | approximate (`done`) | no |
+| parallel-code | README-only: no hook surface | — | — |
+
+No surveyed tool can honor a blocking pre-merge, which is why the local
+`pre-merge.d/` gate is a convenience pre-check and **CI verify is the
+merge authority everywhere** (R11).
 
 ## 4. Guardrails, honestly
 

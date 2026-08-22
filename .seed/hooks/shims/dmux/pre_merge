@@ -1,0 +1,13 @@
+#!/bin/sh
+# dmux pre_merge → seed pre-merge.d. CAVEAT (shim README): dmux spawns
+# hooks detached and non-blocking, so a non-zero exit here is LOGGED,
+# never enforced — this run is advisory and CI remains the merge gate.
+cd "${DMUX_WORKTREE_PATH:-.}" || exit 0
+export SEED_WORKTREE="${DMUX_WORKTREE_PATH:-$PWD}"
+export SEED_REPO_ROOT="${DMUX_ROOT:-}"
+export SEED_BRANCH="${DMUX_BRANCH:-}"
+export SEED_TARGET_BRANCH="${DMUX_TARGET_BRANCH:-}"
+for h in .seed/hooks/pre-merge.d/*; do
+  [ -x "$h" ] && "$h" || exit 1
+done
+exit 0

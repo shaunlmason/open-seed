@@ -71,4 +71,24 @@ if command -v jq >/dev/null 2>&1; then
   fi
 fi
 
+# Lifecycle shim structure (os-7792a002): every shim dir ships a README;
+# fragments may reference only contract-defined hook paths; a README-only
+# shim must declare the no-hook-point finding.
+for d in "$root"/.seed/hooks/shims/*/; do
+  [ -d "$d" ] || continue
+  name=$(basename "$d")
+  if [ ! -f "$d/README.md" ]; then
+    say "FAIL: shim $name has no README.md"; fail=1; continue
+  fi
+  fragments=$(find "$d" -type f ! -name README.md)
+  if [ -z "$fragments" ]; then
+    grep -qi "no usable hook point" "$d/README.md"       || { say "FAIL: shim $name ships no fragment but its README does not declare the no-hook-point finding"; fail=1; }
+    continue
+  fi
+  bad=$(grep -rho '\.seed/hooks/[A-Za-z0-9._-]*' $fragments | sort -u     | grep -v -E '^\.seed/hooks/(setup|run|teardown|post-create\.d|pre-merge\.d)$' || true)
+  if [ -n "$bad" ]; then
+    say "FAIL: shim $name references undefined hook paths: $bad"; fail=1
+  fi
+done
+
 [ "$fail" -eq 0 ] && say "ok" || exit 1

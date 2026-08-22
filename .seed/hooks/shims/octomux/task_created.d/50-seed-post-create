@@ -1,0 +1,17 @@
+#!/bin/sh
+# octomux task_created → seed setup + post-create.d. The HookEnvelope on
+# stdin names the task worktree; octomux's cwd fallback is the repo path,
+# so resolve the worktree from the envelope and refuse to run the
+# post-create extras against the main checkout.
+env=$(cat)
+wt=$(printf '%s' "$env" | jq -r '.task.worktree // .data.worktree // empty' 2>/dev/null)
+task=$(printf '%s' "$env" | jq -r '.task.id // empty' 2>/dev/null)
+[ -n "$wt" ] && cd "$wt" 2>/dev/null
+[ -d .seed ] || exit 0
+export SEED_WORKTREE="$PWD"
+export SEED_TASK="${task:-${OCTOMUX_TASK_ID:-}}"
+[ -x .seed/hooks/setup ] && .seed/hooks/setup
+for h in .seed/hooks/post-create.d/*; do
+  [ -x "$h" ] && "$h"
+done
+exit 0
