@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "task": "os-499c5978",
+  "merge_base": "6c4b3d8eb8f207adab7cc1d607465bbc9a03b5bb",
+  "head": "adf4314689d30d0d22acd24c16bd87804ac7a2eb",
+  "plan_path": "plans/os-499c5978.md",
+  "plan_sha256": "5f7f9dee1739bb0b2e03927de646c1a63f9dc71cfeb1d28dc93ec7b6dc22f18b",
+  "diff_files": [
+    ".github/workflows/seed-maintenance.yml",
+    ".seed/engine.lock",
+    "AGENTS.md",
+    "docs/handbook.md",
+    "rules/00-coordination.md",
+    "scripts/loop.sh"
+  ],
+  "diff_sha256": "1bd03aa9aa991c2630bac4f1b84288f9f0969f4d157ec1efc2ada95c06c8c695",
+  "validation": [
+    {
+      "cmd": "grep -q \"mailbox\" AGENTS.md",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -qi \"mail\" .github/workflows/seed-maintenance.yml",
+      "exit": 0
+    },
+    {
+      "cmd": "make smoke",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
