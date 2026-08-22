@@ -29,6 +29,12 @@ if out=$(cd "$root" && sh scripts/seed spec lint 2>&1); then
     say "FAIL: $out"
     fail=1
   fi
+  if out=$(cd "$root" && sh scripts/seed sync --check 2>&1); then
+    say "$out"
+  else
+    say "FAIL: $out"
+    fail=1
+  fi
 else
   say "WARNING: engine unavailable, skipped spec lint + validate ($out)"
 fi
