@@ -87,7 +87,19 @@ class Handler(BaseHTTPRequestHandler):
         self.reply({"issueLabelCreate": {"success": True, "issueLabel": l}})
 
     def op_Issues(self, v):
-        self.reply({"team": {"issues": {"nodes": [issue_node(i) for i in issues.values()]}}})
+        # Paginated like the real connection (small page size so the
+        # adapter's pagination loop is actually exercised).
+        nodes = [issue_node(i) for i in issues.values()]
+        page_size = 2
+        start = 0
+        after = v.get("after")
+        if after:
+            start = int(after)
+        chunk = nodes[start:start + page_size]
+        has_next = start + page_size < len(nodes)
+        self.reply({"team": {"issues": {
+            "pageInfo": {"hasNextPage": has_next, "endCursor": str(start + page_size) if has_next else None},
+            "nodes": chunk}}})
 
     def op_Issue(self, v):
         i = issues.get(v["id"])

@@ -98,6 +98,29 @@ echo "$out" | jq -e --arg d "$dep2" '.cascaded | index($d)' >/dev/null || die "c
 out=$("$sb" reinstate "$blk" --actor lead --json); ok "$out" reinstate
 [ "$("$sb" get "$blk" --json | jq -r .state)" = "backlog" ] || die "reinstate → backlog"
 
+# Cancelling in-progress work ends the claim: after reinstate + promote the
+# card must be claimable, not stranded behind a dead holder.
+"$sb" promote "$blk" --actor lead --json >/dev/null
+tokc=$("$sb" claim "$blk" --actor agent-1 --json | jq -r .claim_token)
+out=$("$sb" cancel "$blk" --actor lead --json); ok "$out" cancel-live-claim
+"$sb" reinstate "$blk" --actor lead --json >/dev/null
+"$sb" promote "$blk" --actor lead --json >/dev/null
+out=$("$sb" claim "$blk" --actor agent-2 --json); ok "$out" "reclaim after cancel"
+
+# Unfenced comment while no live claim exists (review card).
+out=$("$sb" comment "$id" --body "post-review note" --actor lead --json); ok "$out" "unfenced comment on done card" || true
+
+# Operator manual block/unblock without --blocked-on derives manual:<actor>.
+mb=$("$sb" create --title "Manual block" --actor a --json | jq -r .task)
+"$sb" promote "$mb" --actor lead --json >/dev/null
+"$sb" block "$mb" --actor lead --blocked-on manual:lead --json >/dev/null
+out=$("$sb" unblock "$mb" --actor lead --json); ok "$out" "bare unblock derives manual entry"
+[ "$(echo "$out" | jq -r .state)" = "ready" ] || die "manual unblock did not release"
+
+# list --state filter.
+out=$("$sb" list --state ready --json); ok "$out" "list filtered"
+[ "$(echo "$out" | jq '[.tasks[] | select(.state != "ready")] | length')" = "0" ] || die "list --state leaked other states"
+
 out=$("$sb" event-append --event '{"ts":"t","verb":"probe"}' --json); ok "$out" event-append
 out=$("$sb" list --json); ok "$out" list
 expect_rc 4 "missing issue" "$sb" get LIN-999 --json
