@@ -72,6 +72,45 @@ jobs:
             fi
           done
 
+      - name: Mirror export (one-way, D1 — only when [mirror] enabled)
+        if: steps.gate.outputs.active == 'true'
+        run: |
+          enabled=$(awk '/^\[mirror\]/{m=1} m && /^enabled/{print $3; exit}' .seed/config.toml)
+          [ "$enabled" = "true" ] || { echo "mirror disabled ([mirror] enabled=false)"; exit 0; }
+          scripts/seed mirror plan | jq -c '.actions[]' | while read -r a; do
+            op=$(echo "$a" | jq -r .op); card=$(echo "$a" | jq -r .card)
+            title=$(echo "$a" | jq -r .title); issue=$(echo "$a" | jq -r .issue)
+            labels=$(echo "$a" | jq -r '.labels | join(",")')
+            exported=$(echo "$a" | jq -r 'if .close_reason=="not_planned" then "cancelled"
+              elif .state=="closed" then "done"
+              elif (.labels|length)==0 then "backlog"
+              else (.labels[0] | ltrimstr("seed:")) end')
+            case "$op" in
+              create)
+                echo "$a" | jq -r .body > /tmp/mirror-body.md
+                n=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
+                    --body-file /tmp/mirror-body.md ${labels:+--label "$labels"} \
+                    | sed -n 's#.*/issues/\([0-9]*\)$#\1#p')
+                [ -n "$n" ] && scripts/seed mirror record "$card" --issue "$n" \
+                    --state "$exported" --actor "$ACTOR" || true
+                ;;
+              update)
+                gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --title "$title" \
+                  --remove-label "seed:ready,seed:in_progress,seed:review,seed:done,seed:blocked" || true
+                [ -n "$labels" ] && gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --add-label "$labels" || true
+                ;;
+              close)
+                reason=$(echo "$a" | jq -r '.close_reason | sub("_"; " ")')
+                [ -n "$labels" ] && gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --add-label "$labels" || true
+                gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --reason "$reason" || true
+                ;;
+            esac
+            # Record the exported state for update/close so the next pass is a no-op.
+            if [ "$op" != "create" ]; then
+              scripts/seed mirror record "$card" --issue "$issue" --state "$exported" --actor "$ACTOR" || true
+            fi
+          done
+
       - name: Conformance lint (writes HALT on failure, §7.2)
         if: steps.gate.outputs.active == 'true'
         run: scripts/seed state lint --halt-on-fail --actor "$ACTOR"
