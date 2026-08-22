@@ -1,0 +1,73 @@
+#!/bin/sh
+# Deterministic bd test double honoring the documented CLI surface the
+# adapter uses (docs/research/inspirations/01 §1). State: one JSON file at
+# $BD_FAKE_STATE. Not a beads implementation — a contract fixture.
+set -eu
+S=${BD_FAKE_STATE:?BD_FAKE_STATE required}
+[ -f "$S" ] || echo '{"seq":0,"issues":{}}' > "$S"
+
+j() { jq "$@" "$S"; }
+save() { jq "$@" "$S" > "$S.tmp" && mv "$S.tmp" "$S"; }
+
+cmd=$1; shift
+case "$cmd" in
+  create)
+    title=$1; shift
+    prio=2; desc=""
+    while [ $# -gt 0 ]; do case "$1" in
+      -p) prio=$2; shift 2 ;; --description) desc=$2; shift 2 ;;
+      -t|--type) shift 2 ;; --json) shift ;; *) shift ;;
+    esac; done
+    id="bd-$(jq -r '.seq' "$S")"
+    save --arg id "$id" --arg t "$title" --arg d "$desc" --argjson p "$prio" \
+      '.seq += 1 | .issues[$id] = {id:$id, title:$t, description:$d, priority:$p, status:"open", assignee:"", labels:[], comments:[], created_at:"2026-08-22T00:00:00Z"}'
+    printf '{"id":"%s"}\n' "$id"
+    ;;
+  show)
+    id=$1
+    j -e --arg id "$id" '.issues[$id] // empty' || exit 1
+    ;;
+  ready)
+    j -c '[.issues[] | select(.status == "open")] | sort_by(.priority)'
+    ;;
+  list)
+    j -c '[.issues[]]'
+    ;;
+  update)
+    id=$1; shift
+    while [ $# -gt 0 ]; do case "$1" in
+      --claim)
+        cur=$(j -r --arg id "$id" '.issues[$id].assignee // ""')
+        actor="${BD_ACTOR:-fake-user}"
+        if [ -n "$cur" ] && [ "$cur" != "$actor" ]; then echo "already claimed by $cur" >&2; exit 1; fi
+        st=$(j -r --arg id "$id" '.issues[$id].status // ""')
+        [ "$st" = "open" ] || [ "$cur" = "$actor" ] || { echo "not claimable from $st" >&2; exit 1; }
+        save --arg id "$id" --arg a "$actor" '.issues[$id].assignee = $a | .issues[$id].status = "in_progress"'
+        shift ;;
+      --status) save --arg id "$id" --arg v "$2" '.issues[$id].status = $v'; shift 2 ;;
+      --assignee) save --arg id "$id" --arg v "$2" '.issues[$id].assignee = $v'; shift 2 ;;
+      --json) shift ;; *) shift ;;
+    esac; done
+    j -c --arg id "$id" '.issues[$id]'
+    ;;
+  close)
+    id=$1; shift
+    save --arg id "$id" '.issues[$id].status = "closed" | .issues[$id].assignee = ""'
+    j -c --arg id "$id" '.issues[$id]'
+    ;;
+  reopen) save --arg id "$1" '.issues[$id].status = "open"'; echo '{}' ;;
+  defer)  save --arg id "$1" '.issues[$id].status = "deferred"'; echo '{}' ;;
+  undefer) save --arg id "$1" '.issues[$id].status = "open"'; echo '{}' ;;
+  label)
+    op=$1; id=$2; lab=$3
+    if [ "$op" = "add" ]; then save --arg id "$id" --arg l "$lab" '.issues[$id].labels = ((.issues[$id].labels // []) + [$l] | unique)'
+    else save --arg id "$id" --arg l "$lab" '.issues[$id].labels = ((.issues[$id].labels // []) - [$l])'; fi
+    echo '{}'
+    ;;
+  comment|note)
+    id=$1; text=${2:-}
+    save --arg id "$id" --arg t "$text" '.issues[$id].comments += [$t]'
+    echo '{}'
+    ;;
+  *) echo "fake-bd: unknown command $cmd" >&2; exit 64 ;;
+esac

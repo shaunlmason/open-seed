@@ -138,9 +138,13 @@ requirements:
 
 - **Write ceiling (file backend):** every mutating verb is one commit+push
   on one ref — contention starts well below ten chatty agents. The engine
-  retries with backoff and reports; when you outgrow it, the answer is the
-  **beads backend** (v2): same port, `backend = "beads"` in config, no
-  instruction changes anywhere.
+  retries with backoff and reports; when you outgrow it, switch to the
+  **beads backend** (ships in `.seed/backends/beads/`): install `bd` + `jq`,
+  `bd init`, set `backend = "beads"` in `.seed/config.toml`, migrate open
+  cards through the port, and `scripts/seed backend verify beads` — same
+  verbs, native atomic claim and close-cascade, no instruction changes
+  anywhere. Read its README for the declared variances (emulated fence,
+  replica-scoped leases, audit rides bd).
 - **Merge throughput:** don't enable repo-wide "require branches up to
   date" — stale-plan safety is already per-PR in verify. At scale, enable a
   GitHub **merge queue**; the verify workflow already handles `merge_group`

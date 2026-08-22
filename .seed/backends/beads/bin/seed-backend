@@ -1,0 +1,172 @@
+#!/bin/sh
+# beads backend plugin: implements the port contract over the bd CLI.
+# Invoked by the engine as: seed-backend <verb> [id] [flags] --json
+# State mapping (plan os-3e2a8d92): backlog=deferred, ready=open,
+# in_progress=in_progress, blocked=blocked, review=open+label seed:review,
+# done=closed, cancelled=closed+label seed:cancelled.
+set -u
+command -v bd >/dev/null 2>&1 || { printf '{"ok":false,"schema_version":"1.0","error":"backend_unavailable","message":"bd CLI not installed"}\n'; exit 5; }
+command -v jq >/dev/null 2>&1 || { printf '{"ok":false,"schema_version":"1.0","error":"backend_unavailable","message":"jq not installed"}\n'; exit 5; }
+
+verb=${1:-}; [ $# -gt 0 ] && shift
+id=""
+case "${1:-}" in
+  ""|-*) ;;
+  *) id=$1; shift ;;
+esac
+
+# Flag parsing (the port surface's flags; unknown flags are ignored).
+title="" body="" priority="P2" squad="" actor="" token="" to="" resolution="" kind="" ref="" lease=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --title) title=$2; shift 2 ;;
+    --body) body=$2; shift 2 ;;
+    --priority) priority=$2; shift 2 ;;
+    --squad) squad=$2; shift 2 ;;
+    --actor) actor=$2; shift 2 ;;
+    --token) token=$2; shift 2 ;;
+    --to) to=$2; shift 2 ;;
+    --resolution) resolution=$2; shift 2 ;;
+    --kind) kind=$2; shift 2 ;;
+    --ref) ref=$2; shift 2 ;;
+    --lease) lease=$2; shift 2 ;;
+    --state) state_filter=$2; shift 2 ;;
+    --json|--no-pr) shift ;;
+    --*) [ $# -ge 2 ] && case "$2" in -*) shift ;; *) shift 2 ;; esac || shift ;;
+    *) shift ;;
+  esac
+done
+
+fail() { # exit_code error [message]
+  printf '{"ok":false,"schema_version":"1.0","verb":"%s","error":"%s","message":"%s"}\n' "$verb" "$2" "${3:-}"
+  exit "$1"
+}
+envelope() { # extra-json-fields (already comma-prefixed or empty)
+  printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"
+}
+
+# Port state → bd query mapping.
+port_state() { # bd status, labels → port state
+  jq -r '
+    if .status == "closed" then (if ((.labels // []) | index("seed:cancelled")) then "cancelled" else "done" end)
+    elif .status == "deferred" then "backlog"
+    elif .status == "in_progress" then "in_progress"
+    elif .status == "blocked" then "blocked"
+    elif ((.labels // []) | index("seed:review")) then "review"
+    else "ready" end'
+}
+
+prio_bd() { case "$1" in P0) echo 0;; P1) echo 1;; P2) echo 2;; P3) echo 3;; *) echo 2;; esac; }
+
+show() { bd show "$1" --json 2>/dev/null; }
+
+require_assignee() { # id actor — the emulated fence (declared variance)
+  holder=$(show "$1" | jq -r '.assignee // ""')
+  [ "$holder" = "$2" ] || fail 6 fenced_out "assignee is '$holder', not '$2'"
+}
+
+case "$verb" in
+  create)
+    [ -n "$title" ] || fail 3 invalid_transition "title required"
+    out=$(bd create "$title" -t task -p "$(prio_bd "$priority")" --description "$body" --json) || fail 5 backend_unavailable "bd create failed"
+    new=$(printf '%s' "$out" | jq -r '.id // empty'); [ -n "$new" ] || fail 10 version_mismatch "bd create returned no id"
+    bd defer "$new" >/dev/null 2>&1   # port cards are born in backlog
+    [ -n "$squad" ] && bd label add "$new" "squad:$squad" >/dev/null 2>&1
+    envelope ",\"task\":\"$new\",\"state\":\"backlog\""
+    ;;
+  ready)
+    args="--json --sort priority"
+    [ -n "$squad" ] && args="$args --label squad:$squad"
+    out=$(bd ready $args) || fail 5 backend_unavailable "bd ready failed"
+    tasks=$(printf '%s' "$out" | jq -c '[(. // []) | .[] | select((.labels // []) | index("seed:review") | not) | {task: .id, title: .title, priority: ("P" + (.priority|tostring)), squad: ((.labels // []) | map(select(startswith("squad:"))) | first // "" | ltrimstr("squad:")), created_at: (.created_at // "")}]')
+    envelope ",\"tasks\":$tasks"
+    ;;
+  get)
+    out=$(show "$id"); [ -n "$out" ] || fail 4 not_found
+    st=$(printf '%s' "$out" | port_state)
+    card=$(printf '%s' "$out" | jq -c --arg st "$st" '{id: .id, title: .title, state: $st, priority: ("P" + (.priority|tostring)), author: (.assignee // ""), body: (.description // ""), blocked_on: [], labels: (.labels // [])}')
+    envelope ",\"task\":\"$id\",\"state\":\"$st\",\"card\":$card"
+    ;;
+  list)
+    out=$(bd list --json) || fail 5 backend_unavailable "bd list failed"
+    tasks=$(printf '%s' "$out" | jq -c '[(. // []) | .[] | {task: .id, title: .title, priority: ("P" + (.priority|tostring)), status: .status, labels: (.labels // [])}]')
+    envelope ",\"tasks\":$tasks"
+    ;;
+  claim)
+    cur=$(show "$id"); [ -n "$cur" ] || fail 4 not_found
+    holder=$(printf '%s' "$cur" | jq -r '.assignee // ""')
+    if [ -n "$holder" ] && [ "$holder" != "$actor" ]; then
+      printf '{"ok":false,"schema_version":"1.0","error":"claim_contention","holder":"%s"}\n' "$holder"; exit 2
+    fi
+    BD_ACTOR="$actor" bd update "$id" --claim --json >/dev/null 2>&1 || fail 2 claim_contention "bd --claim refused"
+    # Fence token is the assignee identity (declared variance: emulated).
+    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"actor\":\"$actor\",\"claim_token\":\"assignee:$actor\""
+    ;;
+  release)
+    require_assignee "$id" "$actor"
+    bd update "$id" --status open --assignee "" --json >/dev/null 2>&1 || fail 5 backend_unavailable
+    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    ;;
+  transition)
+    case "$to" in
+      review)
+        require_assignee "$id" "$actor"
+        bd update "$id" --status open --assignee "" --json >/dev/null 2>&1 || fail 5 backend_unavailable
+        bd label add "$id" seed:review >/dev/null 2>&1
+        ;;
+      ready)
+        bd update "$id" --status open --assignee "" --json >/dev/null 2>&1 || fail 5 backend_unavailable
+        bd label remove "$id" seed:review >/dev/null 2>&1
+        ;;
+      blocked)
+        require_assignee "$id" "$actor"
+        bd update "$id" --status blocked --assignee "" --json >/dev/null 2>&1 || fail 5 backend_unavailable
+        ;;
+      *) fail 3 invalid_transition "unsupported --to $to" ;;
+    esac
+    envelope ",\"task\":\"$id\",\"state\":\"$to\",\"transitioned\":true"
+    ;;
+  promote)   bd undefer "$id" >/dev/null 2>&1 || fail 3 invalid_transition; envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true" ;;
+  deprioritize) bd defer "$id" >/dev/null 2>&1 || fail 3 invalid_transition; envelope ",\"task\":\"$id\",\"state\":\"backlog\",\"transitioned\":true" ;;
+  block)     bd update "$id" --status blocked --json >/dev/null 2>&1 || fail 3 invalid_transition; envelope ",\"task\":\"$id\",\"state\":\"blocked\",\"transitioned\":true" ;;
+  unblock)   bd update "$id" --status open --json >/dev/null 2>&1 || fail 3 invalid_transition; envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true" ;;
+  accept|close)
+    bd close "$id" --reason "${resolution:-accepted}" --json >/dev/null 2>&1 || fail 3 invalid_transition "bd close failed (already closed?)"
+    envelope ",\"task\":\"$id\",\"state\":\"done\",\"transitioned\":true"
+    ;;
+  reject)
+    bd update "$id" --status open --json >/dev/null 2>&1 || fail 3 invalid_transition
+    bd label remove "$id" seed:review >/dev/null 2>&1
+    bd note "$id" "rejected by $actor: ${resolution:-}" >/dev/null 2>&1
+    envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true"
+    ;;
+  cancel)
+    bd close "$id" --reason "cancelled: ${resolution:-}" --json >/dev/null 2>&1 || fail 3 invalid_transition
+    bd label add "$id" seed:cancelled >/dev/null 2>&1
+    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"transitioned\":true"
+    ;;
+  reinstate)
+    bd reopen "$id" >/dev/null 2>&1 || fail 3 invalid_transition
+    bd label remove "$id" seed:cancelled >/dev/null 2>&1
+    bd defer "$id" >/dev/null 2>&1
+    envelope ",\"task\":\"$id\",\"state\":\"backlog\",\"transitioned\":true"
+    ;;
+  comment)
+    bd comment "$id" "$body" --json >/dev/null 2>&1 || fail 4 not_found
+    envelope ",\"task\":\"$id\""
+    ;;
+  attach-evidence)
+    bd note "$id" "evidence ($kind): $ref" --json >/dev/null 2>&1 || fail 4 not_found
+    envelope ",\"task\":\"$id\""
+    ;;
+  lease-renew)
+    require_assignee "$id" "$actor"
+    BD_ACTOR="$actor" bd update "$id" --claim --json >/dev/null 2>&1 || fail 5 backend_unavailable
+    envelope ",\"task\":\"$id\""
+    ;;
+  event-append)
+    if [ -n "$id" ]; then bd comment "$id" "event: ${body:-}" --json >/dev/null 2>&1 || true; fi
+    envelope ",\"note\":\"audit rides bd (Dolt history); see README\""
+    ;;
+  *) fail 64 usage "unknown verb $verb" ;;
+esac

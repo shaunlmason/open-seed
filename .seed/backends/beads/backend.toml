@@ -1,0 +1,17 @@
+# beads — external backend wrapping the bd CLI (steveyegge/beads).
+# Native atomic claim and close-cascade; Dolt-backed, offline-first.
+# Declared variances (see README.md): emulated fence (assignee-match, not a
+# rotating token), replica-scoped leases, event-append rides bd's audit.
+name = "beads"
+version = "0.1.0"
+schema_version = "1.0"
+entry = "bin/seed-backend"
+requires = ["bd>=0.57.0", "jq"]
+requires_env = ["BEADS_DIR", "BD_FAKE_STATE"]
+
+[capabilities]
+required = true
+optional = ["lease-renew", "dep", "ready_squad"]
+atomic_claim = "native"
+offline = "native"
+budget = "none"
