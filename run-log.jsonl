@@ -10,3 +10,4 @@
 {"actor":"shaunlmason","data":{"title":"v2: github-issues backend + one-way mirror exporter (D1/D7)"},"task":"os-50995779","ts":"2026-08-22T06:26:13Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"v2: workflow engine + mock harness (§7.3)"},"task":"os-52b9aed0","ts":"2026-08-22T06:26:15Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"v2: skills manifest + lockfile (seed.yaml/seed.lock, D8)"},"task":"os-6f3104db","ts":"2026-08-22T06:26:17Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"v2: mailboxes + handoff-packet automation (§7.2)"},"task":"os-499c5978","ts":"2026-08-22T06:26:19Z","verb":"create"}
