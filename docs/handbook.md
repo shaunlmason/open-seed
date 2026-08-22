@@ -156,7 +156,11 @@ requirements:
   `scripts/seed state import cards.json` — ids, states, dep edges,
   rejections, and the run log all travel; import refuses a non-empty
   target. Then `scripts/seed backend verify <name>`. Read each README for
-  the declared variances.
+  the declared variances. For teams already living in a tracker, the
+  **jira backend** (`.seed/backends/jira/`) puts cards on a Jira Cloud
+  project (status-name convention incl. `Backlog` + `Blocked`,
+  transitions arbitrated by the workflow, actors mapped to accountIds in
+  `actors.json`; emulated claim and cascade, declared).
 - **Human visibility — the issues mirror:** set `[mirror] enabled = true` in
   `.seed/config.toml` and the maintenance workflow renders every card as a
   labeled GitHub issue (`seed:ready`, `seed:in_progress`, `seed:review`,

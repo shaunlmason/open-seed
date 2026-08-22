@@ -1,0 +1,417 @@
+#!/bin/sh
+# jira backend plugin: the port over Jira Cloud REST v3.
+# Invoked by the engine as: seed-backend <verb> [id] [flags] --json
+# Statuses are workflow-specific and moves happen via the transitions API,
+# so every state change resolves the transition BY TARGET STATUS NAME at
+# call time (GET transitions → match to.name → POST id); a target the
+# workflow does not offer from the current status maps to exit 3 — Jira's
+# workflow is the arbiter, honestly surfaced. Status convention (README):
+# Backlog=backlog, To Do=ready, In Progress=in_progress, In Review=review,
+# Blocked=blocked (required), Done=done, cancelled = Done + resolution
+# "Won't Do". Actor identity: Jira assignment needs accountIds — actors
+# resolve through the checked-in mapping .seed/backends/jira/actors.json.
+# Seed bookkeeping rides labels: seed:bo:<entry>, seed:author:<actor>,
+# seed:rejected:<actor>, seed:tok:<hex> (minted per-claim fence token).
+set -u
+for c in curl jq; do
+  command -v "$c" >/dev/null 2>&1 || { printf '{"ok":false,"schema_version":"1.0","error":"backend_unavailable","message":"%s not installed"}\n' "$c"; exit 5; }
+done
+: "${JIRA_BASE_URL:?}" "${JIRA_EMAIL:?}" "${JIRA_API_TOKEN:?}" "${JIRA_PROJECT_KEY:?}"
+base="$JIRA_BASE_URL/rest/api/3"
+sdir=$(cd "$(dirname "$0")/.." && pwd)
+actors_file="${JIRA_ACTORS_FILE:-$sdir/actors.json}"
+
+verb=${1:-}; [ $# -gt 0 ] && shift
+id=""
+case "${1:-}" in
+  ""|-*) ;;
+  *) id=$1; shift ;;
+esac
+
+title="" body="" priority="P2" actor="" token="" to="" resolution="" kind="" ref="" event="" pr="" blocked_on_arg="" blocked_by=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --title) title=$2; shift 2 ;;
+    --body) body=$2; shift 2 ;;
+    --priority) priority=$2; shift 2 ;;
+    --actor) actor=$2; shift 2 ;;
+    --token) token=$2; shift 2 ;;
+    --to) to=$2; shift 2 ;;
+    --resolution) resolution=$2; shift 2 ;;
+    --kind) kind=$2; shift 2 ;;
+    --ref) ref=$2; shift 2 ;;
+    --event) event=$2; shift 2 ;;
+    --pr) pr=$2; shift 2 ;;
+    --blocked-on) blocked_on_arg=$2; shift 2 ;;
+    --blocked-by) blocked_by="$blocked_by $2"; shift 2 ;;
+    --lease) shift 2 ;;
+    --json|--no-pr) shift ;;
+    --*) [ $# -ge 2 ] && case "$2" in -*) shift ;; *) shift 2 ;; esac || shift ;;
+    *) shift ;;
+  esac
+done
+
+fail() {
+  printf '{"ok":false,"schema_version":"1.0","verb":"%s","error":"%s","message":"%s"}\n' "$verb" "$2" "${3:-}"
+  exit "$1"
+}
+envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
+
+# api METHOD PATH [JSON] — HTTP code persisted to a temp file (callers run
+# api inside command substitutions; a variable would be lost in the subshell).
+SEED_JR_CODE=$(mktemp)
+trap 'rm -f "$SEED_JR_CODE"' EXIT
+api() {
+  m=$1; p=$2; d=${3:-}
+  out=$(curl -sS -w '\n%{http_code}' -X "$m" -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+    -H "Content-Type: application/json" ${d:+-d "$d"} "$base$p" 2>/dev/null) \
+    || { printf '000' > "$SEED_JR_CODE"; return 1; }
+  printf '%s' "$out" | tail -1 > "$SEED_JR_CODE"
+  printf '%s' "$out" | sed '$d'
+}
+rc() { cat "$SEED_JR_CODE"; }
+
+# --- actor identity (accountId mapping; unknown actor exits 5) ------------
+account_id() {
+  [ -f "$actors_file" ] || fail 5 backend_unavailable "no actor mapping at $actors_file — check in {\"<actor>\": \"<accountId>\"} (see README)"
+  AID=$(jq -r --arg a "$1" '.[$a] // ""' "$actors_file")
+  [ -n "$AID" ] || fail 5 backend_unavailable "actor '$1' has no accountId in $actors_file — add the mapping (see README)"
+}
+actor_name() { # reverse map accountId → actor for envelope holder fields
+  [ -f "$actors_file" ] && jq -r --arg id "$1" 'to_entries[] | select(.value == $id) | .key' "$actors_file" | head -1 || echo "$1"
+}
+
+jr_status() { # port state → Jira status name (cancelled shares Done)
+  case "$1" in backlog) echo "Backlog";; ready) echo "To Do";; in_progress) echo "In Progress";;
+    review) echo "In Review";; blocked) echo "Blocked";; done|cancelled) echo "Done";; *) echo "";; esac
+}
+prio_jr() { case "$1" in P0) echo Highest;; P1) echo High;; P2) echo Medium;; P3) echo Low;; *) echo Medium;; esac; }
+JJQ='def pport: {"Highest":"P0","High":"P1","Medium":"P2","Low":"P3"}[.] // "P2";
+     def prank: {"P0":0,"P1":1,"P2":2,"P3":3}[.] // 2;'
+
+get_issue() { api GET "/issue/$1"; }
+# require_issue/require_fence/do_transition set globals and fail() in the
+# PARENT shell — never call them inside a command substitution (a subshell
+# exit cannot propagate the port exit code).
+require_issue() {
+  CUR=$(get_issue "$1")
+  [ "$(rc)" = "200" ] || fail 4 not_found "no issue $1"
+}
+istatus() { printf '%s' "$1" | jq -r '.fields.status.name'; }
+iresolution() { printf '%s' "$1" | jq -r '.fields.resolution.name // ""'; }
+iassignee_id() { printf '%s' "$1" | jq -r '.fields.assignee.accountId // ""'; }
+ilabels() { printf '%s' "$1" | jq -r '.fields.labels[]'; }
+port_state_of() { # from a fetched issue: status name + resolution → port state
+  st=$(istatus "$1")
+  case "$st" in
+    Backlog) echo backlog;; "To Do") echo ready;; "In Progress") echo in_progress;;
+    "In Review") echo review;; Blocked) echo blocked;;
+    Done) [ "$(iresolution "$1")" = "Won't Do" ] && echo cancelled || echo done;;
+    *) echo unknown;;
+  esac
+}
+
+# do_transition KEY PORT_TARGET [RESOLUTION] — resolve by target status name
+# from the transitions the workflow offers NOW. Missing from the offer list:
+# if the status exists nowhere in the project's workflow it is the declared
+# convention gap (exit 5 + remediation); otherwise it is an illegal move
+# from the current status (exit 3).
+do_transition() {
+  key=$1; target=$(jr_status "$2"); res=${3:-}
+  avail=$(api GET "/issue/$key/transitions"); [ "$(rc)" = "200" ] || fail 4 not_found "no issue $key"
+  tid=$(printf '%s' "$avail" | jq -r --arg n "$target" '.transitions[] | select(.to.name == $n) | .id' | head -1)
+  if [ -z "$tid" ]; then
+    # Disambiguate: a status missing from the project workflow entirely is
+    # the declared convention gap (exit 5 + remediation); a status that
+    # exists but is not offered from here is an illegal move (exit 3).
+    known=$(api GET "/project/$JIRA_PROJECT_KEY/statuses" | jq -r '[.[].statuses[].name] | unique | join("|")')
+    case "|$known|" in
+      *"|$target|"*) fail 3 invalid_transition "the workflow offers no transition to '$target' from the current status" ;;
+      *) fail 5 backend_unavailable "the project workflow has no '$target' status — add it once in Jira workflow settings (required convention, see .seed/backends/jira/README.md)" ;;
+    esac
+  fi
+  payload=$(jq -nc --arg t "$tid" --arg r "$res" '{transition:{id:$t}} + (if $r != "" then {fields:{resolution:{name:$r}}} else {} end)')
+  api POST "/issue/$key/transitions" "$payload" >/dev/null
+  case "$(rc)" in 200|204) ;; 400) fail 3 invalid_transition "transition refused by the workflow";; *) fail 5 backend_unavailable "transition HTTP $(rc)";; esac
+}
+
+set_labels() { # KEY JSON_ARRAY
+  api PUT "/issue/$1" "{\"fields\":{\"labels\": $2}}" >/dev/null
+  case "$(rc)" in 200|204) ;; *) fail 5 backend_unavailable "label update HTTP $(rc)";; esac
+}
+relabel() { # KEY CUR add=NAMES del=PREFIX
+  keep=$(printf '%s' "$2" | jq -c --arg d "$4" '[.fields.labels[] | select(($d != "") and (startswith($d)) | not)]')
+  [ -n "$4" ] || keep=$(printf '%s' "$2" | jq -c '.fields.labels')
+  for n in $3; do keep=$(printf '%s' "$keep" | jq -c --arg l "$n" '. + [$l] | unique'); done
+  set_labels "$1" "$keep"
+}
+assign() { # KEY ACCOUNT_ID_OR_NULL
+  if [ "$2" = "null" ]; then payload='{"fields":{"assignee": null}}'; else payload="{\"fields\":{\"assignee\":{\"accountId\":\"$2\"}}}"; fi
+  api PUT "/issue/$1" "$payload" >/dev/null
+  case "$(rc)" in 200|204) ;; *) fail 5 backend_unavailable "assign HTTP $(rc)";; esac
+}
+
+# The fence: assignee accountId match AND the minted seed:tok:<token> label
+# — both rotate per claim; a reaped predecessor's stale token exits 6 even
+# for the same actor.
+require_fence() {
+  require_issue "$1"
+  account_id "$actor"
+  [ -n "$token" ] || fail 6 fenced_out "no claim token presented"
+  printf '%s\n' "$(ilabels "$CUR")" | grep -qx "seed:tok:$token" || fail 6 fenced_out "token does not match the live claim"
+  [ "$(iassignee_id "$CUR")" = "$AID" ] || fail 6 fenced_out "actor is not the assignee of record"
+}
+
+mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1 /dev/urandom | tr -d ' \n'; }
+bo_entries() { printf '%s\n' "$(ilabels "$1")" | sed -n 's/^seed:bo://p'; }
+bo_json() { bo_entries "$1" | jq -R . | jq -cs .; }
+
+comment_on() { # KEY TEXT (ADF body)
+  payload=$(jq -nc --arg t "$2" '{body:{type:"doc",version:1,content:[{type:"paragraph",content:[{type:"text",text:$t}]}]}}')
+  api POST "/issue/$1/comment" "$payload" >/dev/null
+  case "$(rc)" in 200|201) ;; *) fail 5 backend_unavailable "comment HTTP $(rc)";; esac
+}
+
+all_issues() { api GET "/search?jql=project%20%3D%20$JIRA_PROJECT_KEY" | jq -c '.issues // []'; }
+
+# cascade FROM_KEY — close AND cancel edges both carry the effect: remove
+# seed:bo:dep:<key> everywhere; Blocked issues left with an empty set go
+# back to To Do. Sets $cascaded.
+cascade() {
+  cascaded="[]"
+  for dep in $(all_issues | jq -r --arg l "seed:bo:dep:$1" '.[] | select(.fields.labels | index($l)) | .key'); do
+    require_issue "$dep"; cur=$CUR
+    relabel "$dep" "$cur" "" "seed:bo:dep:$1"
+    require_issue "$dep"; cur=$CUR
+    if [ "$(istatus "$cur")" = "Blocked" ] && [ -z "$(bo_entries "$cur")" ]; then
+      do_transition "$dep" ready
+      cascaded=$(printf '%s' "$cascaded" | jq -c --arg d "$dep" '. + [$d]')
+    fi
+  done
+}
+
+release_claim() { # KEY CUR
+  relabel "$1" "$2" "" "seed:tok:"
+  assign "$1" null
+}
+
+case "$verb" in
+  create)
+    payload=$(jq -nc --arg t "$title" --arg d "$body" --arg p "$(prio_jr "$priority")" --arg k "$JIRA_PROJECT_KEY" \
+      '{fields:{project:{key:$k}, issuetype:{name:"Task"}, summary:$t, priority:{name:$p},
+        description:{type:"doc",version:1,content:[{type:"paragraph",content:[{type:"text",text:(if $d == "" then " " else $d end)}]}]}}}')
+    out=$(api POST "/issue" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "create HTTP $(rc)"
+    key=$(printf '%s' "$out" | jq -r .key)
+    # The port contract says create returns backlog, so the issue must
+    # actually land there: a workflow whose initial status is To Do (the
+    # common default) would otherwise mint ready cards.
+    require_issue "$key"
+    if [ "$(istatus "$CUR")" != "Backlog" ]; then
+      do_transition "$key" backlog
+    fi
+    for d in $blocked_by; do
+      require_issue "$key"
+      relabel "$key" "$CUR" "seed:bo:dep:$d" ""
+    done
+    envelope ",\"task\":\"$key\",\"state\":\"backlog\""
+    ;;
+
+  ready)
+    tasks=$(all_issues | jq -c --arg a "$actor" "$JJQ"'[ .[]
+      | select(.fields.status.name == "To Do")
+      | select((.fields.assignee.accountId // "") == "")
+      | select((.fields.labels | map(select(. == ("seed:rejected:" + $a))) | length) == 0)
+      | select((.fields.labels | map(select(startswith("seed:bo:"))) | length) == 0)
+      | {task: .key, title: .fields.summary, priority: (.fields.priority.name | pport), created_at: .fields.created}]
+      | sort_by((.priority | prank), .created_at)')
+    envelope ",\"tasks\":$tasks"
+    ;;
+
+  get)
+    require_issue "$id"
+    pstate=$(port_state_of "$CUR")
+    holder=$(actor_name "$(iassignee_id "$CUR")")
+    card=$(printf '%s' "$CUR" | jq -c --arg s "$pstate" --arg h "$holder" --arg bo "$(bo_json "$CUR")" "$JJQ"'{
+      task: .key, title: .fields.summary, priority: (.fields.priority.name | pport),
+      state: $s, holder: $h, blocked_on: ($bo | fromjson),
+      rejected_authors: [.fields.labels[] | select(startswith("seed:rejected:")) | ltrimstr("seed:rejected:")]}')
+    envelope ",\"task\":\"$id\",\"state\":\"$pstate\",\"card\":$card"
+    ;;
+
+  list)
+    tasks=$(all_issues | jq -c "$JJQ"'
+      def pst: if .fields.status.name == "Done"
+               then (if (.fields.resolution.name // "") == "Won'"'"'t Do" then "cancelled" else "done" end)
+               else ({"Backlog":"backlog","To Do":"ready","In Progress":"in_progress","In Review":"review","Blocked":"blocked"}[.fields.status.name] // "unknown") end;
+      [ .[] | {task: .key, title: .fields.summary, state: pst, priority: (.fields.priority.name | pport)}]')
+    envelope ",\"tasks\":$tasks"
+    ;;
+
+  claim)
+    require_issue "$id"
+    account_id "$actor"
+    printf '%s\n' "$(ilabels "$CUR")" | grep -qx "seed:rejected:$actor" \
+      && fail 2 claim_not_granted "rejected_author: $actor was the rejected implementer"
+    holder=$(iassignee_id "$CUR")
+    [ -n "$holder" ] && fail 2 claim_not_granted "held by $(actor_name "$holder")"
+    [ "$(istatus "$CUR")" = "To Do" ] || fail 3 invalid_transition "claim requires ready (To Do); issue is '$(istatus "$CUR")'"
+    tok="c-$(mint)"
+    # Declared variance: read-check then two writes, last-write-wins — no
+    # server arbitration (weaker than filecards' push-wins).
+    relabel "$id" "$CUR" "seed:tok:$tok" "seed:tok:"
+    assign "$id" "$AID"
+    do_transition "$id" in_progress
+    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"claim_token\":\"$tok\",\"lease_expires\":\"\""
+    ;;
+
+  release)
+    require_fence "$id"; cur=$CUR
+    [ "$(istatus "$cur")" = "In Progress" ] || fail 3 invalid_transition "release requires in_progress"
+    release_claim "$id" "$cur"
+    do_transition "$id" ready
+    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    ;;
+
+  transition)
+    case "$to" in
+      review)
+        require_fence "$id"; cur=$CUR
+        [ "$(istatus "$cur")" = "In Progress" ] || fail 3 invalid_transition "review requires in_progress"
+        relabel "$id" "$cur" "seed:author:$actor" "seed:author:"
+        require_issue "$id"
+        release_claim "$id" "$CUR"
+        do_transition "$id" review
+        [ -n "$resolution" ] && comment_on "$id" "seed:evidence: $resolution"
+        envelope ",\"task\":\"$id\",\"state\":\"review\",\"transitioned\":true"
+        ;;
+      blocked)
+        require_fence "$id"; cur=$CUR
+        [ "$(istatus "$cur")" = "In Progress" ] || fail 3 invalid_transition "parking requires in_progress"
+        [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "blocked requires --blocked-on"
+        relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
+        require_issue "$id"
+        release_claim "$id" "$CUR"
+        do_transition "$id" blocked
+        envelope ",\"task\":\"$id\",\"state\":\"blocked\",\"transitioned\":true"
+        ;;
+      ready)
+        require_fence "$id"; cur=$CUR
+        [ "$(istatus "$cur")" = "In Progress" ] || fail 3 invalid_transition "release-shaped transition requires in_progress"
+        release_claim "$id" "$cur"
+        do_transition "$id" ready
+        envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true"
+        ;;
+      *) fail 3 invalid_transition "worker transition to '$to' is not a port edge" ;;
+    esac
+    ;;
+
+  promote)
+    require_issue "$id"
+    [ "$(istatus "$CUR")" = "Backlog" ] || fail 3 invalid_transition "promote requires backlog"
+    do_transition "$id" ready
+    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    ;;
+  deprioritize)
+    require_issue "$id"
+    [ "$(istatus "$CUR")" = "To Do" ] || fail 3 invalid_transition "deprioritize requires ready"
+    do_transition "$id" backlog
+    envelope ",\"task\":\"$id\",\"state\":\"backlog\""
+    ;;
+
+  block)
+    require_issue "$id"
+    [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "block requires --blocked-on"
+    case "$(istatus "$CUR")" in Backlog|"To Do"|Blocked) ;; *) fail 3 invalid_transition "operator block from '$(istatus "$CUR")'";; esac
+    relabel "$id" "$CUR" "seed:bo:$blocked_on_arg" ""
+    [ "$(istatus "$CUR")" = "Blocked" ] || do_transition "$id" blocked
+    envelope ",\"task\":\"$id\",\"state\":\"blocked\""
+    ;;
+
+  unblock|plan-unblock)
+    require_issue "$id"; cur=$CUR
+    [ "$(istatus "$cur")" = "Blocked" ] || fail 3 invalid_transition "not blocked"
+    if [ "$verb" = "plan-unblock" ]; then entry="plan:$pr"; else entry="$blocked_on_arg"; fi
+    bo_entries "$cur" | grep -qx "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
+    relabel "$id" "$cur" "" "seed:bo:$entry"
+    require_issue "$id"
+    if [ -z "$(bo_entries "$CUR")" ]; then
+      do_transition "$id" ready
+      envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    else
+      envelope ",\"task\":\"$id\",\"state\":\"blocked\""
+    fi
+    ;;
+
+  accept|close)
+    require_issue "$id"
+    [ "$(istatus "$CUR")" = "In Review" ] || fail 3 invalid_transition "close is accept+cascade: review → done only (issue is '$(istatus "$CUR")')"
+    do_transition "$id" done "${resolution:-Done}"
+    [ -n "$resolution" ] && comment_on "$id" "seed:resolution: $resolution"
+    cascade "$id"
+    envelope ",\"task\":\"$id\",\"state\":\"done\",\"cascaded\":$cascaded"
+    ;;
+
+  reject)
+    require_issue "$id"; cur=$CUR
+    [ "$(istatus "$cur")" = "In Review" ] || fail 3 invalid_transition "reject requires review"
+    author=$(printf '%s\n' "$(ilabels "$cur")" | sed -n 's/^seed:author://p' | head -1)
+    adds=""
+    [ -n "$author" ] && adds="seed:rejected:$author"
+    relabel "$id" "$cur" "$adds" "seed:author:"
+    do_transition "$id" ready
+    [ -n "$resolution" ] && comment_on "$id" "seed:rejection: $resolution"
+    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    ;;
+
+  cancel)
+    require_issue "$id"
+    case "$(port_state_of "$CUR")" in done|cancelled) fail 3 invalid_transition "already terminal" ;; esac
+    do_transition "$id" cancelled "Won't Do"
+    cascade "$id"
+    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"cascaded\":$cascaded"
+    ;;
+
+  reinstate)
+    require_issue "$id"
+    [ "$(port_state_of "$CUR")" = "cancelled" ] || fail 3 invalid_transition "reinstate requires cancelled"
+    do_transition "$id" backlog
+    envelope ",\"task\":\"$id\",\"state\":\"backlog\""
+    ;;
+
+  comment)
+    require_fence "$id"
+    comment_on "$id" "[$actor] $body"
+    envelope ",\"task\":\"$id\""
+    ;;
+
+  attach-evidence)
+    require_issue "$id"
+    if [ -n "$(iassignee_id "$CUR")" ] || [ "$(istatus "$CUR")" = "In Progress" ]; then
+      require_fence "$id"
+    fi
+    comment_on "$id" "seed:evidence ($kind): $ref"
+    envelope ",\"task\":\"$id\""
+    ;;
+
+  lease-renew)
+    require_fence "$id"
+    envelope ",\"task\":\"$id\",\"note\":\"no lease concept in Jira (declared variance); fence validated\""
+    ;;
+
+  event-append)
+    if [ -n "$id" ]; then
+      comment_on "$id" "seed:event: $event"
+    else
+      audit=$(all_issues | jq -r '.[] | select(.fields.summary == "seed: audit log") | .key' | head -1)
+      if [ -z "$audit" ]; then
+        payload=$(jq -nc --arg k "$JIRA_PROJECT_KEY" '{fields:{project:{key:$k}, issuetype:{name:"Task"}, summary:"seed: audit log", description:"taskless seed events land here", priority:{name:"Low"}}}')
+        out=$(api POST "/issue" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "audit issue create HTTP $(rc)"
+        audit=$(printf '%s' "$out" | jq -r .key)
+      fi
+      comment_on "$audit" "seed:event: $event"
+    fi
+    envelope ""
+    ;;
+
+  *) fail 64 usage "unknown verb '$verb'" ;;
+esac
