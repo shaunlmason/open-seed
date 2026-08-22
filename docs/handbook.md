@@ -130,6 +130,38 @@ cascade already schedule work across agents topologically).
 `.claude/workflows/` remains the home for Claude-native dynamic
 workflows — never under `.seed/`.
 
+**Sharing skills between repos** (D8 §147): `seed.yaml` at the template
+root names upstream skill sources; `seed.lock` pins them (commit SHA +
+content sha256, full source coordinates); both are control surface
+(§113 — CODEOWNERS-reviewed, never auto-merged). The flow:
+
+```sh
+$EDITOR seed.yaml                      # name sources; optionally compose
+scripts/seed skills lock               # resolve refs → commits, hash trees
+scripts/seed skills install            # materialize under skills/managed/
+git add seed.yaml seed.lock skills/managed && git commit
+```
+
+CI runs `seed skills install --frozen` (the §116 supply-chain rule): an
+unlocked manifest edit, a hash mismatch, or on-disk drift fails the
+build — with an empty manifest the step is a no-op, so fresh
+instantiations stay green with zero configuration. Managed skills flow
+through `seed sync` to `.claude/skills/` and `.agents/skills/` exactly
+like local ones (a local skill with the same name wins); install prunes
+only `skills/managed/` — local skills are never touched.
+
+`compose:` entries generate a NEW skill from an ordered `use:` list
+(bodies concatenated with headings demoted, supporting files carried
+over; unknown inputs, self-use, and cycles are refused at parse time).
+Composed skills are not locked — they are deterministic functions of
+locked inputs, regenerated at install.
+
+**Injection-review posture**: skill updates arrive as ordinary PRs whose
+diff shows the new skill content — review happens in the review pane on
+that diff, never at install time. Treat upstream skill text like any
+other third-party code contribution: the lock pins what you reviewed,
+and `--frozen` guarantees CI runs only that.
+
 ## 4. Guardrails, honestly
 
 `.seed/guardrails.yaml` is the vocabulary; enforcement is layered — hooks

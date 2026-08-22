@@ -14,6 +14,8 @@
 /CLAUDE.md        @shaunlmason
 /.mcp.json        @shaunlmason
 /Makefile         @shaunlmason
+/seed.yaml        @shaunlmason
+/seed.lock        @shaunlmason
 
 # Chapter leads — one line per role file; variants share the lead.
 /.seed/agents/    @shaunlmason
