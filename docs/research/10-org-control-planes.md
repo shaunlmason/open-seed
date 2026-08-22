@@ -109,6 +109,17 @@ The proposed minimal plane — task cards (or beads) + claim convention + heartb
 
 # Part 5 — Plugin System Spec: Interchangeable Coordination Backends
 
+> **Erratum (design review, 2026-08-22):** superseded by `docs/design-options.md` §7.1/D1 on
+> these points: (1) exit code **6** is added for "fenced out" (stale claim token); (2) worker
+> verbs (`transition` from in_progress, `comment`/`attach-evidence` under claim, lease renewal)
+> take a `--token` parameter — the claim token issued by `claim` is a fence, rotated on reap;
+> (3) verbs are classed worker vs. operator — accept/reject/cancel/reinstate require an
+> operator-class credential, not a token; (4) `close` is restricted to from-`review` (it is
+> accept + blocker-cascade, exit 3 otherwise), and `cancel` also cascades; the design doc's D1
+> transition table is the single authority; (5) `ready --squad <name>` is added to the optional
+> capability list; (6) card bookkeeping fields (`rejected_authors`, review/claim blocks) are
+> written only as defined side effects of verbs — there is no free-form field-set verb.
+
 This section proposes a concrete plugin architecture that lets an open-seed repo swap its coordination backend — plain file cards, beads, GitHub Issues, Paperclip, etc. — without rewriting agent instructions, hooks, or CI. The design rule throughout: **the seed's scripts and skills speak only to a port; backends are adapters behind it.** Every operation below is derived from mechanics verified in the survey (Paperclip's checkout locks and wakeups, beads' ready/claim semantics, ORCH's state machine, Fusion's kanban, GitHub Issues' API).
 
 ## 5.1 Port operations
