@@ -275,6 +275,45 @@ No surveyed tool can honor a blocking pre-merge, which is why the local
 `pre-merge.d/` gate is a convenience pre-check and **CI verify is the
 merge authority everywhere** (R11).
 
+## Activating the agent lanes
+
+The seed-dispatch and pr-review workflows ship in-tree and **inert**
+(§139): without secrets every run is a cheap no-op. Everything
+mechanizable already landed — the deterministic label router
+(`scripts/seed-dispatch-route`, contract-tested in validate.sh), the
+D4.5 identity check (`scripts/seed-review-identity`, wired into verify
+on `pull_request_review` events), and the audited workflow conventions.
+The flip itself is yours; in order:
+
+1. **Secrets**: add `ANTHROPIC_API_KEY` (repo → Settings → Secrets →
+   Actions). Both workflows activate on its presence alone.
+2. **The reviewer's identity**: install/choose the GitHub App the
+   pr-review lane posts through, and add that identity to
+   `[operators].actors` in `.seed/config.toml` — the roster is what
+   authorizes `seed task reject` and the other operator verbs the lane
+   uses. Without this the lane can review but every reject is refused.
+3. **Repo settings** (once you want L3): add the reviewer app to branch
+   protection's allowed approvers; the D4.5 step already enforces
+   reviewer ≠ implementer, and a review posted after the last push
+   re-runs verify automatically.
+4. **Guardrails tier**: raise `autonomy.max_tier` L2 → L3 in
+   `.seed/guardrails.yaml` (its own reviewed PR — control surface).
+5. **Solo-mode caveat** (§115): on a solo repo your own account is
+   admin, implementer, AND operator — agents need a non-admin machine
+   identity before L3 means anything. Do not skip this.
+
+**Live checklist** (run after flipping; attach each artifact's URL as
+evidence on card os-70028620):
+
+| # | Exercise | Expected artifact |
+|---|---|---|
+| 1 | `cmd:promote` label on a mirrored backlog card's issue | dispatch run: promote applied, label removed, `by:agent` + sticky comment |
+| 2 | `cmd:promote` from an account without write access | dispatch run log shows the refusal; no state change |
+| 3 | `cmd:frobnicate` label | run ignores it; label left for a human |
+| 4 | hand-edit a `state:*` mirror label | sticky comment marks it a REQUEST; no state write |
+| 5 | issue form (no cmd label) | AI dispatcher files exactly one card, `[ai]` title, sticky marker |
+| 6 | open a task PR touching one file | pr-review posts a REAL review under the app identity; verify re-runs on the review; `seed-review-identity` passes |
+
 ## 4. Guardrails, honestly
 
 `.seed/guardrails.yaml` is the vocabulary; enforcement is layered — hooks

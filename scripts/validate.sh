@@ -91,4 +91,43 @@ for d in "$root"/.seed/hooks/shims/*/; do
   fi
 done
 
+# Dispatcher routing contract (os-70028620): fake events through
+# scripts/seed-dispatch-route — authorized cmd labels map to port
+# invocations with label removal + provenance; unauthorized actors are
+# refused; unknown commands are ignored; mirror label edits become
+# requests, never state writes. Zero credentials.
+if command -v jq >/dev/null 2>&1; then
+  route="$root/scripts/seed-dispatch-route"
+  ev() { printf '{"action":"labeled","label":{"name":"%s"},"sender":{"login":"alice"},"issue":{"number":7,"title":"card os-1234abcd","labels":[{"name":"seed:os-1234abcd"}]}}' "$1"; }
+  out=$(ev cmd:promote | DISPATCH_SENDER_ASSOC=COLLABORATOR sh "$route") || { say "FAIL: dispatch-route authorized promote exited $?"; fail=1; }
+  echo "$out" | grep -q '^scripts/seed task promote os-1234abcd --actor alice$' || { say "FAIL: dispatch-route promote invocation wrong: $out"; fail=1; }
+  echo "$out" | grep -q -- '--remove-label cmd:promote' || { say "FAIL: dispatch-route one-shot label not removed"; fail=1; }
+  echo "$out" | grep -q -- '--add-label by:agent' || { say "FAIL: dispatch-route provenance label missing"; fail=1; }
+  echo "$out" | grep -q 'seed-dispatch' || { say "FAIL: dispatch-route sticky comment missing"; fail=1; }
+  rc=0; out=$(ev cmd:promote | DISPATCH_SENDER_ASSOC=NONE sh "$route" 2>/dev/null) || rc=$?
+  { [ "$rc" = 3 ] && [ -z "$out" ]; } || { say "FAIL: dispatch-route unauthorized actor not refused (rc=$rc out=$out)"; fail=1; }
+  rc=0; out=$(ev cmd:frobnicate | DISPATCH_SENDER_ASSOC=OWNER sh "$route") || rc=$?
+  { [ "$rc" = 0 ] && [ -z "$out" ]; } || { say "FAIL: dispatch-route unknown cmd not ignored (rc=$rc out=$out)"; fail=1; }
+  out=$(ev state:done | DISPATCH_SENDER_ASSOC=OWNER sh "$route") || { say "FAIL: dispatch-route mirror edit errored"; fail=1; }
+  echo "$out" | grep -q 'REQUEST' || { say "FAIL: dispatch-route mirror edit not treated as request"; fail=1; }
+  echo "$out" | grep -q '^scripts/seed task' && { say "FAIL: dispatch-route mirror edit produced a state write"; fail=1; }
+  rc=0; out=$(ev cmd:close | DISPATCH_SENDER_ASSOC=OWNER sh "$route") || rc=$?
+  { [ "$rc" = 0 ] && echo "$out" | grep -q 'not label-routable' && ! echo "$out" | grep -q '^scripts/seed task'; } \
+    || { say "FAIL: dispatch-route cmd:close must be refused with a comment, never routed (rc=$rc out=$out)"; fail=1; }
+  evil='{"action":"labeled","label":{"name":"cmd:promote"},"sender":{"login":"alice"},"issue":{"number":7,"title":"x","labels":[{"name":"seed:os-12; rm -rf /"}]}}'
+  rc=0; out=$(printf '%s' "$evil" | DISPATCH_SENDER_ASSOC=OWNER sh "$route" 2>/dev/null) || rc=$?
+  { [ "$rc" = 3 ] && [ -z "$out" ]; } || { say "FAIL: dispatch-route crafted card id not refused (rc=$rc out=$out)"; fail=1; }
+  say "dispatch-route: OK — authorized mapping, refusal, unknown-cmd ignore, mirror-edit-as-request, close-not-routable, injection refused"
+
+  # Reviewer-lane conformance (D4.5): an app-identity approval satisfies
+  # reviewer != implementer; a self-approval is refused; none = waiting.
+  idcheck="$root/scripts/seed-review-identity"
+  echo '[{"author":{"login":"seed-reviewer[bot]"},"state":"APPROVED"}]' | IMPLEMENTER=alice sh "$idcheck" >/dev/null     || { say "FAIL: review-identity rejected an app-identity approval"; fail=1; }
+  rc=0; echo '[{"author":{"login":"alice"},"state":"APPROVED"}]' | IMPLEMENTER=alice sh "$idcheck" >/dev/null 2>&1 || rc=$?
+  [ "$rc" = 3 ] || { say "FAIL: review-identity accepted a self-approval (rc=$rc)"; fail=1; }
+  rc=0; echo '[]' | IMPLEMENTER=alice sh "$idcheck" >/dev/null 2>&1 || rc=$?
+  [ "$rc" = 2 ] || { say "FAIL: review-identity wrong verdict on no reviews (rc=$rc)"; fail=1; }
+  say "review-identity: OK — app approval passes, self-approval refused, none waits"
+fi
+
 [ "$fail" -eq 0 ] && say "ok" || exit 1

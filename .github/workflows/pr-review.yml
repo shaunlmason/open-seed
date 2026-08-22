@@ -9,7 +9,7 @@ on:
     types: [opened, synchronize, ready_for_review]
 
 permissions:
-  contents: read
+  contents: write   # seed task reject on REQUEST_CHANGES pushes seed-state
   pull-requests: write
 
 jobs:
@@ -37,9 +37,13 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--settings .claude/ci-settings.json"
+          claude_args: "--settings .claude/ci-settings.json --allowedTools Bash(scripts/seed:*),Bash(git diff:*),Bash(git log:*)"
           prompt: |
             You are the reviewer role: read .seed/agents/reviewer.md and
             follow it. Review this PR against the merge-base plan blob only
-            (D3). Post a review comment; do not merge, and do not edit card
-            state directly.
+            (D3). Post your verdict as a REAL pull-request review
+            (server-attributed to this workflow's app identity — the D4.5
+            gate reads reviews, never comments); do not merge, and do not
+            edit card state directly except `seed task reject` on a
+            REQUEST_CHANGES verdict, which requires this app's identity in
+            [operators].actors (see the activation runbook).

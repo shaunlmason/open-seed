@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "task": "os-70028620",
+  "merge_base": "553a59ea5f67d34d2b986f991a4395142d6b7178",
+  "head": "30430827ab03191d4208b1f41d1f144bd7fa88d3",
+  "plan_path": "plans/os-70028620.md",
+  "plan_sha256": "c0cad34083b2aa9c8ce557a488fae5a819c0ddf1894d6ebffb193d413e36512d",
+  "diff_files": [
+    ".claude/agents/dispatcher.md",
+    ".github/workflows/check-validate.yml",
+    ".github/workflows/pr-review.yml",
+    ".github/workflows/seed-dispatch.yml",
+    ".seed/agents/dispatcher.md",
+    "docs/handbook.md",
+    "scripts/seed-dispatch-route",
+    "scripts/seed-review-identity",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "94376bb72ba1790991100ca5b5583253989bf9a6d4124b5916acb2898bd9a4fd",
+  "validation": [
+    {
+      "cmd": "test -x scripts/seed-dispatch-route",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -qi \"Activating the agent lanes\" docs/handbook.md",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}

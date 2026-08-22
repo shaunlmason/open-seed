@@ -1,0 +1,33 @@
+#!/bin/sh
+# seed-review-identity (plan os-70028620, D4.5): the reviewer-lane
+# conformance check, factored to POSIX sh + jq so it is testable offline.
+# Reads a GitHub reviews JSON array on stdin (gh pr view --json reviews
+# -q .reviews shape: [{author: {login}, state}]) with IMPLEMENTER set to
+# the implementer of record (the task PR's author).
+#
+# Verdicts:
+#   exit 0 — at least one APPROVED review by an identity that is NOT the
+#            implementer (the workflow's app identity qualifies: D4.5
+#            requires reviewer ≠ implementer, not reviewer = human);
+#   exit 2 — no approving review yet (waiting, not a violation);
+#   exit 3 — the only approvals are self-reviews: refused.
+set -eu
+command -v jq >/dev/null 2>&1 || { echo "seed-review-identity: jq required" >&2; exit 64; }
+[ -n "${IMPLEMENTER:-}" ] || { echo "seed-review-identity: IMPLEMENTER required" >&2; exit 64; }
+
+reviews=$(cat)
+others=$(printf '%s' "$reviews" | jq --arg me "$IMPLEMENTER" \
+  '[.[] | select(.state == "APPROVED") | .author.login | select(. != $me)] | length')
+selfs=$(printf '%s' "$reviews" | jq --arg me "$IMPLEMENTER" \
+  '[.[] | select(.state == "APPROVED") | .author.login | select(. == $me)] | length')
+
+if [ "$others" -gt 0 ]; then
+  echo "seed-review-identity: ok — $others approving review(s) by a non-implementer identity (D4.5)"
+  exit 0
+fi
+if [ "$selfs" -gt 0 ]; then
+  echo "seed-review-identity: REFUSED — only self-approval(s) by $IMPLEMENTER (D4.5: reviewer must differ from implementer)" >&2
+  exit 3
+fi
+echo "seed-review-identity: no approving review yet"
+exit 2

@@ -1,0 +1,107 @@
+#!/bin/sh
+# seed-dispatch-route (plan os-70028620): the dispatcher's deterministic
+# label-routing core, factored out of workflow YAML so it is testable
+# offline. Reads one GitHub event JSON on stdin and PRINTS the commands
+# the workflow should apply — print, don't execute: this script performs
+# no writes, so the fake-event contract test in validate.sh can assert
+# on its output with zero credentials.
+#
+# Contract:
+# - `cmd:<verb>` one-shot labels added by an actor with write access
+#   (author_association OWNER|MEMBER|COLLABORATOR) map to port verbs on
+#   the mirrored card (id read from a `seed:os-...` label or an
+#   `os-<hex>` token in the issue title). Output: the seed invocation,
+#   the one-shot label removal, `by:agent` provenance, and the sticky
+#   progress comment (marker `<!-- seed-dispatch -->`).
+# - An unauthorized actor is refused: exit 3, nothing on stdout.
+# - An unknown `cmd:*` is ignored: exit 0, nothing on stdout.
+# - Mirror-label edits (`state:*`) are REQUESTS, never direct state
+#   writes (§141): the output is a comment invoking the port ceremony,
+#   no `seed task` state verb.
+set -eu
+
+command -v jq >/dev/null 2>&1 || { echo "seed-dispatch-route: jq required" >&2; exit 64; }
+event=$(cat)
+
+jget() { printf '%s' "$event" | jq -r "$1"; }
+
+action=$(jget '.action // empty')
+label=$(jget '.label.name // empty')
+sender=$(jget '.sender.login // empty')
+# The label payload does not carry the SENDER's permission; the workflow
+# checks it (gh api .../collaborators/<sender>/permission) and injects it
+# as DISPATCH_SENDER_ASSOC. The payload fallback covers comment-shaped
+# events that do carry it. Never fall back to .issue.author_association —
+# that is the issue AUTHOR, not the acting sender.
+assoc=${DISPATCH_SENDER_ASSOC:-$(jget '.sender.author_association // "NONE"')}
+issue=$(jget '.issue.number // empty')
+
+[ "$action" = "labeled" ] || exit 0
+[ -n "$label" ] || exit 0
+
+# Card id: prefer the mirror label, fall back to a title token.
+card=$(jget '(.issue.labels // []) | map(.name) | map(select(startswith("seed:os-"))) | first // "" | ltrimstr("seed:")')
+if [ -z "$card" ]; then
+  card=$(jget '.issue.title // ""' | grep -oE 'os-[0-9a-f]{4,}' | head -1 || true)
+fi
+# Every field later interpolated into a printed command is STRICTLY
+# validated — the workflow executes router output, so issue-derived text
+# (a crafted seed:os-* label included) must never smuggle shell
+# metacharacters.
+if [ -n "$card" ] && ! printf '%s' "$card" | grep -qE '^os-[0-9a-f]{4,16}$'; then
+  echo "seed-dispatch-route: refused: card id fails validation" >&2
+  exit 3
+fi
+if [ -n "$issue" ] && ! printf '%s' "$issue" | grep -qE '^[0-9]+$'; then
+  echo "seed-dispatch-route: refused: non-numeric issue number" >&2
+  exit 3
+fi
+printf '%s' "$sender" | grep -qE '^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$' || { echo "seed-dispatch-route: refused: sender login fails validation" >&2; exit 3; }
+
+sticky='<!-- seed-dispatch -->'
+
+case "$label" in
+  state:*)
+    # Mirror label edited by hand: a request, never a direct state write
+    # (§141 — the port is the only writer).
+    printf 'gh issue comment %s --body "%s label edit \`%s\` by @%s noted as a REQUEST (mirror labels are read-only projections; state changes go through \`scripts/seed task <verb>\` — §141)."\n' \
+      "$issue" "$sticky" "$label" "$sender"
+    exit 0
+    ;;
+  cmd:*) ;;
+  *) exit 0 ;;
+esac
+
+case "$assoc" in
+  OWNER|MEMBER|COLLABORATOR) ;;
+  *)
+    echo "seed-dispatch-route: refused: @$sender ($assoc) lacks write access for $label" >&2
+    exit 3
+    ;;
+esac
+
+verb=${label#cmd:}
+case "$verb" in
+  promote|deprioritize|cancel|reinstate|reject) ;;
+  close)
+    # close is deliberately NOT routable: review→done must follow the
+    # approve → merge → close ordering (merged-PR maintenance path or
+    # the server-attributed no-PR workflow), or the cascade could
+    # unblock dependents on work absent from the default branch.
+    printf 'gh issue comment %s --body "%s \`cmd:close\` is not label-routable: closing follows the merged-PR path (maintenance) or the no-PR workflow_dispatch (D7). Label removed."\n' "$issue" "$sticky"
+    printf 'gh issue edit %s --remove-label cmd:close\n' "$issue"
+    exit 0
+    ;;
+  *) exit 0 ;; # unknown command: ignored, the label stays for a human to see
+esac
+
+if [ -z "$card" ]; then
+  echo "seed-dispatch-route: refused: no card id resolvable on issue #$issue (need a seed:os-* label or an os-<id> title token)" >&2
+  exit 3
+fi
+
+printf 'scripts/seed task %s %s --actor %s\n' "$verb" "$card" "$sender"
+printf 'gh issue edit %s --remove-label %s\n' "$issue" "$label"
+printf 'gh issue edit %s --add-label by:agent\n' "$issue"
+printf 'gh issue comment %s --body "%s \`%s\` → \`seed task %s %s\` on behalf of @%s (by:agent)."\n' \
+  "$issue" "$sticky" "$label" "$verb" "$card" "$sender"
