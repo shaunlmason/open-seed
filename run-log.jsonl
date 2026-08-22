@@ -6,3 +6,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-18135882","ts":"2026-08-22T06:26:04Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-72722779","ts":"2026-08-22T06:26:06Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-62b64ce8","ts":"2026-08-22T06:26:08Z","verb":"promote"}
+{"actor":"shaunlmason","data":{"title":"v2: beads backend plugin (design §7.3; research/10 §5)"},"task":"os-3e2a8d92","ts":"2026-08-22T06:26:11Z","verb":"create"}
