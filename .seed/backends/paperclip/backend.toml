@@ -1,0 +1,17 @@
+# paperclip — external backend over the Paperclip control plane's REST API
+# (research/10 Part 1). Native DB-atomic checkout, server-validated
+# transitions, native budgets with hard stops. Server is truth: no offline,
+# no fork portability (declared in README.md).
+name = "paperclip"
+version = "0.1.0"
+schema_version = "1.0"
+entry = "bin/seed-backend"
+requires = ["curl", "jq"]
+requires_env = ["PAPERCLIP_API_URL", "PAPERCLIP_API_KEY", "PAPERCLIP_COMPANY_ID", "PAPERCLIP_DEFAULT_GOAL_ID"]
+
+[capabilities]
+required = true
+optional = ["lease-renew", "ancestry", "budget"]
+atomic_claim = "native"
+offline = "none"
+budget = "native"

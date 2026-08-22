@@ -14,6 +14,7 @@ permissions:
   contents: write
   pull-requests: read
   checks: read
+  issues: write # mirror export (gh issue create/edit/close)
 
 concurrency: seed-maintenance
 
@@ -77,6 +78,12 @@ jobs:
         run: |
           enabled=$(awk '/^\[mirror\]/{m=1} m && /^enabled/{print $3; exit}' .seed/config.toml)
           [ "$enabled" = "true" ] || { echo "mirror disabled ([mirror] enabled=false)"; exit 0; }
+          # Provision the D1 state labels idempotently (a fresh repo has none).
+          for s in ready in_progress review done blocked; do
+            gh label create "seed:$s" --repo "$GITHUB_REPOSITORY" --color 5319e7 \
+              --description "seed mirror state" --force || true
+          done
+          state_labels="seed:ready,seed:in_progress,seed:review,seed:done,seed:blocked"
           scripts/seed mirror plan | jq -c '.actions[]' | while read -r a; do
             op=$(echo "$a" | jq -r .op); card=$(echo "$a" | jq -r .card)
             title=$(echo "$a" | jq -r .title); issue=$(echo "$a" | jq -r .issue)
@@ -85,29 +92,39 @@ jobs:
               elif .state=="closed" then "done"
               elif (.labels|length)==0 then "backlog"
               else (.labels[0] | ltrimstr("seed:")) end')
+            # Record an export only after every gh mutation for it succeeded —
+            # a failed mutation must leave the card planned for the next tick.
+            ok=1
             case "$op" in
               create)
                 echo "$a" | jq -r .body > /tmp/mirror-body.md
                 n=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
                     --body-file /tmp/mirror-body.md ${labels:+--label "$labels"} \
-                    | sed -n 's#.*/issues/\([0-9]*\)$#\1#p')
-                [ -n "$n" ] && scripts/seed mirror record "$card" --issue "$n" \
-                    --state "$exported" --actor "$ACTOR" || true
+                    | sed -n 's#.*/issues/\([0-9]*\)$#\1#p') || ok=0
+                [ -n "$n" ] || ok=0
+                issue="$n"
                 ;;
               update)
                 gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --title "$title" \
-                  --remove-label "seed:ready,seed:in_progress,seed:review,seed:done,seed:blocked" || true
-                [ -n "$labels" ] && gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --add-label "$labels" || true
+                  --remove-label "$state_labels" || ok=0
+                if [ -n "$labels" ]; then
+                  gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --add-label "$labels" || ok=0
+                fi
                 ;;
               close)
                 reason=$(echo "$a" | jq -r '.close_reason | sub("_"; " ")')
-                [ -n "$labels" ] && gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --add-label "$labels" || true
-                gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --reason "$reason" || true
+                gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --remove-label "$state_labels" || ok=0
+                if [ -n "$labels" ]; then
+                  gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --add-label "$labels" || ok=0
+                fi
+                gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --reason "$reason" || ok=0
                 ;;
             esac
-            # Record the exported state for update/close so the next pass is a no-op.
-            if [ "$op" != "create" ]; then
-              scripts/seed mirror record "$card" --issue "$issue" --state "$exported" --actor "$ACTOR" || true
+            if [ "$ok" = "1" ] && [ -n "$issue" ]; then
+              scripts/seed mirror record "$card" --issue "$issue" --state "$exported" --actor "$ACTOR" \
+                || echo "record failed for $card (will re-plan next tick)"
+            else
+              echo "export incomplete for $card (op=$op) — leaving unrecorded for retry"
             fi
           done
 
