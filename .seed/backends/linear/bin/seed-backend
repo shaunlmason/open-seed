@@ -142,10 +142,17 @@ update_issue() { # ID INPUT_JSON — issueUpdate; GraphQL errors → exit 5
 
 # set_labels ID CURRENT_ISSUE add=NAME... del=PREFIX...  (space-separated
 # add names / del prefixes) — one issueUpdate with the recomputed labelIds.
+# relabel IID CUR add=NAMES del=SELECTOR — a selector ending in ":" deletes
+# the whole namespace (seed:tok:, seed:author:); anything else deletes ONLY
+# the exact label name, so removing seed:bo:dep:LIN-1 can never strip
+# seed:bo:dep:LIN-10.
 relabel() {
-  iid=$1; cur=$2; adds=$3; delpfx=$4
-  keep=$(printf '%s' "$cur" | jq -c --arg d "$delpfx" '[.labels.nodes[] | select((.name | startswith($d)) | not) | .id]')
-  [ -n "$delpfx" ] || keep=$(printf '%s' "$cur" | jq -c '[.labels.nodes[].id]')
+  iid=$1; cur=$2; adds=$3; delsel=$4
+  keep=$(printf '%s' "$cur" | jq -c --arg d "$delsel" '[.labels.nodes[]
+    | select(if $d == "" then true
+             elif ($d | endswith(":")) then ((.name | startswith($d)) | not)
+             else (.name != $d) end)
+    | .id]')
   for n in $adds; do
     lid=$(label_id "$n")
     keep=$(printf '%s' "$keep" | jq -c --arg l "$lid" '. + [$l] | unique')
@@ -281,8 +288,9 @@ case "$verb" in
   release)
     require_fence "$id"; cur=$CUR
     [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "release requires in_progress"
-    release_claim "$id" "$cur"
     state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    require_issue "$id"; cur=$CUR
+    release_claim "$id" "$cur"
     envelope ",\"task\":\"$id\",\"state\":\"ready\""
     ;;
 
@@ -291,10 +299,13 @@ case "$verb" in
       review)
         require_fence "$id"; cur=$CUR
         [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "review requires in_progress"
+        # The fallible state move runs FIRST: a refusal must leave the
+        # claim intact so the worker can retry or park.
+        state_id review; update_issue "$id" "{\"stateId\": \"$SID\"}"
+        require_issue "$id"; cur=$CUR
         relabel "$id" "$cur" "seed:author:$actor" "seed:author:"
         require_issue "$id"; cur=$CUR
         release_claim "$id" "$cur"
-        state_id review; update_issue "$id" "{\"stateId\": \"$SID\"}"
         [ -n "$resolution" ] && comment_on "$id" "seed:evidence: $resolution"
         envelope ",\"task\":\"$id\",\"state\":\"review\",\"transitioned\":true"
         ;;
@@ -302,17 +313,19 @@ case "$verb" in
         require_fence "$id"; cur=$CUR
         [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "parking requires in_progress"
         [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "blocked requires --blocked-on"
+        state_id blocked; update_issue "$id" "{\"stateId\": \"$SID\"}"
+        require_issue "$id"; cur=$CUR
         relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
         require_issue "$id"; cur=$CUR
         release_claim "$id" "$cur"
-        state_id blocked; update_issue "$id" "{\"stateId\": \"$SID\"}"
         envelope ",\"task\":\"$id\",\"state\":\"blocked\",\"transitioned\":true"
         ;;
       ready)
         require_fence "$id"; cur=$CUR
         [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "release-shaped transition requires in_progress"
-        release_claim "$id" "$cur"
         state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
+        require_issue "$id"; cur=$CUR
+        release_claim "$id" "$cur"
         envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true"
         ;;
       *) fail 3 invalid_transition "worker transition to '$to' is not a port edge" ;;

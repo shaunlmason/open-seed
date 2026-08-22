@@ -117,6 +117,15 @@ mb=$("$sb" create --title "Manual block" --actor a --json | jq -r .task)
 out=$("$sb" unblock "$mb" --actor lead --json); ok "$out" "bare unblock derives manual entry"
 [ "$(echo "$out" | jq -r .state)" = "ready" ] || die "manual unblock did not release"
 
+# Exact-match blocked_on release: removing manual:x must not strip manual:xy.
+xb=$("$sb" create --title "Exact match" --actor a --json | jq -r .task)
+"$sb" promote "$xb" --actor lead --json >/dev/null
+"$sb" block "$xb" --actor lead --blocked-on manual:x --json >/dev/null
+"$sb" block "$xb" --actor lead --blocked-on manual:xy --json >/dev/null
+out=$("$sb" unblock "$xb" --actor lead --blocked-on manual:x --json); ok "$out" "exact unblock"
+[ "$(echo "$out" | jq -r .state)" = "blocked" ] || die "prefix deletion stripped manual:xy too"
+[ "$("$sb" get "$xb" --json | jq -r '.card.blocked_on[0]')" = "manual:xy" ] || die "manual:xy lost"
+
 # list --state filter.
 out=$("$sb" list --state ready --json); ok "$out" "list filtered"
 [ "$(echo "$out" | jq '[.tasks[] | select(.state != "ready")] | length')" = "0" ] || die "list --state leaked other states"
