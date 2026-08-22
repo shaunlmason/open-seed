@@ -101,3 +101,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:26","to":"ready"},"task":"os-23494e11","ts":"2026-08-22T18:43:20Z","verb":"plan-unblock"}
 {"actor":"claude-session","data":{"lease_expires":"2026-08-22T19:43:23Z"},"task":"os-69bd5a64","ts":"2026-08-22T18:43:23Z","verb":"claim"}
 {"actor":"claude-session","data":{"to":"review","transitioned":true},"task":"os-69bd5a64","ts":"2026-08-22T18:53:58Z","verb":"transition"}
+{"actor":"claude-session","data":{"kind":"pr"},"task":"os-69bd5a64","ts":"2026-08-22T18:54:00Z","verb":"attach-evidence"}
