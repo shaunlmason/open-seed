@@ -1,0 +1,17 @@
+# seed.yaml — shared-skills manifest (design D8 §147; handbook §3
+# "Sharing skills between repos"). Sources named here are pinned by
+# seed.lock (`seed skills lock`) and materialized under skills/managed/
+# by `seed skills install`; CI runs `install --frozen`, so an unlocked
+# edit or on-disk drift fails the build. Skill updates arrive as
+# ordinary PRs whose diff shows the new content — review the diff, not
+# the install step.
+schema_version: "1"
+skills: []
+#  - name: code-review          # directory name under skills/managed/
+#    repo: acme/skill-library   # owner/name or a full git URL
+#    ref: v1.2.0                # tag or branch, resolved to a commit at lock
+#    path: skills/code-review   # subtree of that repo holding the skill
+compose: []
+#  - name: release-manager      # a GENERATED skill: concatenates the used
+#    description: Cut releases end to end.
+#    use: [code-review]         # ordered; validated for cycles/self-use

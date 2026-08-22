@@ -24,14 +24,24 @@ case "$cmd" in
     printf '{"id":"%s"}\n' "$id"
     ;;
   show)
+    # Real bd v1.2.2 returns an ARRAY of issues; a missing id is an error
+    # object on stdout with exit 1 (live-validated — os-435d7b61).
     id=$1
-    j -e --arg id "$id" '.issues[$id] // empty' || exit 1
+    if j -e --arg id "$id" '.issues[$id]' >/dev/null 2>&1; then
+      j -c --arg id "$id" '[.issues[$id]]'
+    else
+      printf '{"error":"no issues found matching the provided IDs","schema_version":1}\n'
+      exit 1
+    fi
     ;;
   ready)
     j -c '[.issues[] | select(.status == "open")] | sort_by(.priority)'
     ;;
   list)
-    j -c '[.issues[]]'
+    # Real bd list hides closed issues unless --all (live-validated).
+    all=0
+    for a in "$@"; do [ "$a" = "--all" ] && all=1; done
+    if [ "$all" = 1 ]; then j -c '[.issues[]]'; else j -c '[.issues[] | select(.status != "closed")]'; fi
     ;;
   update)
     id=$1; shift
@@ -67,9 +77,19 @@ case "$cmd" in
     echo '{}'
     ;;
   comment|note)
+    # Real bd comment --json returns the CREATED comment object with a
+    # stable id (live-validated); the fake mirrors that.
     id=$1; text=${2:-}
-    save --arg id "$id" --arg t "$text" '.issues[$id].comments += [$t]'
-    echo '{}'
+    n=$(j -r --arg id "$id" '(.issues[$id].comments // []) | length')
+    cid="c-$id-$n"
+    save --arg id "$id" --arg t "$text" --arg cid "$cid" '.issues[$id].comments += [{id: $cid, text: $t}]'
+    printf '{"id":"%s","issue_id":"%s","text":%s}\n' "$cid" "$id" "$(printf '%s' "$text" | jq -Rs .)"
+    ;;
+  comments)
+    # Real bd lists comments via `bd comments <id> --json` (show carries
+    # only comment_count there — live-validated).
+    id=$1
+    j -c --arg id "$id" '(.issues[$id].comments // [])'
     ;;
   *) echo "fake-bd: unknown command $cmd" >&2; exit 64 ;;
 esac
