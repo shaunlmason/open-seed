@@ -36,18 +36,38 @@ P0–P3 → urgent / high / medium / low.
 ## What the adapter enforces
 
 - **Claim** assigns the caller and moves to In Progress; a held issue is
-  contention (exit 2 + holder). **The fence is a minted per-claim token**
-  riding a `seed:tok:<hex>` label, validated on every fenced verb *in
-  addition to* the assignee match — the API key alone cannot tell a reaped
-  predecessor from the same actor's new claim; the rotating token can
-  (D1 binding, exceeding the plan's assignee-match floor to match the
-  beads/paperclip posture).
+  contention (exit 2, `error: "claim_contention"`, top-level `holder`).
+  **The fence is a minted per-claim token** riding a `seed:tok:c-<hex>`
+  label, validated on every fenced verb *in addition to* the assignee
+  match — the API key alone cannot tell a reaped predecessor from the
+  same actor's new claim; the rotating token can (D1 binding, exceeding
+  the plan's assignee-match floor to match the beads/paperclip posture).
+  **Post-claim verification**: after its writes, claim re-reads the issue
+  and succeeds only if the substrate holds *its* assignee AND *its*
+  token — a lost last-write-wins interleave exits 2 with the real holder
+  instead of returning a dead token. **Compensation**: a refused
+  assign+move rolls the minted token back, so a failed claim leaves the
+  issue unchanged. The reviewer lockout emits its own `rejected_author`
+  cause.
 - **close/accept is review → done only** (the port table's accept+cascade
   edge); anything else exits 3. Cancellation is the separate `cancel` verb.
 - **Both close and cancel run the emulated cascade**: dep edges ride
   `seed:bo:dep:<id>` labels; the terminal transition removes its entry
   everywhere and moves issues left blocked on nothing back to Todo,
-  returning the released ids in `cascaded`.
+  returning the released ids in `cascaded`. Per-dependent failures —
+  the release move OR the label bookkeeping — **skip-and-report**: the
+  dependency entry is preserved (a failed post-release label write rolls
+  the state back to Blocked), the dependent is listed in
+  `cascade_skipped`, the rest of the cascade continues, and recovery is
+  an operator `unblock` once the substrate allows the moves.
+- **Envelope parity**: `get` carries the issue description as the card
+  `body`; `comment`/`attach-evidence` return `comment_id`/`evidence_id`;
+  `event-append` honors a `.task` reference inside the event JSON before
+  falling back to the audit sink; all failure envelopes and embedded ids
+  are jq-built. An issue in a workflow state outside the convention is
+  refused with remediation by `get` and skipped by `list`. The audit
+  issue carries a `seed:audit` label, is excluded from `ready`, and is
+  refused at `claim`.
 - Port bookkeeping rides labels: `seed:bo:<entry>` (plan parking and dep
   edges, released entry-by-entry), `seed:author:<actor>` (implementer of
   record), `seed:rejected:<actor>` (reviewer lockout — enforced at claim
@@ -57,7 +77,20 @@ P0–P3 → urgent / high / medium / low.
 
 - **Emulated claim**: Linear updates are last-write-wins, so the
   read-check-assign window is real — weaker than filecards' push-wins
-  (no server arbitration). Declared, never hidden.
+  (no server arbitration). Post-claim verification narrows the window to
+  the moment between the verifying read and the next fenced verb (a race
+  lost after verification surfaces as exit 6 on that verb); the window
+  itself is declared, never hidden. A **torn interleave** (one rival
+  write landing without the other, leaving assignee and token from
+  different claimants) is reported as contention naming the torn tuple —
+  no one holds a usable claim; an operator release/reap recovers, and
+  the next claim rotates both fields.
+- **Label writes replace the whole array**: Linear's `issueUpdate` has no
+  atomic add/remove label operations (unlike Jira's update ops), so every
+  label write recomputes `labelIds` from a fresh read immediately before
+  the write. A concurrent label edit landing inside that read-write
+  window is overwritten — declared; keep non-seed label automation off
+  seed-managed issues.
 - **No leases**: `lease-renew` validates the fence and succeeds;
   staleness is handled by `seed maintain reap` policy, not the platform.
 - **Server is truth**: no offline operation, no fork portability
@@ -78,7 +111,13 @@ P0–P3 → urgent / high / medium / low.
 
 `sh test.sh` runs the offline contract test against `testdata/fake-linear`
 (Python3 stdlib HTTP server modeling the GraphQL subset: workflow states by
-name, assignee, labels-on-demand, last-write-wins updates). It covers every
-required verb, token rotation on reclaim, contention, plan parking, the
-lockout, the cascade on close AND cancel, close refused outside review, and
-the missing-Blocked-state refusal; it runs in `make check` via validate.sh.
+name, assignee, labels-on-demand, last-write-wins updates, plus fault hooks
+for the deterministic claim race, the torn token-only interleave, the
+refused assign, the refused dep-label removal, and the refused
+Blocked→Todo move). It covers every required verb, the body round-trip,
+token rotation on reclaim, the contention envelope with its holder, the
+compensated failed claim, the lost-race post-claim verification, plan
+parking, the lockout, the cascade on close AND cancel with skip-and-report,
+close refused outside review, `comment_id`/`evidence_id`, event `.task`
+routing, the audit-issue exclusions, and the missing-Blocked-state refusal;
+it runs in `make check` via validate.sh.

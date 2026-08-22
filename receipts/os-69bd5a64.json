@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "task": "os-69bd5a64",
+  "merge_base": "68008c3ab3d542c5bc04c4e7a3ab3d28ade77efe",
+  "head": "55be5d91c194ded2e2cf8062a08755392389e757",
+  "plan_path": "plans/os-69bd5a64.md",
+  "plan_sha256": "ddb0c4b2f9409cebca6bedaf072fa5f299da0cf62d8103e38a88032ccdde76ad",
+  "diff_files": [
+    ".seed/backends/linear/README.md",
+    ".seed/backends/linear/bin/seed-backend",
+    ".seed/backends/linear/test.sh",
+    ".seed/backends/linear/testdata/fake-linear",
+    ".seed/port-schema/envelope.schema.json",
+    ".seed/port-schema/verbs.json",
+    "memory/LEARNINGS.md"
+  ],
+  "diff_sha256": "5f14ba6441896a3164aaabce595e194c81fa3c938eee01149deb537fe3623fc5",
+  "validation": [
+    {
+      "cmd": "test -x .seed/backends/linear/bin/seed-backend",
+      "exit": 0
+    },
+    {
+      "cmd": "jq -e '.properties.comment_id and .properties.evidence_id and .properties.cascade_skipped' .seed/port-schema/envelope.schema.json",
+      "exit": 0
+    },
+    {
+      "cmd": "sh .seed/backends/linear/test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}

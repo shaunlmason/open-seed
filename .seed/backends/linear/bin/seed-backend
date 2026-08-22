@@ -6,10 +6,16 @@
 # In Review=review, Blocked=blocked (required custom state), Done=done,
 # Canceled=cancelled. A workflow missing a required state → exit 5 with
 # remediation. Seed bookkeeping rides labels: seed:bo:<entry> (blocked_on),
-# seed:author:<actor>, seed:rejected:<actor>, seed:tok:<hex> (the minted
+# seed:author:<actor>, seed:rejected:<actor>, seed:tok:c-<hex> (the minted
 # per-claim fence token — D1 binding, same posture as beads/paperclip: the
 # API key alone cannot tell a reaped predecessor from the same actor's new
-# claim; the rotating token can).
+# claim; the rotating token can), seed:audit (the audit-sink issue, never a
+# card). Ordering discipline (plan os-69bd5a64): the fallible state move
+# always runs before bookkeeping is destroyed; a failed claim is compensated
+# and then verified against the substrate (last-write-wins races resolve to
+# the actual holder); per-dependent cascade failures skip-and-report instead
+# of aborting the terminal verb. Envelopes and embedded ids are jq-built —
+# caller values can never break the JSON.
 set -u
 for c in curl jq; do
   command -v "$c" >/dev/null 2>&1 || { printf '{"ok":false,"schema_version":"1.0","error":"backend_unavailable","message":"%s not installed"}\n' "$c"; exit 5; }
@@ -48,11 +54,22 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Envelopes are built with jq — caller-controlled values (actors, ids,
+# messages) must never be interpolated into JSON by hand.
 fail() {
-  printf '{"ok":false,"schema_version":"1.0","verb":"%s","error":"%s","message":"%s"}\n' "$verb" "$2" "${3:-}"
+  jq -nc --arg v "$verb" --arg e "$2" --arg m "${3:-}" \
+    '{ok:false, schema_version:"1.0", verb:$v, error:$e, message:$m}'
   exit "$1"
 }
+# The port contract's contention shape: cause claim_contention plus a
+# top-level holder field an orchestrator can act on.
+fail_contention() { # HOLDER [MESSAGE]
+  jq -nc --arg v "$verb" --arg h "$1" --arg m "${2:-held by $1}" \
+    '{ok:false, schema_version:"1.0", verb:$v, error:"claim_contention", holder:$h, message:$m}'
+  exit 2
+}
 envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
+jstr() { jq -nc --arg s "$1" '$s'; } # JSON-encode one string
 
 # gql OPNAME QUERY VARIABLES_JSON — one GraphQL call; .errors → caller sees
 # empty data. The response body is printed; rc-style checks read .errors.
@@ -98,7 +115,7 @@ port_state() { # Linear state name → port state
 }
 prio_ln() { case "$1" in P0) echo 1;; P1) echo 2;; P2) echo 3;; P3) echo 4;; *) echo 3;; esac; }
 LJQ='def pport: {"1":"P0","2":"P1","3":"P2","4":"P3"}[(.|tostring)] // "P2";
-     def prank: . // 3;
+     def prank: {"P0":0,"P1":1,"P2":2,"P3":3}[.] // 2;
      def pstate: {"Backlog":"backlog","Todo":"ready","In Progress":"in_progress","In Review":"review","Blocked":"blocked","Done":"done","Canceled":"cancelled"}[.] // "unknown";'
 
 get_issue() {
@@ -123,7 +140,6 @@ require_issue() {
 istate() { printf '%s' "$1" | jq -r '.state.name'; }
 iassignee() { printf '%s' "$1" | jq -r '.assignee.id // ""'; }
 ilabels() { printf '%s' "$1" | jq -r '.labels.nodes[].name'; }
-ilabel_ids() { printf '%s' "$1" | jq -r '[.labels.nodes[].id] | join(",")'; }
 
 label_id() { # find-or-create a team label by name → id
   lid=$(gql TeamLabels 'query TeamLabels($teamId: String!) { team(id: $teamId) { labels { nodes { id name } } } }' \
@@ -133,20 +149,31 @@ label_id() { # find-or-create a team label by name → id
     "$(jq -nc --arg n "$1" --arg t "$LINEAR_TEAM_ID" '{input:{name:$n, teamId:$t}}')" | jq -r '.data.issueLabelCreate.issueLabel.id'
 }
 
-update_issue() { # ID INPUT_JSON — issueUpdate; GraphQL errors → exit 5
-  out=$(gql IssueUpdate 'mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id } } }' \
-    "$(jq -nc --arg id "$1" --argjson i "$2" '{id:$id, input:$i}')")
-  [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "issueUpdate: $(gqlerr)"
-  printf '%s' "$out" >/dev/null
+# try_update ID INPUT_JSON — the non-fatal issueUpdate core: sets TU_RC
+# (0 ok / 5 substrate refusal or outage) and TU_MSG; never exits, so
+# callers with something to compensate or skip can do so before
+# propagating. update_issue is the fatal wrapper for callers with nothing
+# to unwind.
+try_update() {
+  gql IssueUpdate 'mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id } } }' \
+    "$(jq -nc --arg id "$1" --argjson i "$2" '{id:$id, input:$i}')" >/dev/null
+  if [ -n "$(gqlerr)" ]; then TU_RC=5; TU_MSG="issueUpdate: $(gqlerr)"; else TU_RC=0; TU_MSG=""; fi
+}
+update_issue() {
+  try_update "$@"
+  [ "$TU_RC" = "0" ] || fail 5 backend_unavailable "$TU_MSG"
 }
 
-# set_labels ID CURRENT_ISSUE add=NAME... del=PREFIX...  (space-separated
-# add names / del prefixes) — one issueUpdate with the recomputed labelIds.
 # relabel IID CUR add=NAMES del=SELECTOR — a selector ending in ":" deletes
 # the whole namespace (seed:tok:, seed:author:); anything else deletes ONLY
 # the exact label name, so removing seed:bo:dep:LIN-1 can never strip
-# seed:bo:dep:LIN-10.
-relabel() {
+# seed:bo:dep:LIN-10. Declared variance: Linear's issueUpdate replaces the
+# whole labelIds array (no atomic add/remove operations like Jira's), so
+# the set is recomputed from the snapshot immediately before the write —
+# the remaining race window is declared in the README. try_relabel is the
+# non-fatal core (sets RL_RC/RL_MSG) for callers that must compensate or
+# skip-and-report; relabel is the fatal wrapper.
+try_relabel() {
   iid=$1; cur=$2; adds=$3; delsel=$4
   keep=$(printf '%s' "$cur" | jq -c --arg d "$delsel" '[.labels.nodes[]
     | select(if $d == "" then true
@@ -157,12 +184,18 @@ relabel() {
     lid=$(label_id "$n")
     keep=$(printf '%s' "$keep" | jq -c --arg l "$lid" '. + [$l] | unique')
   done
-  update_issue "$iid" "{\"labelIds\": $keep}"
+  try_update "$iid" "{\"labelIds\": $keep}"
+  RL_RC=$TU_RC; RL_MSG=$TU_MSG
+}
+relabel() {
+  try_relabel "$@"
+  [ "$RL_RC" = "0" ] || fail 5 backend_unavailable "$RL_MSG"
 }
 
 # The fence: assignee-match AND the minted seed:tok:<token> label. Both
 # rotate on every claim; stale tokens (a reaped predecessor, even the same
-# actor) exit 6.
+# actor) exit 6. Actors are Linear user ids, so the assignee comparison is
+# by .assignee.id.
 require_fence() {
   require_issue "$1"
   holder=$(iassignee "$CUR")
@@ -176,15 +209,13 @@ mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1
 bo_entries() { printf '%s\n' "$(ilabels "$1")" | sed -n 's/^seed:bo://p'; }
 bo_json() { bo_entries "$1" | jq -R . | jq -cs .; }
 
-comment_on() { # ID BODY
-  gql CommentCreate 'mutation CommentCreate($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id } } }' \
-    "$(jq -nc --arg i "$1" --arg b "$2" '{input:{issueId:$i, body:$b}}')" >/dev/null
+comment_on() { # ID BODY — sets $CID to the created comment id
+  out=$(gql CommentCreate 'mutation CommentCreate($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id } } }' \
+    "$(jq -nc --arg i "$1" --arg b "$2" '{input:{issueId:$i, body:$b}}')")
   [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "commentCreate: $(gqlerr)"
+  CID=$(printf '%s' "$out" | jq -r '.data.commentCreate.comment.id // ""')
 }
 
-# cascade FROM_ID — remove dep:<id> everywhere (close AND cancel edges carry
-# the effect, per the transition table); release issues left blocked on
-# nothing back to Todo. Sets $cascaded (JSON array).
 # load_issues sets $ISSUES_JSON (every page of the team issue connection)
 # and fail()s in the PARENT shell on a GraphQL error — an expired key or
 # rate limit must exit 5, never masquerade as an empty queue or a cascade
@@ -204,17 +235,44 @@ load_issues() {
     [ -n "$cursor" ] || break
   done
 }
+
+# cascade FROM_ID — remove dep:<id> everywhere (close AND cancel edges carry
+# the effect, per the transition table); issues left blocked on nothing go
+# back to Todo. Per-dependent failures — the release move OR the label
+# bookkeeping — do NOT abort the terminal verb or the rest of the cascade:
+# the dependent is reported in $cascade_skipped with its dependency entry
+# preserved (a failed post-release label write rolls the state back to
+# Blocked so the entry stays recoverable), and recovery is an operator
+# unblock once the substrate allows the moves. The fallible state move runs
+# BEFORE the label is destroyed. Sets $cascaded and $cascade_skipped.
 cascade() {
-  cascaded="[]"
+  cascaded="[]"; cascade_skipped="[]"
   state_id ready; todo_id=$SID
   load_issues
   for dep in $(printf '%s' "$ISSUES_JSON" | jq -r --arg l "seed:bo:dep:$1" '.[] | select([.labels.nodes[].name] | index($l)) | .id'); do
     require_issue "$dep"; cur=$CUR
-    relabel "$dep" "$cur" "" "seed:bo:dep:$1"
-    require_issue "$dep"; cur=$CUR
-    if [ "$(istate "$cur")" = "Blocked" ] && [ -z "$(bo_entries "$cur")" ]; then
-      update_issue "$dep" "{\"stateId\": \"$todo_id\"}"
-      cascaded=$(printf '%s' "$cascaded" | jq -c --arg d "$dep" '. + [$d]')
+    left=$(bo_entries "$cur" | grep -vxF "dep:$1" | head -1)
+    if [ "$(istate "$cur")" = "Blocked" ] && [ -z "$left" ]; then
+      try_update "$dep" "{\"stateId\": \"$todo_id\"}"
+      if [ "$TU_RC" = "0" ]; then
+        require_issue "$dep"; cur=$CUR
+        try_relabel "$dep" "$cur" "" "seed:bo:dep:$1"
+        if [ "$RL_RC" = "0" ]; then
+          cascaded=$(printf '%s' "$cascaded" | jq -c --arg d "$dep" '. + [$d]')
+        else
+          # The release landed but the entry could not be cleared: roll
+          # the state back so Blocked + recorded entry stays the truth —
+          # never a Todo issue hidden from ready by a stale seed:bo label.
+          bid=$(printf '%s' "$STATES_JSON" | jq -r '.[] | select(.name == "Blocked") | .id')
+          [ -n "$bid" ] && try_update "$dep" "{\"stateId\": \"$bid\"}"
+          cascade_skipped=$(printf '%s' "$cascade_skipped" | jq -c --arg d "$dep" '. + [$d]')
+        fi
+      else
+        cascade_skipped=$(printf '%s' "$cascade_skipped" | jq -c --arg d "$dep" '. + [$d]')
+      fi
+    else
+      try_relabel "$dep" "$cur" "" "seed:bo:dep:$1"
+      [ "$RL_RC" = "0" ] || cascade_skipped=$(printf '%s' "$cascade_skipped" | jq -c --arg d "$dep" '. + [$d]')
     fi
   done
 }
@@ -236,53 +294,90 @@ case "$verb" in
       require_issue "$nid"; cur=$CUR
       relabel "$nid" "$cur" "seed:bo:dep:$d" ""
     done
-    envelope ",\"task\":\"$nid\",\"state\":\"backlog\""
+    envelope ",\"task\":$(jstr "$nid"),\"state\":\"backlog\""
     ;;
 
   ready)
     load_issues
     tasks=$(printf '%s' "$ISSUES_JSON" | jq -c --arg a "$actor" "$LJQ"'[ .[]
       | select(.state.name == "Todo")
-      | select((.assignee.name // "") == "")
+      | select((.assignee.id // "") == "")
       | select(([.labels.nodes[].name] | map(select(. == ("seed:rejected:" + $a))) | length) == 0)
       | select(([.labels.nodes[].name] | map(select(startswith("seed:bo:"))) | length) == 0)
+      | select(([.labels.nodes[].name] | index("seed:audit")) | not)
       | {task: .id, title: .title, priority: (.priority | pport), created_at: .createdAt}]
-      | sort_by(.priority)')
+      | sort_by((.priority | prank), .created_at)')
     envelope ",\"tasks\":$tasks"
     ;;
 
   get)
     require_issue "$id"; cur=$CUR
-    card=$(printf '%s' "$cur" | jq -c --arg bo "$(bo_json "$cur")" "$LJQ"'{
-      task: .id, title: .title, priority: (.priority | pport),
-      state: (.state.name | pstate), holder: (.assignee.name // ""),
+    pstate=$(port_state "$(istate "$cur")")
+    [ "$pstate" != "unknown" ] || fail 5 backend_unavailable "issue $id is in workflow state '$(istate "$cur")', which is outside the seed state convention — map or move it (see .seed/backends/linear/README.md)"
+    card=$(printf '%s' "$cur" | jq -c --arg s "$pstate" --arg bo "$(bo_json "$cur")" "$LJQ"'{
+      task: .id, title: .title, body: (.description // ""),
+      priority: (.priority | pport),
+      state: $s, holder: (.assignee.id // ""),
       blocked_on: ($bo | fromjson),
       rejected_authors: [.labels.nodes[].name | select(startswith("seed:rejected:")) | ltrimstr("seed:rejected:")]}')
-    envelope ",\"task\":\"$id\",\"state\":$(printf '%s' "$card" | jq .state),\"card\":$card"
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"$pstate\",\"card\":$card"
     ;;
 
   list)
+    # Issues in workflow states outside the convention are not seed cards;
+    # list skips them rather than emitting an invalid port state (declared).
     load_issues
     tasks=$(printf '%s' "$ISSUES_JSON" | jq -c --arg f "$state_filter" "$LJQ"'[ .[]
       | {task: .id, title: .title, state: (.state.name | pstate), priority: (.priority | pport)}
+      | select(.state != "unknown")
       | select(($f == "") or (.state == $f))]')
     envelope ",\"tasks\":$tasks"
     ;;
 
   claim)
     require_issue "$id"; cur=$CUR
-    st=$(istate "$cur"); holder=$(iassignee "$cur")
+    printf '%s\n' "$(ilabels "$cur")" | grep -qxF "seed:audit" \
+      && fail 3 invalid_transition "the seed:audit issue is the audit substrate, not a card"
     printf '%s\n' "$(ilabels "$cur")" | grep -qxF "seed:rejected:$actor" \
-      && fail 2 claim_not_granted "rejected_author: $actor was the rejected implementer"
-    [ -n "$holder" ] && fail 2 claim_not_granted "held by $holder"
-    [ "$st" = "Todo" ] || fail 3 invalid_transition "claim requires ready (Todo); issue is '$st'"
+      && fail 2 rejected_author "$actor was the rejected implementer on this card"
+    holder=$(iassignee "$cur")
+    [ -n "$holder" ] && fail_contention "$holder"
+    [ "$(istate "$cur")" = "Todo" ] || fail 3 invalid_transition "claim requires ready (Todo); issue is '$(istate "$cur")'"
     tok="c-$(mint)"
-    # Declared variance: two GraphQL writes, last-write-wins — the read-check
-    # window is real (no server arbitration; weaker than filecards push-wins).
+    state_id in_progress; prog_id=$SID
+    # Declared variance: read-check then two GraphQL writes, last-write-wins
+    # — no server arbitration (weaker than filecards push-wins). Post-claim
+    # verification keeps an interleaved race from stranding the card, and a
+    # failed assign+move is COMPENSATED so a failed claim leaves the issue
+    # unchanged.
     relabel "$id" "$cur" "seed:tok:$tok" "seed:tok:"
-    state_id in_progress
-    update_issue "$id" "$(jq -nc --arg a "$actor" --arg s "$SID" '{assigneeId:$a, stateId:$s}')"
-    envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"claim_token\":\"$tok\""
+    try_update "$id" "$(jq -nc --arg a "$actor" --arg s "$prog_id" '{assigneeId:$a, stateId:$s}')"
+    if [ "$TU_RC" != "0" ]; then
+      require_issue "$id"; cur=$CUR
+      h=$(iassignee "$cur")
+      if { [ -z "$h" ] || [ "$h" = "$actor" ]; } && printf '%s\n' "$(ilabels "$cur")" | grep -qxF "seed:tok:$tok"; then
+        relabel "$id" "$cur" "" "seed:tok:$tok"
+        [ "$h" = "$actor" ] && update_issue "$id" '{"assigneeId": null}'
+      fi
+      fail 5 backend_unavailable "claim rolled back: $TU_MSG"
+    fi
+    # Final verification: we won only if the substrate holds OUR assignee
+    # AND OUR token. A coherent rival tuple (their assignee AND their
+    # token) means they are the usable winner — contention with the real
+    # holder. Anything else is a TORN interleave (assignee and token from
+    # different claimants): no one holds a usable claim, so report
+    # contention with the torn state named — an operator release/reap
+    # recovers, and the next claim rotates both fields (declared, README).
+    require_issue "$id"; cur=$CUR
+    vh=$(iassignee "$cur")
+    vtok=$(printf '%s\n' "$(ilabels "$cur")" | sed -n 's/^seed:tok://p' | head -1)
+    if [ "$vh" != "$actor" ] || [ "$vtok" != "$tok" ]; then
+      if [ -n "$vh" ] && [ "$vh" != "$actor" ] && [ -n "$vtok" ] && [ "$vtok" != "$tok" ]; then
+        fail_contention "$vh"
+      fi
+      fail_contention "$vh" "torn claim interleave (assignee '$vh', token label '$vtok'): no usable claimant — operator release/reap recovers"
+    fi
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"in_progress\",\"claim_token\":\"$tok\""
     ;;
 
   release)
@@ -291,7 +386,7 @@ case "$verb" in
     state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
     require_issue "$id"; cur=$CUR
     release_claim "$id" "$cur"
-    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"ready\""
     ;;
 
   transition)
@@ -300,25 +395,40 @@ case "$verb" in
         require_fence "$id"; cur=$CUR
         [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "review requires in_progress"
         # The fallible state move runs FIRST: a refusal must leave the
-        # claim intact so the worker can retry or park.
+        # claim intact so the worker can retry or park. A failed
+        # author-label write after the move is COMPENSATED (state rolled
+        # back to In Progress) — review must never be reached without the
+        # seed:author record the reject lockout depends on.
+        state_id in_progress; prog_id=$SID
         state_id review; update_issue "$id" "{\"stateId\": \"$SID\"}"
         require_issue "$id"; cur=$CUR
-        relabel "$id" "$cur" "seed:author:$actor" "seed:author:"
+        try_relabel "$id" "$cur" "seed:author:$actor" "seed:author:"
+        if [ "$RL_RC" != "0" ]; then
+          try_update "$id" "{\"stateId\": \"$prog_id\"}"
+          fail 5 backend_unavailable "review transition rolled back (author record could not be written; claim intact — retry): $RL_MSG"
+        fi
         require_issue "$id"; cur=$CUR
         release_claim "$id" "$cur"
         [ -n "$resolution" ] && comment_on "$id" "seed:evidence: $resolution"
-        envelope ",\"task\":\"$id\",\"state\":\"review\",\"transitioned\":true"
+        envelope ",\"task\":$(jstr "$id"),\"state\":\"review\",\"transitioned\":true"
         ;;
       blocked)
         require_fence "$id"; cur=$CUR
         [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "parking requires in_progress"
         [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "blocked requires --blocked-on"
+        # Same compensation as review: a Blocked issue must never exist
+        # without its blocked_on entry on record.
+        state_id in_progress; prog_id=$SID
         state_id blocked; update_issue "$id" "{\"stateId\": \"$SID\"}"
         require_issue "$id"; cur=$CUR
-        relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
+        try_relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
+        if [ "$RL_RC" != "0" ]; then
+          try_update "$id" "{\"stateId\": \"$prog_id\"}"
+          fail 5 backend_unavailable "park rolled back (blocked_on entry could not be written; claim intact — retry): $RL_MSG"
+        fi
         require_issue "$id"; cur=$CUR
         release_claim "$id" "$cur"
-        envelope ",\"task\":\"$id\",\"state\":\"blocked\",\"transitioned\":true"
+        envelope ",\"task\":$(jstr "$id"),\"state\":\"blocked\",\"transitioned\":true"
         ;;
       ready)
         require_fence "$id"; cur=$CUR
@@ -326,7 +436,7 @@ case "$verb" in
         state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
         require_issue "$id"; cur=$CUR
         release_claim "$id" "$cur"
-        envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true"
+        envelope ",\"task\":$(jstr "$id"),\"state\":\"ready\",\"transitioned\":true"
         ;;
       *) fail 3 invalid_transition "worker transition to '$to' is not a port edge" ;;
     esac
@@ -336,22 +446,29 @@ case "$verb" in
     require_issue "$id"; cur=$CUR
     [ "$(istate "$cur")" = "Backlog" ] || fail 3 invalid_transition "promote requires backlog"
     state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
-    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"ready\""
     ;;
   deprioritize)
     require_issue "$id"; cur=$CUR
     [ "$(istate "$cur")" = "Todo" ] || fail 3 invalid_transition "deprioritize requires ready"
     state_id backlog; update_issue "$id" "{\"stateId\": \"$SID\"}"
-    envelope ",\"task\":\"$id\",\"state\":\"backlog\""
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"backlog\""
     ;;
 
   block)
     require_issue "$id"; cur=$CUR
     [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "block requires --blocked-on"
     case "$(istate "$cur")" in Backlog|Todo|Blocked) ;; *) fail 3 invalid_transition "operator block from '$(istate "$cur")'";; esac
+    # State move first: a refusal (or missing Blocked state) must not leave
+    # a seed:bo label hiding a Todo issue from ready. A label failure after
+    # the move is recovered by re-running block (an already-Blocked issue
+    # accepts more entries).
+    if [ "$(istate "$cur")" != "Blocked" ]; then
+      state_id blocked; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    fi
+    require_issue "$id"; cur=$CUR
     relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
-    state_id blocked; update_issue "$id" "{\"stateId\": \"$SID\"}"
-    envelope ",\"task\":\"$id\",\"state\":\"blocked\""
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"blocked\""
     ;;
 
   unblock|plan-unblock)
@@ -364,13 +481,18 @@ case "$verb" in
       entry="${blocked_on_arg:-manual:$actor}"
     fi
     bo_entries "$cur" | grep -qxF "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
-    relabel "$id" "$cur" "" "seed:bo:$entry"
-    require_issue "$id"; cur=$CUR
-    if [ -z "$(bo_entries "$cur")" ]; then
-      state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
-      envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    left=$(bo_entries "$cur" | grep -vxF "$entry" | head -1)
+    if [ -z "$left" ]; then
+      # State move first: a refusal keeps the entry recorded for retry.
+      state_id ready
+      try_update "$id" "{\"stateId\": \"$SID\"}"
+      [ "$TU_RC" = "0" ] || fail 5 backend_unavailable "release refused; blocked_on entry preserved: $TU_MSG"
+      require_issue "$id"; cur=$CUR
+      relabel "$id" "$cur" "" "seed:bo:$entry"
+      envelope ",\"task\":$(jstr "$id"),\"state\":\"ready\""
     else
-      envelope ",\"task\":\"$id\",\"state\":\"blocked\""
+      relabel "$id" "$cur" "" "seed:bo:$entry"
+      envelope ",\"task\":$(jstr "$id"),\"state\":\"blocked\""
     fi
     ;;
 
@@ -380,39 +502,45 @@ case "$verb" in
     state_id done; update_issue "$id" "{\"stateId\": \"$SID\"}"
     [ -n "$resolution" ] && comment_on "$id" "seed:resolution: $resolution"
     cascade "$id"
-    envelope ",\"task\":\"$id\",\"state\":\"done\",\"cascaded\":$cascaded"
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"done\",\"cascaded\":$cascaded,\"cascade_skipped\":$cascade_skipped"
     ;;
 
   reject)
     require_issue "$id"; cur=$CUR
     [ "$(istate "$cur")" = "In Review" ] || fail 3 invalid_transition "reject requires review"
     author=$(printf '%s\n' "$(ilabels "$cur")" | sed -n 's/^seed:author://p' | head -1)
+    # State move first — a refused In Review → Todo must leave the author
+    # label intact so a retry still knows whom to lock out.
+    state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
     adds=""
     [ -n "$author" ] && adds="seed:rejected:$author"
+    require_issue "$id"; cur=$CUR
     relabel "$id" "$cur" "$adds" "seed:author:"
-    state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
     [ -n "$resolution" ] && comment_on "$id" "seed:rejection: $resolution"
-    envelope ",\"task\":\"$id\",\"state\":\"ready\""
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"ready\""
     ;;
 
   cancel)
     require_issue "$id"; cur=$CUR
     case "$(istate "$cur")" in Done|Canceled) fail 3 invalid_transition "already terminal" ;; esac
-    # The in_progress → cancelled edge carries the claim-ending side effect:
-    # a reinstated card must be claimable, not stranded behind a dead holder.
+    # State move first — a refused terminal move must leave a live claim
+    # usable. The in_progress → cancelled edge still carries the
+    # claim-ending side effect after the move succeeds: a reinstated card
+    # must be claimable, not stranded behind a dead holder.
+    state_id cancelled; update_issue "$id" "{\"stateId\": \"$SID\"}"
+    require_issue "$id"; cur=$CUR
     if [ -n "$(iassignee "$cur")" ]; then
       release_claim "$id" "$cur"
     fi
-    state_id cancelled; update_issue "$id" "{\"stateId\": \"$SID\"}"
     cascade "$id"
-    envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"cascaded\":$cascaded"
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"cancelled\",\"cascaded\":$cascaded,\"cascade_skipped\":$cascade_skipped"
     ;;
 
   reinstate)
     require_issue "$id"; cur=$CUR
     [ "$(istate "$cur")" = "Canceled" ] || fail 3 invalid_transition "reinstate requires cancelled"
     state_id backlog; update_issue "$id" "{\"stateId\": \"$SID\"}"
-    envelope ",\"task\":\"$id\",\"state\":\"backlog\""
+    envelope ",\"task\":$(jstr "$id"),\"state\":\"backlog\""
     ;;
 
   comment)
@@ -423,35 +551,39 @@ case "$verb" in
       require_fence "$id"
     fi
     comment_on "$id" "[$actor] $body"
-    envelope ",\"task\":\"$id\""
+    envelope ",\"task\":$(jstr "$id"),\"comment_id\":$(jstr "$CID")"
     ;;
 
   attach-evidence)
     require_issue "$id"; cur=$CUR
-    holder=$(iassignee "$cur")
-    if [ -n "$holder" ] || [ "$(istate "$cur")" = "In Progress" ]; then
-      require_fence "$id"; cur=$CUR
+    if [ -n "$(iassignee "$cur")" ] || [ "$(istate "$cur")" = "In Progress" ]; then
+      require_fence "$id"
     fi
     comment_on "$id" "seed:evidence ($kind): $ref"
-    envelope ",\"task\":\"$id\""
+    envelope ",\"task\":$(jstr "$id"),\"evidence_id\":$(jstr "$CID")"
     ;;
 
   lease-renew)
     require_fence "$id"
-    envelope ",\"task\":\"$id\",\"note\":\"no lease concept in Linear (declared variance); fence validated\""
+    envelope ",\"task\":$(jstr "$id"),\"note\":\"no lease concept in Linear (declared variance); fence validated\""
     ;;
 
   event-append)
+    # The event JSON may carry its own task reference; honor it before
+    # falling back to the taskless audit sink.
+    [ -z "$id" ] && id=$(printf '%s' "$event" | jq -r '.task // ""' 2>/dev/null || echo "")
     if [ -n "$id" ]; then
       comment_on "$id" "seed:event: $event"
     else
       load_issues
-      audit=$(printf '%s' "$ISSUES_JSON" | jq -r '.[] | select(.title == "seed: audit log") | .id' | head -1)
+      audit=$(printf '%s' "$ISSUES_JSON" | jq -r '.[] | select([.labels.nodes[].name] | index("seed:audit")) | .id' | head -1)
       if [ -z "$audit" ]; then
         state_id backlog; sid=$SID
-        audit=$(gql IssueCreate 'mutation IssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier } } }' \
-          "$(jq -nc --arg s "$sid" --arg team "$LINEAR_TEAM_ID" '{input:{title:"seed: audit log", description:"taskless seed events land here", stateId:$s, teamId:$team, priority:4}}')" \
-          | jq -r '.data.issueCreate.issue.id')
+        alid=$(label_id "seed:audit")
+        out=$(gql IssueCreate 'mutation IssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier } } }' \
+          "$(jq -nc --arg s "$sid" --arg team "$LINEAR_TEAM_ID" --arg l "$alid" '{input:{title:"seed: audit log", description:"taskless seed events land here", stateId:$s, teamId:$team, priority:4, labelIds:[$l]}}')")
+        [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "audit issue create: $(gqlerr)"
+        audit=$(printf '%s' "$out" | jq -r '.data.issueCreate.issue.id')
       fi
       comment_on "$audit" "seed:event: $event"
     fi
