@@ -162,6 +162,32 @@ that diff, never at install time. Treat upstream skill text like any
 other third-party code contribution: the lock pins what you reviewed,
 and `--frozen` guarantees CI runs only that.
 
+**Multi-squad routing** (§6 — v2 activated): v1 ships one `core` squad
+whose bare-`**` scope satisfies every rule trivially; a second
+`.seed/teams/<name>.yaml` (start from `platform.yaml.example`) activates
+the full semantics. `seed validate` enforces: non-overlapping specific
+scopes (core's `**` fallback is exempt — it is the "matches what nothing
+else claims" floor; two bare-`**` squads are refused; a specific overlap
+passes only under a `shared_scope` entry naming one owning squad),
+unique priority ints, a human lead per squad, and tier ≤ the guardrails
+ceiling. Cards route **explicit `squad:` → lowest-priority backlog label
+match → core** — no card can be invisible — and `get`/`list`/`ready`
+surface the resolved squad. One loop per squad is the scaling unit:
+
+```sh
+scripts/loop.sh --actor web-loop --squad web
+scripts/seed task ready --actor you --squad web
+```
+
+Cross-squad merges ride the owning squad's gate: CODEOWNERS + that
+squad's tier govern merges into its scope (once >1 squad exists, a
+codeowners-reviewing squad whose lead is missing from CODEOWNERS gets a
+validation warning). Goal-ancestry checking activates on the literal
+`>1 squad || any mission`: open cards with no resolvable parent chain
+to a mission card warn (report, never refusal) — core-only, missionless
+repos see nothing, which is why the shipped core.yaml keeps its
+`mission:` commented out until you set a real one.
+
 ## 4. Guardrails, honestly
 
 `.seed/guardrails.yaml` is the vocabulary; enforcement is layered — hooks

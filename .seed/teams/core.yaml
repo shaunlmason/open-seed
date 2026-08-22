@@ -1,7 +1,9 @@
 # The one v1 squad (§7.3): every routing rule in §6 is trivially satisfied by
 # it. Multi-squad activation is v2. Replace the lead when instantiating.
 name: core
-mission: Ship the project # replace with your mission; cards link to it via parent
+# mission: Ship the project   # set a real mission to activate §6 goal-ancestry
+#                             # checking (cards link to it via parent) — the
+#                             # activation literal is >1 squad || any mission
 lead: shaunlmason         # a human; CODEOWNERS entry for this squad's scope
 members:
   - human: shaunlmason
