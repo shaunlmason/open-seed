@@ -95,7 +95,11 @@ get_issue() { api GET "/issue/$1"; }
 # exit cannot propagate the port exit code).
 require_issue() {
   CUR=$(get_issue "$1")
-  [ "$(rc)" = "200" ] || fail 4 not_found "no issue $1"
+  case "$(rc)" in
+    200) ;;
+    404) fail 4 not_found "no issue $1" ;;
+    *) fail 5 backend_unavailable "issue fetch HTTP $(rc)" ;;
+  esac
 }
 istatus() { printf '%s' "$1" | jq -r '.fields.status.name'; }
 iresolution() { printf '%s' "$1" | jq -r '.fields.resolution.name // ""'; }
@@ -118,7 +122,12 @@ port_state_of() { # from a fetched issue: status name + resolution → port stat
 # from the current status (exit 3).
 do_transition() {
   key=$1; target=$(jr_status "$2"); res=${3:-}
-  avail=$(api GET "/issue/$key/transitions"); [ "$(rc)" = "200" ] || fail 4 not_found "no issue $key"
+  avail=$(api GET "/issue/$key/transitions")
+  case "$(rc)" in
+    200) ;;
+    404) fail 4 not_found "no issue $key" ;;
+    *) fail 5 backend_unavailable "transitions fetch HTTP $(rc)" ;;
+  esac
   tid=$(printf '%s' "$avail" | jq -r --arg n "$target" '.transitions[] | select(.to.name == $n) | .id' | head -1)
   if [ -z "$tid" ]; then
     # Disambiguate: a status missing from the project workflow entirely is
@@ -158,7 +167,7 @@ require_fence() {
   require_issue "$1"
   account_id "$actor"
   [ -n "$token" ] || fail 6 fenced_out "no claim token presented"
-  printf '%s\n' "$(ilabels "$CUR")" | grep -qx "seed:tok:$token" || fail 6 fenced_out "token does not match the live claim"
+  printf '%s\n' "$(ilabels "$CUR")" | grep -qxF "seed:tok:$token" || fail 6 fenced_out "token does not match the live claim"
   [ "$(iassignee_id "$CUR")" = "$AID" ] || fail 6 fenced_out "actor is not the assignee of record"
 }
 
@@ -250,7 +259,7 @@ case "$verb" in
   claim)
     require_issue "$id"
     account_id "$actor"
-    printf '%s\n' "$(ilabels "$CUR")" | grep -qx "seed:rejected:$actor" \
+    printf '%s\n' "$(ilabels "$CUR")" | grep -qxF "seed:rejected:$actor" \
       && fail 2 claim_not_granted "rejected_author: $actor was the rejected implementer"
     holder=$(iassignee_id "$CUR")
     [ -n "$holder" ] && fail 2 claim_not_granted "held by $(actor_name "$holder")"
@@ -331,7 +340,7 @@ case "$verb" in
     require_issue "$id"; cur=$CUR
     [ "$(istatus "$cur")" = "Blocked" ] || fail 3 invalid_transition "not blocked"
     if [ "$verb" = "plan-unblock" ]; then entry="plan:$pr"; else entry="$blocked_on_arg"; fi
-    bo_entries "$cur" | grep -qx "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
+    bo_entries "$cur" | grep -qxF "$entry" || fail 3 invalid_transition "no blocked_on entry '$entry'"
     relabel "$id" "$cur" "" "seed:bo:$entry"
     require_issue "$id"
     if [ -z "$(bo_entries "$CUR")" ]; then
