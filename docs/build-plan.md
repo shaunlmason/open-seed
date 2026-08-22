@@ -21,8 +21,9 @@
 The two-repo split (§7.5) makes this step one, and it happens **outside this repo**.
 
 - Create the engine repo (working name `open-seed-engine`; final name is an
-  implementer decision recorded in `decisions/`). Go module, MIT/Apache-2 license
-  matching the template, `cmd/seed/` entrypoint.
+  implementer decision recorded in `decisions/`). Go module, MIT license — matching
+  the template's root `LICENSE`, which establishes MIT for both repos —
+  `cmd/seed/` entrypoint.
 - Release pipeline: goreleaser matrix (`linux/darwin/windows × amd64/arm64`),
   `checksums.txt`, GitHub artifact attestations (build provenance).
 - Tag `v0.1.0` with a stub binary (`seed version` only) to prove the pipeline
