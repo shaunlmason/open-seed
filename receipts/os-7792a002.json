@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "task": "os-7792a002",
+  "merge_base": "6c4b3d8eb8f207adab7cc1d607465bbc9a03b5bb",
+  "head": "c3743139214f92c7041ddfa521b7e7a3f73a682c",
+  "plan_path": "plans/os-7792a002.md",
+  "plan_sha256": "3ea476a7f6798561f622252b9fe46c590cd3c03c912018ecd46f1dd41b0d100e",
+  "diff_files": [
+    ".seed/hooks/README.md",
+    ".seed/hooks/shims/amux/README.md",
+    ".seed/hooks/shims/amux/workspaces.json",
+    ".seed/hooks/shims/dmux/README.md",
+    ".seed/hooks/shims/dmux/before_worktree_remove",
+    ".seed/hooks/shims/dmux/pre_merge",
+    ".seed/hooks/shims/dmux/worktree_created",
+    ".seed/hooks/shims/octomux/README.md",
+    ".seed/hooks/shims/octomux/runtime_state_changed.d/50-seed-dispatch",
+    ".seed/hooks/shims/octomux/task_created.d/50-seed-post-create",
+    ".seed/hooks/shims/ouijit/README.md",
+    ".seed/hooks/shims/ouijit/register.sh",
+    ".seed/hooks/shims/parallel-code/README.md",
+    ".seed/hooks/shims/tmux-ide/README.md",
+    ".seed/hooks/shims/tmux-ide/workspace.yml",
+    "docs/handbook.md",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "86899b7f0b51e215484334556e71342bac25f42141ba7b101de6a9c2b6dcf857",
+  "validation": [
+    {
+      "cmd": "test -d .seed/hooks/shims/dmux",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -rq \"pre_merge\" .seed/hooks/shims/dmux/",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -qi \"fidelity\" docs/handbook.md",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
