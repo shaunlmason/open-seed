@@ -41,7 +41,7 @@ fi
 
 # Backend plugin contract tests (offline, fake substrates).
 if command -v jq >/dev/null 2>&1; then
-  for b in beads paperclip; do
+  for b in beads paperclip linear; do
     if out=$(sh "$root/.seed/backends/$b/test.sh" 2>&1); then
       say "$out"
     else
