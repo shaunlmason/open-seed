@@ -62,3 +62,4 @@
 {"actor":"claude-session","data":{"to":"blocked","transitioned":true},"task":"os-94ac6371","ts":"2026-08-22T15:01:55Z","verb":"transition"}
 {"actor":"claude-session","data":{"title":"engine: seed upgrade command (R8) — move engine.lock pins against tagged releases"},"task":"os-4a347bd1","ts":"2026-08-22T15:22:49Z","verb":"create"}
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:15","to":"ready"},"task":"os-94ac6371","ts":"2026-08-22T16:28:21Z","verb":"plan-unblock"}
+{"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-e2b3a1f9","ts":"2026-08-22T16:28:26Z","verb":"close"}
