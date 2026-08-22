@@ -213,6 +213,21 @@ against a scratch repo.
 unattended at L2 in a scratch project, with receipt, memory append, and green
 check+validate.
 
+> **Status: complete (2026-08-22), engine v0.6.0.** `seed sync` generates the
+> fan-outs (byte-identical copies; AGENTS.md managed rules block from `rules/`
+> fragments, regenerating byte-stable) with an offline `--check` wired into
+> validate.sh. `loop.sh` runs the full cycle: claim (skipping planless cards),
+> fresh worktree + post-create hooks, half-lease renewal in a detached
+> background job, harness invocation via the `seed-harness` adapter contract
+> (claude + codex adapters with declared tier mappings), the dual mechanical
+> gate (blocking pre-merge hooks + receipt generate executing the merge-base
+> plan's validation commands), evidence + hand-off to review; circuit breaker
+> and iteration budget from guardrails.yaml. The done-when is proven by
+> `make smoke` (scripts/smoke-loop.sh): a temp instantiation with a
+> deterministic fake harness goes ready→review unattended with the receipt on
+> the task branch, memory appended, evidence attached, gates green — no model,
+> no secrets, CI-safe.
+
 ## Phase 7 — Docs, dogfood, release
 
 - Conventions handbook in `docs/` (user-facing: lifecycle walkthrough, guardrails
