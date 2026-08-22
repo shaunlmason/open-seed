@@ -1,0 +1,8 @@
+# open-seed template provenance — read by `seed template upgrade`.
+# `version` is set by the maintainer's release checklist (version-then-tag:
+# bump this line, commit, tag that commit); `commit` is the upstream commit
+# the last upgrade merged from, stamped by the command itself — never
+# authored at release time (a release cannot record its own SHA; the
+# immutability of release tags anchors the base instead).
+repo shaunlmason/open-seed
+version v0.1.0

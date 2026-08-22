@@ -23,3 +23,12 @@ Fresh sessions read this file instead of rediscovering.
   land in one and not the other silently — the shim drops what the
   schema omits, so verb outputs existed on paper while callers never
   saw them. Cross-check the pair whenever either grows a field.
+- 2026-08-22 (os-23494e11): `git fetch <url> <ref>` with no destination
+  refspec stores no local ref — resolve what arrived through
+  `FETCH_HEAD^{commit}` (which also peels annotated tags); pairing the
+  fetch with `--no-write-fetch-head` leaves the objects unnameable.
+- 2026-08-22 (os-23494e11): a lockfile can never record the SHA of the
+  commit that contains it (writing the SHA changes the tree, which
+  changes the SHA). Record the tag at release time and let the consumer
+  stamp the resolved commit after the fact — provenance splits into
+  "what the release declares" and "what the consumer verified".
