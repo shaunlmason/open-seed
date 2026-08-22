@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "task": "os-3e2a8d92",
+  "merge_base": "cc575ee5225e50d4a2f15e5de83e5bd55091af7d",
+  "head": "59a3ea244c7584671b468660a4b07f472eb9762e",
+  "plan_path": "plans/os-3e2a8d92.md",
+  "plan_sha256": "56d13e127f3e4a4fcc6a8bd2905735e3c8a197134c9b6956c8670e579ab424c8",
+  "diff_files": [
+    ".seed/backends.lock.json",
+    ".seed/backends/beads/README.md",
+    ".seed/backends/beads/backend.toml",
+    ".seed/backends/beads/bin/seed-backend",
+    ".seed/backends/beads/test.sh",
+    ".seed/backends/beads/testdata/fake-bd",
+    ".seed/engine.lock",
+    "docs/handbook.md",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "e38cc8b3d75bd6905cdeae30d1510d842c45b8024d3af5977b557561f8902752",
+  "validation": [
+    {
+      "cmd": "test -x .seed/backends/beads/bin/seed-backend",
+      "exit": 0
+    },
+    {
+      "cmd": "sh .seed/backends/beads/test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "claude-session"
+}
