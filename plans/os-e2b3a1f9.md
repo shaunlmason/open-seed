@@ -25,7 +25,12 @@ enforcement, supplied by a platform through the seam built for it).
      actor) — Paperclip assignment is routing, checkout is the claim, and
      conflating them would hide assigned-but-unclaimed work while showing
      issues the caller cannot take. Rejected-author filtering applies as
-     below.
+     below, and the predicate also requires **no open blockers of either
+     kind**: no seed `blockedOn` entries *and* no nonterminal native
+     Paperclip dependency (`blockerIds` — deps created in the Paperclip
+     UI gate claimability too). Contract case: a todo issue with an
+     unresolved native blocker is absent from `ready` and appears when
+     the blocker reaches a terminal state.
    - `get`/`list` → GET issue(s), states mapped todo→ready,
      in_review→review (others 1:1)
    - `claim` → the checkout endpoint (DB-atomic `checkoutRunId`);
@@ -36,7 +41,17 @@ enforcement, supplied by a platform through the seam built for it).
      verb validates the presented token against the stored one *in
      addition to* the server's ownership check — the bearer key cannot
      distinguish a reaped predecessor from the same actor's new claim;
-     the rotating token can. Stale or missing tokens exit 6.
+     the rotating token can. Stale or missing tokens exit 6. Checkout +
+     mint form **one exclusive claim**: a held checkout is contention
+     (exit 2) for every caller, the same actor included, so no second
+     process can silently rotate a live token. **Declared variance
+     (never silent): the fence is check-then-act, not atomic** —
+     Paperclip has no conditional metadata update, so validate-then-
+     mutate spans two requests and a worker reaped and superseded inside
+     that one-round-trip window can still land one mutation past the
+     platform's own same-actor ownership check. The backend declares it
+     cannot provide an atomic fence (filecards remains the backend that
+     does); the README carries this variance.
    - `transition`/`release`/operator verbs → state PATCH; the server's
      `assertTransition()` refusal maps to exit 3
    - `close` → done/cancelled transition; blocker cascade is native
@@ -52,8 +67,13 @@ enforcement, supplied by a platform through the seam built for it).
      and the README declares API-drift risk (very high upstream velocity,
      no shipped SDK).
 2. **Manifest + lock**: `backend.toml` (atomic_claim native, offline
-   `none` — server is truth, budget **native**; optional: ancestry,
-   budget), `backends.lock.json` in-template entry.
+   `none` — server is truth, budget **native**; optional: lease-renew,
+   ancestry, budget), `backends.lock.json` in-template entry. **Every
+   advertised optional capability ships its handler**: `ancestry <id>`
+   walks the parent-issue chain up to the goal, and `budget <id>` reports
+   the issue's goal budget as the platform enforces it (ok / alert at
+   80% / paused at 100%) — both covered by the contract test, so
+   capability negotiation never selects an unimplemented verb.
 3. **Contract test** — `test.sh` + `testdata/fake-paperclip` (a small
    Python3 `http.server` implementing the API subset with in-memory state,
    started on a random localhost port). Exercises every required verb's
