@@ -1,0 +1,13 @@
+#!/bin/sh
+# dmux worktree_created → seed setup + post-create.d, with the dmux
+# context translated to the portable SEED_* variables.
+cd "${DMUX_WORKTREE_PATH:-.}" || exit 0
+export SEED_WORKTREE="${DMUX_WORKTREE_PATH:-$PWD}"
+export SEED_REPO_ROOT="${DMUX_ROOT:-}"
+export SEED_BRANCH="${DMUX_BRANCH:-}"
+export SEED_TASK_DESCRIPTION="${DMUX_PROMPT:-}"
+[ -x .seed/hooks/setup ] && .seed/hooks/setup
+for h in .seed/hooks/post-create.d/*; do
+  [ -x "$h" ] && "$h"
+done
+exit 0

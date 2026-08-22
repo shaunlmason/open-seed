@@ -1,0 +1,15 @@
+# tmux-ide workspace fragment wiring the seed lifecycle contract.
+version: 1
+name: seed
+before: "[ -x .seed/hooks/setup ] && .seed/hooks/setup || true"
+terminal:
+  rows:
+    - size: 70%
+      panes:
+        - title: Agent
+          command: bash scripts/loop.sh --actor tmux-agent --once
+          focus: true
+        - title: Shell
+    - panes:
+        - title: Run
+          command: "[ -x .seed/hooks/run ] && .seed/hooks/run || $SHELL"
