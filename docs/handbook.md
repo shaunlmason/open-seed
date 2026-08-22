@@ -190,9 +190,28 @@ requirements:
   the lockfile is control surface, and its output walks you through the
   review steps and the release notes. An incompatible release is refused
   before anything is written (the alternative is a pin that exits 10 on
-  every invocation). Template updates: diff against a newer template tag
-  and take what you want — your `.seed/` is yours; the spec files only
-  change with a protocol bump.
+  every invocation).
+- **Upgrading the template** is the same two-command story:
+  `scripts/seed template upgrade` reads your provenance from
+  `.seed/template.lock` (repo, recorded version, and — after the first
+  upgrade — the upstream commit it merged from, stamped by the command),
+  fetches the target release, and three-way merges what changed upstream
+  against what you changed locally onto a new local branch
+  `template-upgrade/<tag>`: conflicts staged as standard markers, your
+  work products (`plans/`, `receipts/`, `memory/`, `decisions/`) never
+  merged, your working tree untouched. Then the **reviewed PR** — the
+  command never pushes and never opens one: resolve any conflicts on the
+  branch, run `make check`, push, merge through the ordinary gates.
+  A `.seed/version` change in the target is called out in the envelope;
+  run `scripts/seed upgrade` next as its own reviewed step. Pull-based
+  by design (§7.1): upstream never pushes into your repo. `--check`
+  reports current vs latest without creating anything.
+- **Cutting a template release (maintainers):** bump `version` in
+  `.seed/template.lock`, commit, tag that commit — version-then-tag. Do
+  not write a `commit` line: the lockfile cannot record the SHA of the
+  commit that contains it; consumers resolve your immutable release tag
+  instead — which is why the seed-anchor-style tag protections in §1
+  extend to release tags.
 
 ## 7. Where everything lives
 
