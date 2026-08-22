@@ -22,6 +22,7 @@ TRANSITIONS = {
 }
 
 issues = {}
+goals = {"goal-1": {"id": "goal-1", "title": "Default goal", "budgetUsd": 100.0, "spentUsd": 42.0}}
 events = []
 seq = [0]
 
@@ -62,6 +63,10 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             i = issues.get(m.group(1))
             return self.reply(200, i) if i else self.reply(404, {"error": "not found"})
+        m = re.match(r"^/goals/([^/]+)$", p)
+        if m:
+            g = goals.get(m.group(1))
+            return self.reply(200, g) if g else self.reply(404, {"error": "not found"})
         self.reply(404, {"error": "no route"})
 
     def do_POST(self):
@@ -70,10 +75,15 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/issues":
             if not d.get("goalId"):
                 return self.reply(422, {"error": "goal ancestry required"})
+            if d["goalId"] not in goals:
+                return self.reply(422, {"error": "unknown goal"})
+            if d.get("parentId") and d["parentId"] not in issues:
+                return self.reply(422, {"error": "unknown parent issue"})
             i = {
                 "id": new_id(), "title": d.get("title", ""), "description": d.get("description", ""),
                 "priority": d.get("priority", "medium"), "state": d.get("state", "backlog"),
-                "goalId": d["goalId"], "assignee": d.get("assignee", ""), "checkoutAgent": "",
+                "goalId": d["goalId"], "parentId": d.get("parentId", ""),
+                "assignee": d.get("assignee", ""), "checkoutAgent": "",
                 "metadata": d.get("metadata", {}), "comments": [], "createdAt": "2026-08-22T00:00:00Z",
             }
             issues[i["id"]] = i
@@ -83,7 +93,12 @@ class Handler(BaseHTTPRequestHandler):
             i = issues.get(m.group(1))
             if not i:
                 return self.reply(404, {})
-            if i["checkoutAgent"] and i["checkoutAgent"] != d.get("agent"):
+            # A held checkout is contention for EVERYONE, the same agent
+            # included: checkout + token mint must form one exclusive claim,
+            # so a repeated same-owner checkout may not silently succeed
+            # (it would let two processes of one actor both claim, the
+            # second overwriting the first's fence token).
+            if i["checkoutAgent"]:
                 return self.reply(409, {"holder": i["checkoutAgent"]})
             if i["state"] not in ("todo", "in_progress"):
                 return self.reply(409, {"error": f"not claimable from {i['state']}"})

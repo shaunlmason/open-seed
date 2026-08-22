@@ -25,6 +25,19 @@ out=$("$sb" create --title "Card A" --body work --priority P1 --actor a --json);
 id=$(echo "$out" | jq -r .task); [ "$(echo "$out" | jq -r .state)" = "backlog" ] || die "create state"
 PAPERCLIP_DEFAULT_GOAL_ID= expect_rc 5 "parentless create without goal" "$sb" create --title "No goal" --actor a --json
 
+# --parent is a TASK id: the child inherits the parent's goal (no default
+# needed) and keeps the parent link; a bogus parent is not_found, and
+# ancestry walks child → parent → goal.
+out=$(PAPERCLIP_DEFAULT_GOAL_ID= "$sb" create --title "Child" --actor a --parent "$id" --json); ok "$out" create-child
+child=$(echo "$out" | jq -r .task)
+expect_rc 4 "create with bogus parent" env PAPERCLIP_DEFAULT_GOAL_ID= "$sb" create --title "Orphan" --actor a --parent PAP-999 --json
+out=$("$sb" ancestry "$child" --json); ok "$out" ancestry
+[ "$(echo "$out" | jq -r '.ancestors[0].id')" = "$id" ] || die "ancestry parent"
+[ "$(echo "$out" | jq -r '.ancestors[-1] | .kind + ":" + .id')" = "goal:goal-1" ] || die "ancestry goal"
+out=$("$sb" budget "$child" --json); ok "$out" budget
+[ "$(echo "$out" | jq -r '.budget.state')" = "ok" ] || die "budget state"
+echo "$out" | jq -e '.budget.limit == 100' >/dev/null || die "budget limit"
+
 out=$("$sb" promote "$id" --actor lead --json); ok "$out" promote
 out=$("$sb" ready --actor agent-1 --json); ok "$out" ready
 [ "$(echo "$out" | jq -r '.tasks[0].task')" = "$id" ] || die "promoted card not ready"
@@ -32,6 +45,9 @@ out=$("$sb" ready --actor agent-1 --json); ok "$out" ready
 out=$("$sb" claim "$id" --actor agent-1 --json); ok "$out" claim
 tok1=$(echo "$out" | jq -r .claim_token)
 case "$tok1" in c-*) ;; *) die "minted token shape: $tok1" ;; esac
+# Checkout + mint is one exclusive claim: a second claim by the SAME actor
+# is contention, never a silent token rotation under the first process.
+expect_rc 2 "same-actor duplicate claim" "$sb" claim "$id" --actor agent-1 --json
 
 # Checkout-aware ready: a checked-out issue is not claimable work.
 out=$("$sb" ready --actor agent-2 --json)
@@ -84,6 +100,27 @@ out=$("$sb" create --title "Cancel me" --actor a --json); id2=$(echo "$out" | jq
 out=$("$sb" cancel "$id2" --actor lead --json); ok "$out" cancel
 out=$("$sb" reinstate "$id2" --actor lead --json); ok "$out" reinstate
 [ "$("$sb" get "$id2" --json | jq -r .state)" = "backlog" ] || die "reinstate → backlog"
+
+# Cancel cascades like close: a dependent blocked solely on a cancelled
+# blocker must be released, not stay blocked forever.
+out=$("$sb" create --title "Blocker" --actor a --json); blk=$(echo "$out" | jq -r .task)
+out=$("$sb" create --title "Dependent of blocker" --actor a --blocked-by "$blk" --json); dep2=$(echo "$out" | jq -r .task)
+"$sb" promote "$dep2" --actor lead --json >/dev/null
+"$sb" block "$dep2" --actor lead --blocked-on "dep:$blk" --json >/dev/null
+out=$("$sb" cancel "$blk" --actor lead --json); ok "$out" cancel-cascade
+echo "$out" | jq -e --arg d "$dep2" '.cascaded | index($d)' >/dev/null || die "cancel did not report cascade"
+[ "$("$sb" get "$dep2" --json | jq -r .state)" = "ready" ] || die "cancel cascade did not release dependent"
+
+# ready normalizes priorities to P0-P3 and sorts by them: loop.sh claims
+# the FIRST returned task, so a P0 must precede lower priorities.
+out=$("$sb" create --title "Low prio" --priority P3 --actor a --json); lo=$(echo "$out" | jq -r .task)
+out=$("$sb" create --title "Critical" --priority P0 --actor a --json); hi=$(echo "$out" | jq -r .task)
+"$sb" promote "$lo" --actor lead --json >/dev/null
+"$sb" promote "$hi" --actor lead --json >/dev/null
+out=$("$sb" ready --actor fresh-agent --json); ok "$out" ready-sorted
+[ "$(echo "$out" | jq -r '.tasks[0].task')" = "$hi" ] || die "P0 not first in ready"
+[ "$(echo "$out" | jq -r '.tasks[0].priority')" = "P0" ] || die "priority not normalized to P0"
+[ "$(echo "$out" | jq -r '.tasks[-1].priority')" = "P3" ] || die "priority not normalized to P3"
 
 out=$("$sb" event-append --event '{"ts":"t","verb":"probe"}' --json); ok "$out" event-append
 out=$("$sb" list --json); ok "$out" list

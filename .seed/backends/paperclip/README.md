@@ -40,15 +40,32 @@ P0–P3 → critical / high / medium / low.
 
 - **Claim = checkout** (DB-atomic, native). `ready` returns *claimable*
   work: `todo`, no checkout lock, unassigned **or assigned to the caller**
-  — Paperclip assignment is routing; checkout is the claim.
+  — Paperclip assignment is routing; checkout is the claim. Results are
+  normalized to the port vocabulary (P0–P3) and **sorted by priority**
+  (the loop claims the first entry).
+- **A held checkout is contention for everyone — the same agent included**
+  (exit 2): checkout + token mint form one exclusive claim, so a repeated
+  same-owner checkout may never silently succeed (two processes of one
+  actor would both "win" and the second would invalidate the first's
+  fence). The adapter pre-checks the holder; the atomic arbiter is the
+  server, whose checkout endpoint must 409 on *any* held lock — the
+  contract the fake encodes; reconcile against the live API on upgrades.
+- **`--parent` is a task id, never a goal id**: the child inherits the
+  parent issue's goal for the mandatory ancestry and keeps `parentId`;
+  the optional `ancestry` verb walks child → parents → goal, and the
+  optional `budget` verb reports the goal's platform-enforced budget
+  (`ok` / `alert` at 80% / `paused` at 100% — the native R6 stop).
 - **The fence is a minted per-claim token** stored in issue `metadata`
   (`seedToken`) and validated on every fenced verb *in addition to* the
   server's ownership check: the bearer key cannot distinguish a reaped
   predecessor from the same actor's new claim; the rotating token can.
 - Port bookkeeping rides `metadata`: `blockedOn` entries (plan parking,
-  dep edges — released entry-by-entry, cascaded on close), `seedAuthor`
-  (implementer of record), `rejected` (reviewer lockout, enforced at claim
-  and in `ready`).
+  dep edges — released entry-by-entry, cascaded on **close and cancel**
+  alike, per the transition table), `seedAuthor` (implementer of record),
+  `rejected` (reviewer lockout, enforced at claim and in `ready`).
+  Server-arbitrated state PATCHes are checked **before** bookkeeping
+  mutates: a refused transition never burns the claim token or reports
+  success.
 
 ## Declared variances (never silent)
 
