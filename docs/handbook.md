@@ -20,7 +20,9 @@ companion to the [design](design-options.md) (which explains *why*) and the
 3. **Apply server-side protections** — these are what make the gates real
    (`scripts/seed init-github` prints this checklist):
    - Branch protection on `main`: require the `check-validate` checks and a
-     review; no force pushes.
+     review; **require conversation resolution before merging** (otherwise
+     review-thread fixes pushed while you merge are silently stranded);
+     no force pushes.
    - Branch rule for `seed-state`: allow pushes, **block force-pushes and
      deletion**.
    - Tag rule for `seed-anchor/*`: create-only, no deletion.
