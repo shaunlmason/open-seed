@@ -6,7 +6,7 @@
 # In Review=review, Blocked=blocked (required custom state), Done=done,
 # Canceled=cancelled. A workflow missing a required state → exit 5 with
 # remediation. Seed bookkeeping rides labels: seed:bo:<entry> (blocked_on),
-# seed:author:<actor>, seed:rejected:<actor>, seed:tok:<hex> (the minted
+# seed:author:<actor>, seed:rejected:<actor>, seed:tok:c-<hex> (the minted
 # per-claim fence token — D1 binding, same posture as beads/paperclip: the
 # API key alone cannot tell a reaped predecessor from the same actor's new
 # claim; the rotating token can), seed:audit (the audit-sink issue, never a
@@ -63,9 +63,9 @@ fail() {
 }
 # The port contract's contention shape: cause claim_contention plus a
 # top-level holder field an orchestrator can act on.
-fail_contention() {
-  jq -nc --arg v "$verb" --arg h "$1" \
-    '{ok:false, schema_version:"1.0", verb:$v, error:"claim_contention", holder:$h, message:("held by " + $h)}'
+fail_contention() { # HOLDER [MESSAGE]
+  jq -nc --arg v "$verb" --arg h "$1" --arg m "${2:-held by $1}" \
+    '{ok:false, schema_version:"1.0", verb:$v, error:"claim_contention", holder:$h, message:$m}'
   exit 2
 }
 envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
@@ -170,8 +170,10 @@ update_issue() {
 # seed:bo:dep:LIN-10. Declared variance: Linear's issueUpdate replaces the
 # whole labelIds array (no atomic add/remove operations like Jira's), so
 # the set is recomputed from the snapshot immediately before the write —
-# the remaining race window is declared in the README.
-relabel() {
+# the remaining race window is declared in the README. try_relabel is the
+# non-fatal core (sets RL_RC/RL_MSG) for callers that must compensate or
+# skip-and-report; relabel is the fatal wrapper.
+try_relabel() {
   iid=$1; cur=$2; adds=$3; delsel=$4
   keep=$(printf '%s' "$cur" | jq -c --arg d "$delsel" '[.labels.nodes[]
     | select(if $d == "" then true
@@ -182,7 +184,12 @@ relabel() {
     lid=$(label_id "$n")
     keep=$(printf '%s' "$keep" | jq -c --arg l "$lid" '. + [$l] | unique')
   done
-  update_issue "$iid" "{\"labelIds\": $keep}"
+  try_update "$iid" "{\"labelIds\": $keep}"
+  RL_RC=$TU_RC; RL_MSG=$TU_MSG
+}
+relabel() {
+  try_relabel "$@"
+  [ "$RL_RC" = "0" ] || fail 5 backend_unavailable "$RL_MSG"
 }
 
 # The fence: assignee-match AND the minted seed:tok:<token> label. Both
@@ -231,10 +238,12 @@ load_issues() {
 
 # cascade FROM_ID — remove dep:<id> everywhere (close AND cancel edges carry
 # the effect, per the transition table); issues left blocked on nothing go
-# back to Todo. Per-dependent release failures do NOT abort the terminal
-# verb or the rest of the cascade: the dependency label is kept, the
-# dependent is reported in $cascade_skipped, and recovery is an operator
-# unblock once the substrate allows the move. The fallible state move runs
+# back to Todo. Per-dependent failures — the release move OR the label
+# bookkeeping — do NOT abort the terminal verb or the rest of the cascade:
+# the dependent is reported in $cascade_skipped with its dependency entry
+# preserved (a failed post-release label write rolls the state back to
+# Blocked so the entry stays recoverable), and recovery is an operator
+# unblock once the substrate allows the moves. The fallible state move runs
 # BEFORE the label is destroyed. Sets $cascaded and $cascade_skipped.
 cascade() {
   cascaded="[]"; cascade_skipped="[]"
@@ -247,13 +256,23 @@ cascade() {
       try_update "$dep" "{\"stateId\": \"$todo_id\"}"
       if [ "$TU_RC" = "0" ]; then
         require_issue "$dep"; cur=$CUR
-        relabel "$dep" "$cur" "" "seed:bo:dep:$1"
-        cascaded=$(printf '%s' "$cascaded" | jq -c --arg d "$dep" '. + [$d]')
+        try_relabel "$dep" "$cur" "" "seed:bo:dep:$1"
+        if [ "$RL_RC" = "0" ]; then
+          cascaded=$(printf '%s' "$cascaded" | jq -c --arg d "$dep" '. + [$d]')
+        else
+          # The release landed but the entry could not be cleared: roll
+          # the state back so Blocked + recorded entry stays the truth —
+          # never a Todo issue hidden from ready by a stale seed:bo label.
+          bid=$(printf '%s' "$STATES_JSON" | jq -r '.[] | select(.name == "Blocked") | .id')
+          [ -n "$bid" ] && try_update "$dep" "{\"stateId\": \"$bid\"}"
+          cascade_skipped=$(printf '%s' "$cascade_skipped" | jq -c --arg d "$dep" '. + [$d]')
+        fi
       else
         cascade_skipped=$(printf '%s' "$cascade_skipped" | jq -c --arg d "$dep" '. + [$d]')
       fi
     else
-      relabel "$dep" "$cur" "" "seed:bo:dep:$1"
+      try_relabel "$dep" "$cur" "" "seed:bo:dep:$1"
+      [ "$RL_RC" = "0" ] || cascade_skipped=$(printf '%s' "$cascade_skipped" | jq -c --arg d "$dep" '. + [$d]')
     fi
   done
 }
@@ -343,11 +362,20 @@ case "$verb" in
       fail 5 backend_unavailable "claim rolled back: $TU_MSG"
     fi
     # Final verification: we won only if the substrate holds OUR assignee
-    # AND OUR token; a rival's overwrite means they are the usable winner
-    # and we report contention with the real holder.
+    # AND OUR token. A coherent rival tuple (their assignee AND their
+    # token) means they are the usable winner — contention with the real
+    # holder. Anything else is a TORN interleave (assignee and token from
+    # different claimants): no one holds a usable claim, so report
+    # contention with the torn state named — an operator release/reap
+    # recovers, and the next claim rotates both fields (declared, README).
     require_issue "$id"; cur=$CUR
-    if [ "$(iassignee "$cur")" != "$actor" ] || ! printf '%s\n' "$(ilabels "$cur")" | grep -qxF "seed:tok:$tok"; then
-      fail_contention "$(iassignee "$cur")"
+    vh=$(iassignee "$cur")
+    vtok=$(printf '%s\n' "$(ilabels "$cur")" | sed -n 's/^seed:tok://p' | head -1)
+    if [ "$vh" != "$actor" ] || [ "$vtok" != "$tok" ]; then
+      if [ -n "$vh" ] && [ "$vh" != "$actor" ] && [ -n "$vtok" ] && [ "$vtok" != "$tok" ]; then
+        fail_contention "$vh"
+      fi
+      fail_contention "$vh" "torn claim interleave (assignee '$vh', token label '$vtok'): no usable claimant — operator release/reap recovers"
     fi
     envelope ",\"task\":$(jstr "$id"),\"state\":\"in_progress\",\"claim_token\":\"$tok\""
     ;;
@@ -367,10 +395,18 @@ case "$verb" in
         require_fence "$id"; cur=$CUR
         [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "review requires in_progress"
         # The fallible state move runs FIRST: a refusal must leave the
-        # claim intact so the worker can retry or park.
+        # claim intact so the worker can retry or park. A failed
+        # author-label write after the move is COMPENSATED (state rolled
+        # back to In Progress) — review must never be reached without the
+        # seed:author record the reject lockout depends on.
+        state_id in_progress; prog_id=$SID
         state_id review; update_issue "$id" "{\"stateId\": \"$SID\"}"
         require_issue "$id"; cur=$CUR
-        relabel "$id" "$cur" "seed:author:$actor" "seed:author:"
+        try_relabel "$id" "$cur" "seed:author:$actor" "seed:author:"
+        if [ "$RL_RC" != "0" ]; then
+          try_update "$id" "{\"stateId\": \"$prog_id\"}"
+          fail 5 backend_unavailable "review transition rolled back (author record could not be written; claim intact — retry): $RL_MSG"
+        fi
         require_issue "$id"; cur=$CUR
         release_claim "$id" "$cur"
         [ -n "$resolution" ] && comment_on "$id" "seed:evidence: $resolution"
@@ -380,9 +416,16 @@ case "$verb" in
         require_fence "$id"; cur=$CUR
         [ "$(istate "$cur")" = "In Progress" ] || fail 3 invalid_transition "parking requires in_progress"
         [ -n "$blocked_on_arg" ] || fail 3 invalid_transition "blocked requires --blocked-on"
+        # Same compensation as review: a Blocked issue must never exist
+        # without its blocked_on entry on record.
+        state_id in_progress; prog_id=$SID
         state_id blocked; update_issue "$id" "{\"stateId\": \"$SID\"}"
         require_issue "$id"; cur=$CUR
-        relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
+        try_relabel "$id" "$cur" "seed:bo:$blocked_on_arg" ""
+        if [ "$RL_RC" != "0" ]; then
+          try_update "$id" "{\"stateId\": \"$prog_id\"}"
+          fail 5 backend_unavailable "park rolled back (blocked_on entry could not be written; claim intact — retry): $RL_MSG"
+        fi
         require_issue "$id"; cur=$CUR
         release_claim "$id" "$cur"
         envelope ",\"task\":$(jstr "$id"),\"state\":\"blocked\",\"transitioned\":true"
