@@ -98,3 +98,4 @@
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-69bd5a64","ts":"2026-08-22T18:42:44Z","verb":"unblock"}
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-69bd5a64","ts":"2026-08-22T18:42:57Z","verb":"unblock"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:25","to":"ready"},"task":"os-69bd5a64","ts":"2026-08-22T18:43:17Z","verb":"plan-unblock"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:26","to":"ready"},"task":"os-23494e11","ts":"2026-08-22T18:43:20Z","verb":"plan-unblock"}
