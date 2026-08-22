@@ -152,6 +152,18 @@ plan tamper via task PR (rejected), stale plan replay (rejected), forged local
 receipt (overwritten by CI author-of-record), amendment flow (rebase required, work
 salvaged).
 
+> **Status: complete (2026-08-22), engine v0.4.0.** All four done-when scenarios
+> have passing and failing fixtures (plus: red validation commands, missing
+> merge-base plan, merge-group-ref refusal). `seed receipt verify` reads the plan
+> from the merge-base blob only — the tamper fixture proves the commands executed
+> come from the merge-base even when the head copy is malicious. Validators:
+> auto-merge intersection (conservative glob-prefix overlap), tier ≤ ceiling,
+> human lead, unique priorities, non-overlapping scopes, role-variant body-hash,
+> repo-wide plan lint — `seed validate`, wired into `scripts/validate.sh` with
+> engine-absent degradation. Deferred to Phase 5 as planned: the `merge_group`
+> workflow trigger and PR-number derivation (the engine side — refusing to
+> classify a queue ref and requiring the real head branch — is in).
+
 ## Phase 5 — CI workflows
 
 - **check+validate** (live): `make check` + all validators + fan-out drift check +

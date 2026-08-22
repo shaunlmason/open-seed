@@ -18,12 +18,19 @@ for f in .seed/version .seed/engine.lock .seed/config.toml .seed/guardrails.yaml
   fi
 done
 
-# Spec lint via the engine when it can be bootstrapped; degrade with a warning
-# otherwise (differentiator #4: the repo must work without the engine).
+# Engine-backed lints (spec, guardrails, teams, role variants, plans) when the
+# engine can be bootstrapped; degrade with a warning otherwise (differentiator
+# #4: the repo must work without the engine).
 if out=$(cd "$root" && sh scripts/seed spec lint 2>&1); then
   say "$out"
+  if out=$(cd "$root" && sh scripts/seed validate 2>&1); then
+    say "$out"
+  else
+    say "FAIL: $out"
+    fail=1
+  fi
 else
-  say "WARNING: engine unavailable, skipped spec lint ($out)"
+  say "WARNING: engine unavailable, skipped spec lint + validate ($out)"
 fi
 
 [ "$fail" -eq 0 ] && say "ok" || exit 1
