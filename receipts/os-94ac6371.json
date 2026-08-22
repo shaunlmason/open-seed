@@ -2,10 +2,11 @@
   "schema_version": "1.0",
   "task": "os-94ac6371",
   "merge_base": "f56f4dacc6acef1b1f244098fe553f7e552c86c8",
-  "head": "7f4ce9a7428f70a54676ee53dd32be3676bf1518",
+  "head": "552700e12f7a7241f798b7e3c8ca7393bb1bb8e2",
   "plan_path": "plans/os-94ac6371.md",
   "plan_sha256": "39bf067707896111a1fe99e0c2b19f5985d5d12b232950eb149694d806f03d25",
   "diff_files": [
+    ".github/workflows/seed-maintenance.yml",
     ".seed/backends.lock.json",
     ".seed/backends/fastcards/README.md",
     ".seed/backends/fastcards/backend.toml",
@@ -14,7 +15,7 @@
     "docs/handbook.md",
     "memory/LEARNINGS.md"
   ],
-  "diff_sha256": "ba6ed41f97f806daf400d03c7ca5482d099b6373bf00fd6e30062922fdc47c0e",
+  "diff_sha256": "031055aab4dc92317b8573c69428c2d3b093b351090203852968fbb104120bd4",
   "validation": [
     {
       "cmd": "test -f .seed/backends/fastcards/backend.toml",
