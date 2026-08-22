@@ -42,7 +42,10 @@ P0–P3 → critical / high / medium / low.
   work: `todo`, no checkout lock, unassigned **or assigned to the caller**
   — Paperclip assignment is routing; checkout is the claim. Results are
   normalized to the port vocabulary (P0–P3) and **sorted by priority**
-  (the loop claims the first entry).
+  (the loop claims the first entry). `ready` also excludes issues with a
+  **nonterminal native blocker** (`blockerIds` — deps created in the
+  Paperclip UI count, not just seed's own `metadata.blockedOn` entries);
+  `create --blocked-by` mirrors each edge into both.
 - **A held checkout is contention for everyone — the same agent included**
   (exit 2): checkout + token mint form one exclusive claim, so a repeated
   same-owner checkout may never silently succeed (two processes of one
@@ -71,6 +74,16 @@ P0–P3 → critical / high / medium / low.
 
 - **Server is truth**: no offline operation, no fork portability — the
   exact inverse of filecards, and the reason both exist behind one port.
+- **The token fence is check-then-act, not atomic**: Paperclip has no
+  conditional (compare-and-swap) update on issue metadata, so the fence
+  validates the stored `seedToken` and then mutates in a second request.
+  A worker reaped and superseded *between those two requests* can still
+  land one mutation (Paperclip's own ownership check passes — same
+  actor). The window is one request round-trip; the same-actor
+  claim-contention rule closes the common reap-reclaim race, and filecards
+  remains the backend with a fully atomic fence. Declared, per the
+  never-waivable-semantics rule: this backend cannot provide an atomic
+  fence.
 - **Leases are Paperclip's watchdogs** (`issueWatchdogs`): `lease-renew`
   validates the fence and succeeds; staleness detection is the platform's.
 - **Audit rides Paperclip's immutable activity log** (+ issue comments);
