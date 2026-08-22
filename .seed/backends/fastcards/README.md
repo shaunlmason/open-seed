@@ -45,7 +45,10 @@ evidence, and the run log (import refuses a non-empty target).
   the solo human operator closes review cards through the port on their own
   machine (`seed task close <id> --no-pr --resolution … --actor <operator>`),
   with the evidence recorded on the card. fastcards is for local solo
-  loops, not for repos where CI closes cards.
+  loops, not for repos where CI closes cards. The **seed-maintenance
+  workflow detects the machine-local backend and skips itself** — a
+  `seed-state` ref left over from a filecards migration does not
+  reactivate it; reap and lint are local commands here.
 - **Leases and fencing** behave identically to filecards (same evaluator);
   reaping is `seed maintain reap` run locally.
 

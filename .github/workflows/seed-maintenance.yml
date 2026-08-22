@@ -29,10 +29,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Skip when no state ref exists yet
+      - name: Skip when no state ref exists, or the backend is machine-local
         id: gate
         run: |
-          if git ls-remote --exit-code origin seed-state >/dev/null 2>&1; then
+          # A machine-local backend (fastcards: state_portability=machine)
+          # keeps its state in a local DB that CI can never see — the whole
+          # maintenance lane is the operator's local job there, and a stale
+          # seed-state ref left over from a filecards migration must not
+          # reactivate it (every step, anchor first, would fail).
+          backend=$(sed -n 's/^backend *= *"\(.*\)"/\1/p' .seed/config.toml | head -1)
+          portability=$(sed -n 's/^state_portability *= *"\(.*\)"/\1/p' ".seed/backends/${backend:-filecards}/backend.toml" 2>/dev/null | head -1)
+          if [ "$portability" = "machine" ]; then
+            echo "backend '$backend' is machine-local — maintenance runs locally (see its README); skipping"
+            echo "active=false" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --exit-code origin seed-state >/dev/null 2>&1; then
             echo "active=true" >> "$GITHUB_OUTPUT"
           else
             echo "no seed-state ref — run scripts/seed init first"; echo "active=false" >> "$GITHUB_OUTPUT"
