@@ -181,6 +181,22 @@ salvaged).
 secrets configured, and the reap/close/HALT paths each have an integration test
 against a scratch repo.
 
+> **Status: complete (2026-08-22), engine v0.5.0.** Five workflows shipped:
+> check-validate (make check + validators + read-only state lint; on PRs and
+> merge_group, the verify gate — with the D3 merge-queue adaptation deriving the
+> PR from the queue ref and classifying by the real head branch), seed-maintenance
+> (reap → state-shaped plan-unblock via `gh` → merged-PR close gated on the green
+> verify check → conformance lint that writes HALT and stops the job before
+> anchoring → anchor tag → report to the job summary), seed-close-no-pr
+> (`workflow_dispatch`, server-attributed actor + run URL as evidence, engine
+> enforces the operator roster), and the inert pair seed-dispatch/pr-review
+> (secret-gated no-ops until activation, claude-code-action based). The
+> reap/plan-unblock/no-PR-close/forged-transition-HALT paths all have integration
+> tests against scratch git remotes; every live-workflow engine step was run green
+> against the template itself (including the state lint replaying the repo's real
+> seed-state history). Both live workflows execute on the default branch after
+> this branch merges — verified locally step-for-step until then.
+
 ## Phase 6 — Loop, roles, memory
 
 - `loop.sh`: dual-gate exit, circuit breaker, budgets, lease renewal at half-lease

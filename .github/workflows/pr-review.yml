@@ -1,0 +1,45 @@
+# pr-review (INERT until activation, §7.3): the reviewer-agent lane. v1
+# review is human-only; when the ANTHROPIC_API_KEY secret is added, this
+# workflow reviews task PRs under its own server-attributed app identity —
+# which must differ from the plan author (D4.5 identity rule).
+name: pr-review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    # Only seed task/plan PRs; drafts wait.
+    if: startsWith(github.head_ref, 'seed/') && !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: Activation gate
+        id: gate
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "inert: no ANTHROPIC_API_KEY secret — pr-review is scaffolding until activation; v1 review is human-only (§7.3)"
+            echo "active=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.gate.outputs.active == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - if: steps.gate.outputs.active == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--settings .claude/ci-settings.json"
+          prompt: |
+            You are the reviewer role: read .seed/agents/reviewer.md and
+            follow it. Review this PR against the merge-base plan blob only
+            (D3). Post a review comment; do not merge, and do not edit card
+            state directly.
