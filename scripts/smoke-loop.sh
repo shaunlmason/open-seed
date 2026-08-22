@@ -85,4 +85,13 @@ git cat-file -p "origin/seed/$id:src/hello.txt" | grep -q "hello from the loop" 
 evidence=$(scripts/seed task get "$id" | jq -r .card.body)
 echo "$evidence" | grep -q "Evidence" || { say "FAIL: evidence not attached"; exit 1; }
 
-say "OK: $id ready→review unattended — implementation, receipt, memory append, evidence all present"
+# Builtin id conformance (os-61967950): comment and attach-evidence must
+# return the ids verbs.json declares, resolvable in the card body.
+cid=$(scripts/seed task comment "$id" --actor smoke-agent --body "smoke comment probe" | jq -r '.comment_id // empty')
+[ -n "$cid" ] || { say "FAIL: comment_id missing from envelope"; exit 1; }
+eid=$(scripts/seed task attach-evidence "$id" --actor smoke-agent --kind log --ref smoke-probe | jq -r '.evidence_id // empty')
+[ -n "$eid" ] || { say "FAIL: evidence_id missing from envelope"; exit 1; }
+scripts/seed task get "$id" | jq -r .card.body | grep -q "$cid" \
+  || { say "FAIL: comment_id not stamped into the card body"; exit 1; }
+
+say "OK: $id ready→review unattended — implementation, receipt, memory append, evidence + record ids all present"
