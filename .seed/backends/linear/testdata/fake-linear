@@ -5,7 +5,15 @@ Models the subset the adapter uses: team workflow states (by NAME — the
 adapter's whole state mapping is name-based), issues with assignee/priority/
 labels, team labels (created on demand), comments, and issueUpdate. Set
 FAKE_LINEAR_NO_BLOCKED=1 to serve a workflow missing the required custom
-Blocked state (the adapter must refuse with exit 5 + remediation).
+Blocked state (the adapter must refuse with exit 5 + remediation). Set
+FAKE_LINEAR_RACE_ACTOR=<id> for a deterministic claim interleave: a rival's
+later assignee+token write lands right after ours (last-write-wins, like
+the real API — the adapter's post-claim verification must report contention
+with the winner). Set FAKE_LINEAR_NO_TODO_FROM_BLOCKED=1 to refuse the
+Blocked→Todo state move (the adapter's cascade must skip-and-report, and
+an unblock must keep the entry). Set FAKE_LINEAR_FAIL_ASSIGN=1 to refuse
+any non-null assignee write (the adapter's claim must compensate: token
+label rolled back, issue left unchanged).
 
 GraphQL is dispatched by operation name — the adapter sends named
 operations, so no query parsing is needed.
@@ -128,12 +136,31 @@ class Handler(BaseHTTPRequestHandler):
         if not i:
             return self.reply(None, [{"message": "issue not found"}])
         inp = v["input"]
+        # Validate the whole input BEFORE applying any of it — the real
+        # mutation is atomic, so a refusal must never leave a partial write.
         if "stateId" in inp:
             if inp["stateId"] not in BY_STATE_ID:
                 return self.reply(None, [{"message": "invalid stateId"}])
+            if (os.environ.get("FAKE_LINEAR_NO_TODO_FROM_BLOCKED")
+                    and BY_STATE_ID[i["stateId"]]["name"] == "Blocked"
+                    and BY_STATE_ID[inp["stateId"]]["name"] == "Todo"):
+                return self.reply(None, [{"message": "state move refused by team settings"}])
+        if ("assigneeId" in inp and inp["assigneeId"]
+                and os.environ.get("FAKE_LINEAR_FAIL_ASSIGN")):
+            return self.reply(None, [{"message": "assignment refused"}])
+        if "stateId" in inp:
             i["stateId"] = inp["stateId"]
         if "assigneeId" in inp:
             i["assigneeId"] = inp["assigneeId"]  # None clears — last write wins, like the real API
+            rival = os.environ.get("FAKE_LINEAR_RACE_ACTOR")
+            if rival and i["assigneeId"] and i["assigneeId"] != rival:
+                # Deterministic interleave: a rival's later write lands
+                # right after ours (last-write-wins, like the real API).
+                i["assigneeId"] = rival
+                tok = {"id": "lab-rival", "name": "seed:tok:c-rival"}
+                labels.setdefault(tok["id"], tok)
+                i["labelIds"] = [lid for lid in i.get("labelIds", [])
+                                 if not labels.get(lid, {}).get("name", "").startswith("seed:tok:")] + [tok["id"]]
         if "labelIds" in inp:
             i["labelIds"] = [lid for lid in inp["labelIds"] if lid in labels]
         if "priority" in inp:

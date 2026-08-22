@@ -36,8 +36,9 @@
     },
     "close": {
       "args": {"task": "required", "resolution": "string message", "no-pr": "flag: human close via workflow_dispatch (D7 exemption; server-attributed)"},
-      "output": {"task": "id", "state": "done", "cascaded": "[task ids unblocked]"},
-      "errors": {"invalid_transition": {"exit": 3, "notes": "only legal from review"}}
+      "output": {"task": "id", "state": "done", "cascaded": "[task ids unblocked]", "cascade_skipped": "[task ids whose release the substrate refused — dependency entry preserved, operator unblock recovers]"},
+      "errors": {"invalid_transition": {"exit": 3, "notes": "only legal from review"}},
+      "notes": "The operator cancel cascade (terminal edges) reports cascaded/cascade_skipped exactly like close."
     },
     "comment": {
       "args": {"task": "required", "body": "required", "actor": "required", "token": "required while the card holds a claim"},
