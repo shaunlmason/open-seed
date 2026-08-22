@@ -3,6 +3,12 @@
 > Implementation-grade deep dive for the open-seed design study, researched 2026-08-21/22.
 > Covers skillfold, sub-agents-skills, the Agent Skills standard, multica/Vercel skills lockfiles,
 > and HumanLayer's checked-in command trilogy. Repos were cloned and quoted from source.
+>
+> **Erratum (design review, 2026-08-22):** superseded by `docs/design-options.md` D8/§4 on
+> paths: the skills source of truth is root **`skills/`** and rules are root **`rules/`** (not
+> `seed/skills/`/`seed/rules/` as this file's synthesis and manifest examples show — content
+> dirs stay at root; `.seed/` is reserved for the orchestration contract). The manifest/lockfile
+> (`seed.yaml`/`seed.lock`) is v2; v1 ships local skills only.
 
 ## 1. byronxlg/skillfold
 
