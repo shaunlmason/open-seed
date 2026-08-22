@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "task": "os-50995779",
+  "merge_base": "31d92360bf1e47cce5dbe4b7f904135669f28761",
+  "head": "771710dd059172ea18e6101057c84a08da0bccfc",
+  "plan_path": "plans/os-50995779.md",
+  "plan_sha256": "6699655fe389f6793ddbba1f98393563dba9ef9369ccdadc1ee1f8d1706623e1",
+  "diff_files": [
+    ".github/workflows/seed-maintenance.yml",
+    ".seed/config.toml",
+    ".seed/engine.lock",
+    "docs/handbook.md"
+  ],
+  "diff_sha256": "6c89450a259a15733057bb1a7edc7c753bd27b0a47dc82cc3041848145df6cf4",
+  "validation": [
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed mirror plan --json \u003e /dev/null",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"mirror\" .github/workflows/seed-maintenance.yml",
+      "exit": 0
+    }
+  ],
+  "generated_by": "claude-session"
+}
