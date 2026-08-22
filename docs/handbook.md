@@ -182,11 +182,17 @@ requirements:
   date" — stale-plan safety is already per-PR in verify. At scale, enable a
   GitHub **merge queue**; the verify workflow already handles `merge_group`
   by deriving the PR and classifying by its real head branch.
-- **Upgrading the engine:** bump `version` + hashes in `.seed/engine.lock`
-  via a reviewed PR (it is control surface). The engine refuses protocol
-  mismatches (exit 10) against `.seed/version`. Template updates: diff
-  against a newer template tag and take what you want — your `.seed/` is
-  yours; the spec files only change with a protocol bump.
+- **Upgrading the engine** is two commands: `scripts/seed upgrade`
+  (resolve the latest release — or `--to vX.Y.Z`, rollback included —
+  verify its checksums, preflight protocol compatibility, and rewrite
+  `.seed/engine.lock` atomically; `--check` only reports), then a
+  **reviewed PR** with the diff — the command never touches git, because
+  the lockfile is control surface, and its output walks you through the
+  review steps and the release notes. An incompatible release is refused
+  before anything is written (the alternative is a pin that exits 10 on
+  every invocation). Template updates: diff against a newer template tag
+  and take what you want — your `.seed/` is yours; the spec files only
+  change with a protocol bump.
 
 ## 7. Where everything lives
 
