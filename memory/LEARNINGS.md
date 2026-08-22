@@ -49,3 +49,11 @@ Fresh sessions read this file instead of rediscovering.
   cards); comments are listed via `bd comments`, not `show`. Shared corpus
   file (`corpus.sh`) sourced by both offline and live suites is what keeps
   a fake and its real counterpart from drifting apart silently.
+- 2026-08-22: multi-squad activation (os-10c10aae): a fallback scope
+  (core's bare `**`) must be EXEMPT from pairwise overlap validation or
+  no second squad can ever validate — "matches what nothing else claims"
+  necessarily intersects everything; only two catch-alls or two specific
+  scopes overlapping are real conflicts. Activation checks that read
+  shipped placeholder config (core's example mission) fire on every
+  fresh clone: gate them on a deliberate act (>1 squad || a real
+  mission) and ship the placeholder commented out.
