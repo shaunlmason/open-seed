@@ -110,3 +110,4 @@
 {"actor":"shaunlmason","data":{"kind":"comment"},"task":"os-6f3104db","ts":"2026-08-22T19:33:37Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:27","to":"ready"},"task":"os-52b9aed0","ts":"2026-08-22T19:51:13Z","verb":"plan-unblock"}
 {"actor":"shaunlmason","data":{"kind":"comment"},"task":"os-6f3104db","ts":"2026-08-22T19:52:28Z","verb":"comment"}
+{"actor":"shaunlmason","data":{"title":"Builtin backends: emit comment_id/evidence_id per verbs.json (port conformance)"},"task":"os-61967950","ts":"2026-08-22T19:52:42Z","verb":"create"}
