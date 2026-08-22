@@ -1,1 +1,2 @@
 {"actor":"shaunlmason","data":{"title":"First real card"},"task":"os-01d9ceb3","ts":"2026-08-22T05:34:04Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"cancelled","transitioned":true},"task":"os-01d9ceb3","ts":"2026-08-22T05:35:07Z","verb":"cancel"}
