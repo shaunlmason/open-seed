@@ -5,7 +5,11 @@ state: review
 priority: P3
 author: claude-session
 created_at: "2026-08-22T06:26:14Z"
-updated_at: "2026-08-22T20:18:27Z"
+updated_at: "2026-08-22T20:18:29Z"
 ---
 
 Scoped in docs/design-options.md; leave seams, not implementations, until claimed.
+
+## Evidence (pr, claude-session, 2026-08-22T20:18:29Z)
+
+https://github.com/shaunlmason/open-seed/pull/30
