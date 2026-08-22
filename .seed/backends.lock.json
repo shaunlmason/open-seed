@@ -2,6 +2,10 @@
   "filecards": {
     "source": "builtin",
     "engine": ">=0.3.0",
-    "note": "Implemented inside the pinned engine binary; the manifest declares capabilities. External plugin dirs are hash-pinned here when installed (seed backend verify)."
+    "note": "Implemented inside the pinned engine binary; the manifest declares capabilities."
+  },
+  "beads": {
+    "source": "in-template",
+    "note": "Ships in-template; PR + owner review is the pin (control surface). Externally installed copies must carry a sha256 (seed backend verify)."
   }
 }
