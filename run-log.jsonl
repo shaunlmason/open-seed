@@ -210,3 +210,4 @@
 {"actor":"shaunlmason","data":{"title":"v2: opinionated stack template flavors (TypeScript make check preset, §10 Q3)"},"task":"os-501a29c2","ts":"2026-08-23T07:26:58Z","verb":"create"}
 {"actor":"claude","data":{"title":"Engine README status refresh + design-doc section-ref remap (open-seed-engine PR #1)"},"task":"os-488323ec","ts":"2026-08-23T08:19:19Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-488323ec","ts":"2026-08-23T08:28:22Z","verb":"promote"}
+{"actor":"claude","data":{"lease_expires":"2026-08-23T08:58:24Z"},"task":"os-488323ec","ts":"2026-08-23T08:28:24Z","verb":"claim"}
