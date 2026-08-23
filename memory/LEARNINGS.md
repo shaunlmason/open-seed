@@ -57,3 +57,14 @@ Fresh sessions read this file instead of rediscovering.
   shipped placeholder config (core's example mission) fire on every
   fresh clone: gate them on a deliberate act (>1 squad || a real
   mission) and ship the placeholder commented out.
+- 2026-08-23 (os-488323ec): the D7 done-consistency exemption is the
+  `no-pr:` evidence PREFIX, minted only by a `--no-pr` close (engine
+  task.go `record_review` effect) — a plain CLI `task close` on a
+  cross-repo card (no template plan, no `seed/<id>` PR) passes its own
+  transition but leaves the state ref conformance-failing, and `done`
+  is terminal with no re-record verb: the next maintenance tick writes
+  HALT and blocks every mutating port verb until a human resumes. The
+  recovery is one replay-legal ref commit (evidence edit, state
+  unchanged, run-log line, one commit) plus `state resume`; better,
+  close no-PR work through the `seed-close-no-pr` workflow_dispatch so
+  the marker mints itself.
