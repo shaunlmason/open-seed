@@ -218,3 +218,4 @@
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-488323ec","ts":"2026-08-23T18:21:07Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"failures":1},"task":"","ts":"2026-08-23T18:29:17Z","verb":"halt"}
 {"ts":"2026-08-23T18:58:44Z","actor":"shaunlmason","verb":"state-repair","task":"os-488323ec","data":{"reason":"D7 no-PR exemption: close minted evidence without the no-pr: marker; human operator repair on the state ref (R10 push-access-deep)"}}
+{"actor":"shaunlmason","task":"","ts":"2026-08-23T19:00:18Z","verb":"state-resume"}
