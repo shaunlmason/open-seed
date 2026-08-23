@@ -220,3 +220,4 @@
 {"ts":"2026-08-23T18:58:44Z","actor":"shaunlmason","verb":"state-repair","task":"os-488323ec","data":{"reason":"D7 no-PR exemption: close minted evidence without the no-pr: marker; human operator repair on the state ref (R10 push-access-deep)"}}
 {"actor":"shaunlmason","task":"","ts":"2026-08-23T19:00:18Z","verb":"state-resume"}
 {"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-0f76f772","ts":"2026-08-23T19:27:30Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"kind":"file","ref":"no-pr: evidence now cites the server-attributed close record (issue #51) per D7 — resolves the P1 codex review on the evidence repair"},"task":"os-18135882","ts":"2026-08-23T19:29:22Z","verb":"comment"}
