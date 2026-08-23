@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "task": "os-0f76f772",
+  "merge_base": "a37e356dbd0b13e6048dd5ede81f4a9f27545286",
+  "head": "171b3dda592046ade8508fe50a8b3a735b6762c1",
+  "plan_path": "plans/os-0f76f772.md",
+  "plan_sha256": "5c7322d7d4fca659632ca0e85e8dcbf4cf6c5e796b95647128c19b126affa027",
+  "diff_files": [
+    "docs/handbook.md"
+  ],
+  "diff_sha256": "5c02947e714ec35851b096a62b12a776d7ca5333eb3147cbef2184749cde2467",
+  "validation": [
+    {
+      "cmd": "make check",
+      "exit": -1
+    },
+    {
+      "cmd": "grep -n \"publish\\|verify-tag\" docs/handbook.md",
+      "exit": -1
+    }
+  ],
+  "generated_by": "shaunlmason"
+}
