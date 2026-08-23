@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://open-seed.dev/workflow-schema/workflow.schema.json",
   "title": "Workflow definition",
-  "description": "One checked-in workflow per file at .seed/workflows/<name>.yaml (design §148 + inspirations/04 SYNTHESIS). The engine's `seed workflow validate` enforces this contract plus twelve semantic rules (unique kebab-case ids, DAG acyclicity, prompt XOR, referenced files, artifact closure, role closure, the harness/model registry, budget sanity, loop requirements, token lint, optional adapter checks). Unknown fields fail validation. `tools` maps onto the harness contract's SEED_PERMISSION: readonly → read-only, coding → safe-edit (the default); yolo is NOT reachable from a workflow file. Run state lives under <git-common-dir>/seed-runs/<run-id>/ — local, never committed.",
+  "description": "One checked-in workflow per file at .seed/workflows/<name>.yaml (design §7.3 + inspirations/04 SYNTHESIS). The engine's `seed workflow validate` enforces this contract plus twelve semantic rules (unique kebab-case ids, DAG acyclicity, prompt XOR, referenced files, artifact closure, role closure, the harness/model registry, budget sanity, loop requirements, token lint, optional adapter checks). Unknown fields fail validation. `tools` maps onto the harness contract's SEED_PERMISSION: readonly → read-only, coding → safe-edit (the default); yolo is NOT reachable from a workflow file. Run state lives under <git-common-dir>/seed-runs/<run-id>/ — local, never committed.",
   "type": "object",
   "required": ["schema_version", "name", "steps"],
   "additionalProperties": false,

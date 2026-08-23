@@ -1,4 +1,4 @@
-# seed.yaml — shared-skills manifest (design D8 §147; handbook §3
+# seed.yaml — shared-skills manifest (design D8; handbook §3
 # "Sharing skills between repos"). Sources named here are pinned by
 # seed.lock (`seed skills lock`) and materialized under skills/managed/
 # by `seed skills install`; CI runs `install --frozen`, so an unlocked

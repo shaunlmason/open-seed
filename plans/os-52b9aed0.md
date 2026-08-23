@@ -5,7 +5,7 @@ YAML files whose steps declare `depends_on` edges, artifact contracts,
 and gates — validated in CI and executed in parallel waves. The format
 and validate rules are already decided at implementation grade in
 [inspirations/04](../docs/research/inspirations/04-workflow-as-config.md)
-(SYNTHESIS section) and §148 of the design doc; this plan implements
+(SYNTHESIS section) and §7.3 of the design doc; this plan implements
 that decision, it does not reopen it. The card-level dependency DAG
 (blocks/blocked-by + ready-gating + close cascade) is untouched — a
 workflow is the *intra-run* DAG a single driver executes; cards remain

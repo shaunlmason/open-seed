@@ -24,12 +24,16 @@ follow [`AGENTS.md`](AGENTS.md). The `seed` engine is a pinned, hash-verified bi
 from [open-seed-engine](https://github.com/shaunlmason/open-seed-engine); the shim
 fetches it on first use.
 
-## Status: v1 complete
+## Status: v1 + v2 scope complete
 
-All seven build-plan phases are done. v2 work (beads/github-issues backends, workflow
-engine, skills lockfile, mailboxes, multi-squad activation, MCP transport) is tracked
-as cards on this repo's own seed-state ref — open-seed dogfoods its own port
-(`scripts/seed task ready --actor you`).
+All seven build-plan phases are done, and the §7.3 v2 scope has shipped
+(workflow engine, skills lockfile, mailboxes + handoff packets, multi-squad
+routing, MCP transport, the fastcards builtin, the beads/paperclip/linear/jira
+adapters, the mirror exporter + label router). open-seed dogfoods its own
+port: remaining work is tracked as cards on this repo's own seed-state ref
+(`scripts/seed task ready --actor you`). What remains for an instantiating
+owner is activation, not building: flipping the lane secrets and the autonomy
+tier (handbook, "Activating the agent lanes").
 
 ## Design & research
 
@@ -39,6 +43,7 @@ binding decisions).
 
 - **[Handbook](docs/handbook.md)** — user-facing conventions
 - **[Design](docs/design-options.md)** — the design authority: decisions, team layer, risks, glossary, resolved defaults
+- **[Architecture map](docs/architecture.md)** — the cross-repo map: layering, the port, the evidence chain, where each gate grounds
 - **[Build plan](docs/build-plan.md)** — v1 phase ordering and per-phase acceptance criteria
 - **[Research reports](docs/research/)** — per-category evidence:
   1. [Terminal TUI orchestrators](docs/research/01-terminal-tui-orchestrators.md)

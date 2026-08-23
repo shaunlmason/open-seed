@@ -2,8 +2,10 @@
 
 How to run a project on open-seed: setup, the task lifecycle, the loop,
 guardrails, and how the system degrades and scales. This is the user-facing
-companion to the [design](design-options.md) (which explains *why*) and the
-[build plan](build-plan.md) (which tracked *how it was built*).
+companion to the [design](design-options.md) (which explains *why*), the
+[build plan](build-plan.md) (which tracked *how it was built*), and the
+[architecture map](architecture.md) (which spans both repos: the layering,
+the port, the evidence chain, and where each gate grounds).
 
 ## 1. Getting started
 
@@ -97,7 +99,7 @@ and `scripts/harness/codex` ship; add your own by dropping an executable in
 map per-harness and the mapping is **declared, never silent** — see the role
 files' `permission:` frontmatter.
 
-**Checked-in workflows** (v2, §148): multi-step jobs live as step DAGs at
+**Checked-in workflows** (v2, §7.3): multi-step jobs live as step DAGs at
 `.seed/workflows/<name>.yaml` — steps with `depends_on` edges (by id),
 `consumes`/`produces` artifact contracts, `when`/`trigger_rule` branching,
 loop groups, and `approval|review|checks` gates; the format is
@@ -166,10 +168,10 @@ shell strings) and for MCP-gateway governance in the Paperclip style;
 CI, cron, and bare shells stay on the CLI, which remains the source of
 truth — no verb exists MCP-only.
 
-**Sharing skills between repos** (D8 §147): `seed.yaml` at the template
+**Sharing skills between repos** (D8): `seed.yaml` at the template
 root names upstream skill sources; `seed.lock` pins them (commit SHA +
 content sha256, full source coordinates); both are control surface
-(§113 — CODEOWNERS-reviewed, never auto-merged). The flow:
+(D4.1 — CODEOWNERS-reviewed, never auto-merged). The flow:
 
 ```sh
 $EDITOR seed.yaml                      # name sources; optionally compose
@@ -178,7 +180,7 @@ scripts/seed skills install            # materialize under skills/managed/
 git add seed.yaml seed.lock skills/managed && git commit
 ```
 
-CI runs `seed skills install --frozen` (the §116 supply-chain rule): an
+CI runs `seed skills install --frozen` (the D8 supply-chain rule): an
 unlocked manifest edit, a hash mismatch, or on-disk drift fails the
 build — with an empty manifest the step is a no-op, so fresh
 instantiations stay green with zero configuration. Managed skills flow
@@ -253,7 +255,7 @@ automatically with real workspace anchors; a maintenance **reap** runs
 in its own checkout, so reap-written packets mark the anchors
 unavailable instead of recording the reaper's git state.
 
-**Worktree tool fidelity** (§131 "the rest v2"): `.seed/hooks/` is the
+**Worktree tool fidelity** (D6 "the rest v2"): `.seed/hooks/` is the
 runner-agnostic lifecycle contract, and `.seed/hooks/shims/<tool>/` ships
 checked-in fragments for the surveyed external tools. Support is declared,
 never silent — the per-tool matrix (README in each shim dir has the full
@@ -278,7 +280,7 @@ merge authority everywhere** (R11).
 ## Activating the agent lanes
 
 The seed-dispatch and pr-review workflows ship in-tree and **inert**
-(§139): without secrets every run is a cheap no-op. Everything
+(D7): without secrets every run is a cheap no-op. Everything
 mechanizable already landed — the deterministic label router
 (`scripts/seed-dispatch-route`, contract-tested in validate.sh), the
 D4.5 identity check (`scripts/seed-review-identity`, wired into verify
@@ -298,7 +300,7 @@ The flip itself is yours; in order:
    re-runs verify automatically.
 4. **Guardrails tier**: raise `autonomy.max_tier` L2 → L3 in
    `.seed/guardrails.yaml` (its own reviewed PR — control surface).
-5. **Solo-mode caveat** (§115): on a solo repo your own account is
+5. **Solo-mode caveat** (§10 Q1): on a solo repo your own account is
    admin, implementer, AND operator — agents need a non-admin machine
    identity before L3 means anything. Do not skip this.
 

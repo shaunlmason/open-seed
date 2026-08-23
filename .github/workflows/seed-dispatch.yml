@@ -16,7 +16,7 @@ permissions:
   contents: write   # routed port verbs commit + push the seed-state ref
   issues: write
 
-# §139 conventions this workflow declares (audited os-70028620 against
+# D7 conventions this workflow declares (audited os-70028620 against
 # anthropics/claude-code-action@v1): trigger gating by write access is
 # enforced deterministically below (the action's own gating covers the
 # AI path); per-command Bash allowlists ride claude_args; agent-authored

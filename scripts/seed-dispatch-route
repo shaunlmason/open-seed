@@ -16,7 +16,7 @@
 # - An unauthorized actor is refused: exit 3, nothing on stdout.
 # - An unknown `cmd:*` is ignored: exit 0, nothing on stdout.
 # - Mirror-label edits (`state:*`) are REQUESTS, never direct state
-#   writes (§141): the output is a comment invoking the port ceremony,
+#   writes (§7.1: the port is the only state writer): the output is a comment
 #   no `seed task` state verb.
 set -eu
 
@@ -63,8 +63,8 @@ sticky='<!-- seed-dispatch -->'
 case "$label" in
   state:*)
     # Mirror label edited by hand: a request, never a direct state write
-    # (§141 — the port is the only writer).
-    printf 'gh issue comment %s --body "%s label edit \`%s\` by @%s noted as a REQUEST (mirror labels are read-only projections; state changes go through \`scripts/seed task <verb>\` — §141)."\n' \
+    # (§7.1 — the port is the only writer).
+    printf 'gh issue comment %s --body "%s label edit \`%s\` by @%s noted as a REQUEST (mirror labels are read-only projections; state changes go through \`scripts/seed task <verb>\` — §7.1)."\n' \
       "$issue" "$sticky" "$label" "$sender"
     exit 0
     ;;

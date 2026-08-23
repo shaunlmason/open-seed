@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - name: make check (validators + project checks)
         run: make check
-      - name: Shared skills pinned (D8 §116 — skills install --frozen)
+      - name: Shared skills pinned (D8 — skills install --frozen)
         run: sh scripts/seed skills install --frozen
       - name: State-ref lint (read-only; reports, never halts here)
         run: scripts/seed state lint
