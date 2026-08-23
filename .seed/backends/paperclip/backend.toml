@@ -1,4 +1,4 @@
-# paperclip — external backend over the Paperclip control plane's REST API
+# paperclip: external backend over the Paperclip control plane's REST API
 # (research/10 Part 1). Native DB-atomic checkout, server-validated
 # transitions, native budgets with hard stops. Server is truth: no offline,
 # no fork portability (declared in README.md).

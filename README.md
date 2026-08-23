@@ -3,7 +3,7 @@
 A template repository for new projects that ships standardized, checked-in tooling for
 multi-agent orchestration, task tracking, and guardrails. The contract is **files, not
 an app**: a task port with pluggable backends, coordination state on a dedicated git
-ref, a plan→implement→receipt evidence chain, enforced guardrails, and a loop runner —
+ref, a plan→implement→receipt evidence chain, enforced guardrails, and a loop runner:
 all reviewable, all degrading gracefully from a fleet of agents down to one human with
 no engine installed.
 
@@ -18,7 +18,7 @@ scripts/loop.sh --once             # or work the lifecycle by hand
 make smoke                         # deterministic end-to-end proof, no model needed
 ```
 
-**Read next: [the handbook](docs/handbook.md)** — setup, the task lifecycle, the loop,
+**Read next: [the handbook](docs/handbook.md)**: setup, the task lifecycle, the loop,
 guardrails, the degradation ladder, and scaling. Agents working in an instantiated repo
 follow [`AGENTS.md`](AGENTS.md). The `seed` engine is a pinned, hash-verified binary
 from [open-seed-engine](https://github.com/shaunlmason/open-seed-engine); the shim
@@ -41,11 +41,11 @@ Agents building open-seed itself: read
 [`docs/CONTRIBUTING-AGENTS.md`](docs/CONTRIBUTING-AGENTS.md) first (authority order,
 binding decisions).
 
-- **[Handbook](docs/handbook.md)** — user-facing conventions
-- **[Design](docs/design-options.md)** — the design authority: decisions, team layer, risks, glossary, resolved defaults
-- **[Architecture map](docs/architecture.md)** — the cross-repo map: layering, the port, the evidence chain, where each gate grounds
-- **[Build plan](docs/build-plan.md)** — v1 phase ordering and per-phase acceptance criteria
-- **[Research reports](docs/research/)** — per-category evidence:
+- **[Handbook](docs/handbook.md)**: user-facing conventions
+- **[Design](docs/design-options.md)**: the design authority: decisions, team layer, risks, glossary, resolved defaults
+- **[Architecture map](docs/architecture.md)**: the cross-repo map: layering, the port, the evidence chain, where each gate grounds
+- **[Build plan](docs/build-plan.md)**: v1 phase ordering and per-phase acceptance criteria
+- **[Research reports](docs/research/)**: per-category evidence:
   1. [Terminal TUI orchestrators](docs/research/01-terminal-tui-orchestrators.md)
   2. [Desktop & web orchestrators (A)](docs/research/02-desktop-web-orchestrators-a.md)
   3. [Desktop & web orchestrators (B)](docs/research/03-desktop-web-orchestrators-b.md)
@@ -56,7 +56,7 @@ binding decisions).
   8. [Personal assistants & inactive projects](docs/research/08-assistants-and-inactive.md)
   9. [SOTA landscape (harnesses, beads, guardrails, methodology)](docs/research/09-sota-landscape.md)
   10. [Org control planes: Paperclip vs Gas Town vs build-your-own](docs/research/10-org-control-planes.md)
-- **[Inspiration deep dives](docs/research/inspirations/)** — implementation-grade format/schema extraction from the key inspiration projects:
+- **[Inspiration deep dives](docs/research/inspirations/)**: implementation-grade format/schema extraction from the key inspiration projects:
   1. [Git-native task substrates (beads, gnap, ORCH, squad, tick-md)](docs/research/inspirations/01-git-native-task-substrates.md)
   2. [Ralph loop implementations (ralphex, ralph-claude-code, dex, wreckit, martin-loop)](docs/research/inspirations/02-ralph-loop-implementations.md)
   3. [Governance & gates (loop-engineering, orc, antfarm, loki-mode, kodo)](docs/research/inspirations/03-governance-and-gates.md)

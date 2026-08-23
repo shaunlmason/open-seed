@@ -57,7 +57,7 @@ expect_rc 6 "no-token transition" "$sb" transition "$id" --to review --actor age
 expect_rc 6 "wrong-token transition" "$sb" transition "$id" --to review --actor agent-1 --token c-bogus --json
 expect_rc 3 "close from in_progress" "$sb" close "$id" --actor lead --json
 
-# The rotation case (D1): release (reap stand-in), same actor reclaims —
+# The rotation case (D1): release (reap stand-in), same actor reclaims:
 # the old token must be dead even though the identity is unchanged.
 out=$("$sb" release "$id" --actor agent-1 --token "$tok1" --json); ok "$out" release
 out=$("$sb" claim "$id" --actor agent-1 --json); ok "$out" reclaim

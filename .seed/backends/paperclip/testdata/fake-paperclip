@@ -2,7 +2,7 @@
 """Deterministic Paperclip API test double (documented surface subset,
 research/10 Part 1): issues with the seven-state machine enforced by
 assertTransition, DB-atomic checkout locks, comments, metadata, and the
-activity log. Not a Paperclip implementation — a contract fixture.
+activity log. Not a Paperclip implementation: a contract fixture.
 
 Usage: fake-paperclip <port>
 """

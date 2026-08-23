@@ -2,7 +2,7 @@
 """Offline stand-in for Jira Cloud REST v3 (contract-test substrate).
 
 Models the subset the adapter uses: issue CRUD, transitions-by-id resolved
-from the CURRENT status (the workflow is the arbiter — unavailable target →
+from the CURRENT status (the workflow is the arbiter: unavailable target →
 not offered), assignee by accountId, labels, comments, and a JQL search that
 returns the project's issues (the adapter filters client-side).
 
@@ -12,7 +12,7 @@ Deliberate quirks that the adapter must handle:
 - Set FAKE_JIRA_NO_BLOCKED=1 to serve a workflow missing the required
   Blocked status (the adapter must refuse with exit 5 + remediation).
 - Done is terminal-ish: the only transition offered from Done is Backlog
-  (reopen) — closing again is unavailable → the adapter maps that to 3.
+  (reopen): closing again is unavailable → the adapter maps that to 3.
 """
 import json
 import os

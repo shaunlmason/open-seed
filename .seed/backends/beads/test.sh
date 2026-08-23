@@ -13,7 +13,7 @@ sb="$dir/bin/seed-backend"
 PREFIX="beads-test"
 . "$dir/corpus.sh"
 
-# Fake-only: create rollback — a forced defer failure must not leave a
+# Fake-only: create rollback: a forced defer failure must not leave a
 # claimable issue (the fake's failure injection has no live analogue).
 FAKE_BD_FAIL_DEFER=1 expect_rc 5 "create with failed defer" "$sb" create --title "Doomed" --actor a --json
 [ "$(bd list --json | jq '[.[] | select(.title == "Doomed" and .status != "closed")] | length')" = "0" ] || die "doomed issue not rolled back"

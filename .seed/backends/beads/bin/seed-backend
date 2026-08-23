@@ -62,7 +62,7 @@ port_state() {
 prio_bd() { case "$1" in P0) echo 0;; P1) echo 1;; P2) echo 2;; P3) echo 3;; *) echo 2;; esac; }
 # Real bd v1.2.2 returns an ARRAY from `bd show --json` (and an error
 # object on a missing id, exit 1); the fake mirrors it. Normalize to the
-# single issue object every consumer expects — empty output with rc 0
+# single issue object every consumer expects: empty output with rc 0
 # means not found, while a bd failure WITHOUT the documented missing-id
 # error object returns rc 5 so callers report backend_unavailable, never
 # a bogus not_found/fenced_out.
@@ -178,7 +178,7 @@ case "$verb" in
       review)
         require_fence "$id"
         # Record the implementer of record before the claim clears (the
-        # reject target — reviewer lockout).
+        # reject target: reviewer lockout).
         bd label add "$id" "seed:author:$actor" >/dev/null 2>&1
         clear_tok "$id" "$cur"
         bd update "$id" --status open --assignee "" --json >/dev/null 2>&1 || fail 5 backend_unavailable

@@ -1,9 +1,9 @@
-# open-seed — v1 Build Plan
+# open-seed: v1 Build Plan
 
 > Sequencing authority for implementing v1 as scoped in
 > [`design-options.md`](./design-options.md) §7.3. The design doc is the authority on
 > *what*; this file is the authority on *order* and *done-ness*. Phases are ordered by
-> hard dependency — later phases may start early only where they don't depend on an
+> hard dependency: later phases may start early only where they don't depend on an
 > unfinished deliverable. Status column is updated by PR as work lands.
 
 ## Decision status (read this first)
@@ -13,16 +13,16 @@
 | §2 settled ground (worktrees, AGENTS.md, Agent Skills, MCP, fresh-context, CI backpressure, status vocabulary) | **Decided** |
 | D1–D8 recommendations (filecards default, squad-shaped topology, plan gate, guardrails stack, memory, lifecycle, CI layer, packaging) | **Decided** |
 | §7.1 plugins + claim protocol · §7.2 state ref · §7.3 v1/v2 cut · §7.4 teams · §7.5 Go engine binary | **Decided** |
-| §10 Q1–Q5 (harness posture, automation-on-clone, stack coupling, distribution, state-ref principals) | **Provisional defaults** — implement as written; changing one requires a reviewed edit to §10 |
+| §10 Q1–Q5 (harness posture, automation-on-clone, stack coupling, distribution, state-ref principals) | **Provisional defaults**: implement as written; changing one requires a reviewed edit to §10 |
 | Anything not covered above | Implementer judgment, recorded in `decisions/` once that convention exists (Phase 6) |
 
-## Phase 0 — Engine repository bootstrap
+## Phase 0: Engine repository bootstrap
 
 The two-repo split (§7.5) makes this step one, and it happens **outside this repo**.
 
 - Create the engine repo (working name `open-seed-engine`; final name is an
-  implementer decision recorded in `decisions/`). Go module, MIT license — matching
-  the template's root `LICENSE`, which establishes MIT for both repos —
+  implementer decision recorded in `decisions/`). Go module, MIT license: matching
+  the template's root `LICENSE`, which establishes MIT for both repos:
   `cmd/seed/` entrypoint.
 - Release pipeline: goreleaser matrix (`linux/darwin/windows × amd64/arm64`),
   `checksums.txt`, GitHub artifact attestations (build provenance).
@@ -35,7 +35,7 @@ all six targets, and `go install .../cmd/seed@v0.1.0` works.
 > **Status: complete (2026-08-22).** Repo:
 > [`shaunlmason/open-seed-engine`](https://github.com/shaunlmason/open-seed-engine)
 > (public, MIT). One refinement over the plan as written: releases are driven by a
-> `VERSION` file (or manual dispatch) — the workflow mints the semver tag at HEAD
+> `VERSION` file (or manual dispatch): the workflow mints the semver tag at HEAD
 > in-runner, so the tag and the released commit can never disagree and no
 > contributor needs tag-push rights. Verified against
 > [v0.1.1](https://github.com/shaunlmason/open-seed-engine/releases/tag/v0.1.1):
@@ -43,7 +43,7 @@ all six targets, and `go install .../cmd/seed@v0.1.0` works.
 > download + sha256 + exec proven (the bootstrap shim's exact path), and
 > `go install` proven via the module proxy.
 
-## Phase 1 — Port spec as data + protocol core
+## Phase 1: Port spec as data + protocol core
 
 - Author `.seed/port-schema/` in **this** repo: JSON Schemas for the nine required
   verbs' inputs/outputs, the transition table (D1) and verb classes (§7.1) as data
@@ -68,7 +68,7 @@ behavior with no engine code change.
 > invariants directly, and proves spec edits flip behavior with no code change.
 > `seed spec lint` validates a repo's spec (exit 10 on mismatch).
 
-## Phase 2 — Filecards backend + `seed-state` ref
+## Phase 2: Filecards backend + `seed-state` ref
 
 - `filecards` backend plugin (ships in-template): card files, `backend.toml`
   capability manifest, `backends.lock.json` pinning.
@@ -94,19 +94,19 @@ simulated ref rewrite halts the shim.
 > auto-unblock in the closing verb's own commit, one-commit-per-verb with atomic
 > run-log lines, and the push-race retry loop observing the winner's write.
 > Notes: filecards is implemented inside the engine (`entry = "builtin"` in its
-> manifest — the external-plugin exec seam remains for installed backends);
+> manifest: the external-plugin exec seam remains for installed backends);
 > claim on an already-claimed card maps the table's exit 3 to exit 2
 > (contention) per §7.1; `seed init-github` prints the protection checklist
-> (the engine has no GitHub API access) — the API-side verification moves to
+> (the engine has no GitHub API access): the API-side verification moves to
 > Phase 5's workflows.
 
-## Phase 3 — Template scaffold
+## Phase 3: Template scaffold
 
 - Lay down the §4 tree: `.seed/` (config.toml, guardrails.yaml, version, agents/,
   teams/, backends/, hooks/), root work-product dirs (plans/, receipts/, memory/,
   decisions/, skills/, rules/), `.worktreeinclude`, `.gitattributes` (merge=union on
   `decisions/**` only), CODEOWNERS, Makefile with `make check`, `.mcp.json`.
-- Bootstrap shim: `scripts/seed` (POSIX sh) + `scripts/seed.ps1` — read pin +
+- Bootstrap shim: `scripts/seed` (POSIX sh) + `scripts/seed.ps1`: read pin +
   SHA-256 from the lockfile, download to a cache outside the repo, verify, exec;
   vendored-binary config key for air-gapped use; clear failure message when the
   fetch fails.
@@ -118,7 +118,7 @@ simulated ref rewrite halts the shim.
 **Done when:** a fresh template instantiation + `seed init` on a new GitHub repo
 reaches a working claim/transition cycle with only the bootstrap shim checked in.
 **Degradation check (differentiator #4):** the same instantiation with *no engine
-installed* must still be a workable repo — readable cards, CODEOWNERS + server-side
+installed* must still be a workable repo: readable cards, CODEOWNERS + server-side
 gates intact.
 
 > **Status: complete (2026-08-22).** Full §4 tree laid down (guardrails, CODEOWNERS,
@@ -126,7 +126,7 @@ gates intact.
 > dispatcher, `core` squad, work-product dirs, fan-out markers, `.worktreeinclude`,
 > `merge=union` on decisions only). Bootstrap shim pair pins engine v0.3.0 via
 > `.seed/engine.lock` (cold download+verify+exec 0.7s; SHA-256 tamper refused;
-> `vendor`/`SEED_ENGINE` escape hatches). AGENTS.md namespace swap done — user-facing
+> `vendor`/`SEED_ENGINE` escape hatches). AGENTS.md namespace swap done: user-facing
 > contract at root with the `seed:rules` managed block, contributor guidance at
 > `docs/CONTRIBUTING-AGENTS.md`. Done-when verified on a scratch instantiation
 > (create→promote→claim→review→close through the shim only); degradation verified
@@ -135,7 +135,7 @@ gates intact.
 > `seed sync` lands (Phase 6); `seed hooks run` fallback lands with a later engine
 > release.
 
-## Phase 4 — Plan/receipt chain
+## Phase 4: Plan/receipt chain
 
 - Plan grammar validator (D3): `plans/<task-id>.md`, `## Validation Commands`
   parsing, merge-base blob rule, PR purity rule (plan PRs vs task PRs, classified
@@ -155,16 +155,16 @@ salvaged).
 > **Status: complete (2026-08-22), engine v0.4.0.** All four done-when scenarios
 > have passing and failing fixtures (plus: red validation commands, missing
 > merge-base plan, merge-group-ref refusal). `seed receipt verify` reads the plan
-> from the merge-base blob only — the tamper fixture proves the commands executed
+> from the merge-base blob only: the tamper fixture proves the commands executed
 > come from the merge-base even when the head copy is malicious. Validators:
 > auto-merge intersection (conservative glob-prefix overlap), tier ≤ ceiling,
 > human lead, unique priorities, non-overlapping scopes, role-variant body-hash,
-> repo-wide plan lint — `seed validate`, wired into `scripts/validate.sh` with
+> repo-wide plan lint: `seed validate`, wired into `scripts/validate.sh` with
 > engine-absent degradation. Deferred to Phase 5 as planned: the `merge_group`
-> workflow trigger and PR-number derivation (the engine side — refusing to
-> classify a queue ref and requiring the real head branch — is in).
+> workflow trigger and PR-number derivation (the engine side: refusing to
+> classify a queue ref and requiring the real head branch: is in).
 
-## Phase 5 — CI workflows
+## Phase 5: CI workflows
 
 - **check+validate** (live): `make check` + all validators + fan-out drift check +
   state-ref fetch and lint (card lint, run-log commit-over-commit inclusion,
@@ -183,7 +183,7 @@ against a scratch repo.
 
 > **Status: complete (2026-08-22), engine v0.5.0.** Five workflows shipped:
 > check-validate (make check + validators + read-only state lint; on PRs and
-> merge_group, the verify gate — with the D3 merge-queue adaptation deriving the
+> merge_group, the verify gate: with the D3 merge-queue adaptation deriving the
 > PR from the queue ref and classifying by the real head branch), seed-maintenance
 > (reap → state-shaped plan-unblock via `gh` → merged-PR close gated on the green
 > verify check → conformance lint that writes HALT and stops the job before
@@ -195,9 +195,9 @@ against a scratch repo.
 > tests against scratch git remotes; every live-workflow engine step was run green
 > against the template itself (including the state lint replaying the repo's real
 > seed-state history). Both live workflows execute on the default branch after
-> this branch merges — verified locally step-for-step until then.
+> this branch merges: verified locally step-for-step until then.
 
-## Phase 6 — Loop, roles, memory
+## Phase 6: Loop, roles, memory
 
 - `loop.sh`: dual-gate exit, circuit breaker, budgets, lease renewal at half-lease
   cadence.
@@ -225,10 +225,10 @@ check+validate.
 > and iteration budget from guardrails.yaml. The done-when is proven by
 > `make smoke` (scripts/smoke-loop.sh): a temp instantiation with a
 > deterministic fake harness goes ready→review unattended with the receipt on
-> the task branch, memory appended, evidence attached, gates green — no model,
+> the task branch, memory appended, evidence attached, gates green, no model,
 > no secrets, CI-safe.
 
-## Phase 7 — Docs, dogfood, release
+## Phase 7: Docs, dogfood, release
 
 - Conventions handbook in `docs/` (user-facing: lifecycle walkthrough, guardrails
   vocabulary, degradation ladder, backend upgrade path to beads, merge-queue note).
@@ -238,16 +238,16 @@ check+validate.
   guidance (R8).
 
 **Done when:** a team can instantiate the template and reach Phase 6's unattended
-loop scenario using only shipped docs — no knowledge from this repo's history
+loop scenario using only shipped docs, no knowledge from this repo's history
 required.
 
-> **Status: complete (2026-08-22) — v1 done.** `docs/handbook.md` is the user-facing
+> **Status: complete (2026-08-22): v1 done.** `docs/handbook.md` is the user-facing
 > conventions handbook (setup + protections, lifecycle walkthrough with real
 > commands, the loop, guardrails honesty, the degradation ladder, scaling/upgrade
 > guidance incl. the beads path and merge-queue note); README rewritten as the
-> template front page with a quickstart. Dogfood is live: the remaining work — three
+> template front page with a quickstart. Dogfood is live: the remaining work: three
 > P1 tasks (server-side protections, first live CI runs, template v0.1.0 tag) and
-> the eight v2 items — are cards on this repo's own seed-state ref, created through
+> the eight v2 items: are cards on this repo's own seed-state ref, created through
 > the port. The done-when is `make smoke`: the shipped scripts + docs take a fresh
 > instantiation to the unattended ready→review cycle with no repo-history knowledge.
 > Note: the template release tag itself is a card (session credentials cannot push
@@ -255,7 +255,7 @@ required.
 
 ## Standing constraints (all phases)
 
-- Every shipped convention ships with its validator (R9) — they are one deliverable.
+- Every shipped convention ships with its validator (R9): they are one deliverable.
 - No model secrets in live v1 CI; deterministic workflows only (§7.3).
 - The glossary (§9) governs all naming in code, config, and docs.
 - v2 items (beads/github-issues backends, mirror, workflow engine, skills lockfile,

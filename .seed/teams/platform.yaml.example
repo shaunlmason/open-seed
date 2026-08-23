@@ -1,4 +1,4 @@
-# Second-squad example (§6 multi-squad routing — v2 activated). Rename to
+# Second-squad example (§6 multi-squad routing: v2 activated). Rename to
 # platform.yaml to activate; the .example suffix keeps this file inert
 # (team loading only reads *.yaml).
 #

@@ -1,6 +1,6 @@
-# check+validate (live, deterministic — no model secrets; §7.3).
+# check+validate (live, deterministic, no model secrets; §7.3).
 # The fast backpressure gate: make check + all validators, the state-ref lint,
-# and — on task/plan PRs — the D3/D4.5 verify gate.
+# and, on task/plan PRs, the D3/D4.5 verify gate.
 name: check-validate
 
 on:
@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - name: make check (validators + project checks)
         run: make check
-      - name: Shared skills pinned (D8 — skills install --frozen)
+      - name: Shared skills pinned (D8: skills install --frozen)
         run: sh scripts/seed skills install --frozen
       - name: State-ref lint (read-only; reports, never halts here)
         run: scripts/seed state lint
@@ -35,7 +35,7 @@ jobs:
   verify:
     # The receipt verify gate (D4.5): CI is the author of record. Runs for
     # pull_request and merge_group; on merge_group the PR number is derived
-    # from the queue ref and classification uses the REAL head branch — a
+    # from the queue ref and classification uses the REAL head branch: a
     # queue ref must never classify as a non-task PR and pass vacuously (D3).
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.event_name == 'pull_request_review'
     runs-on: ubuntu-latest
@@ -76,7 +76,7 @@ jobs:
           TASK: ${{ steps.head.outputs.task }}
         run: |
           scripts/seed receipt verify "$TASK" --base origin/main --branch "$BRANCH" --run
-      - name: Reviewer identity (D4.5 — reviewer differs from implementer)
+      - name: Reviewer identity (D4.5: reviewer differs from implementer)
         if: github.event_name == 'pull_request_review' && steps.head.outputs.class == 'task'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -85,7 +85,7 @@ jobs:
         run: |
           gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json reviews -q .reviews             | sh scripts/seed-review-identity || rc=$?
           # exit 2 = no qualifying approval yet: the required check stays
-          # red until a non-implementer approval exists (D4.5) — a
+          # red until a non-implementer approval exists (D4.5): a
           # COMMENTED/CHANGES_REQUESTED review must not leave verify
           # green. exit 3 = self-approval, refused.
           exit "${rc:-0}"

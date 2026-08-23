@@ -92,7 +92,7 @@ for d in "$root"/.seed/hooks/shims/*/; do
 done
 
 # Dispatcher routing contract (os-70028620): fake events through
-# scripts/seed-dispatch-route — authorized cmd labels map to port
+# scripts/seed-dispatch-route: authorized cmd labels map to port
 # invocations with label removal + provenance; unauthorized actors are
 # refused; unknown commands are ignored; mirror label edits become
 # requests, never state writes. Zero credentials.

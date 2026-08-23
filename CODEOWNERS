@@ -17,5 +17,5 @@
 /seed.yaml        @shaunlmason
 /seed.lock        @shaunlmason
 
-# Chapter leads — one line per role file; variants share the lead.
+# Chapter leads: one line per role file; variants share the lead.
 /.seed/agents/    @shaunlmason

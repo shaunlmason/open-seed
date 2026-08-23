@@ -1,6 +1,6 @@
-# jira — external backend over Jira Cloud REST v3 (plan os-25958b27).
+# jira: external backend over Jira Cloud REST v3 (plan os-25958b27).
 # The enterprise-reach adapter: statuses are workflow-specific, so every
-# move resolves its transition BY TARGET STATUS NAME at call time — Jira's
+# move resolves its transition BY TARGET STATUS NAME at call time: Jira's
 # workflow is the arbiter (unavailable → exit 3), and a status missing from
 # the workflow entirely is the declared convention gap (exit 5 +
 # remediation). Actor identity rides the checked-in accountId mapping

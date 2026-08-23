@@ -1,6 +1,6 @@
 # The --no-pr close path (D7): for cards whose work never lands as a
 # seed/<id> PR. Running via workflow_dispatch makes GitHub record the
-# triggering actor server-side — the done-consistency lint validates against
+# triggering actor server-side: the done-consistency lint validates against
 # that artifact, never card text. The engine additionally requires the actor
 # to be in the .seed/config.toml operator roster.
 name: seed-close-no-pr

@@ -1,4 +1,4 @@
-# seed-maintenance (live, deterministic — no model secrets; §7.3/D7).
+# seed-maintenance (live, deterministic, no model secrets; §7.3/D7).
 # Runs under the workflow's operator credential ("seed-maintenance", in the
 # .seed/config.toml roster). Scheduled off the hour (aeon debt-model: assume
 # missed ticks). Order matters: reap → unblock → close → lint (halts on
@@ -33,7 +33,7 @@ jobs:
         id: gate
         run: |
           # A machine-local backend (fastcards: state_portability=machine)
-          # keeps its state in a local DB that CI can never see — the whole
+          # keeps its state in a local DB that CI can never see: the whole
           # maintenance lane is the operator's local job there, and a stale
           # seed-state ref left over from a filecards migration must not
           # reactivate it (every step, anchor first, would fail).
@@ -52,7 +52,7 @@ jobs:
         if: steps.gate.outputs.active == 'true'
         run: scripts/seed maintain reap --actor "$ACTOR"
 
-      - name: Plan-unblock (state-shaped — PR merged or closed, D1)
+      - name: Plan-unblock (state-shaped: PR merged or closed, D1)
         if: steps.gate.outputs.active == 'true'
         run: |
           for id in $(scripts/seed task list --state blocked | jq -r '.tasks[].task'); do
@@ -83,7 +83,7 @@ jobs:
             fi
           done
 
-      - name: Mirror export (one-way, D1 — only when [mirror] enabled)
+      - name: Mirror export (one-way, D1: only when [mirror] enabled)
         if: steps.gate.outputs.active == 'true'
         run: |
           enabled=$(awk '/^\[mirror\]/{m=1} m && /^enabled/{print $3; exit}' .seed/config.toml)
@@ -102,7 +102,7 @@ jobs:
               elif .state=="closed" then "done"
               elif (.labels|length)==0 then "backlog"
               else (.labels[0] | ltrimstr("seed:")) end')
-            # Record an export only after every gh mutation for it succeeded —
+            # Record an export only after every gh mutation for it succeeded:
             # a failed mutation must leave the card planned for the next tick.
             ok=1
             case "$op" in

@@ -61,7 +61,7 @@ expect_rc 6 "wrong-token transition" "$sb" transition "$id" --to review --actor 
 expect_rc 6 "regex-metachar token cannot bypass the fence" "$sb" transition "$id" --to review --actor agent-1 --token '.*' --json
 expect_rc 3 "close from in_progress" "$sb" close "$id" --actor lead --json
 
-# Token rotation: release, same-actor reclaim — the old token must be dead.
+# Token rotation: release, same-actor reclaim: the old token must be dead.
 out=$("$sb" release "$id" --actor agent-1 --token "$tok1" --json); ok "$out" release
 out=$("$sb" claim "$id" --actor agent-1 --json); ok "$out" reclaim
 tok2=$(echo "$out" | jq -r .claim_token)
@@ -173,7 +173,7 @@ echo "$out" | jq -e '.error == "claim_contention"' >/dev/null || die "lost race 
 [ "$("$sb" get "$rc_card" --json | jq -r .card.holder)" = "agent-2" ] || die "race winner not recorded"
 
 # A refused cascade release keeps the dependency recorded (recoverable via
-# operator unblock once the workflow allows it) — never a Blocked issue
+# operator unblock once the workflow allows it), never a Blocked issue
 # with no blocker on record.
 kill $srv 2>/dev/null || true; wait $srv 2>/dev/null || true
 port3=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')

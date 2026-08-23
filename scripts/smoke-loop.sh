@@ -3,7 +3,7 @@
 # template into a temp repo, pre-merge a plan, create+promote a card, and run
 # loop.sh --once with a deterministic fake harness. Asserts: card reaches
 # review, receipt committed on the task branch, gate green, memory appended.
-# No model, no secrets — safe for CI.
+# No model, no secrets: safe for CI.
 set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -21,7 +21,7 @@ cd "$inst"
 git init -q --initial-branch=main
 git remote add origin "$work/origin.git"
 
-# The task: a plan already merged on main (D3 — plan gate before work).
+# The task: a plan already merged on main (D3: plan gate before work).
 id="os-aaaa0001"
 cat > "plans/$id.md" <<'EOF'
 # Plan
@@ -95,7 +95,7 @@ body=$(scripts/seed task get "$id" | jq -r .card.body)
 echo "$body" | grep -q "$cid" || { say "FAIL: comment_id not stamped into the card body"; exit 1; }
 echo "$body" | grep -q "$eid" || { say "FAIL: evidence_id not stamped into the card body"; exit 1; }
 
-# Two-squad routing (os-10c10aae): a second team file activates §6 —
+# Two-squad routing (os-10c10aae): a second team file activates §6:
 # explicit/label routing, ready --squad filtering, and the overlap
 # refusal, all against the live instantiation.
 say "two-squad scenario: routing + ready --squad + overlap refusal"

@@ -5,7 +5,7 @@ schema_version: "1"
 name: smoke
 description: |
   Use when: proving the workflow engine end-to-end (CI, fresh clones).
-  NOT for: real work — every step is mock-safe by construction.
+  NOT for: real work: every step is mock-safe by construction.
 inputs:
   - {name: goal, type: string, required: false, description: "Free text echoed into the plan"}
 defaults: {harness: claude, model: sonnet}

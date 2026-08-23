@@ -3,7 +3,7 @@
 octomux's `.d` hooks are **task-lifecycle events, not worktree-lifecycle
 events** (survey correction, inspirations/07 §2). Its full surface is seven
 task events; exactly two are mappable onto the seed contract, and this shim
-maps only those — the rest of the contract is a declared gap, not an
+maps only those: the rest of the contract is a declared gap, not an
 invented mapping.
 
 ## Install
@@ -26,7 +26,7 @@ logs non-zero exits but never blocks on them.
 | Contract point | Supported | Via |
 |---|---|---|
 | post-create.d | yes | `task_created` (cwd = task worktree) |
-| setup / teardown | approximate | `runtime_state_changed` dispatch — teardown fires on terminal runtime states, not on worktree removal |
+| setup / teardown | approximate | `runtime_state_changed` dispatch: teardown fires on terminal runtime states, not on worktree removal |
 | run | no | octomux owns the runtime; no hookable start point |
 | pre-merge.d (blocking) | **no** | all octomux hooks are fire-and-forget; CI is the merge authority (R11) |
 
