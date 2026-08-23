@@ -188,3 +188,4 @@
 {"actor":"shaun","data":{"evidence_id":"ev-d1e5c8bf","kind":"log"},"task":"os-62b64ce8","ts":"2026-08-23T03:44:33Z","verb":"attach-evidence"}
 {"actor":"shaun","data":{"to":"review","transitioned":true},"task":"os-62b64ce8","ts":"2026-08-23T03:44:43Z","verb":"transition"}
 {"actor":"shaun","data":{"title":"template upgrade cannot resolve releases while open-seed is private"},"task":"os-bb20001f","ts":"2026-08-23T03:44:55Z","verb":"create"}
+{"actor":"shaun","data":{"lease_expires":"2026-08-23T04:48:26Z"},"task":"os-18135882","ts":"2026-08-23T03:48:26Z","verb":"claim"}
