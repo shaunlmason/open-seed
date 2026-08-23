@@ -206,3 +206,4 @@
 {"actor":"shaunlmason","data":{"kind":"log","ref":"no-pr evidence repair: card was accepted at 04:18Z without the --no-pr flag; the no-pr: prefix restores the D7 exemption the done-consistency lint requires"},"task":"os-62b64ce8","ts":"2026-08-23T07:19:01Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"kind":"log","ref":"no-pr evidence repair: card was accepted at 04:18Z without the --no-pr flag; the no-pr: prefix restores the D7 exemption the done-consistency lint requires"},"task":"os-72722779","ts":"2026-08-23T07:19:03Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"title":"paperclip backend: live-server contract test (npx paperclipai onboard)"},"task":"os-2c0c474c","ts":"2026-08-23T07:26:53Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"v2: Claude Code plugin/marketplace channel for skills, roles, workflows (R8, §10 Q4)"},"task":"os-221f5929","ts":"2026-08-23T07:26:56Z","verb":"create"}
