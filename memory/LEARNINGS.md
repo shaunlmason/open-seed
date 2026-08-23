@@ -68,3 +68,16 @@ Fresh sessions read this file instead of rediscovering.
   unchanged, run-log line, one commit) plus `state resume`; better,
   close no-PR work through the `seed-close-no-pr` workflow_dispatch so
   the marker mints itself.
+- 2026-08-23 (state-ref repair): the D7 no-PR exemption lives in the
+  evidence string, not the run log — a done card whose work never landed
+  as a `seed/<id>` PR must have evidence starting `no-pr:` (the
+  `accept`/`close --no-pr` flag mints it), else the done-consistency lint
+  HALTs the whole state ref: "done without a resolvable plan". The
+  marker alone is not the proof: D7 requires a server-attributed artifact
+  behind it (the seed-close-no-pr workflow's run URL, or a comment/issue
+  by the closing human) — a bare `accept` mints no such artifact, so any
+  repair must create one and cite it in the evidence (this incident:
+  issue #51, cited 2026-08-23). Repair mechanics: one commit per card
+  (front-matter evidence edit + a run-log comment line); the replay lint
+  allows same-state card edits, and `state resume` is exempt from the
+  HALT (checkHalt=false) so it can always run.
