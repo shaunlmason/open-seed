@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - name: make check (validators + project checks)
         run: make check
-      - name: Shared skills pinned (D8: skills install --frozen)
+      - name: 'Shared skills pinned (D8: skills install --frozen)'
         run: sh scripts/seed skills install --frozen
       - name: State-ref lint (read-only; reports, never halts here)
         run: scripts/seed state lint
@@ -76,7 +76,7 @@ jobs:
           TASK: ${{ steps.head.outputs.task }}
         run: |
           scripts/seed receipt verify "$TASK" --base origin/main --branch "$BRANCH" --run
-      - name: Reviewer identity (D4.5: reviewer differs from implementer)
+      - name: 'Reviewer identity (D4.5: reviewer differs from implementer)'
         if: github.event_name == 'pull_request_review' && steps.head.outputs.class == 'task'
         env:
           GH_TOKEN: ${{ github.token }}

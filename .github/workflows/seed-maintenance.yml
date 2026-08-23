@@ -52,7 +52,7 @@ jobs:
         if: steps.gate.outputs.active == 'true'
         run: scripts/seed maintain reap --actor "$ACTOR"
 
-      - name: Plan-unblock (state-shaped: PR merged or closed, D1)
+      - name: 'Plan-unblock (state-shaped: PR merged or closed, D1)'
         if: steps.gate.outputs.active == 'true'
         run: |
           for id in $(scripts/seed task list --state blocked | jq -r '.tasks[].task'); do
@@ -83,7 +83,7 @@ jobs:
             fi
           done
 
-      - name: Mirror export (one-way, D1: only when [mirror] enabled)
+      - name: 'Mirror export (one-way, D1: only when [mirror] enabled)'
         if: steps.gate.outputs.active == 'true'
         run: |
           enabled=$(awk '/^\[mirror\]/{m=1} m && /^enabled/{print $3; exit}' .seed/config.toml)
