@@ -59,7 +59,7 @@ Fresh sessions read this file instead of rediscovering.
   mission) and ship the placeholder commented out.
 - 2026-08-23 (os-488323ec): the D7 done-consistency exemption is the
   `no-pr:` evidence PREFIX, minted only by a `--no-pr` close (engine
-  task.go `record_review` effect) — a plain CLI `task close` on a
+  task.go `record_review` effect): a plain CLI `task close` on a
   cross-repo card (no template plan, no `seed/<id>` PR) passes its own
   transition but leaves the state ref conformance-failing, and `done`
   is terminal with no re-record verb: the next maintenance tick writes
