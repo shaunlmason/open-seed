@@ -6,17 +6,17 @@
 >
 > **Erratum (design review, 2026-08-22):** superseded by `docs/design-options.md` on run-state
 > placement: this file's synthesis puts workflow checkpoints at `.seed/state/runs/<run-id>.json`,
-> but `.seed/**` is human-owned control surface in the final design — workflow-run scratch
+> but `.seed/**` is human-owned control surface in the final design: workflow-run scratch
 > (checkpoints, artifacts) is **uncommitted local state**, excluded via `.git/info/exclude`,
 > never under `.seed/`. The workflow engine itself is v2 (§7.3).
 
-## 1. nutthouse/tutti — `tutti.toml` (Rust)
+## 1. nutthouse/tutti: `tutti.toml` (Rust)
 
 The complete schema comes from `src/config/mod.rs` (serde structs) plus the repo's own dogfood `tutti.toml` (399 lines) and `docs/examples/tutti-codex-sdlc.toml`.
 
 **Top level:** `[workspace]` (name, description, `[workspace.env]` with git_name/git_email + flattened extra env, `[workspace.auth].default_profile`), `[defaults]` (`worktree` bool default true, `runtime`), `[roles]`, `[launch]` (`mode = safe|auto|unattended`, `policy = constrained|bypass`), `[[agent]]`, `[[tool_pack]]`, `[[workflow]]`, `[[hook]]` (events `agent_stop|workflow_complete`), `[handoff]`, `[observe]`, `[budget]`, `[[webhook]]`.
 
-**Roles mapping** — a plain table; agents reference it via `role`:
+**Roles mapping**: a plain table; agents reference it via `role`:
 
 ```toml
 [roles]
@@ -29,9 +29,9 @@ name = "backend"
 role = "backend"     # runtime resolved via [roles]
 ```
 
-**`[[agent]]` fields** (verbatim from `AgentConfig`): `name` (required), `runtime` (validated against `["claude-code", "codex", "aider", "openclaw"]`), `scope` (a single glob string, e.g. `scope = "src/**"` — not a list), `prompt`, `depends_on` (agent names), `worktree`, `fresh_worktree`, `branch`, `persistent` (bool), `memory` (path to persistent memory file), `env` (map), `role`.
+**`[[agent]]` fields** (verbatim from `AgentConfig`): `name` (required), `runtime` (validated against `["claude-code", "codex", "aider", "openclaw"]`), `scope` (a single glob string, e.g. `scope = "src/**"`, not a list), `prompt`, `depends_on` (agent names), `worktree`, `fresh_worktree`, `branch`, `persistent` (bool), `memory` (path to persistent memory file), `env` (map), `role`.
 
-**Workflow step types** — a serde enum tagged by `type`, six variants:
+**Workflow step types**: a serde enum tagged by `type`, six variants:
 
 ```rust
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -48,11 +48,11 @@ pub enum WorkflowStepConfig {
 }
 ```
 
-Note `prompt` steps carry per-step `provider` and `model` overrides — exactly open-seed's per-step harness/model premise.
+Note `prompt` steps carry per-step `provider` and `model` overrides: exactly open-seed's per-step harness/model premise.
 
-**depends_on parallelism**: on steps it is `Vec<usize>` — **1-based step numbers, not ids** (README: "independent `ensure_running`/`review`/`land` steps run in parallel waves"). The executor computes ready waves and runs each wave on threads, joining before the next wave; a `fail_mode = "closed"` failure hard-stops the DAG.
+**depends_on parallelism**: on steps it is `Vec<usize>`: **1-based step numbers, not ids** (README: "independent `ensure_running`/`review`/`land` steps run in parallel waves"). The executor computes ready waves and runs each wave on threads, joining before the next wave; a `fail_mode = "closed"` failure hard-stops the DAG.
 
-**Artifacts**: a prompt step with `artifact_glob` + `artifact_name` switches from idle-detection to **artifact-polling** — tutti polls the glob until a new file appears. Verbatim from the dogfood config:
+**Artifacts**: a prompt step with `artifact_glob` + `artifact_name` switches from idle-detection to **artifact-polling**: tutti polls the glob until a new file appears. Verbatim from the dogfood config:
 
 ```toml
 [[workflow.step]]
@@ -62,7 +62,7 @@ agent = "planner"
 text = "/office-hours"
 artifact_glob = "~/.gstack/projects/{slug}/*-design-*.md"
 artifact_name = "design_doc"
-# No wait_for_idle — artifact-polling mode
+# No wait_for_idle: artifact-polling mode
 
 [[workflow.step]]
 id = "eng_review"
@@ -77,7 +77,7 @@ Injection tokens are `{{output.<step_id_or_artifact_name>.path}}` and `{{output.
 
 **Checkpoint/resume**: `.tutti/state/workflow-checkpoints/<run_id>.json` serializes `{run_id, workflow_name, strict, origin, agent_scope, started_at, finished_at, success, failed_steps, step_results, output_files}`; step outputs land in `.tutti/state/workflow-outputs/<run_id>/<step_id>.json`. `tt run --resume <run_id>` refuses if `success == true`, drops failed step results, rebuilds completed steps from surviving indices, reloads `output_files` so `{{output.*}}` still resolves, and re-executes only non-completed steps. Validation checks: duplicate agent names, agent depends_on existence + self-dep + cycles (topological sort), role table closure, known runtimes, and step depends_on bounds.
 
-## 2. KnoxOps/agent-runbook — `runbook.yaml` → SKILL.md compiler (Python)
+## 2. KnoxOps/agent-runbook: `runbook.yaml` → SKILL.md compiler (Python)
 
 Crucial framing: **this is a compiler, not a runtime**. `python3 -m agent_runbook generate runbook.yaml --output dir` compiles to a `SKILL.md` that the agent itself executes; checkpoints/loops are instructions in the compiled prose plus generated helper scripts.
 
@@ -105,9 +105,9 @@ class Step(BaseModel):
 
 The README markets "eight step types," but **the enum has only four**; `parallel`, `branch` (`condition`), `checkpoint`, and `quality_check` are *fields/decorators on steps*, each with its own strategy module. Worth remembering when copying the marketing table.
 
-**Contract declaration**: every step's `output:` pairs a file with a JSON Schema path; schemas are ordinary draft-07 files (e.g. a `oneOf` over the real payload vs `{"done": true}` — their sentinel convention for "loop finished").
+**Contract declaration**: every step's `output:` pairs a file with a JSON Schema path; schemas are ordinary draft-07 files (e.g. a `oneOf` over the real payload vs `{"done": true}`: their sentinel convention for "loop finished").
 
-**Contract-closure validation** (`validator.py`, 13 checks): duplicate step IDs; `prompt_file` existence; **schema file existence**; DAG cycle detection; `from_step` must exist AND must appear in that step's `depends_on` (this is the closure rule — you cannot consume an artifact from a step you don't depend on); condition validity; parallel config sanity; type/field mismatches; output-file conflict warnings; orphan-step warnings; quality_check config; loop requirements (`goal` + non-empty `body`).
+**Contract-closure validation** (`validator.py`, 13 checks): duplicate step IDs; `prompt_file` existence; **schema file existence**; DAG cycle detection; `from_step` must exist AND must appear in that step's `depends_on` (this is the closure rule: you cannot consume an artifact from a step you don't depend on); condition validity; parallel config sanity; type/field mismatches; output-file conflict warnings; orphan-step warnings; quality_check config; loop requirements (`goal` + non-empty `body`).
 
 **Compiled SKILL.md** (verbatim structure): YAML frontmatter (`name`, `description`, `user-invocable: true`); an Input Parameters table; then an "Execution Flow" that begins with a **`task_context.json` state file the agent must maintain**:
 
@@ -117,9 +117,9 @@ The README markets "eight step types," but **the enum has only four**; `parallel
   "updated_at": "<ISO timestamp>" }
 ```
 
-Each step compiles to a `### Step N: <id>` section with **Type**, **Description**, an execution block, Output Files, and a Progress Tracking block. Loops compile a "Goal Evaluation" epilogue: goal met → proceed; not met + iterations remain → reset body steps; max reached → complete with `max_iterations_reached`. Human approval is not a first-class type — it's an `inline` step whose prompt says "WAIT for the human… copy pending_action.json to approved_action.json / write skip_action.json", with downstream steps branching on which file exists. **All state passing is files in the working directory.**
+Each step compiles to a `### Step N: <id>` section with **Type**, **Description**, an execution block, Output Files, and a Progress Tracking block. Loops compile a "Goal Evaluation" epilogue: goal met → proceed; not met + iterations remain → reset body steps; max reached → complete with `max_iterations_reached`. Human approval is not a first-class type: it's an `inline` step whose prompt says "WAIT for the human… copy pending_action.json to approved_action.json / write skip_action.json", with downstream steps branching on which file exists. **All state passing is files in the working directory.**
 
-## 3. crewplaneai/crewplane — Markdown workflows with YAML frontmatter (Python)
+## 3. crewplaneai/crewplane: Markdown workflows with YAML frontmatter (Python)
 
 Workflow files are `*.task.md` under `.crewplane/workflows/`. Verbatim minimum:
 
@@ -138,17 +138,17 @@ nodes:
 Inspect the project.
 ```
 
-**Frontmatter**: `schema_version` (must match the tool's), `name`, `description`, `inputs` (workflow input name → local input-node id), `imports` (`{path, as, with, inputs}` — alias-namespaced, cycle-checked, project-root-bounded, unused `with` params fail), `worktrees` (experimental), `nodes`.
+**Frontmatter**: `schema_version` (must match the tool's), `name`, `description`, `inputs` (workflow input name → local input-node id), `imports` (`{path, as, with, inputs}`: alias-namespaced, cycle-checked, project-root-bounded, unused `with` params fail), `worktrees` (experimental), `nodes`.
 
-**Node fields**: `id` (`[a-z0-9._-]+`, reserved names rejected), `mode: parallel|sequential|input`, `providers` (shorthand strings = executors, or objects `{provider, model, reasoning, role: executor|reviewer}`), `needs`, `continue_on_failure`, `findings` (bool — write a findings artifact), `source` (input mode only), `depth` (sequential rounds / remediation depth), `audit_rounds`, `review_starts_with`, `failure_threshold` (parallel), `token_budget: {warn_threshold_chars, fail_threshold_chars}`, `worktree`.
+**Node fields**: `id` (`[a-z0-9._-]+`, reserved names rejected), `mode: parallel|sequential|input`, `providers` (shorthand strings = executors, or objects `{provider, model, reasoning, role: executor|reviewer}`), `needs`, `continue_on_failure`, `findings` (bool: write a findings artifact), `source` (input mode only), `depth` (sequential rounds / remediation depth), `audit_rounds`, `review_starts_with`, `failure_threshold` (parallel), `token_budget: {warn_threshold_chars, fail_threshold_chars}`, `worktree`.
 
-**Body mapping**: every non-input node requires exactly one `## <node-id>` section; unmarked markdown is shared prompt, and role-scoped segments use standalone HTML comments `<!-- crewplane:executor -->…<!-- /crewplane:executor -->` / `crewplane:reviewer`. Review loops (sequential multi-provider: contiguous executors then contiguous reviewers) require all reviewers to approve; loop order is `for audit_round: for local_round in 1..depth+1: candidate → review → stop on approval`. Template tokens: `{{file:path}}`, `{{env:KEY}}`, `{{var:KEY}}`, `{{node.output}}`, `{{node.findings}}`, plus `_path`/`_size`/`_sha256` metadata variants. Artifact references are **only valid for upstream `needs` dependencies**, and `findings` refs require the producer to declare `findings: true` — validation enforces artifact-closure like agent-runbook does. The bundled `refactoring-example.task.md` shows the full audit→plan→execute→parallel-review→fix→handoff pipeline mixing gemini/claude/codex per node.
+**Body mapping**: every non-input node requires exactly one `## <node-id>` section; unmarked markdown is shared prompt, and role-scoped segments use standalone HTML comments `<!-- crewplane:executor -->…<!-- /crewplane:executor -->` / `crewplane:reviewer`. Review loops (sequential multi-provider: contiguous executors then contiguous reviewers) require all reviewers to approve; loop order is `for audit_round: for local_round in 1..depth+1: candidate → review → stop on approval`. Template tokens: `{{file:path}}`, `{{env:KEY}}`, `{{var:KEY}}`, `{{node.output}}`, `{{node.findings}}`, plus `_path`/`_size`/`_sha256` metadata variants. Artifact references are **only valid for upstream `needs` dependencies**, and `findings` refs require the producer to declare `findings: true`: validation enforces artifact-closure like agent-runbook does. The bundled `refactoring-example.task.md` shows the full audit→plan→execute→parallel-review→fix→handoff pipeline mixing gemini/claude/codex per node.
 
-**config.yml wiring**: `.crewplane/config.yml` defines `agents.<name>` — `cli_cmd` (argv), `provider_kind: claude|codex|copilot|gemini|kilo|generic`, `default_model`, `model_arg`, `prompt_transport: stdin|argv`, `extra_args`, and an unusually rich retry/quota block (`retry_on_exit_codes`, `retry_on_stderr_contains`, `quota_reached_on_contains`, `quota_retry_max_wait_seconds`, `invocation_idle_timeout_seconds` default 1800, per-million-token `pricing`). Settings include `max_audit_rounds` (default 5), `max_concurrent_nodes`, global `token_budget`.
+**config.yml wiring**: `.crewplane/config.yml` defines `agents.<name>`: `cli_cmd` (argv), `provider_kind: claude|codex|copilot|gemini|kilo|generic`, `default_model`, `model_arg`, `prompt_transport: stdin|argv`, `extra_args`, and an unusually rich retry/quota block (`retry_on_exit_codes`, `retry_on_stderr_contains`, `quota_reached_on_contains`, `quota_retry_max_wait_seconds`, `invocation_idle_timeout_seconds` default 1800, per-million-token `pricing`). Settings include `max_audit_rounds` (default 5), `max_concurrent_nodes`, global `token_budget`.
 
-**Mock provider**: `crewplane init` generates a config with one `mock` agent and `invoker.implementation: "mock"` with options `{output_mode: "lorem", seed: 42, delay_seconds: 0.25}` — deterministic scaffolding output so the first `validate` and `run` are provider-free.
+**Mock provider**: `crewplane init` generates a config with one `mock` agent and `invoker.implementation: "mock"` with options `{output_mode: "lorem", seed: 42, delay_seconds: 0.25}`: deterministic scaffolding output so the first `validate` and `run` are provider-free.
 
-**Validate**: `crewplane validate [TASKS_FILE] -c .crewplane/config.yml` — no providers invoked, no artifacts written; checks workflow + config validity and (for the cli invoker) provider CLI availability on PATH.
+**Validate**: `crewplane validate [TASKS_FILE] -c .crewplane/config.yml`, no providers invoked, no artifacts written; checks workflow + config validity and (for the cli invoker) provider CLI availability on PATH.
 
 **Artifact layout**: run key = `<workflow-id>-<run-id>`; `.crewplane/execution-stages/<run-key>/` (logs/events.ndjson, preflight plans/manifests, per-node logs) and `.crewplane/execution-results/<run-key>/` (`<node-id>-result.md`, `<node-id>-findings.md`, generated-files).
 
@@ -158,7 +158,7 @@ Inspect the project.
 
 **PROMPT.md structure**: `# Task: <ID>` preamble, then `## Mission`, `## Dependencies`, `## File Scope`, `## Steps` containing `### Step N: <title>` headings (0-based; `### Step 0: Preflight`, then Implement / Testing / Docs), `## Completion Criteria`, `## Git Commit Convention` ("FN-prefixed conventional commits"). Additional generated sections: `## Review Advisory Notes` (non-blocking findings) and, for multi-repo workspaces, a mandatory `## Repository Scope`. File Scope is enforced (`strictScopeEnforcement`; scope-overlap blocks parallel tasks; scope additions require approval; validation requires referenced files to be in File Scope, "(new)"-marked, or created by a prior step). Planning output goes through *deterministic validation* before Plan Review; failures retry with backoff and finally park the task.
 
-**Automation levels** (`plannerOversightLevel`, per-task nullable override; resolution: task override → workflow value → `autonomous` default): `off` — oversight disabled; `observe` — watches/logs only; `steer` — injects guidance or suggests revisions; `autonomous` — bounded retry + targeted-fix recovery (stall detection default 2h) — **but merge/PR progression and destructive/external side effects always require an explicit recorded human confirmation, even at `autonomous`**.
+**Automation levels** (`plannerOversightLevel`, per-task nullable override; resolution: task override → workflow value → `autonomous` default): `off`: oversight disabled; `observe`: watches/logs only; `steer`: injects guidance or suggests revisions; `autonomous`: bounded retry + targeted-fix recovery (stall detection default 2h), **but merge/PR progression and destructive/external side effects always require an explicit recorded human confirmation, even at `autonomous`**.
 
 **Gates**: quality gates are `optional-group` graph nodes with config `{ name?, defaultOn?, maxRevisions?: number | "unbounded", phase?: "pre-merge" | "post-merge", template: {nodes, edges} }`. `phase: "pre-merge"` (default) blocks merge on failure with a fix→re-review loop budgeted by `maxRevisions`; `phase: "post-merge"` runs after a successful merge and failures are non-blocking. Gate nodes also carry `gateMode: "gate" | "advisory"` (**advisory by default**), `toolMode: "readonly" | "coding"` (readonly is a hard allowlist; violations fail closed as `READONLY_VIOLATION`), and verdicts use a structured final-line JSON envelope `{"verdict":"APPROVE|APPROVE_WITH_NOTES|REVISE","notes":"..."}`.
 
@@ -181,9 +181,9 @@ export interface AgentRuntime {
 //   defaultThinkingLevel, skills?: string[], runtimeContext
 ```
 
-## 5. coleam00/Archon — brief
+## 5. coleam00/Archon: brief
 
-Workflows are YAML files; the repo dogfoods 21 under its own `.archon/workflows/defaults/`. Verbatim node-schema reference: top level `name`, multi-line `description` with **`Use when:` / `Triggers:` / `NOT for:` router conventions**, optional `provider: claude|codex`, `model: small|medium|large` (tier names), `interactive: true`. Node types — exactly one of `prompt`, `bash`, `command` (references `.archon/commands/<name>.md`), `script` (`runtime: bun|uv`), `loop` (`{prompt, until: COMPLETION_SIGNAL, max_iterations, fresh_context}`), `loop_group` (sealed sub-DAG re-run until signal), `approval`, `cancel: "reason"`. Common options: `depends_on: [ids]`, `when: "$<node>.output == 'value'"`, `trigger_rule: all_success | one_success | all_done`, `timeout` (ms), and for AI nodes `model`, `allowed_tools`/`denied_tools`, `context: fresh`, `output_format` (inline JSON Schema, consumed as `$classify.output.issue_type` in `when:` clauses). Variables: `$ARGUMENTS`, `$ARTIFACTS_DIR`, `$<nodeId>.output`. Deterministic/AI mixing is idiomatic: `parse-request` (AI, small) → `fetch-issue` (bash + gh) → `classify` (AI, structured output, `allowed_tools: []`) → conditional branches → a bash guard with `trigger_rule: one_success` that *fails* if neither artifact exists ("an AI node that declines the task still exits 0").
+Workflows are YAML files; the repo dogfoods 21 under its own `.archon/workflows/defaults/`. Verbatim node-schema reference: top level `name`, multi-line `description` with **`Use when:` / `Triggers:` / `NOT for:` router conventions**, optional `provider: claude|codex`, `model: small|medium|large` (tier names), `interactive: true`. Node types: exactly one of `prompt`, `bash`, `command` (references `.archon/commands/<name>.md`), `script` (`runtime: bun|uv`), `loop` (`{prompt, until: COMPLETION_SIGNAL, max_iterations, fresh_context}`), `loop_group` (sealed sub-DAG re-run until signal), `approval`, `cancel: "reason"`. Common options: `depends_on: [ids]`, `when: "$<node>.output == 'value'"`, `trigger_rule: all_success | one_success | all_done`, `timeout` (ms), and for AI nodes `model`, `allowed_tools`/`denied_tools`, `context: fresh`, `output_format` (inline JSON Schema, consumed as `$classify.output.issue_type` in `when:` clauses). Variables: `$ARGUMENTS`, `$ARTIFACTS_DIR`, `$<nodeId>.output`. Deterministic/AI mixing is idiomatic: `parse-request` (AI, small) → `fetch-issue` (bash + gh) → `classify` (AI, structured output, `allowed_tools: []`) → conditional branches → a bash guard with `trigger_rule: one_success` that *fails* if neither artifact exists ("an AI node that declines the task still exits 0").
 
 **Approval gate** verbatim:
 
@@ -199,7 +199,7 @@ Workflows are YAML files; the repo dogfoods 21 under its own `.archon/workflows/
 
 ---
 
-# SYNTHESIS — open-seed's workflow format
+# SYNTHESIS: open-seed's workflow format
 
 **Choose YAML files with a markdown-prompt escape hatch, not markdown-with-frontmatter.** The evidence: the two systems closest to open-seed's premise where *structure dominates* (tutti, Archon) use pure config; crewplane's markdown-body format is elegant but pays for it with a bespoke parser that CI validation must reimplement. Archon shows the winning middle: YAML for the DAG, `prompt: |` blocks inline for short prompts, and `prompt_file:` references into ordinary markdown files for long ones. That keeps `seed workflow validate` a plain schema check (JSON Schema over YAML), keeps prompts diffable as markdown, and matches the already-decided "validate preflight" direction. One workflow per file under `.seed/workflows/<name>.yaml`, with Archon's override rule verbatim: repo `.seed/workflows/` overrides template-bundled defaults by name.
 
@@ -217,7 +217,7 @@ budgets:
   max_wall_clock_minutes: 90
   max_step_retries: 2
 steps:
-  - id: kebab-case          # unique; depends_on BY ID (never index — tutti's usize indices
+  - id: kebab-case          # unique; depends_on BY ID (never index: tutti's usize indices
     role: implementer       #   are its worst design decision; ids survive reordering)
     harness: claude-code    # per-step override; validated against a known-harness list
     model: opus             # tier or exact id
@@ -242,7 +242,7 @@ steps:
       # checks:   {required_ci: true, unresolved_threads: 0}              (tutti land gate)
 ```
 
-**CI validate rules** (`seed workflow validate`, union of all five validators): (1) JSON Schema over the file — unknown fields fail; (2) `schema_version` match; (3) unique step ids; (4) DAG acyclicity + depends_on existence; (5) XOR of prompt/prompt_file/run; (6) referenced files/schemas exist; (7) **artifact closure**: every `consumes` name is `produces`-declared by a step reachable through `depends_on`; (8) role closure against the roles mapping; (9) harness/model values against the pinned registry; (10) budget sanity (fail ≥ warn); (11) loop steps require `until` + body + max_iterations; (12) template-token lint (no unresolvable references); (13) optionally `--with-harnesses`: check CLIs on PATH. Ship a crewplane-style **mock harness** so `seed workflow run --mock` works in CI with zero credentials — that single feature is why crewplane's validate story is credible.
+**CI validate rules** (`seed workflow validate`, union of all five validators): (1) JSON Schema over the file: unknown fields fail; (2) `schema_version` match; (3) unique step ids; (4) DAG acyclicity + depends_on existence; (5) XOR of prompt/prompt_file/run; (6) referenced files/schemas exist; (7) **artifact closure**: every `consumes` name is `produces`-declared by a step reachable through `depends_on`; (8) role closure against the roles mapping; (9) harness/model values against the pinned registry; (10) budget sanity (fail ≥ warn); (11) loop steps require `until` + body + max_iterations; (12) template-token lint (no unresolvable references); (13) optionally `--with-harnesses`: check CLIs on PATH. Ship a crewplane-style **mock harness** so `seed workflow run --mock` works in CI with zero credentials: that single feature is why crewplane's validate story is credible.
 
 **Runtime conventions to adopt**: checkpoint file per run at `.seed/state/runs/<run-id>.json` recording `{completed_steps (by id), step_results, output_files}` with tutti's resume semantics (refuse resuming a succeeded run; re-run failed steps only); artifacts under `.seed/state/runs/<run-id>/artifacts/`.
 
@@ -311,4 +311,4 @@ steps:
     run: "seed land --pr"
 ```
 
-**Corrections to earlier findings**: (1) design-options groups Fusion with checked-in workflow systems — its workflow graphs are DB-resident and dashboard-edited; only per-task `PROMPT.md` and memory files are repo content, so Fusion is prior art for *gate semantics and plan-artifact structure*, not for committed workflow files. (2) agent-runbook's "eight step types" is marketing; the schema has four types plus four decorator fields. (3) tutti — cited as "closest prior art" — resolves step `depends_on` by 1-based index, has no per-step budget, and its `[roles]` table maps role→runtime only (not role→model); open-seed's step schema is a superset, not a copy. (4) Archon's README says "19 default workflows"; the repo ships 21. (5) Every system that validates artifact handoffs validates *closure against the dependency graph*, not just schema existence — that stricter rule should be the standard.
+**Corrections to earlier findings**: (1) design-options groups Fusion with checked-in workflow systems: its workflow graphs are DB-resident and dashboard-edited; only per-task `PROMPT.md` and memory files are repo content, so Fusion is prior art for *gate semantics and plan-artifact structure*, not for committed workflow files. (2) agent-runbook's "eight step types" is marketing; the schema has four types plus four decorator fields. (3) tutti: cited as "closest prior art": resolves step `depends_on` by 1-based index, has no per-step budget, and its `[roles]` table maps role→runtime only (not role→model); open-seed's step schema is a superset, not a copy. (4) Archon's README says "19 default workflows"; the repo ships 21. (5) Every system that validates artifact handoffs validates *closure against the dependency graph*, not just schema existence: that stricter rule should be the standard.

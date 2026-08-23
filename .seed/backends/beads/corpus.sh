@@ -1,5 +1,5 @@
 # Shared contract corpus for the beads adapter (plan os-435d7b61).
-# Sourced — never executed — by test.sh (fake bd) and live-test.sh (real
+# Sourced, never executed, by test.sh (fake bd) and live-test.sh (real
 # bd), so the two suites cannot drift apart silently. Callers set:
 #   sb      path to bin/seed-backend
 #   PREFIX  log tag (beads-test / beads-live)
@@ -100,7 +100,7 @@ run_corpus() {
 
   out=$("$sb" list --json); ok "$out" list
   # The list verb sees terminal cards too (bd list --all; default bd list
-  # hides closed — a declared v1.2.2 variance).
+  # hides closed: a declared v1.2.2 variance).
   [ "$(echo "$out" | jq --arg id "$id" '[.tasks[] | select(.task == $id)] | length')" = "1" ] || die "closed card missing from list verb"
   # --state filters on the port state: done includes the closed card,
   # ready excludes it.

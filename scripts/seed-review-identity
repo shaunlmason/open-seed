@@ -6,11 +6,11 @@
 # the implementer of record (the task PR's author).
 #
 # Verdicts:
-#   exit 0 — at least one APPROVED review by an identity that is NOT the
+#   exit 0: at least one APPROVED review by an identity that is NOT the
 #            implementer (the workflow's app identity qualifies: D4.5
 #            requires reviewer ≠ implementer, not reviewer = human);
-#   exit 2 — no approving review yet (waiting, not a violation);
-#   exit 3 — the only approvals are self-reviews: refused.
+#   exit 2: no approving review yet (waiting, not a violation);
+#   exit 3: the only approvals are self-reviews: refused.
 set -eu
 command -v jq >/dev/null 2>&1 || { echo "seed-review-identity: jq required" >&2; exit 64; }
 [ -n "${IMPLEMENTER:-}" ] || { echo "seed-review-identity: IMPLEMENTER required" >&2; exit 64; }

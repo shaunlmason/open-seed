@@ -52,7 +52,7 @@ expect_rc 6 "wrong-token transition" "$sb" transition "$id" --to review --actor 
 expect_rc 6 "regex-metachar token cannot bypass the fence" "$sb" transition "$id" --to review --actor agent-1 --token '.*' --json
 expect_rc 3 "close from in_progress" "$sb" close "$id" --actor lead --json
 
-# Token rotation: release, same-actor reclaim — the old token must be dead.
+# Token rotation: release, same-actor reclaim: the old token must be dead.
 out=$("$sb" release "$id" --actor agent-1 --token "$tok1" --json); ok "$out" release
 out=$("$sb" claim "$id" --actor agent-1 --json); ok "$out" reclaim
 tok2=$(echo "$out" | jq -r .claim_token)
@@ -203,7 +203,7 @@ echo "$out" | jq -e --arg d "$ld" '.cascade_skipped | index($d)' >/dev/null || d
 [ "$("$sb" get "$ld" --json | jq -r '.card.blocked_on[0]')" = "dep:$lb" ] || die "failed relabel dropped the dependency entry"
 
 # A failed claim is compensated: the assign+move refusal rolls the minted
-# token back and the issue is left unchanged — unheld, still claimable.
+# token back and the issue is left unchanged: unheld, still claimable.
 kill $srv 2>/dev/null || true; wait $srv 2>/dev/null || true
 portf=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
 FAKE_LINEAR_FAIL_ASSIGN=1 python3 "$dir/testdata/fake-linear" "$portf" & srv=$!
@@ -218,7 +218,7 @@ out=$("$sb" ready --actor agent-2 --json)
 echo "$out" | jq -e --arg t "$fc" '[.tasks[].task] | index($t)' >/dev/null || die "failed claim hid the card from ready"
 
 # A refused cascade release keeps the dependency recorded (recoverable via
-# operator unblock once the substrate allows it) — never a Blocked issue
+# operator unblock once the substrate allows it), never a Blocked issue
 # with no blocker on record.
 kill $srv 2>/dev/null || true; wait $srv 2>/dev/null || true
 port3=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')

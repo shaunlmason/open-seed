@@ -1,4 +1,4 @@
-# linear — external backend over Linear's GraphQL API (plan os-73814c53).
+# linear: external backend over Linear's GraphQL API (plan os-73814c53).
 # The cleanest external state-model fit surveyed: the default team workflow
 # plus one required custom state (Blocked) maps onto the port states by
 # NAME, no label tricks for states at all. Declared variances (README.md):

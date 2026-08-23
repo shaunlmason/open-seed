@@ -4,11 +4,11 @@
 # Statuses are workflow-specific and moves happen via the transitions API,
 # so every state change resolves the transition BY TARGET STATUS NAME at
 # call time (GET transitions → match to.name → POST id); a target the
-# workflow does not offer from the current status maps to exit 3 — Jira's
+# workflow does not offer from the current status maps to exit 3: Jira's
 # workflow is the arbiter, honestly surfaced. Status convention (README):
 # Backlog=backlog, To Do=ready, In Progress=in_progress, In Review=review,
 # Blocked=blocked (required), Done=done, cancelled = Done + resolution
-# "Won't Do". Actor identity: Jira assignment needs accountIds — actors
+# "Won't Do". Actor identity: Jira assignment needs accountIds: actors
 # resolve through the checked-in mapping .seed/backends/jira/actors.json.
 # Seed bookkeeping rides labels: seed:bo:<entry>, seed:author:<actor>,
 # seed:rejected:<actor>, seed:tok:<hex> (minted per-claim fence token).
@@ -55,7 +55,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Envelopes are built with jq — caller-controlled values (actors, ids,
+# Envelopes are built with jq: caller-controlled values (actors, ids,
 # messages) must never be interpolated into JSON by hand.
 fail() {
   jq -nc --arg v "$verb" --arg e "$2" --arg m "${3:-}" \
@@ -72,7 +72,7 @@ fail_contention() {
 envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
 jstr() { jq -nc --arg s "$1" '$s'; } # JSON-encode one string
 
-# api METHOD PATH [JSON] — HTTP code persisted to a temp file (callers run
+# api METHOD PATH [JSON]: HTTP code persisted to a temp file (callers run
 # api inside command substitutions; a variable would be lost in the subshell).
 SEED_JR_CODE=$(mktemp)
 trap 'rm -f "$SEED_JR_CODE"' EXIT
@@ -110,7 +110,7 @@ JJQ='def pport: {"Highest":"P0","High":"P1","Medium":"P2","Low":"P3"}[.] // "P2"
 
 get_issue() { api GET "/issue/$1"; }
 # require_issue/require_fence/do_transition set globals and fail() in the
-# PARENT shell — never call them inside a command substitution (a subshell
+# PARENT shell, never call them inside a command substitution (a subshell
 # exit cannot propagate the port exit code).
 require_issue() {
   CUR=$(get_issue "$1")
@@ -134,7 +134,7 @@ port_state_of() { # from a fetched issue: status name + resolution → port stat
   esac
 }
 
-# workflow_has NAME — the project-statuses probe, HTTP-checked: an outage
+# workflow_has NAME: the project-statuses probe, HTTP-checked: an outage
 # or permissions error is backend_unavailable, never mistaken for a
 # missing status. Sets $WF_HAS to yes/no.
 workflow_has() {
@@ -146,7 +146,7 @@ workflow_has() {
   esac
 }
 
-# try_transition KEY PORT_TARGET [RESOLUTION] — the non-fatal core: resolve
+# try_transition KEY PORT_TARGET [RESOLUTION]: the non-fatal core: resolve
 # by target status name from what the workflow offers NOW. Sets TR_RC
 # (0 ok / 3 illegal move / 5 backend|convention) and TR_MSG; never exits,
 # so callers can compensate before propagating.
@@ -177,13 +177,13 @@ try_transition() {
     *) TR_RC=5; TR_MSG="transition HTTP $(rc)" ;;
   esac
 }
-# do_transition — the fatal wrapper for callers with nothing to compensate.
+# do_transition: the fatal wrapper for callers with nothing to compensate.
 do_transition() {
   try_transition "$@"
   [ "$TR_RC" = "0" ] || fail "$TR_RC" "$([ "$TR_RC" = 3 ] && echo invalid_transition || { [ "$TR_RC" = 4 ] && echo not_found || echo backend_unavailable; })" "$TR_MSG"
 }
 
-# relabel KEY CUR add=NAMES del=SELECTOR — computed against the snapshot but
+# relabel KEY CUR add=NAMES del=SELECTOR: computed against the snapshot but
 # written as Jira's ATOMIC add/remove update operations, so a concurrent
 # label edit elsewhere on the issue is never clobbered by a whole-array
 # replacement. A selector ending in ":" removes the whole namespace
@@ -205,7 +205,7 @@ assign() { # KEY ACCOUNT_ID_OR_NULL
 }
 
 # The fence: assignee accountId match AND the minted seed:tok:<token> label
-# — both rotate per claim; a reaped predecessor's stale token exits 6 even
+#: both rotate per claim; a reaped predecessor's stale token exits 6 even
 # for the same actor.
 require_fence() {
   require_issue "$1"
@@ -219,14 +219,14 @@ mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1
 bo_entries() { printf '%s\n' "$(ilabels "$1")" | sed -n 's/^seed:bo://p'; }
 bo_json() { bo_entries "$1" | jq -R . | jq -cs .; }
 
-comment_on() { # KEY TEXT (ADF body) — sets $CID to the created comment id
+comment_on() { # KEY TEXT (ADF body): sets $CID to the created comment id
   payload=$(jq -nc --arg t "$2" '{body:{type:"doc",version:1,content:[{type:"paragraph",content:[{type:"text",text:$t}]}]}}')
   CID=$(api POST "/issue/$1/comment" "$payload" | jq -r '.id // ""')
   case "$(rc)" in 200|201) ;; *) fail 5 backend_unavailable "comment HTTP $(rc)";; esac
 }
 
 # load_issues sets $ISSUES_JSON (every page of the search) and fail()s in
-# the PARENT shell on an HTTP failure — an expired token or rate limit must
+# the PARENT shell on an HTTP failure: an expired token or rate limit must
 # exit 5, never masquerade as an empty queue or a dependent-less cascade.
 load_issues() {
   ISSUES_JSON="[]"
@@ -243,7 +243,7 @@ load_issues() {
   done
 }
 
-# cascade FROM_KEY — close AND cancel edges both carry the effect: remove
+# cascade FROM_KEY: close AND cancel edges both carry the effect: remove
 # seed:bo:dep:<key> everywhere; Blocked issues left with an empty set go
 # back to To Do. Per-dependent failures do NOT abort the terminal verb or
 # the rest of the cascade: the dependency label is kept, the dependent is
@@ -352,7 +352,7 @@ case "$verb" in
     [ -n "$holder" ] && fail_contention "$(actor_name "$holder")"
     [ "$(istatus "$CUR")" = "To Do" ] || fail 3 invalid_transition "claim requires ready (To Do); issue is '$(istatus "$CUR")'"
     tok="c-$(mint)"
-    # Declared variance: read-check then writes, last-write-wins — no server
+    # Declared variance: read-check then writes, last-write-wins, no server
     # arbitration. Post-claim verification keeps an interleaved race from
     # stranding the card, and a failed workflow move is COMPENSATED so a
     # failed claim leaves the issue unchanged.
@@ -482,7 +482,7 @@ case "$verb" in
     require_issue "$id"; cur=$CUR
     [ "$(istatus "$cur")" = "In Review" ] || fail 3 invalid_transition "reject requires review"
     author=$(printf '%s\n' "$(ilabels "$cur")" | sed -n 's/^seed:author://p' | head -1)
-    # Transition first — a refused Review → To Do must leave the author
+    # Transition first: a refused Review → To Do must leave the author
     # label intact so a retry still knows whom to lock out.
     do_transition "$id" ready
     adds=""
@@ -496,7 +496,7 @@ case "$verb" in
   cancel)
     require_issue "$id"
     case "$(port_state_of "$CUR")" in done|cancelled) fail 3 invalid_transition "already terminal" ;; esac
-    # Transition first — a refused terminal move must leave a live claim
+    # Transition first: a refused terminal move must leave a live claim
     # usable. The in_progress → cancelled edge still carries the
     # claim-ending side effect after the move succeeds.
     do_transition "$id" cancelled "Won't Do"
@@ -516,7 +516,7 @@ case "$verb" in
     ;;
 
   comment)
-    # Fenced only while a live claim exists — the port permits unfenced
+    # Fenced only while a live claim exists: the port permits unfenced
     # comments on unclaimed cards (backlog/ready/blocked/review).
     require_issue "$id"
     if [ -n "$(iassignee_id "$CUR")" ] || [ "$(istatus "$CUR")" = "In Progress" ]; then

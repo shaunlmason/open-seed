@@ -7,14 +7,14 @@
 # Canceled=cancelled. A workflow missing a required state → exit 5 with
 # remediation. Seed bookkeeping rides labels: seed:bo:<entry> (blocked_on),
 # seed:author:<actor>, seed:rejected:<actor>, seed:tok:c-<hex> (the minted
-# per-claim fence token — D1 binding, same posture as beads/paperclip: the
+# per-claim fence token: D1 binding, same posture as beads/paperclip: the
 # API key alone cannot tell a reaped predecessor from the same actor's new
 # claim; the rotating token can), seed:audit (the audit-sink issue, never a
 # card). Ordering discipline (plan os-69bd5a64): the fallible state move
 # always runs before bookkeeping is destroyed; a failed claim is compensated
 # and then verified against the substrate (last-write-wins races resolve to
 # the actual holder); per-dependent cascade failures skip-and-report instead
-# of aborting the terminal verb. Envelopes and embedded ids are jq-built —
+# of aborting the terminal verb. Envelopes and embedded ids are jq-built:
 # caller values can never break the JSON.
 set -u
 for c in curl jq; do
@@ -54,7 +54,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Envelopes are built with jq — caller-controlled values (actors, ids,
+# Envelopes are built with jq: caller-controlled values (actors, ids,
 # messages) must never be interpolated into JSON by hand.
 fail() {
   jq -nc --arg v "$verb" --arg e "$2" --arg m "${3:-}" \
@@ -71,7 +71,7 @@ fail_contention() { # HOLDER [MESSAGE]
 envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
 jstr() { jq -nc --arg s "$1" '$s'; } # JSON-encode one string
 
-# gql OPNAME QUERY VARIABLES_JSON — one GraphQL call; .errors → caller sees
+# gql OPNAME QUERY VARIABLES_JSON: one GraphQL call; .errors → caller sees
 # empty data. The response body is printed; rc-style checks read .errors.
 SEED_LN_ERR=$(mktemp)
 trap 'rm -f "$SEED_LN_ERR"' EXIT
@@ -91,7 +91,7 @@ ln_name() { # port state → Linear workflow state name
 }
 STATES_JSON=""
 # load_states sets $STATES_JSON and fail()s in the PARENT shell on a query
-# failure — a dead API must surface as backend_unavailable, never as a
+# failure: a dead API must surface as backend_unavailable, never as a
 # missing-workflow-state remediation.
 load_states() {
   [ -n "$STATES_JSON" ] && return
@@ -100,7 +100,7 @@ load_states() {
   [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "workflow states query: $(gqlerr)"
   [ "$STATES_JSON" != "[]" ] && [ -n "$STATES_JSON" ] || fail 5 backend_unavailable "workflow states query returned nothing (check LINEAR_TEAM_ID)"
 }
-# state_id sets $SID and fail()s in the PARENT shell — never call it inside
+# state_id sets $SID and fail()s in the PARENT shell, never call it inside
 # a command substitution: the exit-5 remediation must terminate the verb,
 # not get embedded into a JSON payload as text.
 state_id() {
@@ -122,7 +122,7 @@ get_issue() {
   gql Issue 'query Issue($id: String!) { issue(id: $id) { id identifier title description priority createdAt state { id name } assignee { id name } labels { nodes { id name } } } }' \
     "{\"id\":\"$1\"}" | jq -c '.data.issue'
 }
-# require_issue/require_fence set $CUR and fail() in the PARENT shell —
+# require_issue/require_fence set $CUR and fail() in the PARENT shell,
 # never call them inside a command substitution (a subshell exit cannot
 # propagate the port exit code).
 require_issue() {
@@ -149,7 +149,7 @@ label_id() { # find-or-create a team label by name → id
     "$(jq -nc --arg n "$1" --arg t "$LINEAR_TEAM_ID" '{input:{name:$n, teamId:$t}}')" | jq -r '.data.issueLabelCreate.issueLabel.id'
 }
 
-# try_update ID INPUT_JSON — the non-fatal issueUpdate core: sets TU_RC
+# try_update ID INPUT_JSON: the non-fatal issueUpdate core: sets TU_RC
 # (0 ok / 5 substrate refusal or outage) and TU_MSG; never exits, so
 # callers with something to compensate or skip can do so before
 # propagating. update_issue is the fatal wrapper for callers with nothing
@@ -164,12 +164,12 @@ update_issue() {
   [ "$TU_RC" = "0" ] || fail 5 backend_unavailable "$TU_MSG"
 }
 
-# relabel IID CUR add=NAMES del=SELECTOR — a selector ending in ":" deletes
+# relabel IID CUR add=NAMES del=SELECTOR: a selector ending in ":" deletes
 # the whole namespace (seed:tok:, seed:author:); anything else deletes ONLY
 # the exact label name, so removing seed:bo:dep:LIN-1 can never strip
 # seed:bo:dep:LIN-10. Declared variance: Linear's issueUpdate replaces the
 # whole labelIds array (no atomic add/remove operations like Jira's), so
-# the set is recomputed from the snapshot immediately before the write —
+# the set is recomputed from the snapshot immediately before the write:
 # the remaining race window is declared in the README. try_relabel is the
 # non-fatal core (sets RL_RC/RL_MSG) for callers that must compensate or
 # skip-and-report; relabel is the fatal wrapper.
@@ -209,7 +209,7 @@ mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1
 bo_entries() { printf '%s\n' "$(ilabels "$1")" | sed -n 's/^seed:bo://p'; }
 bo_json() { bo_entries "$1" | jq -R . | jq -cs .; }
 
-comment_on() { # ID BODY — sets $CID to the created comment id
+comment_on() { # ID BODY: sets $CID to the created comment id
   out=$(gql CommentCreate 'mutation CommentCreate($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id } } }' \
     "$(jq -nc --arg i "$1" --arg b "$2" '{input:{issueId:$i, body:$b}}')")
   [ -z "$(gqlerr)" ] || fail 5 backend_unavailable "commentCreate: $(gqlerr)"
@@ -217,7 +217,7 @@ comment_on() { # ID BODY — sets $CID to the created comment id
 }
 
 # load_issues sets $ISSUES_JSON (every page of the team issue connection)
-# and fail()s in the PARENT shell on a GraphQL error — an expired key or
+# and fail()s in the PARENT shell on a GraphQL error: an expired key or
 # rate limit must exit 5, never masquerade as an empty queue or a cascade
 # with no dependents.
 load_issues() {
@@ -236,10 +236,10 @@ load_issues() {
   done
 }
 
-# cascade FROM_ID — remove dep:<id> everywhere (close AND cancel edges carry
+# cascade FROM_ID: remove dep:<id> everywhere (close AND cancel edges carry
 # the effect, per the transition table); issues left blocked on nothing go
-# back to Todo. Per-dependent failures — the release move OR the label
-# bookkeeping — do NOT abort the terminal verb or the rest of the cascade:
+# back to Todo. Per-dependent failures: the release move OR the label
+# bookkeeping: do NOT abort the terminal verb or the rest of the cascade:
 # the dependent is reported in $cascade_skipped with its dependency entry
 # preserved (a failed post-release label write rolls the state back to
 # Blocked so the entry stays recoverable), and recovery is an operator
@@ -261,7 +261,7 @@ cascade() {
           cascaded=$(printf '%s' "$cascaded" | jq -c --arg d "$dep" '. + [$d]')
         else
           # The release landed but the entry could not be cleared: roll
-          # the state back so Blocked + recorded entry stays the truth —
+          # the state back so Blocked + recorded entry stays the truth,
           # never a Todo issue hidden from ready by a stale seed:bo label.
           bid=$(printf '%s' "$STATES_JSON" | jq -r '.[] | select(.name == "Blocked") | .id')
           [ -n "$bid" ] && try_update "$dep" "{\"stateId\": \"$bid\"}"
@@ -277,7 +277,7 @@ cascade() {
   done
 }
 
-release_claim() { # ID CUR — clear assignee + token label
+release_claim() { # ID CUR: clear assignee + token label
   relabel "$1" "$2" "" "seed:tok:"
   update_issue "$1" '{"assigneeId": null}'
 }
@@ -346,7 +346,7 @@ case "$verb" in
     tok="c-$(mint)"
     state_id in_progress; prog_id=$SID
     # Declared variance: read-check then two GraphQL writes, last-write-wins
-    # — no server arbitration (weaker than filecards push-wins). Post-claim
+    #, no server arbitration (weaker than filecards push-wins). Post-claim
     # verification keeps an interleaved race from stranding the card, and a
     # failed assign+move is COMPENSATED so a failed claim leaves the issue
     # unchanged.
@@ -363,10 +363,10 @@ case "$verb" in
     fi
     # Final verification: we won only if the substrate holds OUR assignee
     # AND OUR token. A coherent rival tuple (their assignee AND their
-    # token) means they are the usable winner — contention with the real
+    # token) means they are the usable winner: contention with the real
     # holder. Anything else is a TORN interleave (assignee and token from
     # different claimants): no one holds a usable claim, so report
-    # contention with the torn state named — an operator release/reap
+    # contention with the torn state named: an operator release/reap
     # recovers, and the next claim rotates both fields (declared, README).
     require_issue "$id"; cur=$CUR
     vh=$(iassignee "$cur")
@@ -397,7 +397,7 @@ case "$verb" in
         # The fallible state move runs FIRST: a refusal must leave the
         # claim intact so the worker can retry or park. A failed
         # author-label write after the move is COMPENSATED (state rolled
-        # back to In Progress) — review must never be reached without the
+        # back to In Progress): review must never be reached without the
         # seed:author record the reject lockout depends on.
         state_id in_progress; prog_id=$SID
         state_id review; update_issue "$id" "{\"stateId\": \"$SID\"}"
@@ -509,7 +509,7 @@ case "$verb" in
     require_issue "$id"; cur=$CUR
     [ "$(istate "$cur")" = "In Review" ] || fail 3 invalid_transition "reject requires review"
     author=$(printf '%s\n' "$(ilabels "$cur")" | sed -n 's/^seed:author://p' | head -1)
-    # State move first — a refused In Review → Todo must leave the author
+    # State move first: a refused In Review → Todo must leave the author
     # label intact so a retry still knows whom to lock out.
     state_id ready; update_issue "$id" "{\"stateId\": \"$SID\"}"
     adds=""
@@ -523,7 +523,7 @@ case "$verb" in
   cancel)
     require_issue "$id"; cur=$CUR
     case "$(istate "$cur")" in Done|Canceled) fail 3 invalid_transition "already terminal" ;; esac
-    # State move first — a refused terminal move must leave a live claim
+    # State move first: a refused terminal move must leave a live claim
     # usable. The in_progress → cancelled edge still carries the
     # claim-ending side effect after the move succeeds: a reinstated card
     # must be claimable, not stranded behind a dead holder.
@@ -544,7 +544,7 @@ case "$verb" in
     ;;
 
   comment)
-    # Fenced only while a live claim exists — the port permits unfenced
+    # Fenced only while a live claim exists: the port permits unfenced
     # comments on unclaimed cards (backlog/ready/blocked/review).
     require_issue "$id"
     if [ -n "$(iassignee "$CUR")" ] || [ "$(istate "$CUR")" = "In Progress" ]; then

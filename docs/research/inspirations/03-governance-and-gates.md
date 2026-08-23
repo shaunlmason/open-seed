@@ -6,17 +6,17 @@
 > **Erratum (design review, 2026-08-22):** the proposed `guardrails.yaml` skeleton in this
 > file's synthesis is superseded by `docs/design-options.md` D4.1 on two points: (1) the
 > `auto_merge_allowlist` example (`"**/*.md"`) is unsafe in open-seed's design, where most of
-> the instruction surface is markdown — the orchestration control surface is never
+> the instruction surface is markdown: the orchestration control surface is never
 > auto-mergeable regardless of allowlist entries; (2) the self-protection entry
 > `"guardrails.yaml"` must be `.seed/guardrails.yaml` (and the rest of `.seed/**`) to match
 > the repository layout. Receipts are additionally written only by the gate, never by agents,
 > and verified by `seed receipt verify` in CI.
 
-## 1. cobusgreyling/loop-engineering (priority — the pattern book)
+## 1. cobusgreyling/loop-engineering (priority: the pattern book)
 
 The repo is exactly what we hoped: a mostly-docs pattern book that dogfoods its own loops. Root files: `LOOP.md`, `STATE.md`, `gate.yaml`, `loop-budget.md`, `loop-constraints.md`, `loop-run-log.md`, plus `patterns/`, `templates/` (24 templates), `docs/`, `starters/`, and 11 CLI tools under `tools/` (`loop-gate`, `loop-audit`, `loop-sync`, `loop-init`, `loop-cost`, etc.).
 
-**Correction to the earlier survey:** there is no `.budget.json` or `run-log.json`. Budget and run-log are **markdown files** (`loop-budget.md`, `loop-run-log.md`) — the run log embeds a JSON entry schema per run. The only pure-machine files are `gate.yaml` and `patterns/registry.yaml`.
+**Correction to the earlier survey:** there is no `.budget.json` or `run-log.json`. Budget and run-log are **markdown files** (`loop-budget.md`, `loop-run-log.md`): the run log embeds a JSON entry schema per run. The only pure-machine files are `gate.yaml` and `patterns/registry.yaml`.
 
 ### gate.yaml (verbatim, repo root)
 
@@ -53,13 +53,13 @@ Template comments: "`Escalate instead of auto-merging when a change touches more
 ### STATE.md.template (verbatim)
 
 ```markdown
-# Loop State — {{PROJECT_NAME}}
+# Loop State: {{PROJECT_NAME}}
 
 Last run: (set by loop on each run)
 
 ## High Priority (loop is acting or waiting on human)
 <!-- Format:
-- [ ] ID — one-line description
+- [ ] ID: one-line description
   Loop action: what the loop did last
   Human decision: (if any)
 -->
@@ -68,7 +68,7 @@ Last run: (set by loop on each run)
 <!-- Items to monitor but not act on yet -->
 
 ## Recent Noise (ignored this run)
-<!-- Brief list — helps tune triage skill -->
+<!-- Brief list: helps tune triage skill -->
 
 ---
 Run log: (timestamp) | findings | actions | escalations
@@ -96,9 +96,9 @@ The live root `STATE.md` follows this exactly, adding a machine-updated `Last ru
 
 ### Budget file (`templates/loop-budget.md.template`)
 
-A per-loop table — `| Loop | Max runs/day | Max tokens/day | Max sub-agent spawns/run |` — e.g. `Daily Triage | 2 | 100k | 0 (L1) / 2 (L2)`, `PR Babysitter | 288 | 2M | 3`, `CI Sweeper | 96 | 1M | 3`. Then **On budget exceed**: "1. Pause all schedulers … 2. Append event to `loop-run-log.md` 3. Notify human (Slack / issue / STATE.md High Priority)". **Kill switch**: "Command or issue label: `loop-pause-all`. Resume only after human clears the flag in STATE.md." Safety doc adds: "humans only may edit `loop-budget.md`".
+A per-loop table: `| Loop | Max runs/day | Max tokens/day | Max sub-agent spawns/run |`: e.g. `Daily Triage | 2 | 100k | 0 (L1) / 2 (L2)`, `PR Babysitter | 288 | 2M | 3`, `CI Sweeper | 96 | 1M | 3`. Then **On budget exceed**: "1. Pause all schedulers … 2. Append event to `loop-run-log.md` 3. Notify human (Slack / issue / STATE.md High Priority)". **Kill switch**: "Command or issue label: `loop-pause-all`. Resume only after human clears the flag in STATE.md." Safety doc adds: "humans only may edit `loop-budget.md`".
 
-### patterns/registry.yaml — per-pattern schema
+### patterns/registry.yaml: per-pattern schema
 
 Each of the seven patterns is an entry with keys: `id, name, file, goal, cadence, risk, tools, skills, state, phases, human_gates, starter, week_one_mode, token_cost`, and a `cost:` block `{tokens_noop, tokens_report, tokens_action, stable_fraction, suggested_daily_cap, early_exit_required}`. The seven loop designs:
 
@@ -112,7 +112,7 @@ Each of the seven patterns is an entry with keys: `id, name, file, goal, cadence
 | **Post-Merge Cleanup** | 1d–6h, low | scan-merges → prioritize → fix-small → ticket-large | architectural-debt, feature-flags, large-diffs | L1 |
 | **Issue Triage** | 2h–1d, low | discover → dedupe → score → propose-labels → human-review | security, p0-p1, ambiguous-duplicates, stale-closures | L1 |
 
-Note `early_exit_required: true` on the three action-heavy loops — the cheap-triage-before-expensive-work rule made mechanical.
+Note `early_exit_required: true` on the three action-heavy loops: the cheap-triage-before-expensive-work rule made mechanical.
 
 ### Autonomy tiers
 
@@ -124,7 +124,7 @@ Checks four areas: required files present (STATE.md, LOOP.md, AGENTS.md); cross-
 
 ### CI validation
 
-`.github/workflows/validate-patterns.yml` — checkout, Node 22, `bash scripts/ci-validate-gates.sh`. The script enforces: **registry↔files bijection** (every `patterns/*.md` registered; every registry entry has a file); **required sections** in each pattern (`## Scheduling`, `## Required Skills`, verifier-strategy language present); **template existence**; then schema validation via `ajv` plus tool builds/tests.
+`.github/workflows/validate-patterns.yml`: checkout, Node 22, `bash scripts/ci-validate-gates.sh`. The script enforces: **registry↔files bijection** (every `patterns/*.md` registered; every registry entry has a file); **required sections** in each pattern (`## Scheduling`, `## Required Skills`, verifier-strategy language present); **template existence**; then schema validation via `ajv` plus tool builds/tests.
 
 ### Failure-mode catalog (verbatim names, S1 annoying / S2 harmful / S3 critical)
 
@@ -186,7 +186,7 @@ system = false
 sound = false
 ```
 
-Every phase-instruction key "accepts natural language or slash commands; empty strings trigger defaults" — governance-as-prompt-fragments, with `max_rounds = 3` as the only hard number in the review loop.
+Every phase-instruction key "accepts natural language or slash commands; empty strings trigger defaults": governance-as-prompt-fragments, with `max_rounds = 3` as the only hard number in the review loop.
 
 ### Roles (docs/personas.md + concepts.md)
 
@@ -194,13 +194,13 @@ Three-tier orchestration: **Root** ("routes requests across multiple projects", 
 
 ### Slash commands
 
-Shipped at `.claude/commands/orc/`: `plan, dispatch, done, blocked, check, complete-goal, feedback, index, leave, status, view`. `/orc:plan` is a five-phase script: Investigate/Scout → Decompose (goals get `feat|fix|task` type + kebab-case name; beads get title/description/acceptance-criteria/files-touched/dependencies) → Propose as dependency table + ASCII graph → **"Do NOT create branches until the user approves"** → Create (`git branch feat/<goal-name>` or `bd create --title "<title>" --desc "<description>"`), then check `echo $ORC_YOLO` — if `ORC_YOLO=1`, self-invoke `/orc:dispatch` with "No questions, no delays."
+Shipped at `.claude/commands/orc/`: `plan, dispatch, done, blocked, check, complete-goal, feedback, index, leave, status, view`. `/orc:plan` is a five-phase script: Investigate/Scout → Decompose (goals get `feat|fix|task` type + kebab-case name; beads get title/description/acceptance-criteria/files-touched/dependencies) → Propose as dependency table + ASCII graph → **"Do NOT create branches until the user approves"** → Create (`git branch feat/<goal-name>` or `bd create --title "<title>" --desc "<description>"`), then check `echo $ORC_YOLO`, if `ORC_YOLO=1`, self-invoke `/orc:dispatch` with "No questions, no delays."
 
 `/orc:done` (engineer, verbatim): run tests ("Do NOT signal for review with failing tests") → self-review the diff → lint/format → conventional commit → signal via a **file-based protocol**: `echo "review" > .worker-status` (optionally with `found: <out-of-scope discovery>`) → "**STOP here.** … The orchestrator will read your status, launch a review, and either approve your work or send feedback via `.worker-feedback`." `/orc:dispatch` uses `bd ready` for dependency-ready beads, spawns via `orc spawn` into tmux, then polls `/orc:check` every 60–90s.
 
 ### Beads + git hygiene
 
-`.beads/` is "the single source of truth for work item status and dependencies". Runtime dirs `.worktrees/`, `.goals/`, `.worker-status`, `.beads/` are added to **`.git/info/exclude`** "automatically to remain invisible to git" — deliberately not `.gitignore`, so orchestration leaves no trace in the repo's tracked files.
+`.beads/` is "the single source of truth for work item status and dependencies". Runtime dirs `.worktrees/`, `.goals/`, `.worker-status`, `.beads/` are added to **`.git/info/exclude`** "automatically to remain invisible to git": deliberately not `.gitignore`, so orchestration leaves no trace in the repo's tracked files.
 
 ---
 
@@ -210,9 +210,9 @@ Architecture: "YAML + SQLite + cron. That's it." TypeScript CLI, zero deps, Node
 
 ### workflow.yml (feature-dev, key structure)
 
-Top: `id`, `name`, `version: 5`, `description`, `polling: {model: default, timeoutSeconds: 120}`. Then `agents:` — six entries (`planner, setup, developer, verifier, tester, reviewer`), each with `role` (analysis/coding/verification/testing), `workspace.baseDir`, per-agent identity `files:` (`AGENTS.md`, `SOUL.md`, `IDENTITY.md` — shared roles pull from `agents/shared/`), and optional `skills: [agent-browser]`.
+Top: `id`, `name`, `version: 5`, `description`, `polling: {model: default, timeoutSeconds: 120}`. Then `agents:`: six entries (`planner, setup, developer, verifier, tester, reviewer`), each with `role` (analysis/coding/verification/testing), `workspace.baseDir`, per-agent identity `files:` (`AGENTS.md`, `SOUL.md`, `IDENTITY.md`: shared roles pull from `agents/shared/`), and optional `skills: [agent-browser]`.
 
-Then `steps:` — each step is `{id, agent, input: |, expects: "STATUS: done", max_retries, on_fail}`. The load-bearing constructs, verbatim:
+Then `steps:`: each step is `{id, agent, input: |, expects: "STATUS: done", max_retries, on_fail}`. The load-bearing constructs, verbatim:
 
 ```yaml
   - id: implement
@@ -241,7 +241,7 @@ Steps pass context via `{{template}}` interpolation of prior-step output keys (`
 
 ### Roles
 
-**Planner**: explores codebase, ≤20 stories ordered schema→backend→frontend→integration; "If you cannot describe the change in 2-3 sentences, it is too big." **Verifier** (a quality gate, notably close to loki's evidence stance): "Inspect the actual diff… This is your source of truth, not the claimed changes from previous agents"; reject on empty diff; hard security checks first (reject if `.env`, `*.key`, `*.pem`, `*.secret`, `credentials.*` in diff, or missing `.gitignore` — "a security failure is always a rejection"); "Don't fix the code yourself — send it back." **Developer**: implement one story, write tests, commit `feat: {id} - {title}`, rewrite `progress-{{run_id}}.txt` (+ Codebase Patterns section). **Tester**: integration/E2E only. **Reviewer**: posts real `gh pr review --approve|--request-changes`, plus a visual design pass when `{{has_frontend_changes}}`.
+**Planner**: explores codebase, ≤20 stories ordered schema→backend→frontend→integration; "If you cannot describe the change in 2-3 sentences, it is too big." **Verifier** (a quality gate, notably close to loki's evidence stance): "Inspect the actual diff… This is your source of truth, not the claimed changes from previous agents"; reject on empty diff; hard security checks first (reject if `.env`, `*.key`, `*.pem`, `*.secret`, `credentials.*` in diff, or missing `.gitignore`: "a security failure is always a rejection"); "Don't fix the code yorself — send it back." **Developer**: implement one story, write tests, commit `feat: {id} - {title}`, rewrite `progress-{{run_id}}.txt` (+ Codebase Patterns section). **Tester**: integration/E2E only. **Reviewer**: posts real `gh pr review --approve|--request-changes`, plus a visual design pass when `{{has_frontend_changes}}`.
 
 ---
 
@@ -251,14 +251,14 @@ Steps pass context via `{{template}}` interpolation of prior-step output keys (`
 
 All wired into `autonomy/run.sh`; "8 BLOCKING default-on gates… 3 ADVISORY default-on… 1 OPT-IN":
 
-1. **Static Analysis** — linters + type-checker on the diff; blocks via severity ladder.
-2. **Test Suite** — project runner pass/fail, "red blocks"; explicitly does NOT measure coverage.
-3. **Blind Code Review** — 3 blind reviewers (agents, parallel); "Critical/High block, Medium/Low advisory."
-4. **Anti-Sycophancy Devil's Advocate** — an agent re-review triggered **only on a unanimous PASS**; its Crit/High findings block.
-5. **Mock Integrity Detector** — script: "tautological assertions, internal-mock ratio, tests that do not import source"; HIGH blocks.
-6. **Test Mutation Detector** — script over recent commits: "assertion-value churn alongside implementation changes (test-fitting), low assertion density"; HIGH blocks.
-7. **Documentation Coverage** — README presence, docs freshness within 10 commits, API docs for exports.
-8. **Magic Modules Debate** — agent spec-vs-implementation debate; BLOCK-severity findings block.
+1. **Static Analysis**: linters + type-checker on the diff; blocks via severity ladder.
+2. **Test Suite**: project runner pass/fail, "red blocks"; explicitly does NOT measure coverage.
+3. **Blind Code Review**: 3 blind reviewers (agents, parallel); "Critical/High block, Medium/Low advisory."
+4. **Anti-Sycophancy Devil's Advocate**: an agent re-review triggered **only on a unanimous PASS**; its Crit/High findings block.
+5. **Mock Integrity Detector**: script: "tautological assertions, internal-mock ratio, tests that do not import source"; HIGH blocks.
+6. **Test Mutation Detector**: script over recent commits: "assertion-value churn alongside implementation changes (test-fitting), low assertion density"; HIGH blocks.
+7. **Documentation Coverage**: README presence, docs freshness within 10 commits, API docs for exports.
+8. **Magic Modules Debate**: agent spec-vs-implementation debate; BLOCK-severity findings block.
 
 So: gates 1,2,5,6,7 are script-driven; 3,4,8 are agent-driven; severity-based blocking (Crit/High block; Med/Low → TODO) is the shared policy. Advisory tier gates surface findings into the next iteration's prompt; coverage is opt-in because "it doubles test runtime."
 
@@ -273,14 +273,14 @@ So: gates 1,2,5,6,7 are script-driven; 3,4,8 are agent-driven; severity-based bl
 Top level: `schema_version, run_id, generated_at, loki_version, started_at, wall_clock_sec, spec, provider, iterations, files_changed, diffs, council, quality_gates, cost, deployment, tree_sha256, effort_estimate` plus the evidence triple:
 
 - **`facts`** ("deterministic, re-derivable, NON-LLM"): `git: {base_sha, head_sha, diff, diff_sha256, tree_sha256, tree_manifest_version}`; `execution`; `build` and `tests` (command + exit code); `quality_gates: [{name, status, provenance}]`; `security`; functional axes (`{state: proven|gap|not_checked, reason}`); `healthcheck`; `cost`; `meta`.
-- **`assessments`**: `{"_note": "AI judgment, not deterministic proof", "council": …, "completion_claim": {claimed, evidence_gate_verdict}}` — "a green council verdict is an opinion… it never contributes to the deterministic headline."
-- **`honesty`**: `{headline, degraded: [{item, status, reason, post_headline?}], evidence_gate}` — degraded is "the explicit honesty ledger: a reader sees exactly what was NOT verified rather than inferring it from silence"; operator-disabled gates are appended as `status: "disabled"`.
+- **`assessments`**: `{"_note": "AI judgment, not deterministic proof", "council": …, "completion_claim": {claimed, evidence_gate_verdict}}`: "a green council verdict is an opinion… it never contributes to the deterministic headline."
+- **`honesty`**: `{headline, degraded: [{item, status, reason, post_headline?}], evidence_gate}`: degraded is "the explicit honesty ledger: a reader sees exactly what was NOT verified rather than inferring it from silence"; operator-disabled gates are appended as `status: "disabled"`.
 
 Headline computed **only from facts**: `VERIFIED` (real test command exited 0, diff non-empty, nothing skipped) / `VERIFIED WITH GAPS` (each gap listed by name) / `NOT VERIFIED`. `loki proof verify` does a tamper check (re-hash) and a drift check (re-derive diff, compare counts + `diff_sha256`); exit 0 clean, 1 tamper/drift. Unsigned receipts are "defense-in-depth, not non-forgeability"; GPG signing closes it.
 
 ### RARV + spec-lock
 
-RARV-C: "**Reason** (read state) — **Act** (execute, commit) — **Reflect** (update context) — **Verify** (run tests, check spec)" + Close. The verified-completion evidence gate "refuses any 'done' claim on an empty git diff against the run-start commit, blocks completion when tests run red," and caps at `MAX_ITERATIONS`. Spec: `loki spec` locks with a deterministic hash into `spec.lock`; divergence lands in `drift-report.json` and as a `SPEC_DRIFT` finding in `loki verify` (exit codes 0 VERIFIED / 1 CONCERNS / 2 BLOCKED); OpenAPI contracts get per-operation hashes.
+RARV-C: "**Reason** (read tate) — **Act** (execute, cmmit) — **Reflect** (update cotext) — **Verify** (run tests, check spec)" + Close. The verified-completion evidence gate "refuses any 'done' claim on an empty git diff against the run-start commit, blocks completion when tests run red," and caps at `MAX_ITERATIONS`. Spec: `loki spec` locks with a deterministic hash into `spec.lock`; divergence lands in `drift-report.json` and as a `SPEC_DRIFT` finding in `loki verify` (exit codes 0 VERIFIED / 1 CONCERNS / 2 BLOCKED); OpenAPI contracts get per-operation hashes.
 
 ---
 
@@ -307,9 +307,9 @@ Any agent added to the dict is visible to the orchestrator as a delegation tool.
 
 ### Orchestrator protocol (verbatim system prompt)
 
-> "You are an orchestrator. Get the user's desired outcome. Your agents have full codebase access and are expert coders. Every implementation detail you specify risks making the result worse. Tell them WHAT, never HOW. 1. Define desired outcome… 2. Delegate as small, verifiable goals. 3. Verify results match intent. Commit good work, revert bad iterations. The team shares .kodo/architecture.md — the architect updates it, workers read it. You decide: priorities, scope, what 'done' looks like, when to revert. Agents decide: code structure, libraries, patterns, file organization."
+> "You are an orchestrator. Get the user's desired outcome. Your agents have full codebase access and are expert coders. Every implementation detail you specify risks making the result worse. Tell them WHAT, never HOW. 1. Define desired outcome… 2. Delegate as small, verifiable goals. 3. Verify results match intent. Commit good work, revert bad iterations. The team shares .kodo/architectre.md — the architect updates it, workers read it. You decide: priorities, scope, what 'done' looks like, when to revert. Agents decide: code structure, libraries, patterns, file organization."
 
-Plans are `GoalPlan{stages: [GoalStage{name, description, acceptance_criteria, browser_testing, parallel_group}]}`; same-`parallel_group` stages run concurrently in worktrees. When the orchestrator calls `done(summary, success)`, the rejection loop runs: send a verification prompt to each **tester** ("Verify this works end-to-end. Report ONLY issues found. If everything works, say 'ALL CHECKS PASS'.") and each **reviewer/architect**. Acceptance = `ALL CHECKS PASS` or a minor-signal in the report. First `done()` attempt resets verifier sessions "for a clean baseline; subsequent calls reuse the session so verifiers have persistent context." If no dedicated verifiers exist, a worker is drafted **in a fresh session** as fallback verifier. Any failing report returns: `"DONE REJECTED (attempt N) — verification found issues that must be fixed: … Fix these issues and try calling done again."` — the README run shows 9 consecutive rejection rounds before acceptance.
+Plans are `GoalPlan{stages: [GoalStage{name, description, acceptance_criteria, browser_testing, parallel_group}]}`; same-`parallel_group` stages run concurrently in worktrees. When the orchestrator calls `done(summary, success)`, the rejection loop runs: send a verification prompt to each **tester** ("Verify this works end-to-end. Report ONLY issues found. If everything works, say 'ALL CHECKS PASS'.") and each **reviewer/architect**. Acceptance = `ALL CHECKS PASS` or a minor-signal in the report. First `done()` attempt resets verifier sessions "for a clean baseline; subsequent calls reuse the session so verifiers have persistent context." If no dedicated verifiers exist, a worker is drafted **in a fresh session** as fallback verifier. Any failing report returns: `"DONE REJECTED (attept N) — verification found issues that must be fixed: … Fix these issues and try calling done again."`: the README run shows 9 consecutive rejection rounds before acceptance.
 
 ### Run archive
 
@@ -405,12 +405,12 @@ Adopt loki's facts/assessments/honesty split, simplified, one file per closed ta
 }
 ```
 
-Headline computed only from `facts` (non-empty diff + all commands exit 0 + no protected paths → VERIFIED); every skipped check must appear in `gaps` — silence never reads as pass. This doubles as the run-log entry (superset of loop-engineering's run-log JSON).
+Headline computed only from `facts` (non-empty diff + all commands exit 0 + no protected paths → VERIFIED); every skipped check must appear in `gaps`: silence never reads as pass. This doubles as the run-log entry (superset of loop-engineering's run-log JSON).
 
 ### Corrections to earlier survey findings
 
-1. loop-engineering has **no `.budget.json`/`run-log.json`** — both are markdown with an embedded JSON entry schema; only `gate.yaml` and `registry.yaml` are machine-first. Implication: open-seed's choice to make guardrails fully YAML is *ahead* of the pattern book, matching its gate.yaml trajectory.
-2. L1/L2/L3 are **not defined in one verbatim block** anywhere — they're an operating convention scattered across LOOP.md/safety.md/checklist. open-seed codifying tiers in guardrails.yaml is novel relative to its closest cousin.
-3. orc's runtime exclusion uses `.git/info/exclude`, not `.gitignore` — worth copying for open-seed runtime dirs.
-4. antfarm's "acceptance criteria" live in planner-generated stories (data), not in the workflow YAML (only `expects:` string-match lives there) — mechanical verifiability is enforced by prompt convention plus the verifier agent, not schema.
-5. kodo has no gate files at all — governance is purely protocol (rejection loop), the opposite pole from loki; open-seed's design should state explicitly that it combines file-governance (loop-engineering/loki) with protocol-governance (kodo/orc).
+1. loop-engineering has **no `.budget.json`/`run-log.json`**: both are markdown with an embedded JSON entry schema; only `gate.yaml` and `registry.yaml` are machine-first. Implication: open-seed's choice to make guardrails fully YAML is *ahead* of the pattern book, matching its gate.yaml trajectory.
+2. L1/L2/L3 are **not defined in one verbatim block** anywhere: they're an operating convention scattered across LOOP.md/safety.md/checklist. open-seed codifying tiers in guardrails.yaml is novel relative to its closest cousin.
+3. orc's runtime exclusion uses `.git/info/exclude`, not `.gitignore`: worth copying for open-seed runtime dirs.
+4. antfarm's "acceptance criteria" live in planner-generated stories (data), not in the workflow YAML (only `expects:` string-match lives there): mechanical verifiability is enforced by prompt convention plus the verifier agent, not schema.
+5. kodo has no gate files at all: governance is purely protocol (rejection loop), the opposite pole from loki; open-seed's design should state explicitly that it combines file-governance (loop-engineering/loki) with protocol-governance (kodo/orc).

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Deterministic bd test double honoring the documented CLI surface the
 # adapter uses (docs/research/inspirations/01 §1). State: one JSON file at
-# $BD_FAKE_STATE. Not a beads implementation — a contract fixture.
+# $BD_FAKE_STATE. Not a beads implementation: a contract fixture.
 set -eu
 S=${BD_FAKE_STATE:?BD_FAKE_STATE required}
 [ -f "$S" ] || echo '{"seq":0,"issues":{}}' > "$S"
@@ -25,7 +25,7 @@ case "$cmd" in
     ;;
   show)
     # Real bd v1.2.2 returns an ARRAY of issues; a missing id is an error
-    # object on stdout with exit 1 (live-validated — os-435d7b61).
+    # object on stdout with exit 1 (live-validated: os-435d7b61).
     id=$1
     if j -e --arg id "$id" '.issues[$id]' >/dev/null 2>&1; then
       j -c --arg id "$id" '[.issues[$id]]'
@@ -87,7 +87,7 @@ case "$cmd" in
     ;;
   comments)
     # Real bd lists comments via `bd comments <id> --json` (show carries
-    # only comment_count there — live-validated).
+    # only comment_count there: live-validated).
     id=$1
     j -c --arg id "$id" '(.issues[$id].comments // [])'
     ;;

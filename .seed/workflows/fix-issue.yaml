@@ -10,7 +10,7 @@ description: |
 inputs:
   - {name: issue, type: string, required: true, description: "Issue number or URL"}
   - {name: repo, type: string, required: true, description: "owner/name for the checks gate"}
-  - {name: head_sha, type: string, required: true, description: "The PR head commit SHA — the ONE revision both the checks gate and the merge bind to (gh pr view <pr> --json headRefOid)"}
+  - {name: head_sha, type: string, required: true, description: "The PR head commit SHA: the ONE revision both the checks gate and the merge bind to (gh pr view <pr> --json headRefOid)"}
   - {name: pr, type: string, required: true, description: "PR number for the unresolved-threads query"}
 defaults: {harness: claude, model: sonnet}
 budgets: {max_wall_clock_minutes: 120, max_step_retries: 2}

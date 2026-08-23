@@ -1,5 +1,5 @@
 {
-  "$comment": "The port verb surface: nine REQUIRED verbs (research/10 §5.1 as amended by erratum) plus optional capabilities backends declare in backend.toml. Args are CLI flags on `seed task <verb>`; outputs are fields in the envelope (envelope.schema.json). Transition legality, classes, and effects come from transitions.json — this file only describes I/O shapes.",
+  "$comment": "The port verb surface: nine REQUIRED verbs (research/10 §5.1 as amended by erratum) plus optional capabilities backends declare in backend.toml. Args are CLI flags on `seed task <verb>`; outputs are fields in the envelope (envelope.schema.json). Transition legality, classes, and effects come from transitions.json: this file only describes I/O shapes.",
   "schema_version": "1.0",
   "required": {
     "create": {
@@ -36,7 +36,7 @@
     },
     "close": {
       "args": {"task": "required", "resolution": "string message", "no-pr": "flag: human close via workflow_dispatch (D7 exemption; server-attributed)"},
-      "output": {"task": "id", "state": "done", "cascaded": "[task ids unblocked]", "cascade_skipped": "[task ids whose release the substrate refused — dependency entry preserved, operator unblock recovers]"},
+      "output": {"task": "id", "state": "done", "cascaded": "[task ids unblocked]", "cascade_skipped": "[task ids whose release the substrate refused: dependency entry preserved, operator unblock recovers]"},
       "errors": {"invalid_transition": {"exit": 3, "notes": "only legal from review"}},
       "notes": "The operator cancel cascade (terminal edges) reports cascaded/cascade_skipped exactly like close."
     },

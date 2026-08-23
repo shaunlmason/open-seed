@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Offline stand-in for Linear's GraphQL API (contract-test substrate).
 
-Models the subset the adapter uses: team workflow states (by NAME — the
+Models the subset the adapter uses: team workflow states (by NAME: the
 adapter's whole state mapping is name-based), issues with assignee/priority/
 labels, team labels (created on demand), comments, and issueUpdate. Set
 FAKE_LINEAR_NO_BLOCKED=1 to serve a workflow missing the required custom
 Blocked state (the adapter must refuse with exit 5 + remediation). Set
 FAKE_LINEAR_RACE_ACTOR=<id> for a deterministic claim interleave: a rival's
 later assignee+token write lands right after ours (last-write-wins, like
-the real API — the adapter's post-claim verification must report contention
+the real API: the adapter's post-claim verification must report contention
 with the winner). Set FAKE_LINEAR_NO_TODO_FROM_BLOCKED=1 to refuse the
 Blocked→Todo state move (the adapter's cascade must skip-and-report, and
 an unblock must keep the entry). Set FAKE_LINEAR_FAIL_ASSIGN=1 to refuse
@@ -20,7 +20,7 @@ contention, not a usable winner). Set FAKE_LINEAR_FAIL_DEP_RELABEL=1 to
 refuse any labelIds write that would REMOVE a seed:bo:dep: label (the
 adapter's cascade must roll the release back and skip-and-report).
 
-GraphQL is dispatched by operation name — the adapter sends named
+GraphQL is dispatched by operation name: the adapter sends named
 operations, so no query parsing is needed.
 """
 import json
@@ -141,7 +141,7 @@ class Handler(BaseHTTPRequestHandler):
         if not i:
             return self.reply(None, [{"message": "issue not found"}])
         inp = v["input"]
-        # Validate the whole input BEFORE applying any of it — the real
+        # Validate the whole input BEFORE applying any of it: the real
         # mutation is atomic, so a refusal must never leave a partial write.
         if "stateId" in inp:
             if inp["stateId"] not in BY_STATE_ID:
@@ -161,7 +161,7 @@ class Handler(BaseHTTPRequestHandler):
         if "stateId" in inp:
             i["stateId"] = inp["stateId"]
         if "assigneeId" in inp:
-            i["assigneeId"] = inp["assigneeId"]  # None clears — last write wins, like the real API
+            i["assigneeId"] = inp["assigneeId"]  # None clears: last write wins, like the real API
             rival = os.environ.get("FAKE_LINEAR_RACE_ACTOR")
             torn = os.environ.get("FAKE_LINEAR_RACE_TOKEN_ONLY")
             if (rival or torn) and i["assigneeId"]:
@@ -174,7 +174,7 @@ class Handler(BaseHTTPRequestHandler):
                     i["labelIds"] = [lid for lid in i.get("labelIds", [])
                                      if not labels.get(lid, {}).get("name", "").startswith("seed:tok:")] + [tok["id"]]
                 elif torn:
-                    # Torn interleave: only the rival's TOKEN write lands —
+                    # Torn interleave: only the rival's TOKEN write lands:
                     # assignee stays ours, token is theirs.
                     i["labelIds"] = [lid for lid in i.get("labelIds", [])
                                      if not labels.get(lid, {}).get("name", "").startswith("seed:tok:")] + [tok["id"]]

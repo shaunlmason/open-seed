@@ -40,12 +40,12 @@ repo=$(lockval repo)
 case "$(uname -s)" in
   Linux)  os=linux ;;
   Darwin) os=darwin ;;
-  *) die "unsupported OS $(uname -s) — use scripts/seed.ps1 on Windows, or set SEED_ENGINE" ;;
+  *) die "unsupported OS $(uname -s): use scripts/seed.ps1 on Windows, or set SEED_ENGINE" ;;
 esac
 case "$(uname -m)" in
   x86_64|amd64)  arch=amd64 ;;
   aarch64|arm64) arch=arm64 ;;
-  *) die "unsupported architecture $(uname -m) — set SEED_ENGINE" ;;
+  *) die "unsupported architecture $(uname -m): set SEED_ENGINE" ;;
 esac
 
 want=$(lockval "sha256_${os}_${arch}")

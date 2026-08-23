@@ -1,8 +1,8 @@
-# fastcards — the builtin single-machine store (§7.1 builtin-store
+# fastcards: the builtin single-machine store (§7.1 builtin-store
 # amendment, §8 R4). Coordination state in a local SQLite database under the
 # repo's COMMON git dir (linked worktrees share one claims DB); one BEGIN
 # IMMEDIATE transaction per verb, so claims are genuinely atomic. Declared
-# variance: state is machine-local (state_portability = "machine") — it does
+# variance: state is machine-local (state_portability = "machine"): it does
 # not travel with clones, forks, or CI; see README.md.
 name = "fastcards"
 version = "0.1.0"

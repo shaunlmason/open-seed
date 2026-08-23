@@ -1,6 +1,6 @@
 #!/bin/sh
 # Claude Code adapter (v1 cut, inspirations/09). Prompt on stdin → one JSON
-# envelope on stdout. Permission-tier mapping (declared, not silent —
+# envelope on stdout. Permission-tier mapping (declared, not silent:
 # faithful for claude per the tier-fidelity table):
 #   read-only → plan mode (no edits)
 #   safe-edit → acceptEdits (workspace file edits, no arbitrary escalation)

@@ -2,7 +2,7 @@
 # seed-dispatch-route (plan os-70028620): the dispatcher's deterministic
 # label-routing core, factored out of workflow YAML so it is testable
 # offline. Reads one GitHub event JSON on stdin and PRINTS the commands
-# the workflow should apply — print, don't execute: this script performs
+# the workflow should apply: print, don't execute: this script performs
 # no writes, so the fake-event contract test in validate.sh can assert
 # on its output with zero credentials.
 #
@@ -31,7 +31,7 @@ sender=$(jget '.sender.login // empty')
 # The label payload does not carry the SENDER's permission; the workflow
 # checks it (gh api .../collaborators/<sender>/permission) and injects it
 # as DISPATCH_SENDER_ASSOC. The payload fallback covers comment-shaped
-# events that do carry it. Never fall back to .issue.author_association —
+# events that do carry it. Never fall back to .issue.author_association:
 # that is the issue AUTHOR, not the acting sender.
 assoc=${DISPATCH_SENDER_ASSOC:-$(jget '.sender.author_association // "NONE"')}
 issue=$(jget '.issue.number // empty')
@@ -45,7 +45,7 @@ if [ -z "$card" ]; then
   card=$(jget '.issue.title // ""' | grep -oE 'os-[0-9a-f]{4,}' | head -1 || true)
 fi
 # Every field later interpolated into a printed command is STRICTLY
-# validated — the workflow executes router output, so issue-derived text
+# validated: the workflow executes router output, so issue-derived text
 # (a crafted seed:os-* label included) must never smuggle shell
 # metacharacters.
 if [ -n "$card" ] && ! printf '%s' "$card" | grep -qE '^os-[0-9a-f]{4,16}$'; then
@@ -63,7 +63,7 @@ sticky='<!-- seed-dispatch -->'
 case "$label" in
   state:*)
     # Mirror label edited by hand: a request, never a direct state write
-    # (§7.1 — the port is the only writer).
+    # (§7.1: the port is the only writer).
     printf 'gh issue comment %s --body "%s label edit \`%s\` by @%s noted as a REQUEST (mirror labels are read-only projections; state changes go through \`scripts/seed task <verb>\` — §7.1)."\n' \
       "$issue" "$sticky" "$label" "$sender"
     exit 0

@@ -1,4 +1,4 @@
-# beads — external backend wrapping the bd CLI (steveyegge/beads).
+# beads: external backend wrapping the bd CLI (steveyegge/beads).
 # Native atomic claim and close-cascade; Dolt-backed, offline-first.
 # Declared variances (see README.md): emulated fence (assignee-match, not a
 # rotating token), replica-scoped leases, event-append rides bd's audit.

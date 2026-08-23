@@ -10,7 +10,7 @@ Merge `workspaces.json` from this directory into `.amux/workspaces.json`
 at the repo root.
 
 **Trust prompts**: amux hash-pins the file (`~/.amux/trusted-scripts.json`,
-fail-closed) — any byte change re-gates and the user must re-approve on
+fail-closed): any byte change re-gates and the user must re-approve on
 next use. Expect a prompt after installing or editing the shim.
 
 ## Fidelity
@@ -19,5 +19,5 @@ next use. Expect a prompt after installing or editing the shim.
 |---|---|---|
 | setup + post-create.d | yes | `setup-workspace` (runs once at creation) |
 | run | yes | `run` |
-| teardown | best-effort | `archive` — ≤2 min, failure never blocks deletion, may run twice; make teardown idempotent |
+| teardown | best-effort | `archive`: ≤2 min, failure never blocks deletion, may run twice; make teardown idempotent |
 | pre-merge.d (blocking) | **no** | amux has no merge hook; CI is the merge authority (R11) |

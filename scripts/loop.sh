@@ -1,5 +1,5 @@
 #!/bin/bash
-# The loop runner (D2 option A — the squad's degenerate one-member case).
+# The loop runner (D2 option A: the squad's degenerate one-member case).
 # Repeatedly: claim ready work, implement it in a fresh worktree via a
 # harness adapter, gate the result mechanically, hand it to review. Fresh
 # context per task; state lives in the repo (§2.5).
@@ -10,7 +10,7 @@
 # Budgets come from .seed/guardrails.yaml (advisory circuit breakers, R6):
 # loop_max_iterations, max_attempts_per_task (consecutive-failure breaker),
 # lease. Dual-gate exit: the loop stops when the ready queue is empty AND the
-# last gate was green — or when the circuit breaker trips.
+# last gate was green, or when the circuit breaker trips.
 # SEED_HARNESS_CMD overrides the harness invocation (used by the smoke test).
 set -u
 

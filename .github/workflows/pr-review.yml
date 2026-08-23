@@ -1,6 +1,6 @@
 # pr-review (INERT until activation, §7.3): the reviewer-agent lane. v1
 # review is human-only; when the ANTHROPIC_API_KEY secret is added, this
-# workflow reviews task PRs under its own server-attributed app identity —
+# workflow reviews task PRs under its own server-attributed app identity:
 # which must differ from the plan author (D4.5 identity rule).
 name: pr-review
 
@@ -42,7 +42,7 @@ jobs:
             You are the reviewer role: read .seed/agents/reviewer.md and
             follow it. Review this PR against the merge-base plan blob only
             (D3). Post your verdict as a REAL pull-request review
-            (server-attributed to this workflow's app identity — the D4.5
+            (server-attributed to this workflow's app identity: the D4.5
             gate reads reviews, never comments); do not merge, and do not
             edit card state directly except `seed task reject` on a
             REQUEST_CHANGES verdict, which requires this app's identity in

@@ -3,7 +3,7 @@
 # Invoked by the engine as: seed-backend <verb> [id] [flags] --json
 # State mapping (plan os-e2b3a1f9): backlog=backlog, ready=todo,
 # in_progress=in_progress, review=in_review, blocked=blocked, done=done,
-# cancelled=cancelled — Paperclip's seven states are the port's, near
+# cancelled=cancelled: Paperclip's seven states are the port's, near
 # verbatim; the server's assertTransition() refusals map to exit 3.
 # Seed bookkeeping (minted claim token, blocked_on entries, implementer of
 # record, reviewer lockout) rides issue `metadata` (free JSON).
@@ -53,7 +53,7 @@ fail() {
 }
 envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
 
-# api METHOD PATH [JSON_BODY] — prints the body. The HTTP code is persisted
+# api METHOD PATH [JSON_BODY]: prints the body. The HTTP code is persisted
 # to a temp file because callers invoke api inside command substitutions
 # (subshells), where a plain variable would be lost; rc() reads it back.
 SEED_PC_CODE=$(mktemp)
@@ -76,7 +76,7 @@ pc_state() { # port state → paperclip state
 }
 prio_pc() { case "$1" in P0) echo critical;; P1) echo high;; P2) echo medium;; P3) echo low;; *) echo medium;; esac; }
 # jq prelude: normalize Paperclip vocabulary back to the port's on the way
-# out (priorities P0-P3, states) — callers like loop.sh sort and act on the
+# out (priorities P0-P3, states): callers like loop.sh sort and act on the
 # port vocabulary, never the backend's.
 PJQ='def pport: {"critical":"P0","high":"P1","medium":"P2","low":"P3"}[.] // "P2";
      def prank: {"P0":0,"P1":1,"P2":2,"P3":3}[.] // 2;
@@ -84,7 +84,7 @@ PJQ='def pport: {"critical":"P0","high":"P1","medium":"P2","low":"P3"}[.] // "P2
 
 get_issue() { api GET "/issues/$1"; }
 
-# patch_meta ID JQ_META_TRANSFORM — read-modify-write the metadata blob.
+# patch_meta ID JQ_META_TRANSFORM: read-modify-write the metadata blob.
 patch_meta() {
   cur=$(get_issue "$1"); [ "$(rc)" = "200" ] || return 1
   newmeta=$(printf '%s' "$cur" | jq -c "(.metadata // {}) | $2")
@@ -93,7 +93,7 @@ patch_meta() {
 }
 
 # The fence (D1 binding): a minted per-claim token stored in metadata,
-# validated in addition to the server's checkout-ownership enforcement — the
+# validated in addition to the server's checkout-ownership enforcement: the
 # bearer key alone cannot distinguish a reaped predecessor from the same
 # actor's new claim; the rotating token can.
 require_fence() {
@@ -108,7 +108,7 @@ require_fence() {
 
 mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1 /dev/urandom | tr -d ' \n'; }
 
-# cascade_deps ID — every nonterminal→done AND nonterminal→cancelled edge
+# cascade_deps ID: every nonterminal→done AND nonterminal→cancelled edge
 # carries the cascade effect (transition table): remove dep:ID from all
 # dependents, releasing those left blocked on nothing. Sets $cascaded.
 cascade_deps() {
@@ -189,7 +189,7 @@ case "$verb" in
     # token mint must be one exclusive claim, or two same-actor processes
     # both "succeed" and the second silently invalidates the first's fence.
     # This pre-check is the fast path; the atomic arbiter is the server,
-    # whose checkout endpoint 409s on ANY held lock (same agent included —
+    # whose checkout endpoint 409s on ANY held lock (same agent included:
     # the contract the fake encodes; reconcile on API upgrades, see README).
     holder=$(printf '%s' "$cur" | jq -r '.checkoutAgent // ""')
     if [ -n "$holder" ]; then
@@ -323,7 +323,7 @@ case "$verb" in
   lease-renew)
     require_fence "$id"
     # Liveness is Paperclip's watchdogs' job (declared variance); a comment
-    # is unnecessary — validate the fence and succeed.
+    # is unnecessary: validate the fence and succeed.
     envelope ",\"task\":\"$id\",\"note\":\"leases ride issueWatchdogs (declared)\""
     ;;
   ancestry)
@@ -343,7 +343,7 @@ case "$verb" in
     ;;
   budget)
     # Optional capability, budget="native": report the issue's goal budget
-    # as the platform enforces it (alert at 80%, hard pause at 100% — the
+    # as the platform enforces it (alert at 80%, hard pause at 100%: the
     # R6 enforcement a repo alone can never provide).
     cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
     goal=$(printf '%s' "$cur" | jq -r '.goalId // ""')

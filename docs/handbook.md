@@ -10,8 +10,8 @@ the port, the evidence chain, and where each gate grounds).
 ## 1. Getting started
 
 1. **Instantiate the template** (GitHub "Use this template", or clone and
-   re-init). Everything you need is checked in; the only binary — the seed
-   engine — is downloaded on first use by `scripts/seed`, pinned and
+   re-init). Everything you need is checked in; the only binary: the seed
+   engine: is downloaded on first use by `scripts/seed`, pinned and
    SHA-256-verified against `.seed/engine.lock`.
 2. **Create the coordination state ref:**
 
@@ -19,7 +19,7 @@ the port, the evidence chain, and where each gate grounds).
    scripts/seed init          # creates the seed-state branch (never check it out)
    ```
 
-3. **Apply server-side protections** — these are what make the gates real
+3. **Apply server-side protections**: these are what make the gates real
    (`scripts/seed init-github` prints this checklist):
    - Branch protection on `main`: require the `check-validate` checks and a
      review; **require conversation resolution before merging** (otherwise
@@ -30,7 +30,7 @@ the port, the evidence chain, and where each gate grounds).
    - Tag rule for `seed-anchor/*`: create-only, no deletion.
 4. **Edit the identity files:** put your leads in `CODEOWNERS`, your operator
    roster in `.seed/config.toml`, your mission in `.seed/teams/core.yaml`,
-   and wire your real lint/test into `make check` (keep it fast — it is the
+   and wire your real lint/test into `make check` (keep it fast: it is the
    backpressure everything multiplies through).
 5. Windows users run `scripts/seed.ps1`; air-gapped machines set a
    `vendor <path>` line in `engine.lock` or `SEED_ENGINE=<path>`.
@@ -39,7 +39,7 @@ the port, the evidence chain, and where each gate grounds).
 
 States: `backlog → ready → in_progress → review → done`, plus `blocked` and
 `cancelled`. The full edge table lives in `.seed/port-schema/transitions.json`
-and is enforced by the engine — invalid transitions are refused, not coerced.
+and is enforced by the engine: invalid transitions are refused, not coerced.
 
 ```sh
 scripts/seed task create --title "Fix login" --actor alice   # → backlog
@@ -49,9 +49,9 @@ scripts/seed task claim os-1a2b --actor agent-1 --lease 60m  # → in_progress
 ```
 
 - **Claim before working.** Claims are synchronous and exclusive: exit 2
-  means someone else has it — move on. Keep the returned `claim_token`;
+  means someone else has it: move on. Keep the returned `claim_token`;
   every later verb on the card needs it (a reaped claim's stale token gets
-  exit 6). Renew with `seed task lease-renew` at half-lease cadence — the
+  exit 6). Renew with `seed task lease-renew` at half-lease cadence: the
   loop does this for you.
 - **Plan first (above L1).** An unplanned card authorizes *planning only*:
   author `plans/<task-id>.md` (sections: Steps, File Scope, Acceptance
@@ -59,7 +59,7 @@ scripts/seed task claim os-1a2b --actor agent-1 --lease 60m  # → in_progress
   touching only that file, then park the card
   (`transition --to blocked --blocked-on plan:<pr>`). Maintenance unparks it
   when the plan PR merges. The **approved plan is the blob at your task PR's
-  merge-base** — amending a plan means a new plan PR, then rebasing your
+  merge-base**: amending a plan means a new plan PR, then rebasing your
   task branch (CI's stale-plan check forces exactly this).
 - **Implement on `seed/<task-id>`** in a worktree. Task PRs never touch
   `plans/**` (CI rejects them). Generate your receipt
@@ -69,7 +69,7 @@ scripts/seed task claim os-1a2b --actor agent-1 --lease 60m  # → in_progress
   A human (or the reviewer lane, once activated) reviews; the PR merges
   through the server gates; maintenance closes the card and unblocks
   dependents. For work that never lands as a PR, an operator runs the
-  **seed-close-no-pr** workflow — the dispatch actor is server-attributed
+  **seed-close-no-pr** workflow: the dispatch actor is server-attributed
   and becomes the card's evidence.
 
 Two habits that compound: append durable insights to `memory/LEARNINGS.md`
@@ -96,11 +96,11 @@ handoff stub and count toward the circuit breaker
 and `scripts/harness/codex` ship; add your own by dropping an executable in
 `scripts/harness/` honoring the contract in `scripts/seed-harness`
 (prompt on stdin, JSON envelope out, exits 0/1/3/124/127). Permission tiers
-map per-harness and the mapping is **declared, never silent** — see the role
+map per-harness and the mapping is **declared, never silent**: see the role
 files' `permission:` frontmatter.
 
 **Checked-in workflows** (v2, §7.3): multi-step jobs live as step DAGs at
-`.seed/workflows/<name>.yaml` — steps with `depends_on` edges (by id),
+`.seed/workflows/<name>.yaml`: steps with `depends_on` edges (by id),
 `consumes`/`produces` artifact contracts, `when`/`trigger_rule` branching,
 loop groups, and `approval|review|checks` gates; the format is
 `.seed/workflow-schema/workflow.schema.json`. Two commands run the story:
@@ -115,29 +115,29 @@ scripts/seed workflow run fix-issue --input issue=42 --input repo=o/r --input pr
 Independent steps run in parallel waves; AI steps ride the same
 `scripts/seed-harness` adapters as the loop, with the step's
 `tools: readonly|coding` mapped onto `SEED_PERMISSION` (`read-only` /
-`safe-edit` — nothing in a workflow file reaches `yolo`), and harness/model
+`safe-edit`, nothing in a workflow file reaches `yolo`), and harness/model
 values validated against the `[workflows]` registry in `.seed/config.toml`.
 Run state (checkpoints, artifacts, gate records) lives under
-`<git-common-dir>/seed-runs/<run-id>/` — local, shared across linked
+`<git-common-dir>/seed-runs/<run-id>/`: local, shared across linked
 worktrees, never committed. An `approval` gate pauses the run until you
 write its response file and `--resume <run-id>`; resuming re-executes only
 incomplete steps and refuses a run whose definition or inputs changed.
 Under `--mock` every AI step goes to `scripts/harness/mock` and every
-`run:` command is recorded, never executed — a mock run can prove any
+`run:` command is recorded, never executed: a mock run can prove any
 workflow, `fix-issue` included, without touching anything. Steps that
 mutate task state do it through `scripts/seed task <verb>` like every
-other caller — workflows are the intra-run DAG; **cards stay the
+other caller: workflows are the intra-run DAG; **cards stay the
 inter-agent coordination layer** (dep edges + `ready`-gating + the close
 cascade already schedule work across agents topologically).
 `.claude/workflows/` remains the home for Claude-native dynamic
-workflows — never under `.seed/`.
+workflows, never under `.seed/`.
 
-**The MCP transport** (research/10 §5.4 — v2): `seed mcp serve` is an
-MCP stdio server exposing one tool per port verb — the worker surface
+**The MCP transport** (research/10 §5.4: v2): `seed mcp serve` is an
+MCP stdio server exposing one tool per port verb: the worker surface
 (create/ready/get/list/claim/lease-renew/release/transition/comment/
 attach-evidence) and one tool per operator verb (close, promote,
 deprioritize, reject, cancel, reinstate, block, unblock, plan-unblock).
-`.mcp.json` ships the registration (strict JSON — the format admits no
+`.mcp.json` ships the registration (strict JSON: the format admits no
 comments, so the entry is live but inert until a harness loads the
 file):
 
@@ -146,7 +146,7 @@ file):
 ```
 
 The shipped registration spawns `sh` (the POSIX bootstrap). On a native
-Windows checkout swap the entry for the PowerShell bootstrap — same
+Windows checkout swap the entry for the PowerShell bootstrap: same
 server, same tools:
 
 ```json
@@ -154,11 +154,11 @@ server, same tools:
 ```
 
 MCP is an ADDITIONAL transport, never a replacement: `tools/call`
-dispatches through the identical service path the CLI uses — same
+dispatches through the identical service path the CLI uses: same
 fencing, same transition table, same run-log events, same envelopes.
 Port failures come back as tool results with `isError: true` carrying
 the refusal envelope and exit class (contention, invalid transition,
-fenced out, halted) — JSON-RPC errors stay reserved for transport
+fenced out, halted): JSON-RPC errors stay reserved for transport
 faults. The wrapper adds no authority: `--actor` remains an asserted
 tool argument, operator tools still check the `[operators]` roster, and
 a HALT marker refuses mutating tools exactly as it refuses CLI verbs.
@@ -166,12 +166,12 @@ a HALT marker refuses mutating tools exactly as it refuses CLI verbs.
 Prefer the MCP surface for tool-native harnesses (schema'd calls beat
 shell strings) and for MCP-gateway governance in the Paperclip style;
 CI, cron, and bare shells stay on the CLI, which remains the source of
-truth — no verb exists MCP-only.
+truth, no verb exists MCP-only.
 
 **Sharing skills between repos** (D8): `seed.yaml` at the template
 root names upstream skill sources; `seed.lock` pins them (commit SHA +
 content sha256, full source coordinates); both are control surface
-(D4.1 — CODEOWNERS-reviewed, never auto-merged). The flow:
+(D4.1: CODEOWNERS-reviewed, never auto-merged). The flow:
 
 ```sh
 $EDITOR seed.yaml                      # name sources; optionally compose
@@ -182,34 +182,34 @@ git add seed.yaml seed.lock skills/managed && git commit
 
 CI runs `seed skills install --frozen` (the D8 supply-chain rule): an
 unlocked manifest edit, a hash mismatch, or on-disk drift fails the
-build — with an empty manifest the step is a no-op, so fresh
+build: with an empty manifest the step is a no-op, so fresh
 instantiations stay green with zero configuration. Managed skills flow
 through `seed sync` to `.claude/skills/` and `.agents/skills/` exactly
 like local ones (a local skill with the same name wins); install prunes
-only `skills/managed/` — local skills are never touched.
+only `skills/managed/`: local skills are never touched.
 
 `compose:` entries generate a NEW skill from an ordered `use:` list
 (bodies concatenated with headings demoted, supporting files carried
 over; unknown inputs, self-use, and cycles are refused at parse time).
-Composed skills are not locked — they are deterministic functions of
+Composed skills are not locked: they are deterministic functions of
 locked inputs, regenerated at install.
 
 **Injection-review posture**: skill updates arrive as ordinary PRs whose
-diff shows the new skill content — review happens in the review pane on
+diff shows the new skill content: review happens in the review pane on
 that diff, never at install time. Treat upstream skill text like any
 other third-party code contribution: the lock pins what you reviewed,
 and `--frozen` guarantees CI runs only that.
 
-**Multi-squad routing** (§6 — v2 activated): v1 ships one `core` squad
+**Multi-squad routing** (§6: v2 activated): v1 ships one `core` squad
 whose bare-`**` scope satisfies every rule trivially; a second
 `.seed/teams/<name>.yaml` (start from `platform.yaml.example`) activates
 the full semantics. `seed validate` enforces: non-overlapping specific
-scopes (core's `**` fallback is exempt — it is the "matches what nothing
+scopes (core's `**` fallback is exempt: it is the "matches what nothing
 else claims" floor; two bare-`**` squads are refused; a specific overlap
 passes only under a `shared_scope` entry naming one owning squad),
 unique priority ints, a human lead per squad, and tier ≤ the guardrails
 ceiling. Cards route **explicit `squad:` → lowest-priority backlog label
-match → core** — no card can be invisible — and `get`/`list`/`ready`
+match → core**, no card can be invisible, and `get`/`list`/`ready`
 surface the resolved squad. One loop per squad is the scaling unit:
 
 ```sh
@@ -222,13 +222,13 @@ squad's tier govern merges into its scope (once >1 squad exists, a
 codeowners-reviewing squad whose lead is missing from CODEOWNERS gets a
 validation warning). Goal-ancestry checking activates on the literal
 `>1 squad || any mission`: open cards with no resolvable parent chain
-to a mission card warn (report, never refusal) — core-only, missionless
+to a mission card warn (report, never refusal): core-only, missionless
 repos see nothing, which is why the shipped core.yaml keeps its
 `mission:` commented out until you set a real one.
 
 **Mail and handoff packets** (§7.2, inspirations/08 as amended by its
 erratum): inter-agent messages are one never-rewritten file per message
-at `mail/<recipient>/<msg-id>.yaml` on the seed-state ref — trust =
+at `mail/<recipient>/<msg-id>.yaml` on the seed-state ref: trust =
 push access, like every coordination artifact; no daemon. Verbs:
 
 ```sh
@@ -248,8 +248,8 @@ the same checkpoint rule for interactive agents. `seed maintain
 report` surfaces unread counts per actor.
 
 `seed handoff generate <task> [--write]` renders the bounded (≤8KB)
-mechanical continuation packet — card goal/criteria, claim block,
-evidence trail, branch/HEAD/dirty-file anchors from git — at
+mechanical continuation packet: card goal/criteria, claim block,
+evidence trail, branch/HEAD/dirty-file anchors from git: at
 `handoff/<task-id>.md` on the state ref. Worker release/park writes one
 automatically with real workspace anchors; a maintenance **reap** runs
 in its own checkout, so reap-written packets mark the anchors
@@ -258,7 +258,7 @@ unavailable instead of recording the reaper's git state.
 **Worktree tool fidelity** (D6 "the rest v2"): `.seed/hooks/` is the
 runner-agnostic lifecycle contract, and `.seed/hooks/shims/<tool>/` ships
 checked-in fragments for the surveyed external tools. Support is declared,
-never silent — the per-tool matrix (README in each shim dir has the full
+never silent: the per-tool matrix (README in each shim dir has the full
 table and install steps):
 
 | Tool | Post-create | Teardown | Blocking pre-merge |
@@ -266,12 +266,12 @@ table and install steps):
 | superset | yes (`.superset/config.json`) | yes | no |
 | agent-deck | yes (`worktree-setup.sh`) | best-effort | no |
 | vibe-tree | yes (`.vibetree/hooks/`) | yes | no |
-| octomux | yes (`task_created`) | approximate (`runtime_state_changed`) | no — fire-and-forget hooks |
+| octomux | yes (`task_created`) | approximate (`runtime_state_changed`) | no: fire-and-forget hooks |
 | amux | yes (`setup-workspace`) | best-effort (`archive`) | no |
-| dmux | yes (`worktree_created`) | yes (`before_worktree_remove`) | **no — dmux spawns `pre_merge` detached; it cannot veto** |
+| dmux | yes (`worktree_created`) | yes (`before_worktree_remove`) | **no: dmux spawns `pre_merge` detached; it cannot veto** |
 | tmux-ide | no | no | no |
 | ouijit | via `start` hook | approximate (`done`) | no |
-| parallel-code | README-only: no hook surface | — | — |
+| parallel-code | README-only: no hook surface | n/a | n/a |
 
 No surveyed tool can honor a blocking pre-merge, which is why the local
 `pre-merge.d/` gate is a convenience pre-check and **CI verify is the
@@ -281,7 +281,7 @@ merge authority everywhere** (R11).
 
 The seed-dispatch and pr-review workflows ship in-tree and **inert**
 (D7): without secrets every run is a cheap no-op. Everything
-mechanizable already landed — the deterministic label router
+mechanizable already landed: the deterministic label router
 (`scripts/seed-dispatch-route`, contract-tested in validate.sh), the
 D4.5 identity check (`scripts/seed-review-identity`, wired into verify
 on `pull_request_review` events), and the audited workflow conventions.
@@ -291,7 +291,7 @@ The flip itself is yours; in order:
    Actions). Both workflows activate on its presence alone.
 2. **The reviewer's identity**: install/choose the GitHub App the
    pr-review lane posts through, and add that identity to
-   `[operators].actors` in `.seed/config.toml` — the roster is what
+   `[operators].actors` in `.seed/config.toml`: the roster is what
    authorizes `seed task reject` and the other operator verbs the lane
    uses. Without this the lane can review but every reject is refused.
 3. **Repo settings** (once you want L3): add the reviewer app to branch
@@ -299,9 +299,9 @@ The flip itself is yours; in order:
    reviewer ≠ implementer, and a review posted after the last push
    re-runs verify automatically.
 4. **Guardrails tier**: raise `autonomy.max_tier` L2 → L3 in
-   `.seed/guardrails.yaml` (its own reviewed PR — control surface).
+   `.seed/guardrails.yaml` (its own reviewed PR: control surface).
 5. **Solo-mode caveat** (§10 Q1): on a solo repo your own account is
-   admin, implementer, AND operator — agents need a non-admin machine
+   admin, implementer, AND operator: agents need a non-admin machine
    identity before L3 means anything. Do not skip this.
 
 **Live checklist** (run after flipping; attach each artifact's URL as
@@ -318,11 +318,11 @@ evidence on card os-70028620):
 
 ## 4. Guardrails, honestly
 
-`.seed/guardrails.yaml` is the vocabulary; enforcement is layered — hooks
+`.seed/guardrails.yaml` is the vocabulary; enforcement is layered: hooks
 locally, CODEOWNERS + branch protection server-side, validators in CI:
 
 - **Autonomy tiers**: L1 report-only, L2 assisted-in-worktree (agent
-  implements against an approved plan, human merges — the default ceiling),
+  implements against an approved plan, human merges: the default ceiling),
   L3 unattended-with-gates (activates with the pr-review lane).
 - **Budgets are advisory** on the file backend: the loop enforces its own
   iteration/attempt caps, but nothing in a repo can hard-stop an external
@@ -330,7 +330,7 @@ locally, CODEOWNERS + branch protection server-side, validators in CI:
   need a platform (that's the backend/event seam, not the template).
 - **Control surface** (`.seed/**`, workflows, CODEOWNERS, the shim…): never
   auto-mergeable, always owner-reviewed. The auto-merge allowlist may not
-  intersect it — nor `plans/**`, so no agent can approve its own work order.
+  intersect it: nor `plans/**`, so no agent can approve its own work order.
 - **Trust, precisely:** everything on the `seed-state` ref is exactly as
   trustworthy as push access to it (leases, rejections, the run log). The
   load-bearing gates deliberately ground elsewhere: merged plans, CI-
@@ -344,27 +344,27 @@ locally, CODEOWNERS + branch protection server-side, validators in CI:
 The same repo works at every rung; each rung only adds convention, never
 requirements:
 
-1. **Solo human, no engine** — cards are readable markdown on the state ref
+1. **Solo human, no engine**: cards are readable markdown on the state ref
    (`git fetch origin seed-state && git cat-file -p FETCH_HEAD:tasks/…`);
    CODEOWNERS and CI still gate PRs; `validate.sh` degrades to a warning.
-2. **Human + engine** — the port verbs, receipts, validators.
-3. **One agent session** — AGENTS.md teaches any harness the loop manually.
-4. **The loop** — unattended L2 as in §3.
-5. **Squads** — add team files as scopes grow (`core` is the degenerate
+2. **Human + engine**: the port verbs, receipts, validators.
+3. **One agent session**: AGENTS.md teaches any harness the loop manually.
+4. **The loop**: unattended L2 as in §3.
+5. **Squads**: add team files as scopes grow (`core` is the degenerate
    default; multi-squad routing activates in v2).
-6. **External orchestrators** — anything that can run a CLI can drive the
+6. **External orchestrators**: anything that can run a CLI can drive the
    port; TUIs and platforms layer on top without changing the contract.
 
 ## 6. Scaling and upgrading
 
 - **Write ceiling (file backend):** every mutating verb is one commit+push
-  on one ref — contention starts well below ten chatty agents. The engine
+  on one ref: contention starts well below ten chatty agents. The engine
   retries with backoff and reports. Two throughput upgrades, split by shape
   (R4): **one machine** hammering the loop → the **fastcards builtin**
-  (`.seed/backends/fastcards/`): a SQLite store inside the engine — native
+  (`.seed/backends/fastcards/`): a SQLite store inside the engine: native
   atomic claims, no network, linked worktrees share one DB. Machine-local
   by declaration (`state_portability = "machine"`): state does not travel
-  with clones or CI, so **the close lane is local** — you close review
+  with clones or CI, so **the close lane is local**: you close review
   cards yourself (`seed task close <id> --no-pr …`), the CI auto-close
   never sees them. **Multiple writers** → the
   **beads backend** (ships in `.seed/backends/beads/`): install `bd` + `jq`,
@@ -372,7 +372,7 @@ requirements:
   switch is a reviewed config line **plus the state move**:
   `scripts/seed state export > cards.json`, flip `backend =` in
   `.seed/config.toml`, `scripts/seed init`, then
-  `scripts/seed state import cards.json` — ids, states, dep edges,
+  `scripts/seed state import cards.json`: ids, states, dep edges,
   rejections, and the run log all travel; import refuses a non-empty
   target. Then `scripts/seed backend verify <name>`. Read each README for
   the declared variances. For teams already living in a tracker, the
@@ -382,43 +382,43 @@ requirements:
   (`.seed/backends/jira/`) does the same for Jira Cloud (status-name
   convention incl. `Backlog` + `Blocked`, transitions arbitrated by the
   workflow, actors mapped to accountIds in `actors.json`).
-- **Human visibility — the issues mirror:** set `[mirror] enabled = true` in
+- **Human visibility: the issues mirror:** set `[mirror] enabled = true` in
   `.seed/config.toml` and the maintenance workflow renders every card as a
   labeled GitHub issue (`seed:ready`, `seed:in_progress`, `seed:review`,
   `seed:blocked`, `seed:done`; backlog unlabeled; done/cancelled close as
   completed/not-planned). Strictly **one-way**: cards stay authoritative,
-  and editing an issue's labels changes nothing — treat issues as a read-only
+  and editing an issue's labels changes nothing: treat issues as a read-only
   dashboard (label edits become *requests* only once the dispatcher lane is
   active).
-- **When budgets must be enforced, not advised** — the control-plane rung:
+- **When budgets must be enforced, not advised**: the control-plane rung:
   the **paperclip backend** (`.seed/backends/paperclip/`) puts cards on a
   Paperclip server with DB-atomic checkouts, server-validated transitions,
   and **native hard budget stops** (the platform pauses over-budget agents
-  — the enforcement R6 says a repo alone can never provide). Server is
+: the enforcement R6 says a repo alone can never provide). Server is
   truth: no offline, no fork portability; read its README for setup and
   the declared variances.
 - **Merge throughput:** don't enable repo-wide "require branches up to
-  date" — stale-plan safety is already per-PR in verify. At scale, enable a
+  date" — stalee-plan safety is already per-PR in verify. At scale, enable a
   GitHub **merge queue**; the verify workflow already handles `merge_group`
   by deriving the PR and classifying by its real head branch.
 - **Upgrading the engine** is two commands: `scripts/seed upgrade`
-  (resolve the latest release — or `--to vX.Y.Z`, rollback included —
+  (resolve the latest release, or `--to vX.Y.Z`, rollback included:
   verify its checksums, preflight protocol compatibility, and rewrite
   `.seed/engine.lock` atomically; `--check` only reports), then a
-  **reviewed PR** with the diff — the command never touches git, because
+  **reviewed PR** with the diff: the command never touches git, because
   the lockfile is control surface, and its output walks you through the
   review steps and the release notes. An incompatible release is refused
   before anything is written (the alternative is a pin that exits 10 on
   every invocation).
 - **Upgrading the template** is the same two-command story:
   `scripts/seed template upgrade` reads your provenance from
-  `.seed/template.lock` (repo, recorded version, and — after the first
-  upgrade — the upstream commit it merged from, stamped by the command),
+  `.seed/template.lock` (repo, recorded version, and: after the first
+  upgrade: the upstream commit it merged from, stamped by the command),
   fetches the target release, and three-way merges what changed upstream
   against what you changed locally onto a new local branch
   `template-upgrade/<tag>`: conflicts staged as standard markers, your
   work products (`plans/`, `receipts/`, `memory/`, `decisions/`) never
-  merged, your working tree untouched. Then the **reviewed PR** — the
+  merged, your working tree untouched. Then the **reviewed PR**: the
   command never pushes and never opens one: resolve any conflicts on the
   branch, run `make check`, push, merge through the ordinary gates.
   A `.seed/version` change in the target is called out in the envelope;
@@ -426,10 +426,10 @@ requirements:
   by design (§7.1): upstream never pushes into your repo. `--check`
   reports current vs latest without creating anything.
 - **Cutting a template release (maintainers):** bump `version` in
-  `.seed/template.lock`, commit, tag that commit — version-then-tag. Do
+  `.seed/template.lock`, commit, tag that commit: version-then-tag. Do
   not write a `commit` line: the lockfile cannot record the SHA of the
   commit that contains it; consumers resolve your immutable release tag
-  instead — which is why the seed-anchor-style tag protections in §1
+  instead: which is why the seed-anchor-style tag protections in §1
   extend to release tags.
 
 ## 7. Where everything lives
@@ -440,5 +440,5 @@ requirements:
 | `plans/` `receipts/` `memory/` `decisions/` | Work products, each with its own gate |
 | `scripts/seed` | The only coordination entry point |
 | `scripts/loop.sh` · `scripts/seed-harness` | The loop and the harness adapters |
-| `seed-state` ref | Machine-written coordination state — never checked out, never hand-edited |
+| `seed-state` ref | Machine-written coordination state, never checked out, never hand-edited |
 | `.github/workflows/` | check-validate + maintenance (live); dispatch + pr-review (inert until secrets) |

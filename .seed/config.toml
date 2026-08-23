@@ -1,4 +1,4 @@
-# open-seed coordination config (control surface, human-owned — D4.1).
+# open-seed coordination config (control surface, human-owned: D4.1).
 
 [coordination]
 backend = "filecards"   # active backend plugin (.seed/backends/<name>/)
@@ -11,20 +11,20 @@ default_lease = "60m"   # leases are mandatory on filecards (§7.1)
 # Operator-class credentials (§7.1 / §10 Q5): the humans (squad leads) and
 # workflow app identities allowed to perform operator verbs. The shim enforces
 # verb class by this roster. Local CLI identity is asserted, not
-# authenticated — true enforcement is state-ref push access plus the
+# authenticated: true enforcement is state-ref push access plus the
 # server-attributed gates (R10).
 [operators]
 # Humans (squad leads) plus the maintenance workflow's identity (§10 Q5).
 actors = ["shaunlmason", "seed-maintenance"]
 
 [mirror]
-# One-way GitHub Issues export (D1: a component, not a backend — cards stay
+# One-way GitHub Issues export (D1: a component, not a backend: cards stay
 # authoritative; label edits on issues are requests, never state). Applied by
 # the seed-maintenance workflow when enabled.
 enabled = false
 
 # Workflow-engine registry (validate rule 9, plan os-52b9aed0): harness
-# and model values in .seed/workflows/*.yaml must appear here — a
+# and model values in .seed/workflows/*.yaml must appear here: a
 # misspelled or unlisted value fails preflight, not the first live run.
 [workflows]
 harnesses = ["claude", "codex", "mock"]

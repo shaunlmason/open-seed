@@ -1,7 +1,7 @@
 #!/bin/sh
 # Live contract test: the SAME corpus as test.sh, driven through the
 # adapter against a real bd install (plan os-435d7b61). Self-skips with
-# exit 0 when bd is absent — CI stays green and credential-free; running
+# exit 0 when bd is absent: CI stays green and credential-free; running
 # against a version other than the validated pin warns but proceeds
 # (drift discovery is the point).
 set -eu

@@ -14,7 +14,7 @@ Merge `workspace.yml` from this directory into `.tmux-ide/workspace.yml`
 |---|---|---|
 | setup | yes | `before` (pre-launch, once per session start) |
 | run | yes | a pane whose `command` is the run hook |
-| post-create.d | no | tmux-ide manages sessions, not worktrees — no create event |
+| post-create.d | no | tmux-ide manages sessions, not worktrees, no create event |
 | teardown | no | no session-end hook surface |
 | pre-merge.d (blocking) | **no** | no merge concept; CI is the merge authority (R11) |
 
