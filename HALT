@@ -1,0 +1,4 @@
+conformance lint failed:
+- os-18135882: done without a resolvable plan at plans/os-18135882.md and without the no-PR exemption (D3/D7)
+- os-62b64ce8: done without a resolvable plan at plans/os-62b64ce8.md and without the no-PR exemption (D3/D7)
+- os-72722779: done without a resolvable plan at plans/os-72722779.md and without the no-PR exemption (D3/D7)
