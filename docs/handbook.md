@@ -426,8 +426,21 @@ requirements:
   by design (§7.1): upstream never pushes into your repo. `--check`
   reports current vs latest without creating anything.
 - **Cutting a template release (maintainers):** bump `version` in
-  `.seed/template.lock`, commit, tag that commit: version-then-tag. Do
-  not write a `commit` line: the lockfile cannot record the SHA of the
+  `.seed/template.lock`, commit, tag that commit: version-then-tag; then
+  push the commit and the tag, and publish a GitHub Release for that tag,
+  e.g. `git push origin main && git push origin v0.1.0` followed by
+  `gh release create v0.1.0 -t v0.1.0 --verify-tag`. Push the tag before
+  the publish: if the tag exists only locally, `gh release create`
+  silently synthesizes one from the head of the default branch, so a
+  Release published without `--verify-tag` can anchor to a different
+  commit than your version bump, and release tags are immutable under
+  the §1 protections, so the mistake cannot be corrected in place.
+  `--verify-tag` makes the command fail instead. Publishing is the
+  load-bearing step: consumers resolve the release through the
+  `/releases/latest` redirect, which GitHub serves only for a published
+  Release, not a bare tag, so the published Release is what `seed
+  template upgrade` (and any `/releases/latest`-based resolution) follows.
+  Do not write a `commit` line: the lockfile cannot record the SHA of the
   commit that contains it; consumers resolve your immutable release tag
   instead: which is why the seed-anchor-style tag protections in §1
   extend to release tags.
