@@ -265,3 +265,4 @@
 {"actor":"claude","data":{"evidence_id":"ev-ef9e51b3","kind":"receipt"},"task":"os-501a29c2","ts":"2026-08-24T02:46:15Z","verb":"attach-evidence"}
 {"actor":"claude","data":{"to":"review","transitioned":true},"task":"os-501a29c2","ts":"2026-08-24T02:46:23Z","verb":"transition"}
 {"actor":"opencode","data":{"to":"blocked","transitioned":true},"task":"os-a353ef17","ts":"2026-08-24T02:46:39Z","verb":"transition"}
+{"actor":"opencode","data":{"lease_expires":"2026-08-24T03:46:52Z"},"task":"os-af5cb439","ts":"2026-08-24T02:46:52Z","verb":"claim"}
