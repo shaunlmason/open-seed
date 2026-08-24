@@ -1,14 +1,16 @@
 {
   "schema_version": "1.0",
   "task": "os-221f5929",
-  "merge_base": "6de913a38db269c182b045a6052292e68abfea2b",
-  "head": "461f42e820bd21e7694109f88bb419b7dd0f28c0",
+  "merge_base": "eb6294b700868936100db0b468ff33ff32ba1ba2",
+  "head": "b189d50985cb9d3a1bc704e984c62eb82ef5f8d7",
   "plan_path": "plans/os-221f5929.md",
   "plan_sha256": "2927498af6626017f6808f140d1c71cab862bce128b50cc928a753cc7213855b",
   "diff_files": [
-    ".seed/engine.lock"
+    ".seed/engine.lock",
+    "docs/handbook.md",
+    "scripts/validate.sh"
   ],
-  "diff_sha256": "f2fc8e478a6f252e2c43679d764fc266aa62c4d1dc9726364ffb79d028c40567",
+  "diff_sha256": "a10c0e6eb06be563012a1194a369c1395fd7a584b31d38583981d18346268464",
   "validation": [
     {
       "cmd": "test -f .claude-plugin/marketplace.json",
