@@ -261,3 +261,4 @@
 {"actor":"shaunlmason","data":{"evidence_id":"ev-88984476","kind":"pr"},"task":"os-221f5929","ts":"2026-08-24T02:45:08Z","verb":"attach-evidence"}
 {"actor":"shaunlmason","data":{"to":"review","transitioned":true},"task":"os-221f5929","ts":"2026-08-24T02:45:10Z","verb":"transition"}
 {"actor":"claude","data":{"to":"blocked","transitioned":true},"task":"os-a9915564","ts":"2026-08-24T02:45:23Z","verb":"transition"}
+{"actor":"claude","data":{"evidence_id":"ev-7e2a64ab","kind":"pr"},"task":"os-501a29c2","ts":"2026-08-24T02:46:13Z","verb":"attach-evidence"}
