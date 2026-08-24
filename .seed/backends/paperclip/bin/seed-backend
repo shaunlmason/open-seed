@@ -1,18 +1,27 @@
 #!/bin/sh
 # paperclip backend plugin: the port over Paperclip's REST API.
 # Invoked by the engine as: seed-backend <verb> [id] [flags] --json
-# State mapping (plan os-e2b3a1f9): backlog=backlog, ready=todo,
-# in_progress=in_progress, review=in_review, blocked=blocked, done=done,
-# cancelled=cancelled: Paperclip's seven states are the port's, near
-# verbatim; the server's assertTransition() refusals map to exit 3.
-# Seed bookkeeping (minted claim token, blocked_on entries, implementer of
-# record, reviewer lockout) rides issue `metadata` (free JSON).
+#
+# Route + field shapes are the ones a live instance actually serves
+# (reconciled under plan os-2c0c474c against paperclipai 2026.817.0):
+#   - only the issue COLLECTION and goals/agents/activity are
+#     company-scoped; every single-issue route is /api/issues/<id>...
+#   - the state field is `status`, not `state`. Paperclip returns 200 for
+#     a PATCH naming a field it does not have, so the wrong name is a
+#     SILENT no-op: never assert a transition from the response alone.
+#   - issues carry no `metadata`; seed bookkeeping rides the per-issue
+#     document store at key `seed` (see meta_get/meta_put).
+#   - checkout wants {agentId, expectedStatuses[]} against a real agent
+#     row, so --actor is resolved to an agent id (resolve_agent).
+# State mapping: backlog=backlog, ready=todo, in_progress=in_progress,
+# review=in_review, blocked=blocked, done=done, cancelled=cancelled.
 set -u
 for c in curl jq; do
   command -v "$c" >/dev/null 2>&1 || { printf '{"ok":false,"schema_version":"1.0","error":"backend_unavailable","message":"%s not installed"}\n' "$c"; exit 5; }
 done
 : "${PAPERCLIP_API_URL:?}" "${PAPERCLIP_API_KEY:?}" "${PAPERCLIP_COMPANY_ID:?}"
-base="$PAPERCLIP_API_URL/api/companies/$PAPERCLIP_COMPANY_ID"
+base="$PAPERCLIP_API_URL/api"
+co="/companies/$PAPERCLIP_COMPANY_ID"
 
 verb=${1:-}; [ $# -gt 0 ] && shift
 id=""
@@ -53,11 +62,11 @@ fail() {
 }
 envelope() { printf '{"ok":true,"schema_version":"1.0","verb":"%s"%s}\n' "$verb" "${1:-}"; }
 
-# api METHOD PATH [JSON_BODY]: prints the body. The HTTP code is persisted
-# to a temp file because callers invoke api inside command substitutions
-# (subshells), where a plain variable would be lost; rc() reads it back.
+# api METHOD PATH [JSON_BODY]: PATH is absolute under /api. Prints the
+# body; the HTTP code is persisted to a temp file because callers invoke
+# api inside command substitutions (subshells), where a plain variable
+# would be lost; rc() reads it back.
 SEED_PC_CODE=$(mktemp)
-trap 'rm -f "$SEED_PC_CODE"' EXIT
 api() {
   m=$1; p=$2; d=${3:-}
   out=$(curl -sS -w '\n%{http_code}' -X "$m" -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
@@ -68,59 +77,157 @@ api() {
 }
 rc() { cat "$SEED_PC_CODE"; }
 
-port_state() { # paperclip state → port state
-  case "$1" in todo) echo ready ;; in_review) echo review ;; *) echo "$1" ;; esac
-}
-pc_state() { # port state → paperclip state
-  case "$1" in ready) echo todo ;; review) echo in_review ;; *) echo "$1" ;; esac
-}
+port_state() { case "$1" in todo) echo ready ;; in_review) echo review ;; *) echo "$1" ;; esac; }
+pc_state()   { case "$1" in ready) echo todo ;; review) echo in_review ;; *) echo "$1" ;; esac; }
 prio_pc() { case "$1" in P0) echo critical;; P1) echo high;; P2) echo medium;; P3) echo low;; *) echo medium;; esac; }
-# jq prelude: normalize Paperclip vocabulary back to the port's on the way
-# out (priorities P0-P3, states): callers like loop.sh sort and act on the
-# port vocabulary, never the backend's.
 PJQ='def pport: {"critical":"P0","high":"P1","medium":"P2","low":"P3"}[.] // "P2";
      def prank: {"P0":0,"P1":1,"P2":2,"P3":3}[.] // 2;
      def pstate: {"todo":"ready","in_review":"review"}[.] // .;'
 
 get_issue() { api GET "/issues/$1"; }
 
-# patch_meta ID JQ_META_TRANSFORM: read-modify-write the metadata blob.
-patch_meta() {
-  cur=$(get_issue "$1"); [ "$(rc)" = "200" ] || return 1
-  newmeta=$(printf '%s' "$cur" | jq -c "(.metadata // {}) | $2")
-  api PATCH "/issues/$1" "{\"metadata\": $newmeta}" >/dev/null
-  [ "$(rc)" = "200" ]
+# set_status ID PORT_STATE: PATCH the status field and VERIFY by re-read.
+# Paperclip 200s a PATCH naming an unknown field, so the response alone
+# proves nothing: the re-read is the assertion. Returns 1 on refusal.
+set_status() {
+  want=$(pc_state "$2")
+  api PATCH "/issues/$1" "$(jq -nc --arg s "$want" '{status: $s}')" >/dev/null
+  case "$(rc)" in 200|201) ;; *) return 1 ;; esac
+  got=$(get_issue "$1" | jq -r '.status // ""')
+  [ "$got" = "$want" ]
 }
 
-# The fence (D1 binding): a minted per-claim token stored in metadata,
-# validated in addition to the server's checkout-ownership enforcement: the
-# bearer key alone cannot distinguish a reaped predecessor from the same
-# actor's new claim; the rotating token can.
+# --- seed bookkeeping -------------------------------------------------
+# Issues have no `metadata` (a PATCH carrying one is accepted and
+# dropped), so the minted claim token, blocked_on entries, implementer of
+# record, and reviewer lockout ride the per-issue document store at key
+# `seed`: a JSON object serialized into the document body.
+SEED_DOC_KEY=seed
+# The document store enforces OPTIMISTIC CONCURRENCY: an update PUT
+# without baseRevisionId is refused 409 ("Document update requires
+# baseRevisionId"). That is a real compare-and-swap, and it is what lets
+# this backend carry an ATOMIC fence (see require_fence): validate the
+# stored token, then write against the exact revision that validation
+# read. A racing writer moves the revision and our write is refused by
+# the server rather than landing behind it.
+# Revisions ride files, not variables: meta_get is called inside command
+# substitutions (subshells), where an assignment would be lost.
+SEED_PC_REV=$(mktemp)
+SEED_PC_FENCE=$(mktemp)
+meta_get() {
+  out=$(api GET "/issues/$1/documents/$SEED_DOC_KEY")
+  if [ "$(rc)" = "200" ]; then
+    printf '%s' "$out" | jq -r '.latestRevisionId // ""' > "$SEED_PC_REV"
+    printf '%s' "$out" | jq -r '.body // "{}"' | jq -c '.' 2>/dev/null || echo '{}'
+  else
+    : > "$SEED_PC_REV"
+    echo '{}'
+  fi
+}
+meta_rev() { cat "$SEED_PC_REV"; }
+fence_rev() { cat "$SEED_PC_FENCE"; }
+meta_put() { # ID BODY [BASE_REVISION]
+  brev=${3:-}
+  api PUT "/issues/$1/documents/$SEED_DOC_KEY" \
+    "$(jq -nc --arg b "$2" --arg r "$brev" '{format: "markdown", body: $b}
+        + (if $r != "" then {baseRevisionId: $r} else {} end)')" >/dev/null
+  case "$(rc)" in 200|201) return 0 ;; *) return 1 ;; esac
+}
+# patch_meta ID JQ_EXPR [BASE_REVISION]: read-modify-write. With an
+# explicit base revision (the one require_fence validated) the write is
+# compare-and-swap; without one it uses the revision it just read.
+patch_meta() {
+  curm=$(meta_get "$1")
+  rev=$(meta_rev)
+  [ -n "${3:-}" ] && rev=$3
+  newm=$(printf '%s' "$curm" | jq -c "$2") || return 1
+  meta_put "$1" "$newm" "$rev"
+}
+
+# --- actor resolution (the production contract) ------------------------
+# Paperclip's checkout endpoint requires an agent row's UUID; the port
+# hands us a free-form --actor. Resolution order: an explicit override
+# map, then the company's agent roster matched on name or urlKey. Both
+# failure modes are refusals with remediation, never a guess: an unknown
+# actor must not silently claim as someone else, and an ambiguous one
+# must not have a winner picked for it.
+#   PAPERCLIP_AGENT_MAP="actor=<uuid>,other=<uuid>"
+# Callers invoke this inside $( ), where `fail`'s exit would only leave
+# the subshell and the refusal would be silently swallowed. So it returns
+# nonzero and leaves the reason in $SEED_PC_ERR; callers turn that into
+# the port-level refusal.
+SEED_PC_ERR=$(mktemp)
+trap 'rm -f "$SEED_PC_CODE" "$SEED_PC_REV" "$SEED_PC_FENCE" "$SEED_PC_ERR"' EXIT
+resolve_agent() {
+  a=$1
+  [ -n "$a" ] || { echo "actor required to resolve a Paperclip agent" > "$SEED_PC_ERR"; return 1; }
+  case "${PAPERCLIP_AGENT_MAP:-}" in
+    *"$a"=*)
+      mapped=$(printf '%s' "$PAPERCLIP_AGENT_MAP" | tr ',' '\n' | sed -n "s/^ *$a= *//p" | head -1)
+      [ -n "$mapped" ] && { printf '%s' "$mapped"; return 0; } ;;
+  esac
+  roster=$(api GET "$co/agents")
+  [ "$(rc)" = "200" ] || { echo "agent roster HTTP $(rc)" > "$SEED_PC_ERR"; return 1; }
+  hits=$(printf '%s' "$roster" | jq -r --arg a "$a" '[(. // [])[] | select(.name == $a or .urlKey == $a) | .id] | .[]')
+  n=$(printf '%s' "$hits" | grep -c . || true)
+  if [ "$n" = "0" ]; then
+    echo "actor '$a' has no Paperclip agent: create one named '$a' in company $PAPERCLIP_COMPANY_ID, or map it via PAPERCLIP_AGENT_MAP=\"$a=<agent-uuid>\"" > "$SEED_PC_ERR"
+    return 1
+  fi
+  if [ "$n" != "1" ]; then
+    echo "actor '$a' matches $n Paperclip agents: disambiguate via PAPERCLIP_AGENT_MAP=\"$a=<agent-uuid>\"" > "$SEED_PC_ERR"
+    return 1
+  fi
+  printf '%s' "$hits"
+}
+agent_err() { cat "$SEED_PC_ERR"; }
+agent_name() { # uuid → display name (for holder reporting)
+  [ -n "$1" ] || { printf ''; return 0; }
+  api GET "$co/agents" | jq -r --arg i "$1" '[(. // [])[] | select(.id == $i) | .name] | .[0] // ""'
+}
+
 require_fence() {
   cur=$(get_issue "$1"); [ "$(rc)" = "200" ] || fail 4 not_found
-  stored=$(printf '%s' "$cur" | jq -r '.metadata.seedToken // ""')
-  holder=$(printf '%s' "$cur" | jq -r '.checkoutAgent // ""')
+  stored=$(meta_get "$1" | jq -r '.seedToken // ""')
+  meta_rev > "$SEED_PC_FENCE"
+  holder=$(printf '%s' "$cur" | jq -r '.assigneeAgentId // ""')
   [ -n "$stored" ] || fail 6 fenced_out "no live claim token"
   [ "$token" = "$stored" ] || fail 6 fenced_out "token does not match current claim"
-  [ -n "$holder" ] && [ "$actor" != "$holder" ] && fail 6 fenced_out "actor is not the checkout owner"
+  if [ -n "$holder" ]; then
+    mine=$(resolve_agent "$actor") || fail 5 backend_unavailable "$(agent_err)"
+    [ "$mine" = "$holder" ] || fail 6 fenced_out "actor is not the checkout owner"
+  fi
   true
 }
 
 mint() { hexdump -n8 -e '8/1 "%02x"' /dev/urandom 2>/dev/null || od -N8 -An -tx1 /dev/urandom | tr -d ' \n'; }
+
+# set_blocked ID ENTRY: Paperclip refuses `blocked` unless the issue has
+# real blockers, a pending interaction, or an unblockDescriptor saying who
+# unblocks it and how (422 otherwise). The port's blocked_on entry is
+# exactly that statement, so it is carried across rather than invented:
+# the board owns the unblock, and the entry text is the action.
+set_blocked() {
+  api PATCH "/issues/$1" "$(jq -nc --arg a "blocked on $2 (seed)" \
+    '{status: "blocked", unblockDescriptor: {owner: "board", action: $a}}')" >/dev/null
+  case "$(rc)" in 200|201) ;; *) return 1 ;; esac
+  [ "$(get_issue "$1" | jq -r '.status // ""')" = "blocked" ]
+}
 
 # cascade_deps ID: every nonterminal→done AND nonterminal→cancelled edge
 # carries the cascade effect (transition table): remove dep:ID from all
 # dependents, releasing those left blocked on nothing. Sets $cascaded.
 cascade_deps() {
   cascaded=""
-  all=$(api GET "/issues")
-  for other in $(printf '%s' "$all" | jq -r --arg dep "dep:$1" '(. // [])[] | select((.metadata.blockedOn // []) | index($dep)) | .id'); do
+  all=$(api GET "$co/issues")
+  for other in $(printf '%s' "$all" | jq -r '(. // [])[] | .id'); do
+    om=$(meta_get "$other")
+    printf '%s' "$om" | jq -e --arg dep "dep:$1" '(.blockedOn // []) | index($dep)' >/dev/null || continue
     patch_meta "$other" ".blockedOn = ((.blockedOn // []) - [\"dep:$1\"])"
-    ost=$(get_issue "$other" | jq -r .state)
-    left=$(get_issue "$other" | jq -r '(.metadata.blockedOn // []) | length')
+    ost=$(get_issue "$other" | jq -r '.status // ""')
+    left=$(meta_get "$other" | jq -r '(.blockedOn // []) | length')
     if [ "$ost" = "blocked" ] && [ "$left" = "0" ]; then
-      api PATCH "/issues/$other" '{"state":"todo"}' >/dev/null
-      cascaded="$cascaded\"$other\","
+      set_status "$other" ready && cascaded="$cascaded\"$other\","
     fi
   done
 }
@@ -138,85 +245,95 @@ case "$verb" in
     fi
     [ -n "$goal" ] || goal=${PAPERCLIP_DEFAULT_GOAL_ID:-}
     [ -n "$goal" ] || fail 5 backend_unavailable "goal ancestry required: pass --parent or set PAPERCLIP_DEFAULT_GOAL_ID (Paperclip mandates ancestry)"
-    # Dep edges are mirrored twice: metadata.blockedOn drives the port's
-    # own cascade bookkeeping; native blockerIds let the platform's
-    # dependency machinery (wakeups, its own views) see the same edge.
+    # Dep edges are mirrored twice: the seed document drives the port's
+    # own cascade bookkeeping; the NATIVE edge (write field
+    # blockedByIssueIds, read back as blockedBy[]) lets Paperclip's own
+    # dependency machinery see the same edge.
     bo=$(for d in $blocked_by; do printf '"dep:%s",' "$d"; done)
     bids=$(for d in $blocked_by; do printf '"%s",' "$d"; done)
     payload=$(jq -nc --arg t "$title" --arg d "$body" --arg p "$(prio_pc "$priority")" --arg g "$goal" --arg pp "$parent" \
-      "{title: \$t, description: \$d, priority: \$p, state: \"backlog\", goalId: \$g, blockerIds: [${bids%,}], metadata: {blockedOn: [${bo%,}]}}
+      "{title: \$t, description: \$d, priority: \$p, status: \"backlog\", goalId: \$g, blockedByIssueIds: [${bids%,}]}
        + (if \$pp != \"\" then {parentId: \$pp} else {} end)")
-    out=$(api POST "/issues" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "create HTTP $(rc)"
+    out=$(api POST "$co/issues" "$payload"); [ "$(rc)" = "201" ] || fail 5 backend_unavailable "create HTTP $(rc)"
     new=$(printf '%s' "$out" | jq -r '.id // empty'); [ -n "$new" ] || fail 10 version_mismatch "no id in create response"
+    [ -n "${bo%,}" ] && meta_put "$new" "$(jq -nc "{blockedOn: [${bo%,}]}")"
     envelope ",\"task\":\"$new\",\"state\":\"backlog\""
     ;;
   ready)
-    # The full issue list (not just todo): native Paperclip dependencies
-    # (blockerIds) leave a todo issue unclaimable while any blocker is
-    # nonterminal, and resolving blocker STATES needs the whole set.
-    out=$(api GET "/issues"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable "list HTTP $(rc)"
-    # Claimable = todo, no checkout lock, unassigned or assigned to the
-    # caller (assignment is routing; checkout is the claim), not rejected,
-    # no open blocked_on entries, no open NATIVE blockers.
-    tasks=$(printf '%s' "$out" | jq -c --arg a "$actor" "$PJQ"'(. // []) | INDEX(.id) as $by | [.[]
-      | select(.state == "todo")
-      | select((.checkoutAgent // "") == "")
-      | select(((.assignee // "") == "") or (.assignee == $a))
-      | select(((.metadata.rejected // []) | index($a)) | not)
-      | select(((.metadata.blockedOn // []) | length) == 0)
-      | select([(.blockerIds // [])[] | ($by[.].state // "cancelled") | select(. != "done" and . != "cancelled")] | length == 0)
-      | {task: .id, title: .title, priority: (.priority | pport), created_at: (.createdAt // "")}]
-      | sort_by((.priority | prank), .created_at)')
+    # Claimable = todo, unassigned or assigned to the caller (assignment
+    # is routing; checkout is the claim, and checkout moves the issue OUT
+    # of todo, so the status filter is what excludes held work: the live
+    # server leaves checkoutRunId null). Rejected authors are filtered,
+    # and an issue with any open blocker of EITHER kind is not claimable.
+    out=$(api GET "$co/issues"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable "list HTTP $(rc)"
+    me=""
+    [ -n "$actor" ] && me=$(api GET "$co/agents" | jq -r --arg a "$actor" '[(. // [])[] | select(.name == $a or .urlKey == $a) | .id] | .[0] // ""')
+    cands=$(printf '%s' "$out" | jq -r --arg me "$me" '(. // [])[]
+      | select(.status == "todo")
+      | select(((.assigneeAgentId // "") == "") or (.assigneeAgentId == $me))
+      | .id')
+    # The list projection omits blockedBy and carries no seed document, so
+    # each candidate is re-read: correctness over one round trip.
+    rows=""
+    for c in $cands; do
+      full=$(get_issue "$c"); [ "$(rc)" = "200" ] || continue
+      m=$(meta_get "$c")
+      printf '%s' "$m" | jq -e --arg a "$actor" '(.rejected // []) | index($a)' >/dev/null && continue
+      [ "$(printf '%s' "$m" | jq -r '(.blockedOn // []) | length')" = "0" ] || continue
+      open=$(printf '%s' "$full" | jq '[(.blockedBy // [])[] | select(.status != "done" and .status != "cancelled")] | length')
+      [ "$open" = "0" ] || continue
+      rows="$rows$(printf '%s' "$full" | jq -c "$PJQ"'{task: .id, title: .title, priority: (.priority | pport), created_at: (.createdAt // "")}'),"
+    done
+    tasks=$(printf '[%s]' "${rows%,}" | jq -c "$PJQ"'sort_by((.priority | prank), .created_at)')
     envelope ",\"tasks\":$tasks"
     ;;
   get)
     out=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
-    st=$(port_state "$(printf '%s' "$out" | jq -r .state)")
-    card=$(printf '%s' "$out" | jq -c --arg st "$st" "$PJQ"'{id: .id, title: .title, state: $st, priority: (.priority | pport), author: (.metadata.seedAuthor // ""), body: (.description // ""), blocked_on: (.metadata.blockedOn // []), rejected_authors: (.metadata.rejected // [])}')
+    m=$(meta_get "$id")
+    st=$(port_state "$(printf '%s' "$out" | jq -r '.status // ""')")
+    card=$(printf '%s' "$out" | jq -c --arg st "$st" --argjson m "$m" "$PJQ"'{id: .id, title: .title, state: $st, priority: (.priority | pport), author: ($m.seedAuthor // ""), body: (.description // ""), blocked_on: ($m.blockedOn // []), rejected_authors: ($m.rejected // [])}')
     envelope ",\"task\":\"$id\",\"state\":\"$st\",\"card\":$card"
     ;;
   list)
-    out=$(api GET "/issues"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable
-    tasks=$(printf '%s' "$out" | jq -c "$PJQ"'[(. // []) | .[] | {task: .id, title: .title, state: (.state | pstate), priority: (.priority | pport)}]')
+    out=$(api GET "$co/issues"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable
+    tasks=$(printf '%s' "$out" | jq -c "$PJQ"'[(. // []) | .[] | {task: .id, title: .title, state: (.status | pstate), priority: (.priority | pport)}]')
     envelope ",\"tasks\":$tasks"
     ;;
   claim)
     cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
-    if printf '%s' "$cur" | jq -e --arg a "$actor" '(.metadata.rejected // []) | index($a)' >/dev/null; then
+    m=$(meta_get "$id")
+    if printf '%s' "$m" | jq -e --arg a "$actor" '(.rejected // []) | index($a)' >/dev/null; then
       printf '{"ok":false,"schema_version":"1.0","error":"rejected_author"}\n'; exit 2
     fi
+    # Identity before resource: an actor with no agent row cannot claim
+    # anything, so resolution refuses before contention is even consulted.
+    mine=$(resolve_agent "$actor") || fail 5 backend_unavailable "$(agent_err)"
     # A held checkout is contention even for the same actor: checkout +
     # token mint must be one exclusive claim, or two same-actor processes
-    # both "succeed" and the second silently invalidates the first's fence.
-    # This pre-check is the fast path; the atomic arbiter is the server,
-    # whose checkout endpoint 409s on ANY held lock (same agent included:
-    # the contract the fake encodes; reconcile on API upgrades, see README).
-    holder=$(printf '%s' "$cur" | jq -r '.checkoutAgent // ""')
+    # both "succeed" and the second silently invalidates the first's
+    # fence. This pre-check is the fast path; the atomic arbiter is the
+    # server, whose checkout endpoint 409s on ANY held lock.
+    holder=$(printf '%s' "$cur" | jq -r '.assigneeAgentId // ""')
     if [ -n "$holder" ]; then
-      printf '{"ok":false,"schema_version":"1.0","error":"claim_contention","holder":"%s"}\n' "$holder"; exit 2
+      printf '{"ok":false,"schema_version":"1.0","error":"claim_contention","holder":"%s"}\n' "$(agent_name "$holder")"; exit 2
     fi
-    out=$(api POST "/issues/$id/checkout" "{\"agent\": \"$actor\"}")
+    out=$(api POST "/issues/$id/checkout" "$(jq -nc --arg a "$mine" '{agentId: $a, expectedStatuses: ["todo"]}')")
     if [ "$(rc)" = "409" ]; then
-      holder=$(printf '%s' "$out" | jq -r '.holder // ""')
-      printf '{"ok":false,"schema_version":"1.0","error":"claim_contention","holder":"%s"}\n' "$holder"; exit 2
+      holder=$(printf '%s' "$out" | jq -r '.details.assigneeAgentId // ""')
+      printf '{"ok":false,"schema_version":"1.0","error":"claim_contention","holder":"%s"}\n' "$(agent_name "$holder")"; exit 2
     fi
-    [ "$(rc)" = "200" ] || fail 5 backend_unavailable "checkout HTTP $(rc)"
+    case "$(rc)" in 200|201) ;; *) fail 5 backend_unavailable "checkout HTTP $(rc)" ;; esac
     new_token="c-$(mint)"
     patch_meta "$id" ". + {seedToken: \"$new_token\"}" || fail 5 backend_unavailable "token store failed"
     envelope ",\"task\":\"$id\",\"state\":\"in_progress\",\"actor\":\"$actor\",\"claim_token\":\"$new_token\""
     ;;
   release)
     require_fence "$id"
-    api POST "/issues/$id/release" "{}" >/dev/null; [ "$(rc)" = "200" ] || fail 5 backend_unavailable
-    # The state PATCH is checked BEFORE the token is cleared and success is
-    # emitted: a failed PATCH must surface, not be masked by patch_meta.
-    api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
-    case "$(rc)" in
-      200) ;;
-      409) fail 3 invalid_transition "server refused release transition" ;;
-      *) fail 5 backend_unavailable "release state PATCH HTTP $(rc)" ;;
-    esac
-    patch_meta "$id" 'del(.seedToken)' || fail 5 backend_unavailable "token clear failed"
+    api POST "/issues/$id/release" "{}" >/dev/null
+    # The status change is checked (by re-read) BEFORE the token is
+    # cleared and success emitted: a failed transition must surface.
+    set_status "$id" ready || fail 3 invalid_transition "server refused release transition"
+    patch_meta "$id" 'del(.seedToken)' "$(fence_rev)" || fail 6 fenced_out "claim moved underneath this release (document revision changed)"
     envelope ",\"task\":\"$id\",\"state\":\"ready\""
     ;;
   transition)
@@ -224,23 +341,19 @@ case "$verb" in
       review)
         require_fence "$id"
         api POST "/issues/$id/release" "{}" >/dev/null
-        api PATCH "/issues/$id" '{"state":"in_review"}' >/dev/null
-        [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+        set_status "$id" review || fail 3 invalid_transition "server refused review transition"
         # Bookkeeping only after the server accepted the transition: a
-        # refused PATCH must not have already burned the claim token.
-        patch_meta "$id" ". + {seedAuthor: \"$actor\"} | del(.seedToken)" || fail 5 backend_unavailable "bookkeeping failed"
+        # refused change must not have already burned the claim token.
+        patch_meta "$id" ". + {seedAuthor: \"$actor\"} | del(.seedToken)" "$(fence_rev)" || fail 6 fenced_out "claim moved underneath this transition (document revision changed)"
         ;;
       ready)
-        api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
-        [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
-        ;;
+        set_status "$id" ready || fail 3 invalid_transition "server refused" ;;
       blocked)
         require_fence "$id"
         entry=${blocked_on_arg:-manual:$actor}
         api POST "/issues/$id/release" "{}" >/dev/null
-        api PATCH "/issues/$id" '{"state":"blocked"}' >/dev/null
-        [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
-        patch_meta "$id" ".blockedOn = ((.blockedOn // []) + [\"$entry\"] | unique) | del(.seedToken)" || fail 5 backend_unavailable "bookkeeping failed"
+        set_blocked "$id" "$entry" || fail 3 invalid_transition "server refused blocked transition"
+        patch_meta "$id" ".blockedOn = ((.blockedOn // []) + [\"$entry\"] | unique) | del(.seedToken)" "$(fence_rev)" || fail 6 fenced_out "claim moved underneath this park (document revision changed)"
         ;;
       *) fail 3 invalid_transition "unsupported --to $to" ;;
     esac
@@ -248,26 +361,25 @@ case "$verb" in
     ;;
   promote|deprioritize|unblock|plan-unblock|block)
     case "$verb" in
-      promote) api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null ;;
-      deprioritize) api PATCH "/issues/$id" '{"state":"backlog"}' >/dev/null ;;
+      promote) set_status "$id" ready || fail 3 invalid_transition "server refused" ;;
+      deprioritize) set_status "$id" backlog || fail 3 invalid_transition "server refused" ;;
       block)
         entry=${blocked_on_arg:-manual:$actor}
         patch_meta "$id" ".blockedOn = ((.blockedOn // []) + [\"$entry\"] | unique)"
-        api PATCH "/issues/$id" '{"state":"blocked"}' >/dev/null ;;
+        set_blocked "$id" "$entry" || fail 3 invalid_transition "server refused blocked transition" ;;
       unblock|plan-unblock)
         [ "$verb" = "plan-unblock" ] && entry="plan:$pr" || entry="manual:$actor"
-        cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
-        printf '%s' "$cur" | jq -e --arg e "$entry" '(.metadata.blockedOn // []) | index($e)' >/dev/null \
+        get_issue "$id" >/dev/null; [ "$(rc)" = "200" ] || fail 4 not_found
+        meta_get "$id" | jq -e --arg e "$entry" '(.blockedOn // []) | index($e)' >/dev/null \
           || fail 3 invalid_transition "no $entry entry"
         patch_meta "$id" ".blockedOn = ((.blockedOn // []) - [\"$entry\"])"
-        left=$(get_issue "$id" | jq -r '(.metadata.blockedOn // []) | length')
+        left=$(meta_get "$id" | jq -r '(.blockedOn // []) | length')
         if [ "$left" = "0" ]; then
-          api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
+          set_status "$id" ready || fail 3 invalid_transition "server refused"
         else
           envelope ",\"task\":\"$id\",\"state\":\"blocked\",\"transitioned\":false"; exit 0
         fi ;;
     esac
-    [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
     case "$verb" in
       deprioritize) st=backlog ;;
       block) st=blocked ;;
@@ -276,54 +388,55 @@ case "$verb" in
     envelope ",\"task\":\"$id\",\"state\":\"$st\",\"transitioned\":true"
     ;;
   accept|close)
-    api PATCH "/issues/$id" '{"state":"done"}' >/dev/null
-    case "$(rc)" in
-      200) ;;
-      404) fail 4 not_found ;;
-      *) fail 3 invalid_transition "server assertTransition refused (HTTP $(rc))" ;;
+    get_issue "$id" >/dev/null; [ "$(rc)" = "200" ] || fail 4 not_found
+    cs=$(get_issue "$id" | jq -r '.status // ""')
+    case "$cs" in
+      in_review) ;;
+      *) fail 3 invalid_transition "close is review→done only (status $cs)" ;;
     esac
+    set_status "$id" done || fail 3 invalid_transition "server assertTransition refused"
     cascade_deps "$id"
     envelope ",\"task\":\"$id\",\"state\":\"done\",\"transitioned\":true,\"cascaded\":[${cascaded%,}]"
     ;;
   reject)
     cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
-    [ "$(printf '%s' "$cur" | jq -r .state)" = "in_review" ] || fail 3 invalid_transition "reject is review→ready only"
-    author=$(printf '%s' "$cur" | jq -r '.metadata.seedAuthor // ""')
+    [ "$(printf '%s' "$cur" | jq -r '.status // ""')" = "in_review" ] || fail 3 invalid_transition "reject is review→ready only"
+    author=$(meta_get "$id" | jq -r '.seedAuthor // ""')
     [ -n "$author" ] && patch_meta "$id" ".rejected = ((.rejected // []) + [\"$author\"] | unique) | del(.seedAuthor)"
-    api PATCH "/issues/$id" '{"state":"todo"}' >/dev/null
-    [ "$(rc)" = "200" ] || fail 3 invalid_transition
-    api POST "/issues/$id/comments" "{\"body\": \"rejected by $actor: ${resolution:-}\"}" >/dev/null
+    set_status "$id" ready || fail 3 invalid_transition "server refused"
+    api POST "/issues/$id/comments" "$(jq -nc --arg b "rejected by $actor: ${resolution:-}" '{body: $b}')" >/dev/null
     envelope ",\"task\":\"$id\",\"state\":\"ready\",\"transitioned\":true"
     ;;
   cancel)
-    api PATCH "/issues/$id" '{"state":"cancelled"}' >/dev/null
-    case "$(rc)" in
-      200) ;;
-      404) fail 4 not_found ;;
-      *) fail 3 invalid_transition "server assertTransition refused (HTTP $(rc))" ;;
-    esac
+    get_issue "$id" >/dev/null; [ "$(rc)" = "200" ] || fail 4 not_found
+    set_status "$id" cancelled || fail 3 invalid_transition "server assertTransition refused"
     # Cancellation cascades exactly like close: dependents blocked solely
     # on a cancelled task must not stay blocked forever.
     cascade_deps "$id"
     envelope ",\"task\":\"$id\",\"state\":\"cancelled\",\"transitioned\":true,\"cascaded\":[${cascaded%,}]"
     ;;
   reinstate)
-    api PATCH "/issues/$id" '{"state":"backlog"}' >/dev/null
-    [ "$(rc)" = "200" ] || fail 3 invalid_transition "server refused (HTTP $(rc))"
+    set_status "$id" backlog || fail 3 invalid_transition "server refused"
     envelope ",\"task\":\"$id\",\"state\":\"backlog\",\"transitioned\":true"
     ;;
   comment|attach-evidence)
-    cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
-    [ -n "$(printf '%s' "$cur" | jq -r '.metadata.seedToken // ""')" ] && require_fence "$id"
+    get_issue "$id" >/dev/null; [ "$(rc)" = "200" ] || fail 4 not_found
+    [ -n "$(meta_get "$id" | jq -r '.seedToken // ""')" ] && require_fence "$id"
     text=$body; [ "$verb" = "attach-evidence" ] && text="evidence ($kind): $ref"
-    api POST "/issues/$id/comments" "$(jq -nc --arg b "$text" '{body: $b}')" >/dev/null
+    out=$(api POST "/issues/$id/comments" "$(jq -nc --arg b "$text" '{body: $b}')")
     [ "$(rc)" = "201" ] || fail 5 backend_unavailable "comment HTTP $(rc)"
-    envelope ",\"task\":\"$id\""
+    cid=$(printf '%s' "$out" | jq -r '.id // empty')
+    [ -n "$cid" ] || fail 10 version_mismatch "comment response carried no id"
+    if [ "$verb" = "attach-evidence" ]; then
+      envelope ",\"task\":\"$id\",\"evidence_id\":\"$cid\""
+    else
+      envelope ",\"task\":\"$id\",\"comment_id\":\"$cid\""
+    fi
     ;;
   lease-renew)
     require_fence "$id"
-    # Liveness is Paperclip's watchdogs' job (declared variance); a comment
-    # is unnecessary: validate the fence and succeed.
+    # Liveness is Paperclip's watchdogs' job (declared variance); a
+    # comment is unnecessary: validate the fence and succeed.
     envelope ",\"task\":\"$id\",\"note\":\"leases ride issueWatchdogs (declared)\""
     ;;
   ancestry)
@@ -342,19 +455,20 @@ case "$verb" in
     envelope ",\"task\":\"$id\",\"ancestors\":[${chain%,}]"
     ;;
   budget)
-    # Optional capability, budget="native": report the issue's goal budget
-    # as the platform enforces it (alert at 80%, hard pause at 100%: the
-    # R6 enforcement a repo alone can never provide).
-    cur=$(get_issue "$id"); [ "$(rc)" = "200" ] || fail 4 not_found
-    goal=$(printf '%s' "$cur" | jq -r '.goalId // ""')
-    [ -n "$goal" ] || fail 5 backend_unavailable "issue has no goal"
-    out=$(api GET "/goals/$goal"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable "goal fetch HTTP $(rc)"
-    budget=$(printf '%s' "$out" | jq -c '{limit: (.budgetUsd // 0), spent: (.spentUsd // 0),
-      state: (if (.budgetUsd // 0) <= 0 then "ok"
-              elif (.spentUsd // 0) >= .budgetUsd then "paused"
-              elif (.spentUsd // 0) >= (.budgetUsd * 0.8) then "alert"
+    # Optional capability, budget="native". Paperclip enforces budgets at
+    # COMPANY and AGENT scope, not per goal (the goal object carries no
+    # budget fields at all), so this reports the company budget the
+    # platform actually enforces. The granularity variance is declared in
+    # README.md: the port asks about a task, and the honest answer is the
+    # enclosing company's enforced envelope.
+    get_issue "$id" >/dev/null; [ "$(rc)" = "200" ] || fail 4 not_found
+    out=$(api GET "$co"); [ "$(rc)" = "200" ] || fail 5 backend_unavailable "company fetch HTTP $(rc)"
+    budget=$(printf '%s' "$out" | jq -c '{scope: "company", limit: ((.budgetMonthlyCents // 0) / 100), spent: ((.spentMonthlyCents // 0) / 100),
+      state: (if (.budgetMonthlyCents // 0) <= 0 then "ok"
+              elif (.spentMonthlyCents // 0) >= .budgetMonthlyCents then "paused"
+              elif (.spentMonthlyCents // 0) >= ((.budgetMonthlyCents) * 0.8) then "alert"
               else "ok" end)}')
-    envelope ",\"task\":\"$id\",\"goal\":\"$goal\",\"budget\":$budget"
+    envelope ",\"task\":\"$id\",\"budget\":$budget"
     ;;
   event-append)
     payload=${event:-$body}
@@ -363,11 +477,19 @@ case "$verb" in
     if [ -n "$target" ]; then
       api POST "/issues/$target/comments" "$(jq -nc --arg b "event: $payload" '{body: $b}')" >/dev/null
       [ "$(rc)" = "201" ] || fail 4 not_found
+      envelope ",\"task\":\"$target\",\"sink\":\"issue-comment\""
     else
-      api POST "/events" "$(jq -nc --arg b "$payload" '{event: $b}')" >/dev/null
+      # verbs.json makes `task` optional, and comment-on-task cannot
+      # serve a taskless event. Paperclip's own company activity log
+      # accepts writes and is the audit substrate the README names, so
+      # that is where taskless events land: durable, id-bearing, and
+      # readable back through the platform's activity view.
+      ev=$(api POST "$co/activity" "$(jq -nc --arg a "${actor:-seed}" --arg c "$PAPERCLIP_COMPANY_ID" --arg r "$payload" \
+        '{actorId: $a, action: "seed.event", entityType: "company", entityId: $c, details: {raw: $r}}')")
       [ "$(rc)" = "201" ] || fail 5 backend_unavailable "activity-log HTTP $(rc)"
+      eid=$(printf '%s' "$ev" | jq -r '.id // empty')
+      envelope ",\"sink\":\"company-activity\",\"event_id\":\"$eid\""
     fi
-    envelope ",\"note\":\"audit rides Paperclip's immutable activity log\""
     ;;
   *) fail 64 usage "unknown verb $verb" ;;
 esac

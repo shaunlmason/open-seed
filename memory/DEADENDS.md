@@ -26,3 +26,19 @@ reason, so the next agent doesn't burn a session rediscovering why.
   that legitimately touches those paths. The durable form is a behavioural
   invariant — the gate's output is unchanged when the flavor tree is removed —
   plus install confinement, neither of which depends on branch position.
+- 2026-08-24 (os-2c0c474c): stopping paperclip's post-checkout
+  `in_progress -> blocked` sweep by any route other than pausing the agent.
+  Per-agent `runtimeConfig.heartbeat.enabled` is already `false` at create and
+  the transition fires anyway (the mover is the recovery sweep, not the
+  heartbeat); `pauseReason`/`pausedAt` are accepted and ignored (the field that
+  matters is `status`); there is no heartbeat switch in `config.json` (only
+  database/logging/server/telemetry/auth/storage/secrets); and every entry in
+  `/api/adapters` is a real executor, so there is no inert adapter type to
+  assign. What works is `PATCH /api/agents/<id> {"status":"paused"}` after
+  create.
+- 2026-08-24 (os-2c0c474c): trusting an experiment whose fixtures silently
+  failed to exist. The first pause test passed `role: "eng"`, which is not in
+  the role enum, so both agents 400'd, both checkouts 400'd, and both issues sat
+  untouched at `todo`: a green-looking result that measured nothing. Assert that
+  fixtures were actually created before drawing a conclusion from what happened
+  to them.

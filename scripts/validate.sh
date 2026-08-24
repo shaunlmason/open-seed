@@ -80,16 +80,20 @@ else
   say "WARNING: jq unavailable, skipped backend contract tests"
 fi
 
-# Live beads validation (os-435d7b61): same corpus against a real bd
-# install; self-skips (exit 0, explicit message) when bd is absent, so
-# CI needs no new binaries.
+# Live backend validation: the same corpus each fake suite runs, against
+# the real substrate. Both self-skip (exit 0, explicit message) when the
+# substrate is absent, so CI needs no new binaries and no credentials.
+#   beads     (os-435d7b61): needs `bd` on PATH
+#   paperclip (os-2c0c474c): needs PAPERCLIP_API_URL, or --onboard by hand
 if command -v jq >/dev/null 2>&1; then
-  if out=$(sh "$root/.seed/backends/beads/live-test.sh" 2>&1); then
-    say "$out"
-  else
-    say "FAIL: beads live test: $out"
-    fail=1
-  fi
+  for b in beads paperclip; do
+    if out=$(sh "$root/.seed/backends/$b/live-test.sh" 2>&1); then
+      say "$out"
+    else
+      say "FAIL: $b live test: $out"
+      fail=1
+    fi
+  done
 fi
 
 # Lifecycle shim structure (os-7792a002): every shim dir ships a README;

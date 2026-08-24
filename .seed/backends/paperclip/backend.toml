@@ -3,8 +3,13 @@
 # transitions, native budgets with hard stops. Server is truth: no offline,
 # no fork portability (declared in README.md).
 name = "paperclip"
-version = "0.1.0"
+version = "0.2.0"
 schema_version = "1.0"
+# The upstream Paperclip release this adapter was validated against by
+# live-test.sh (plan os-2c0c474c). Bump it when the live suite is re-run
+# against a newer release; live-test warns, never refuses, on a mismatch,
+# because surfacing drift is the point.
+paperclip_version = "2026.817.0"
 entry = "bin/seed-backend"
 requires = ["curl", "jq"]
 requires_env = ["PAPERCLIP_API_URL", "PAPERCLIP_API_KEY", "PAPERCLIP_COMPANY_ID", "PAPERCLIP_DEFAULT_GOAL_ID"]
@@ -14,4 +19,7 @@ required = true
 optional = ["lease-renew", "ancestry", "budget"]
 atomic_claim = "native"
 offline = "none"
+# Enforced by the platform, but at COMPANY and AGENT scope, not per goal
+# (goals carry no budget fields at all: verified live). The hard stop is
+# real; the granularity is not the one the port asks about. See README.
 budget = "native"
