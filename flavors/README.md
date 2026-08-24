@@ -22,15 +22,23 @@ one. Nothing here promises automatic flavor updates.
 ## The rule that keeps §10 Q3 true
 
 **A flavor never changes the core template.** It only writes into the
-consumer's instantiation. Two invariants enforce this in `make check`
-(`scripts/flavor-test.sh`, offline):
+consumer's instantiation. Three invariants enforce this
+(`scripts/flavor-test.sh`), split by cost:
 
-- **Core-gate independence** — an unflavored instantiation's `make check`
-  output is identical with and without `flavors/` and `scripts/seed-flavor`
-  present. The core gate must not depend on the flavor machinery.
+In every `make check`, offline:
+
 - **Install confinement** — the set of paths `install` changes is exactly the
   manifest's declared destination set. A flavor that writes anything it did not
   declare fails the build.
+- **Core-gate independence, statically** — `validate` stays the first
+  prerequisite of the flavored `check`, and the core `validate`/`smoke`
+  recipes survive verbatim.
+
+In `make flavor-test` only, because it costs two `make check` runs:
+
+- **Core-gate independence, observed** — an unflavored instantiation's `make
+  check` output is identical with and without `flavors/` and
+  `scripts/seed-flavor` present.
 
 ## Layout of `flavors/<name>/`
 
@@ -41,8 +49,10 @@ consumer's instantiation. Two invariants enforce this in `make check`
 | everything else | The payload |
 
 The `manifest` is line-oriented; `#` comments and blank lines are ignored.
-Each line is `<payload-path> <destination-path>`, both relative to the repo
-root, with the payload path inside this flavor's directory:
+Each line is `<payload-path> <destination-path>`. The two are resolved
+differently, so do not mix them up: the **payload path is relative to this
+flavor's own directory** (`flavors/<name>/`), and the **destination path is
+relative to the repo root**:
 
     Makefile        Makefile
     package.json    package.json

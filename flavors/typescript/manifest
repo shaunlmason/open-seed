@@ -1,4 +1,6 @@
-# <payload-path> <destination-path>, both relative to the repo root.
+# <payload-path> <destination-path>
+# Payload paths are relative to this flavor directory (flavors/typescript/);
+# destination paths are relative to the repo root.
 # Thin root, fat flavor dir (flavors/README.md): every destination outside
 # flavors/ is thin and stable; the churn lives beside this file.
 Makefile        Makefile

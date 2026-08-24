@@ -8,7 +8,10 @@
 #
 #   (default)   the full integration test: instantiate, install, npm install,
 #               assert `make check` is green, then red on a broken fixture,
-#               then exercise reconcile. Needs node + a registry, so it hangs
+#               exercise reconcile, and run the BEHAVIOURAL half of core-gate
+#               independence (two `make check` runs, compared) — which lives
+#               here, not offline, because it costs a `make check`. Needs
+#               node + a registry, so it hangs
 #               off `make flavor-test` and is NEVER wired into validate.sh:
 #               §2.6 binds `make check` to be fast and deterministic, and a
 #               flavored `check` runs `validate`, which would re-enter this.
@@ -31,8 +34,11 @@ export SEED_FLAVOR_TEST=1
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-# Instantiate the template the way scripts/smoke-loop.sh does. Uses the
-# working tree (write-tree) so an uncommitted flavor is still testable.
+# Instantiate the template from the WORKING TREE, so an uncommitted flavor or
+# installer is what gets tested. `git archive` of a write-tree would capture
+# the *index*, silently testing stale code whenever something is unstaged —
+# so enumerate tracked plus untracked-not-ignored files and tar those instead.
+# (smoke-loop.sh archives HEAD on purpose: it tests committed state.)
 # Returns non-zero (quietly) when this tree cannot be archived — not a git
 # repo, or an index git will not write a tree from. Callers must skip rather
 # than fail: `make check` runs this, and a consumer working from a source
@@ -40,7 +46,8 @@ trap 'rm -rf "$work"' EXIT
 instantiate() {
   _dst=$1; mkdir -p "$_dst"
   _tar="$work/inst.tar"
-  if (cd "$root" && git write-tree 2>/dev/null | head -1 | xargs -r git archive --format=tar) > "$_tar" 2>/dev/null && [ -s "$_tar" ]; then
+  if (cd "$root" && git ls-files -z --cached --others --exclude-standard 2>/dev/null \
+        | tar --null -T - -cf - 2>/dev/null) > "$_tar" 2>/dev/null && [ -s "$_tar" ]; then
     :
   elif (cd "$root" && git archive --format=tar HEAD) > "$_tar" 2>/dev/null && [ -s "$_tar" ]; then
     :
@@ -52,7 +59,14 @@ instantiate() {
 }
 
 # Every path in the tree with its hash, for the confinement diff.
-snapshot() { (cd "$1" && find . -type f -not -path './.git/*' -exec sha256sum {} + | sort -k2); }
+# Same Darwin fallback as scripts/seed:72 — this runs inside `make check`, so
+# a GNU-only invocation would break the gate on a supported platform.
+hash_files() {
+  if command -v sha256sum >/dev/null 2>&1; then find . -type f -not -path './.git/*' -exec sha256sum {} +
+  else find . -type f -not -path './.git/*' -exec shasum -a 256 {} +
+  fi
+}
+snapshot() { (cd "$1" && hash_files | sort -k2); }
 
 # ---------------------------------------------------------------- offline --
 
