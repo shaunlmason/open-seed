@@ -1,0 +1,9 @@
+# <payload-path> <destination-path>, both relative to the repo root.
+# Thin root, fat flavor dir (flavors/README.md): every destination outside
+# flavors/ is thin and stable; the churn lives beside this file.
+Makefile        Makefile
+package.json    package.json
+tsconfig.json   tsconfig.json
+biome.json      biome.json
+src/index.ts    src/index.ts
+src/index.test.ts   src/index.test.ts

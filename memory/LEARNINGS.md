@@ -81,3 +81,33 @@ Fresh sessions read this file instead of rediscovering.
   (front-matter evidence edit + a run-log comment line); the replay lint
   allows same-state card edits, and `state resume` is exempt from the
   HALT (checkHalt=false) so it can always run.
+- 2026-08-24 (os-501a29c2): `seed template upgrade` merges by **path**, and
+  that single fact governs anything that copies template content into a
+  consumer's repo. A flavor that installs `flavors/typescript/package.json` to
+  `/package.json` never receives updates: upstream has never owned the root
+  path, so the merge cannot reach it. Two rules follow, now binding in
+  `flavors/README.md`: keep every destination outside `flavors/` **thin and
+  stable** with the churn in the flavor directory (the root `tsconfig.json` is
+  two keys that `extends` a base file, so compiler-option churn arrives with
+  no reapply at all), and record a real merge **base** — not just a hash — for
+  the residue that cannot be thinned, or reconciliation is a clobber rather
+  than a merge. `.seed/flavor.lock` records what was written;
+  `.seed/flavor-base/` stores the payload as installed, which is what
+  `git merge-file` needs as its base.
+- 2026-08-24 (os-501a29c2): a test that instantiates the template and runs
+  `make check` inside it **cannot** live in `scripts/validate.sh`, because a
+  flavored `check` runs `validate`, which runs `validate.sh` again. `make
+  smoke` has always been a separate target for exactly this reason. The trap
+  is easy to re-enter through a side door: the core-gate-independence check
+  (two `make check` runs, compared) looked like a cheap filesystem assertion
+  and was not — it tripled the gate's runtime and only terminated because of
+  the `SEED_FLAVOR_TEST` guard. Split such suites explicitly: a `--offline`
+  half that never shells into `make`, and an integration half behind its own
+  target.
+- 2026-08-24 (os-501a29c2): TypeScript 7 does not auto-include `@types`; a
+  `node:` import fails to typecheck until `"types": ["node"]` is set. When
+  splitting a `tsconfig` across `extends`, remember that **path-relative**
+  options (`typeRoots`) resolve against the file that *declares* them, so they
+  belong in the root config next to `node_modules`, while by-name options
+  (`types`) resolve fine from an extended base. Getting this backwards is a
+  silent typecheck failure, not a config error.

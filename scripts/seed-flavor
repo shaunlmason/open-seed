@@ -1,0 +1,212 @@
+#!/bin/sh
+# Template flavors (ADR 0002): install an opinionated stack variant into a
+# fresh instantiation, and reconcile it later against a newer payload.
+#
+# `seed template upgrade` merges by PATH, so payload updates land in
+# flavors/<name>/ but never in the destinations install copied them to. That
+# is why install records .seed/flavor.lock and stashes the installed payload
+# under .seed/flavor-base/: the lock says what was written, the base blobs are
+# what a later three-way merge merges AGAINST. A hash alone cannot serve as a
+# merge base, and merging against the current file would silently discard the
+# consumer's edits.
+#
+# No network and no package manager in any verb: the dependency install is a
+# printed follow-up the consumer runs.
+set -eu
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+flavors="$root/flavors"
+lock="$root/.seed/flavor.lock"
+basedir="$root/.seed/flavor-base"
+
+# The core Makefile's placeholder recipe. A flavor replaces the check recipe,
+# so install must not run over a Makefile someone has already wired up. This
+# marker is content-based on purpose: a stored hash of the core Makefile would
+# go stale every time the core Makefile changed.
+CORE_MARKER="add your project's lint/test/typecheck here"
+
+say() { printf 'seed-flavor: %s\n' "$*"; }
+die() { printf 'seed-flavor: %s\n' "$*" >&2; exit "${2:-1}"; }
+
+usage() {
+  cat <<'EOF'
+usage: seed-flavor <verb>
+
+  list                 flavors available in flavors/
+  install <name>       apply a flavor to a fresh instantiation
+  status               installed flavor, its template version, diverged files
+  upgrade              reconcile installed destinations against current payload
+
+Keeping a flavored repo current is two steps, in order:
+  scripts/seed template upgrade    # brings new payload into flavors/<name>/
+  scripts/seed-flavor upgrade      # applies it to the installed destinations
+EOF
+}
+
+hash_of()   { sha256sum "$1" | cut -d' ' -f1; }
+lock_get()  { [ -f "$lock" ] && sed -n "s/^$1 //p" "$lock" || true; }
+lock_hash() { [ -f "$lock" ] && awk -v d="$1" '$1=="file" && $2==d {print $3}' "$lock" || true; }
+tmpl_ver()  { sed -n 's/^version //p' "$root/.seed/template.lock" 2>/dev/null || echo unknown; }
+
+# Write "<payload-abs>\t<dest-rel>" per manifest entry into $1. Validates.
+# Never runs in a pipeline, so `die` really exits.
+manifest_pairs() {
+  _name=$1; _out=$2
+  _mf="$flavors/$_name/manifest"
+  [ -f "$_mf" ] || die "flavor '$_name' has no manifest" 1
+  : > "$_out"
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|\#*) continue ;; esac
+    _src=$(printf '%s\n' "$line" | awk '{print $1}')
+    _dst=$(printf '%s\n' "$line" | awk '{print $2}')
+    [ -n "$_src" ] && [ -n "$_dst" ] || die "malformed manifest line: $line" 1
+    case "$_dst" in
+      /*|*..*) die "manifest destination must be a relative path inside the repo: $_dst" 1 ;;
+    esac
+    [ -f "$flavors/$_name/$_src" ] || die "manifest names a missing payload file: $_src" 1
+    printf '%s\t%s\n' "$flavors/$_name/$_src" "$_dst" >> "$_out"
+  done < "$_mf"
+  [ -s "$_out" ] || die "flavor '$_name' has an empty manifest" 1
+}
+
+verb_list() {
+  found=0
+  for d in "$flavors"/*/; do
+    [ -d "$d" ] || continue
+    [ -f "$d/manifest" ] || continue
+    found=1
+    basename "$d"
+  done
+  [ "$found" = 1 ] || say "no flavors available"
+}
+
+verb_install() {
+  name=${1:-}
+  [ -n "$name" ] || die "install needs a flavor name (try: seed-flavor list)" 1
+  [ -d "$flavors/$name" ] || die "no such flavor: $name (try: seed-flavor list)" 1
+
+  # Refusal 1: already flavored. Name the supported path rather than clobber.
+  [ ! -f "$lock" ] || die "this repo already has a flavor installed ($(lock_get flavor)); install is a fresh-instantiation scaffold, not an idempotent converger. To apply a newer payload run: scripts/seed-flavor upgrade" 1
+
+  pairs=$(mktemp); trap 'rm -f "$pairs"' EXIT
+  manifest_pairs "$name" "$pairs"
+
+  # Refusal 2: the Makefile has already been wired up by someone else.
+  if awk -F'\t' '{print $2}' "$pairs" | grep -qx 'Makefile'; then
+    [ -f "$root/Makefile" ] || die "refusing: no Makefile to extend at the repo root" 1
+    grep -qF "$CORE_MARKER" "$root/Makefile" || die "refusing: the root Makefile is not the core template's (its placeholder check recipe is gone, so it has local edits or a flavor is already applied). Apply the flavor to a fresh instantiation, or merge flavors/$name/Makefile into yours by hand." 1
+  fi
+
+  # Refusal 3: any destination already exists. Makefile is replaced by design
+  # and is guarded by refusal 2 instead. Loop is not a pipeline, so die exits.
+  while IFS="$(printf '\t')" read -r src dst; do
+    [ -n "${dst:-}" ] || continue
+    [ "$dst" != "Makefile" ] || continue
+    [ ! -e "$root/$dst" ] || die "refusing: destination already exists: $dst" 1
+  done < "$pairs"
+
+  tmplock=$(mktemp)
+  printf 'flavor %s\ntemplate_version %s\n' "$name" "$(tmpl_ver)" > "$tmplock"
+
+  while IFS="$(printf '\t')" read -r src dst; do
+    [ -n "${dst:-}" ] || continue
+    mkdir -p "$(dirname "$root/$dst")"
+    cp "$src" "$root/$dst"
+    # Stash the installed payload: this is the merge base `upgrade` needs.
+    mkdir -p "$(dirname "$basedir/$dst")"
+    cp "$src" "$basedir/$dst"
+    printf 'file %s %s\n' "$dst" "$(hash_of "$root/$dst")" >> "$tmplock"
+    say "wrote $dst"
+  done < "$pairs"
+
+  mkdir -p "$root/.seed"
+  mv "$tmplock" "$lock"
+  say "installed flavor '$name' (template $(tmpl_ver)); recorded .seed/flavor.lock"
+  [ ! -f "$flavors/$name/README.md" ] || say "next: flavors/$name/README.md names the dependency-install command (this script runs none)"
+}
+
+verb_status() {
+  [ -f "$lock" ] || { say "no flavor installed"; return 0; }
+  say "flavor: $(lock_get flavor)"
+  say "installed at template version: $(lock_get template_version)"
+  awk '$1=="file" {print $2, $3}' "$lock" > "${TMPDIR:-/tmp}/.sf-status.$$"
+  while read -r dst want; do
+    [ -n "${want:-}" ] || continue
+    if [ ! -e "$root/$dst" ]; then say "  MISSING  $dst"
+    elif [ "$(hash_of "$root/$dst")" != "$want" ]; then say "  diverged $dst"
+    else say "  clean    $dst"
+    fi
+  done < "${TMPDIR:-/tmp}/.sf-status.$$"
+  rm -f "${TMPDIR:-/tmp}/.sf-status.$$"
+}
+
+verb_upgrade() {
+  [ -f "$lock" ] || die "no flavor installed; nothing to reconcile (try: seed-flavor install <name>)" 1
+  name=$(lock_get flavor)
+  [ -d "$flavors/$name" ] || die "installed flavor '$name' is not present in flavors/; run 'scripts/seed template upgrade' first" 1
+
+  pairs=$(mktemp); trap 'rm -f "$pairs"' EXIT
+  manifest_pairs "$name" "$pairs"
+
+  conflicts=0
+  tmplock=$(mktemp)
+  printf 'flavor %s\ntemplate_version %s\n' "$name" "$(tmpl_ver)" > "$tmplock"
+
+  while IFS="$(printf '\t')" read -r src dst; do
+    [ -n "${dst:-}" ] || continue
+    want=$(lock_hash "$dst")
+    new=$(hash_of "$src")
+    cur=""; [ -e "$root/$dst" ] && cur=$(hash_of "$root/$dst")
+
+    if [ ! -e "$root/$dst" ]; then
+      mkdir -p "$(dirname "$root/$dst")"; cp "$src" "$root/$dst"
+      say "restored  $dst (was missing)"
+    elif [ "$cur" = "$new" ]; then
+      say "current   $dst"
+    elif [ -z "$want" ]; then
+      cp "$src" "$root/$dst"; say "added     $dst (new in this payload)"
+    elif [ "$cur" = "$want" ]; then
+      cp "$src" "$root/$dst"; say "updated   $dst"
+    elif [ -f "$basedir/$dst" ]; then
+      # Diverged locally AND the payload moved: real three-way merge, base =
+      # the payload as installed. git merge-file exits >0 on conflict and
+      # leaves standard markers, which is the surface template upgrade shows.
+      if git merge-file \
+           -L "yours ($dst)" \
+           -L "base (flavor as installed at $(lock_get template_version))" \
+           -L "new payload (flavors/$name)" \
+           "$root/$dst" "$basedir/$dst" "$src" >/dev/null 2>&1; then
+        say "merged    $dst"
+      else
+        say "CONFLICT  $dst (standard markers left in place; resolve by hand)"
+        conflicts=$((conflicts + 1))
+      fi
+    else
+      # Diverged, payload moved, and no recorded base blob to merge against
+      # (a lock written before base stashing, or a hand-deleted base). Refuse
+      # to guess: leave the file alone and say so.
+      say "SKIPPED   $dst (locally modified and no recorded base to merge against; compare with flavors/$name/$(basename "$src") by hand)"
+      conflicts=$((conflicts + 1))
+    fi
+
+    mkdir -p "$(dirname "$basedir/$dst")"
+    cp "$src" "$basedir/$dst"
+    printf 'file %s %s\n' "$dst" "$(hash_of "$root/$dst")" >> "$tmplock"
+  done < "$pairs"
+
+  mv "$tmplock" "$lock"
+  if [ "$conflicts" -gt 0 ]; then
+    say "$conflicts file(s) need hand resolution; .seed/flavor.lock refreshed to match what is on disk"
+    return 4
+  fi
+  say "reconciled flavor '$name' to template $(tmpl_ver); .seed/flavor.lock refreshed"
+}
+
+case "${1:-}" in
+  list)    verb_list ;;
+  install) shift; verb_install "${1:-}" ;;
+  status)  verb_status ;;
+  upgrade) verb_upgrade ;;
+  -h|--help|help|'') usage ;;
+  *) die "unknown verb: $1 (try: seed-flavor --help)" 1 ;;
+esac
