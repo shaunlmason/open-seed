@@ -486,19 +486,44 @@ open-seed reaches your repo two ways, and they carry different things.
 - **The plugin channel** carries **capabilities**: agent skills and the
   role/subagent definitions. It is a Claude Code plugin published from a
   marketplace manifest in the open-seed repo, and Claude Code installs it
-  for anyone who trusts the folder. Capabilities are what your agents can
-  *do*, so they can change without touching your tree.
+  for anyone who trusts the folder, without those files being vendored
+  into your tree.
 
 This is the R8 mitigation the template repo alone cannot provide (design
 §10 Q4). A clone freezes the template at instantiation time; the plugin
-channel lets capability updates arrive without a merge, while structure
-keeps its reviewed merge path.
+channel lets capabilities advance ahead of that frozen structure.
+
+**By default the two stay aligned.** `seed plugin enable` pins the
+marketplace to the release tag in `.seed/template.lock`, so a fresh opt-in
+tracks exactly the release your tree came from.
+
+**To take capabilities ahead of structure**, point the channel somewhere
+else on purpose: `seed plugin enable --ref v0.4.0` for a later release, or
+`--ref main` to follow upstream continuously. `seed plugin status` then
+reports the relation rather than treating it as a fault:
+
+| relation | meaning | `--check` |
+|---|---|---|
+| `aligned` | the pin names your template release | passes |
+| `ahead` | the pin names a later release | passes, reported |
+| `floating` | the pin is a branch or other moving ref | passes, reported |
+| `behind` | your template moved on and the pin did not | **fails** |
+
+Only `behind` fails, because that is the accidental case: a template
+upgrade landed and nobody re-pinned. A deliberate capability-only ref must
+survive `make check`, or the gate would forbid the operation the channel
+exists for.
+
+What is still manual: there is no `seed plugin upgrade` that resolves the
+latest release and re-pins for you, so advancing the ref means naming a tag
+(tracked as os-6eb32b94).
 
 **Which one is right.** If you never enable the plugin channel, nothing
 changes: the template channel already carries every capability in-tree, and
-that is the supported default. Enable the plugin channel when you run
-several instantiated repos and want skill and role updates to land in all
-of them without N template merges. Do not enable it expecting structural
+that is the supported default. Enable it when you want open-seed's skills
+and roles registered with the harness as a namespaced plugin, especially
+across several repos, or when you want capability updates without waiting
+on a structural template merge. Do not enable it expecting *structural*
 updates: `seed template upgrade` remains the only path for those.
 
 **Seed workflows stay on the template channel.** A Claude Code plugin's
@@ -556,6 +581,14 @@ marketplace ref you pinned no longer names the release
 - Maintainers: the plugin's version is `.seed/template.lock`'s `version`
   line, so the release checklist above already moves both channels. Run
   `scripts/seed sync` after the bump so the rendered manifests follow.
+- **The channel is only installable from a release that contains it.**
+  `plugin enable` pins whatever tag `.seed/template.lock` names, and a tag
+  cut before the channel existed carries no `.claude-plugin/marketplace.json`
+  for Claude Code to read. `status --check` compares the two coordinates and
+  cannot see this, so it still reports healthy. Enable the channel only once
+  your `template.lock` names a release at or after the one that introduced
+  it, or pass `--ref` to name one explicitly; a floor check is tracked with
+  os-6eb32b94.
 
 ## 7. Where everything lives
 

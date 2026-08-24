@@ -41,5 +41,6 @@ label with a comment and removes it.
 Write access is checked on the SENDER; the one-shot label is removed,
 `by:agent` provenance applied, and a sticky `<!-- seed-dispatch -->`
 comment records the act. `state:*` mirror-label edits are requests,
-never direct writes (§7.1: the port is the only state writer). Everything else
-schedule ticks) reaches this role: route it via `seed task create`.
+never direct writes (§7.1: the port is the only state writer). Everything
+else (issue forms, comments, schedule ticks) reaches this role: route it via
+`seed task create`.
