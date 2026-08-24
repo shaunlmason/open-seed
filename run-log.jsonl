@@ -243,3 +243,4 @@
 {"actor":"opencode","data":{"title":"CI: verify server-side seed-state protections (Phase 2 API-side check, unlanded)"},"task":"os-7b6afa4d","ts":"2026-08-24T02:19:59Z","verb":"create"}
 {"actor":"opencode","data":{"title":"engine: resolve latest release via api.github.com with optional token (private-fork fallback)"},"task":"os-a353ef17","ts":"2026-08-24T02:20:20Z","verb":"create"}
 {"actor":"opencode","data":{"title":"Q5: dedicated machine identity for seed-state pushes (ref-push scoping, R10)"},"task":"os-af5cb439","ts":"2026-08-24T02:20:44Z","verb":"create"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:56","to":"ready"},"task":"os-2c0c474c","ts":"2026-08-24T02:26:09Z","verb":"plan-unblock"}
