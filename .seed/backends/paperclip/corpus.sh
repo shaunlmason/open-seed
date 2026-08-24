@@ -81,6 +81,22 @@ run_corpus() {
   # remediation rather than inventing an id, and never silently claims.
   expect_rc 5 "claim as unregistered actor" "$sb" claim "$id" --actor nobody-here --json
 
+  # Assignment is routing, not a claim: an issue ROUTED to an actor must
+  # be both listed in that actor's ready set and claimable by them. The
+  # two have to agree, or routed work is advertised and then refused.
+  out=$("$sb" create --title "Routed" --actor a --json); routed=$(echo "$out" | jq -r .task)
+  "$sb" promote "$routed" --actor lead --json >/dev/null
+  ragent=$(pc_api GET "/companies/$PAPERCLIP_COMPANY_ID/agents" \
+    | jq -r '[.[] | select(.name == "agent-2") | .id] | .[0]')
+  pc_api PATCH "/issues/$routed" "$(jq -nc --arg a "$ragent" '{assigneeAgentId: $a}')" >/dev/null
+  out=$("$sb" ready --actor agent-2 --json)
+  echo "$out" | jq -e --arg t "$routed" '[.tasks[].task] | index($t)' >/dev/null \
+    || die "issue routed to agent-2 missing from its ready set"
+  out=$("$sb" claim "$routed" --actor agent-2 --json); ok "$out" claim-routed
+  rtok=$(echo "$out" | jq -r .claim_token)
+  "$sb" release "$routed" --actor agent-2 --token "$rtok" --json >/dev/null
+  "$sb" cancel "$routed" --actor lead --json >/dev/null
+
   # Checkout-aware ready: a checked-out issue is not claimable work.
   out=$("$sb" ready --actor agent-2 --json)
   [ "$(echo "$out" | jq '.tasks | length')" = "0" ] || die "checked-out issue still in ready"

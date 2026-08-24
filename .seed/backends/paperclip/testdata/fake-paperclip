@@ -240,8 +240,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400, {"error": "Validation error",
                                         "details": [{"path": ["agentId"],
                                                      "message": "Invalid uuid"}]})
-            # ANY held lock is a conflict, the same agent included.
-            if it.get("assigneeAgentId") or it["status"] not in expected:
+            # Assignment is ROUTING, not a lock: verified live, an agent
+            # CAN check out an issue already assigned to it (200), while
+            # a different agent is refused (409). The status precondition
+            # is what makes a held checkout a conflict, since checkout
+            # moves the issue out of `todo`.
+            assignee = it.get("assigneeAgentId")
+            if (assignee and assignee != agent_id) or it["status"] not in expected:
                 return self.reply(409, {"error": "Issue checkout conflict",
                                         "details": {"issueId": it["id"],
                                                     "status": it["status"],
