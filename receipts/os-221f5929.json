@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "task": "os-221f5929",
+  "merge_base": "18ce80f539f7501dd5a460d5df78c4ad1b70fa29",
+  "head": "ba6aa8b55fc6b36a35d6510f46160f17b3865398",
+  "plan_path": "plans/os-221f5929.md",
+  "plan_sha256": "2927498af6626017f6808f140d1c71cab862bce128b50cc928a753cc7213855b",
+  "diff_files": [
+    ".claude-plugin/marketplace.json",
+    ".claude/agents/dispatcher.md",
+    ".claude/agents/implementer.md",
+    ".claude/agents/planner.md",
+    ".claude/agents/reviewer.md",
+    ".seed/agents/dispatcher.md",
+    ".seed/agents/implementer.md",
+    ".seed/agents/planner.md",
+    ".seed/agents/reviewer.md",
+    ".seed/engine.lock",
+    ".seed/guardrails.yaml",
+    "CODEOWNERS",
+    "docs/design-options.md",
+    "docs/handbook.md",
+    "memory/LEARNINGS.md",
+    "plugin/.claude-plugin/plugin.json",
+    "plugin/README.md",
+    "plugin/agents/dispatcher.md",
+    "plugin/agents/implementer.md",
+    "plugin/agents/planner.md",
+    "plugin/agents/reviewer.md",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "3a99ebe6b80b91a6f619301697188862d9d40612bfff11d6e155da5f65f65539",
+  "validation": [
+    {
+      "cmd": "test -f .claude-plugin/marketplace.json",
+      "exit": 0
+    },
+    {
+      "cmd": "test -f plugin/.claude-plugin/plugin.json",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/seed sync --check",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/seed plugin status --check",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "shaunlmason"
+}
