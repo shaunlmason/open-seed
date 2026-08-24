@@ -84,6 +84,17 @@ offline_tests() {
     done < "$d/manifest"
   done
 
+  say "offline: the core-Makefile reference matches the real core Makefile"
+  # Only meaningful in an unflavored tree: after install, ./Makefile is the
+  # flavored one by design.
+  if [ ! -f "$root/.seed/flavor.lock" ]; then
+    if [ ! -f "$root/flavors/core-Makefile" ]; then
+      bad "flavors/core-Makefile is missing; install cannot verify what it replaces"
+    elif ! cmp -s "$root/Makefile" "$root/flavors/core-Makefile"; then
+      bad "flavors/core-Makefile has drifted from ./Makefile; refresh it (cp Makefile flavors/core-Makefile)"
+    fi
+  fi
+
   say "offline: seed-flavor list names the shipped flavors"
   out=$("$root/scripts/seed-flavor" list)
   echo "$out" | grep -qx typescript || bad "seed-flavor list did not name typescript (got: $out)"
@@ -109,6 +120,15 @@ offline_tests() {
   rc=0; msg=$("$inst/scripts/seed-flavor" install typescript 2>&1) || rc=$?
   [ "$rc" != 0 ] || bad "install ran over a customized Makefile"
   echo "$msg" | grep -qi "refusing" || bad "customized-Makefile refusal did not say why: $msg"
+  cp "$work/Makefile.core" "$inst/Makefile"
+
+  # Refusal: a Makefile with the consumer's OWN targets appended, placeholder
+  # left intact. install replaces the whole file, so a partial check (e.g. a
+  # retained marker string) would let those targets be silently discarded.
+  printf '\nrelease:\n\t@echo my release target\n' >> "$inst/Makefile"
+  rc=0; msg=$("$inst/scripts/seed-flavor" install typescript 2>&1) || rc=$?
+  [ "$rc" != 0 ] || bad "install replaced a Makefile carrying the consumer's own targets"
+  echo "$msg" | grep -qi "byte-identical" || bad "appended-target refusal did not name the comparison: $msg"
   cp "$work/Makefile.core" "$inst/Makefile"
 
   # Refusal: a destination that already exists.
@@ -209,6 +229,35 @@ integration_tests() {
   (cd "$inst" && scripts/seed-flavor upgrade >/dev/null)
   grep -q "fromUpstream" "$inst/src/index.ts" \
     || bad "upgrade did not apply a payload change to an undiverged destination"
+
+  say "integration: a merged local edit stays diverged and survives the NEXT upgrade"
+  # Regression: recording the merged result as the baseline would make status
+  # call this clean, and the next payload change would overwrite the edit.
+  mrg="$work/merge"; instantiate "$mrg" || bad "could not instantiate for the merge-baseline test"
+  (cd "$mrg" && scripts/seed-flavor install typescript >/dev/null)
+  printf '\n// consumer edit, top of file\n' | cat - "$mrg/src/index.ts" > "$mrg/src/index.ts.new"
+  mv "$mrg/src/index.ts.new" "$mrg/src/index.ts"
+  printf 'export const wave1 = 1;\n' >> "$mrg/flavors/typescript/src/index.ts"
+  (cd "$mrg" && scripts/seed-flavor upgrade >/dev/null 2>&1) || true
+  grep -q "consumer edit" "$mrg/src/index.ts" || bad "first reconcile lost the consumer edit"
+  (cd "$mrg" && scripts/seed-flavor status) | grep -q "diverged src/index.ts" \
+    || bad "a file carrying a merged local edit is reported clean, not diverged"
+  printf 'export const wave2 = 2;\n' >> "$mrg/flavors/typescript/src/index.ts"
+  (cd "$mrg" && scripts/seed-flavor upgrade >/dev/null 2>&1) || true
+  grep -q "consumer edit" "$mrg/src/index.ts" \
+    || bad "the SECOND reconcile silently deleted the consumer edit"
+
+  say "integration: a new payload destination that already exists is not overwritten"
+  col="$work/collide"; instantiate "$col" || bad "could not instantiate for the collision test"
+  (cd "$col" && scripts/seed-flavor install typescript >/dev/null)
+  echo "mine, not the flavor's" > "$col/src/extra.ts"
+  echo "src/extra.ts    src/extra.ts" >> "$col/flavors/typescript/manifest"
+  echo "export const theirs = 1;" > "$col/flavors/typescript/src/extra.ts"
+  rc=0; out=$( (cd "$col" && scripts/seed-flavor upgrade 2>&1) ) || rc=$?
+  grep -q "mine, not the flavor" "$col/src/extra.ts" \
+    || bad "upgrade overwrote a pre-existing file the flavor never installed"
+  echo "$out" | grep -q "COLLISION" || bad "upgrade did not report the collision: $out"
+  [ "$rc" != 0 ] || bad "upgrade exited 0 despite a collision"
 
   say "integration: reconcile conflicts (not clobbers) on a diverged file"
   printf 'export const mine = 2;\n' >> "$inst/src/index.ts"

@@ -19,11 +19,12 @@ flavors="$root/flavors"
 lock="$root/.seed/flavor.lock"
 basedir="$root/.seed/flavor-base"
 
-# The core Makefile's placeholder recipe. A flavor replaces the check recipe,
-# so install must not run over a Makefile someone has already wired up. This
-# marker is content-based on purpose: a stored hash of the core Makefile would
-# go stale every time the core Makefile changed.
-CORE_MARKER="add your project's lint/test/typecheck here"
+# A byte-identical copy of the core template's Makefile. install replaces the
+# whole file, so anything short of a full comparison lets a consumer's edits be
+# silently discarded — a retained placeholder string proves nothing about the
+# rest of the file. flavor-test.sh asserts this reference matches ./Makefile in
+# an unflavored tree, so it cannot drift silently (R9).
+CORE_MAKEFILE="$flavors/core-Makefile"
 
 say() { printf 'seed-flavor: %s\n' "$*"; }
 die() { printf 'seed-flavor: %s\n' "$*" >&2; exit "${2:-1}"; }
@@ -43,7 +44,10 @@ Keeping a flavored repo current is two steps, in order:
 EOF
 }
 
-hash_of()   { sha256sum "$1" | cut -d' ' -f1; }
+# Same fallback as the engine bootstrap (scripts/seed:72): macOS ships
+# `shasum -a 256`, not `sha256sum`, and this script must not die mid-install
+# on a platform the bootstrap explicitly supports.
+hash_of() { (sha256sum "$1" 2>/dev/null || shasum -a 256 "$1") | awk '{print $1}'; }
 lock_get()  { [ -f "$lock" ] && sed -n "s/^$1 //p" "$lock" || true; }
 lock_hash() { [ -f "$lock" ] && awk -v d="$1" '$1=="file" && $2==d {print $3}' "$lock" || true; }
 tmpl_ver()  { sed -n 's/^version //p' "$root/.seed/template.lock" 2>/dev/null || echo unknown; }
@@ -94,7 +98,10 @@ verb_install() {
   # Refusal 2: the Makefile has already been wired up by someone else.
   if awk -F'\t' '{print $2}' "$pairs" | grep -qx 'Makefile'; then
     [ -f "$root/Makefile" ] || die "refusing: no Makefile to extend at the repo root" 1
-    grep -qF "$CORE_MARKER" "$root/Makefile" || die "refusing: the root Makefile is not the core template's (its placeholder check recipe is gone, so it has local edits or a flavor is already applied). Apply the flavor to a fresh instantiation, or merge flavors/$name/Makefile into yours by hand." 1
+    [ -f "$CORE_MAKEFILE" ] || die "refusing: no core Makefile reference at flavors/core-Makefile to compare against" 1
+    if ! cmp -s "$root/Makefile" "$CORE_MAKEFILE"; then
+      die "refusing: the root Makefile is not byte-identical to the core template's (it has local edits, or a flavor is already applied), and install would replace it whole. Diff it against flavors/core-Makefile, then merge flavors/$name/Makefile into yours by hand." 1
+    fi
   fi
 
   # Refusal 3: any destination already exists. Makefile is replaced by design
@@ -164,7 +171,15 @@ verb_upgrade() {
     elif [ "$cur" = "$new" ]; then
       say "current   $dst"
     elif [ -z "$want" ]; then
-      cp "$src" "$root/$dst"; say "added     $dst (new in this payload)"
+      # New in this payload, but the path already exists and the lock never
+      # recorded it: the file is the consumer's, not the flavor's. The
+      # missing-file branch above already handles genuinely new paths.
+      say "COLLISION $dst (new in this payload, but the file already exists and was not installed by the flavor; left untouched — compare with flavors/${src#"$flavors/"})"
+      conflicts=$((conflicts + 1))
+      # Not recorded in the lock and given no base blob: the flavor does not
+      # own this path, so a later upgrade must see the same collision again
+      # rather than quietly adopting the consumer's file.
+      continue
     elif [ "$cur" = "$want" ]; then
       cp "$src" "$root/$dst"; say "updated   $dst"
     elif [ -f "$basedir/$dst" ]; then
@@ -185,13 +200,17 @@ verb_upgrade() {
       # Diverged, payload moved, and no recorded base blob to merge against
       # (a lock written before base stashing, or a hand-deleted base). Refuse
       # to guess: leave the file alone and say so.
-      say "SKIPPED   $dst (locally modified and no recorded base to merge against; compare with flavors/$name/$(basename "$src") by hand)"
+      say "SKIPPED   $dst (locally modified and no recorded base to merge against; compare with flavors/${src#"$flavors/"} by hand)"
       conflicts=$((conflicts + 1))
     fi
 
+    # The baseline is the payload as of this reconcile, NOT what is on disk.
+    # Recording the merged/conflicted result would make `status` call a
+    # locally-edited file clean, and the next upgrade would take the
+    # overwrite branch and delete the consumer's edit.
     mkdir -p "$(dirname "$basedir/$dst")"
     cp "$src" "$basedir/$dst"
-    printf 'file %s %s\n' "$dst" "$(hash_of "$root/$dst")" >> "$tmplock"
+    printf 'file %s %s\n' "$dst" "$new" >> "$tmplock"
   done < "$pairs"
 
   mv "$tmplock" "$lock"
