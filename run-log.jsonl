@@ -269,3 +269,4 @@
 {"actor":"opencode","data":{"to":"blocked","transitioned":true},"task":"os-af5cb439","ts":"2026-08-24T02:52:45Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"evidence_id":"ev-999fbf3a","kind":"pr"},"task":"os-2c0c474c","ts":"2026-08-24T02:53:53Z","verb":"attach-evidence"}
 {"actor":"shaunlmason","data":{"comment_id":"cm-659acbe9","kind":"comment"},"task":"os-2c0c474c","ts":"2026-08-24T02:53:56Z","verb":"comment"}
+{"actor":"shaunlmason","data":{"to":"review","transitioned":true},"task":"os-2c0c474c","ts":"2026-08-24T02:54:04Z","verb":"transition"}
