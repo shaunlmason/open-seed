@@ -259,3 +259,4 @@
 {"actor":"claude","data":{"lease_expires":"2026-08-24T03:42:32Z"},"task":"os-501a29c2","ts":"2026-08-24T02:42:32Z","verb":"claim"}
 {"actor":"claude","data":{"lease_expires":"2026-08-24T03:45:03Z"},"task":"os-501a29c2","ts":"2026-08-24T02:45:03Z","verb":"lease-renew"}
 {"actor":"shaunlmason","data":{"evidence_id":"ev-88984476","kind":"pr"},"task":"os-221f5929","ts":"2026-08-24T02:45:08Z","verb":"attach-evidence"}
+{"actor":"shaunlmason","data":{"to":"review","transitioned":true},"task":"os-221f5929","ts":"2026-08-24T02:45:10Z","verb":"transition"}
