@@ -1,13 +1,11 @@
 ---
 id: os-af5cb439
 title: 'Q5: dedicated machine identity for seed-state pushes (ref-push scoping, R10)'
-state: blocked
+state: ready
 priority: P3
 squad: core
-blocked_on:
-    - plan:63
 created_at: "2026-08-24T02:20:42Z"
-updated_at: "2026-08-24T02:52:45Z"
+updated_at: "2026-08-24T04:31:50Z"
 ---
 
 Design R10 (docs/design-options.md:287): state-ref integrity is push-access-deep — anyone who can push `seed-state` can bypass the shim (clear a rejection list, forge lease fields, rewrite the log, forge an operator verb). The named mitigation is to "scope which principals hold state-ref push access (Q5)".
