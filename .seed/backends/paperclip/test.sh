@@ -49,4 +49,4 @@ code=$(curl -sS -o /dev/null -w '%{http_code}' -X PUT "$PAPERCLIP_API_URL/api/is
 
 run_corpus
 
-say "OK: all required verbs; atomic document fence (incl. rotation), checkout-aware ready, ancestry, server-arbitrated transitions, lockout, cascades, both event shapes"
+say "OK: all required verbs; CAS-held document fence (incl. rotation), checkout-aware ready, ancestry, server-arbitrated transitions, lockout, cascades, both event shapes"

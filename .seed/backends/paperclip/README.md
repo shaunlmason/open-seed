@@ -98,18 +98,25 @@ P0–P3 → critical / high / medium / low.
 
 - **Server is truth**: no offline operation, no fork portability: the
   exact inverse of filecards, and the reason both exist behind one port.
-- **The fence IS atomic** (corrected against a live server, os-2c0c474c):
-  the earlier release declared it check-then-act because issue `metadata`
-  had no conditional update. Issues turn out to have no `metadata` at all;
-  the bookkeeping moved to the per-issue **document store**, and that
-  store enforces optimistic concurrency: an update without
-  `baseRevisionId` is refused `409`, and a stale base is refused too. The
-  adapter validates the stored `seedToken`, remembers the revision it
-  validated, and writes against exactly that revision, so a worker reaped
-  and superseded between validation and write has its write **refused by
-  the server** rather than landing behind the winner. That path exits 6
-  (`fenced_out`), not a false success. Verified by the shared corpus
-  against both the fake and a real instance.
+- **The fence is check-then-act, narrowed but NOT atomic.** An earlier
+  revision of this document claimed atomicity on the strength of the
+  document store's compare-and-swap. That claim was wrong and is
+  withdrawn: the CAS protects the *bookkeeping document*, and nothing
+  else. No Paperclip write outside the document store accepts a revision
+  precondition, so the issue-status change (and a comment) is always a
+  separate, unconditional request.
+  What the CAS does buy, and what the adapter now does with it: every
+  fenced verb asserts the claim by compare-and-swap (`fence_hold`)
+  **before** it touches the substrate. A worker superseded by a
+  reap-and-reclaim is refused at that assertion and exits 6, instead of
+  half-applying a transition and only then discovering it had lost the
+  claim. Token rotation itself is therefore atomic: a stale token can
+  never be re-validated, and a predecessor can no longer append evidence
+  after a successor has taken over.
+  The residual window is one request round-trip: an operator reap landing
+  between the assertion and the following substrate write can still let a
+  single mutation through. filecards remains the backend with a fully
+  atomic fence. Declared, per the never-waivable-semantics rule.
 - **Leases are Paperclip's watchdogs** (`issueWatchdogs`): `lease-renew`
   validates the fence and succeeds; staleness detection is the platform's.
 - **Audit rides Paperclip's immutable activity log** (+ issue comments);
