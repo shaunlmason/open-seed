@@ -278,3 +278,4 @@
 {"actor":"shaunlmason","data":{"evidence_id":"ev-309dbfe7","kind":"pr"},"task":"os-501a29c2","ts":"2026-08-24T03:23:44Z","verb":"attach-evidence"}
 {"ts":"2026-08-24T03:27:29Z","actor":"shaunlmason","verb":"state-repair","task":"os-501a29c2","data":{"reason":"D4.5 done-without-evidence: the operator close at 03:11Z minted a review block with no evidence URL, so the done-consistency lint failed for every PR in the repo. PR #60 merged at 03:10:21Z; hand-repair records it. Human operator repair on the state ref (R10 push-access-deep)."}}
 {"actor":"shaunlmason","data":{"title":"close/accept without --resolution silently breaks the done-consistency lint for every PR"},"task":"os-6d334325","ts":"2026-08-24T03:27:42Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-2c0c474c","ts":"2026-08-24T03:30:10Z","verb":"accept"}
