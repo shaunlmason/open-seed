@@ -425,6 +425,35 @@ requirements:
   run `scripts/seed upgrade` next as its own reviewed step. Pull-based
   by design (§7.1): upstream never pushes into your repo. `--check`
   reports current vs latest without creating anything.
+- **Flavors (opinionated stack variants).** The core is language-agnostic on
+  purpose: its only contract with your stack is `make check` plus the hooks
+  (§10 Q3). A **flavor** goes beyond that without breaking it:
+
+      scripts/seed-flavor list
+      scripts/seed-flavor install typescript
+      npm install            # the script runs no package manager itself
+      scripts/seed-flavor status
+
+  `install` is a **fresh-instantiation step**, not an idempotent converger: it
+  refuses rather than overwrite a `Makefile` you have already wired, a
+  destination that already exists, or a repo that is already flavored, and it
+  names the alternative each time. It records what it wrote in
+  `.seed/flavor.lock`.
+
+  Keeping a flavored repo current is **two separate commands, in this order**:
+
+      scripts/seed template upgrade    # brings new payload into flavors/<name>/
+      scripts/seed-flavor upgrade      # applies it to the installed destinations
+
+  Both are consumer-initiated, and the second does not happen automatically:
+  `seed template upgrade` merges by *path*, so it updates
+  `flavors/<name>/...` but never the copies `install` made at the repo root.
+  Run the first without the second and you keep running the payload you
+  installed; `seed-flavor status` shows which destinations have diverged.
+  `seed-flavor upgrade` merges against the payload as installed, so a file you
+  have edited yourself conflicts (standard markers) instead of being
+  overwritten. See `decisions/0002-template-flavors.md`.
+
 - **Cutting a template release (maintainers):** bump `version` in
   `.seed/template.lock`, commit, tag that commit: version-then-tag; then
   push the commit and the tag, and publish a GitHub Release for that tag,
@@ -451,6 +480,7 @@ requirements:
 |---|---|
 | `.seed/` | The contract: config, guardrails, port spec, roles, teams, hooks, engine pin |
 | `plans/` `receipts/` `memory/` `decisions/` | Work products, each with its own gate |
+| `flavors/` | Opinionated stack variants (v2): applied by `scripts/seed-flavor install` |
 | `scripts/seed` | The only coordination entry point |
 | `scripts/loop.sh` · `scripts/seed-harness` | The loop and the harness adapters |
 | `seed-state` ref | Machine-written coordination state, never checked out, never hand-edited |

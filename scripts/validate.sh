@@ -151,4 +151,19 @@ if command -v jq >/dev/null 2>&1; then
   say "review-identity: OK — app approval passes, self-approval refused, none waits"
 fi
 
+# Flavor mechanism, offline half (ADR 0002): manifest structure, install
+# refusals, install confinement, and the static core-gate checks. Fast,
+# deterministic, and runs NO `make check`, so it cannot re-enter this script.
+# The flavor's integration test needs node and a registry and deliberately
+# lives behind `make flavor-test` instead (§2.6: this gate stays offline).
+if [ -x "$root/scripts/flavor-test.sh" ]; then
+  if out=$(sh "$root/scripts/flavor-test.sh" --offline 2>&1); then
+    say "flavors ok: manifests, refusals, confinement, core-gate recipes"
+  else
+    say "FAIL: flavor checks:"
+    printf '%s\n' "$out"
+    fail=1
+  fi
+fi
+
 [ "$fail" -eq 0 ] && say "ok" || exit 1

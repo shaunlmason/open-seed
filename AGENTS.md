@@ -60,6 +60,7 @@ orchestration, task tracking, and guardrails.
 | `scripts/seed` | The only coordination entry point (bootstraps the pinned engine) |
 | `.seed/hooks/` | Worktree lifecycle hooks; `pre-merge.d/` blocks bad merges |
 | `Makefile` | `make check`: the fast backpressure command; keep it green |
+| `flavors/` | Opinionated stack variants (v2); `scripts/seed-flavor install <name>` applies one to a fresh instantiation |
 
 Guardrails (autonomy tiers, budgets, protected paths) are in
 `.seed/guardrails.yaml`. Budgets on the file backend are advisory circuit

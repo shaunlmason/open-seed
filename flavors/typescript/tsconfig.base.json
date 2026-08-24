@@ -1,0 +1,21 @@
+{
+  "$comment": "Every compiler option lives here, so option churn arrives through ordinary template merging and needs no seed-flavor upgrade (flavors/README.md). types is by-name, not path-relative, so it resolves correctly through `extends`; a path-relative option such as typeRoots would resolve against THIS directory, which has no node_modules, and would have to live in the thin root tsconfig.json instead.",
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["es2023"],
+    "module": "node16",
+    "moduleResolution": "node16",
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  }
+}
