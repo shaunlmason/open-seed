@@ -8,6 +8,8 @@
 /.seed/           @shaunlmason
 /.github/         @shaunlmason
 /.claude/         @shaunlmason
+/.claude-plugin/  @shaunlmason
+/plugin/          @shaunlmason
 /scripts/         @shaunlmason
 /CODEOWNERS       @shaunlmason
 /AGENTS.md        @shaunlmason

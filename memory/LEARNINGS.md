@@ -144,3 +144,24 @@ Fresh sessions read this file instead of rediscovering.
   worker is then refused instead of half-applying), and declare the residual
   window rather than upgrading the guarantee. Claiming atomicity from a
   partial CAS was a review catch, not a self-catch.
+- 2026-08-24 (plugin channel, os-221f5929): Claude Code **silently
+  skips** a subagent file missing `name` or `description`: the parse
+  error goes to the debug log, never the session, so the four roles in
+  `.claude/agents/` had been loading as nothing at all since the fan-out
+  landed. Nothing failed, which is why it survived. D8 already required
+  the sources to be dual-format; the drift was in the files, not the
+  design. Lesson generalized: when a fan-out targets a harness, the
+  harness's own validator (`claude plugin validate <dir>`) is worth
+  running in the gate, because "no error" from a harness usually means
+  "not loaded", not "loaded fine". Watch the YAML too: an unquoted colon
+  in a `description:` makes the whole frontmatter invalid.
+- 2026-08-24 (generated trees): a fan-out that only ever *writes* its
+  desired files cannot notice deletions. Deleting a source left the
+  generated copy on disk with `sync --check` still clean, so a removed
+  capability kept shipping through the published plugin. The fix that
+  made this tractable was making the owned roots **100% generated**,
+  marker README included: once no hand-written file lives under a root,
+  "delete anything the render did not produce" needs no exception list.
+  The same gap still exists for `.claude/agents/`, `.claude/skills/` and
+  `.agents/skills/`, whose roots hold hand-written READMEs (follow-up
+  card os-fa598c76).

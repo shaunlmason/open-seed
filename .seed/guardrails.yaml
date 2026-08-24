@@ -24,6 +24,8 @@ protected_paths:
   - .seed/**
   - .github/**
   - .claude/**
+  - .claude-plugin/**
+  - plugin/**
   - scripts/**
   - CODEOWNERS
   - AGENTS.md

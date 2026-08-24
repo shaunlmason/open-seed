@@ -1,0 +1,15 @@
+{
+  "name": "open-seed",
+  "owner": {
+    "name": "shaunlmason",
+    "url": "https://github.com/shaunlmason"
+  },
+  "description": "open-seed's own capability channel: the plugin half of the two distribution paths, alongside the template repo itself.",
+  "plugins": [
+    {
+      "name": "open-seed",
+      "source": "./plugin",
+      "description": "open-seed's evolving capabilities: agent skills and role definitions, distributed as a plugin so an instantiated repo can take capability updates without a template merge (R8)."
+    }
+  ]
+}

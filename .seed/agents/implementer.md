@@ -1,4 +1,6 @@
 ---
+name: implementer
+description: Take one claimed card from in_progress to review, implementing against its approved plan. Use when a planned card is ready to build.
 role: implementer
 run-agent: claude
 permission: safe-edit
