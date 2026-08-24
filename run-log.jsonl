@@ -232,3 +232,4 @@
 {"actor":"shaunlmason","data":{"evidence_id":"ev-b58cff17","kind":"pr"},"task":"os-221f5929","ts":"2026-08-24T02:02:07Z","verb":"attach-evidence"}
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":true},"task":"os-221f5929","ts":"2026-08-24T02:02:10Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-2c0c474c","ts":"2026-08-24T02:06:02Z","verb":"promote"}
+{"actor":"shaunlmason","data":{"lease_expires":"2026-08-24T03:06:10Z"},"task":"os-2c0c474c","ts":"2026-08-24T02:06:10Z","verb":"claim"}
