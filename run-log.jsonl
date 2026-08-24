@@ -271,3 +271,4 @@
 {"actor":"shaunlmason","data":{"comment_id":"cm-659acbe9","kind":"comment"},"task":"os-2c0c474c","ts":"2026-08-24T02:53:56Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"to":"review","transitioned":true},"task":"os-2c0c474c","ts":"2026-08-24T02:54:04Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"plugin channel: a real capability-update flow (seed plugin upgrade + a release floor check)"},"task":"os-6eb32b94","ts":"2026-08-24T02:55:00Z","verb":"create"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:59","to":"ready"},"task":"os-a9915564","ts":"2026-08-24T02:59:15Z","verb":"plan-unblock"}
