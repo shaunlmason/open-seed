@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "task": "os-501a29c2",
+  "merge_base": "18ce80f539f7501dd5a460d5df78c4ad1b70fa29",
+  "head": "e83b1ea86b7a5ef51823629e2afc9bb1cfec9b46",
+  "plan_path": "plans/os-501a29c2.md",
+  "plan_sha256": "4dab7078071f3e9c422df94dc9d2153060771a733fff6aafa9f3965f34d86c96",
+  "diff_files": [
+    ".github/workflows/check-validate.yml",
+    "AGENTS.md",
+    "Makefile",
+    "decisions/0002-template-flavors.md",
+    "docs/handbook.md",
+    "flavors/README.md",
+    "flavors/typescript/Makefile",
+    "flavors/typescript/README.md",
+    "flavors/typescript/biome.json",
+    "flavors/typescript/manifest",
+    "flavors/typescript/package.json",
+    "flavors/typescript/src/index.test.ts",
+    "flavors/typescript/src/index.ts",
+    "flavors/typescript/tsconfig.base.json",
+    "flavors/typescript/tsconfig.json",
+    "memory/DEADENDS.md",
+    "memory/LEARNINGS.md",
+    "scripts/flavor-test.sh",
+    "scripts/seed-flavor",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "2593680a8a5a236a75971d50d19b05e05c24114288c672f231f8a2dc707144d3",
+  "validation": [
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed sync --check",
+      "exit": 0
+    },
+    {
+      "cmd": "make flavor-test",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed-flavor list",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed plan lint plans/os-501a29c2.md",
+      "exit": 0
+    }
+  ],
+  "generated_by": "claude"
+}
