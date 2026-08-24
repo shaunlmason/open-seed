@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "task": "os-2c0c474c",
+  "merge_base": "18ce80f539f7501dd5a460d5df78c4ad1b70fa29",
+  "head": "64d1b02414e31a0f89d6dd43873499efcb2925b5",
+  "plan_path": "plans/os-2c0c474c.md",
+  "plan_sha256": "8aaad9c128e3ee0c20c77b7cd3bdc2eabab534e262df83230096d52357e3467c",
+  "diff_files": [
+    ".github/workflows/paperclip-live.yml",
+    ".seed/backends/paperclip/README.md",
+    ".seed/backends/paperclip/backend.toml",
+    ".seed/backends/paperclip/bin/seed-backend",
+    ".seed/backends/paperclip/corpus.sh",
+    ".seed/backends/paperclip/live-test.sh",
+    ".seed/backends/paperclip/test.sh",
+    ".seed/backends/paperclip/testdata/fake-paperclip",
+    "memory/DEADENDS.md",
+    "memory/LEARNINGS.md",
+    "scripts/validate.sh"
+  ],
+  "diff_sha256": "d980b539da15ae3c538cc0520b6f41eb5c8c68e94190b9eb35592990d987a9d9",
+  "validation": [
+    {
+      "cmd": "test -x .seed/backends/paperclip/live-test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh .seed/backends/paperclip/test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh .seed/backends/paperclip/live-test.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"live-test\" .seed/backends/paperclip/README.md",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"paperclip_version\" .seed/backends/paperclip/backend.toml",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"evidence_id\" .seed/backends/paperclip/bin/seed-backend",
+      "exit": 0
+    },
+    {
+      "cmd": "grep -q \"attach-evidence\" .seed/backends/paperclip/corpus.sh",
+      "exit": 0
+    },
+    {
+      "cmd": "sh scripts/validate.sh",
+      "exit": 0
+    }
+  ],
+  "generated_by": "claude"
+}
