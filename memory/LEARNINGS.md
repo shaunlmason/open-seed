@@ -111,3 +111,36 @@ Fresh sessions read this file instead of rediscovering.
   belong in the root config next to `node_modules`, while by-name options
   (`types`) resolve fine from an extended base. Getting this backwards is a
   silent typecheck failure, not a config error.
+- 2026-08-24 (os-2c0c474c): a backend fake written from the same reading of
+  the docs as the adapter proves only that you were **consistent**, not
+  correct. paperclip's contract suite passed every verb for two releases; the
+  first run against a real instance falsified the whole transport layer
+  (single-issue routes are not company-scoped, the field is `status` not
+  `state`, issues carry no `metadata`, checkout needs an agent-row UUID, deps
+  are written `blockedByIssueIds` and read `blockedBy`, there is no `/events`
+  route). Ship the live suite *with* the adapter, share one corpus between fake
+  and live so they cannot drift, and treat any fixture assertion you cannot
+  point at a live response for as an untested assumption.
+- 2026-08-24 (os-2c0c474c): Paperclip returns **200 for a PATCH naming a field
+  it does not have**. That is the drift class to fear: not an error, a silent
+  success, so every transition reported OK while nothing moved. Never assert a
+  state change from a write's response on this backend: re-read the entity. The
+  re-read is the only reason the `state`/`status` bug cannot come back.
+- 2026-08-24 (os-2c0c474c): Paperclip's checkout **dispatches work**, it is not
+  a passive lock, so it is not the port's `claim`. Assignment wakes the agent,
+  a runtime-less agent's run fails, and
+  `recovery.reconcile_stranded_assigned_issue` moves the issue
+  `in_progress -> blocked` within ~10s. Agents a seed deployment owns must be
+  paused (`PATCH /api/agents/<id> {"status":"paused"}`; ignored on create).
+  Diagnosis came from the platform's own activity log, which names the mover in
+  `details.source`: read the substrate's audit trail before theorising about a
+  flake.
+- 2026-08-24 (os-2c0c474c): the per-issue document store enforces optimistic
+  concurrency (an update without `baseRevisionId` is refused 409), which is a
+  real compare-and-swap, but it protects **only the document**. No other
+  Paperclip write takes a revision precondition, so a CAS there does not make a
+  fence atomic: the issue mutation is always a separate unconditional request.
+  Use it to assert the claim *before* touching the substrate (a superseded
+  worker is then refused instead of half-applying), and declare the residual
+  window rather than upgrading the guarantee. Claiming atomicity from a
+  partial CAS was a review catch, not a self-catch.

@@ -1,0 +1,30 @@
+# Live paperclip contract test (plan os-2c0c474c).
+#
+# NOT a required check, and deliberately not on the PR path: a run pays a
+# large npm install, an embedded Postgres, and 210 migrations (~90s cold).
+# It exists to catch upstream API drift between releases, which is a
+# scheduled concern, not a per-commit one. It needs no credentials: a
+# quickstart instance runs local_trusted and serves the API over loopback.
+name: paperclip-live
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, Mondays 06:00 UTC. Paperclip ships most days; weekly is
+    # frequent enough to catch drift while it is still cheap to fix.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run the shared corpus against a real Paperclip instance
+        run: sh .seed/backends/paperclip/live-test.sh --onboard

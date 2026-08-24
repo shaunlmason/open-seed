@@ -1,15 +1,34 @@
 #!/usr/bin/env python3
-"""Deterministic Paperclip API test double (documented surface subset,
-research/10 Part 1): issues with the seven-state machine enforced by
-assertTransition, DB-atomic checkout locks, comments, metadata, and the
-activity log. Not a Paperclip implementation: a contract fixture.
+"""Deterministic Paperclip API test double, reconciled against a live
+paperclipai 2026.817.0 instance under plan os-2c0c474c.
+
+Fidelity rules this fixture exists to hold (each one hid a real adapter
+bug before it was reconciled):
+
+  * single-issue routes are NOT company-scoped. /api/companies/<co>/
+    issues/<id> is a 404 here exactly as it is live; only the collection,
+    goals, agents, activity and the company itself are company-scoped.
+  * the state field is `status`. A PATCH naming an unknown field is
+    accepted and IGNORED (the live server 200s it), so the fake must do
+    the same: it is the behaviour that let `state` drift pass silently,
+    and a fake that errored would hide it again from the other side.
+  * documents enforce optimistic concurrency: updating without
+    baseRevisionId is 409. That CAS is what makes the adapter's fence
+    atomic, so the fixture must enforce it.
+  * entering `blocked` needs unresolved blockers, a pending interaction,
+    or an unblockDescriptor: 422 otherwise.
+  * checkout takes {agentId, expectedStatuses[]} against a real agent
+    row and 409s on ANY held lock.
 
 Usage: fake-paperclip <port>
 """
 import json
 import re
 import sys
+import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+VERSION = "2026.817.0"
 
 TRANSITIONS = {
     "backlog": {"todo", "cancelled"},
@@ -20,16 +39,51 @@ TRANSITIONS = {
     "done": set(),
     "cancelled": {"backlog"},
 }
+STATUSES = set(TRANSITIONS)
+ROLES = {"ceo", "cto", "cmo", "cfo", "security", "engineer", "designer",
+         "pm", "qa", "devops", "researcher", "general"}
+PRIORITIES = {"critical", "high", "medium", "low"}
 
+# Fields a PATCH /issues/<id> actually understands. Anything else is
+# accepted and dropped, mirroring the live server: this is deliberate.
+ISSUE_PATCH_FIELDS = {"title", "description", "status", "priority", "goalId",
+                      "parentId", "assigneeAgentId", "blockedByIssueIds",
+                      "unblockDescriptor"}
+
+COMPANY = {"id": "co-1", "name": "Fake Co", "budgetMonthlyCents": 10000,
+           "spentMonthlyCents": 4200}
 issues = {}
-goals = {"goal-1": {"id": "goal-1", "title": "Default goal", "budgetUsd": 100.0, "spentUsd": 42.0}}
-events = []
+goals = {"goal-1": {"id": "goal-1", "companyId": "co-1", "title": "Default goal",
+                    "level": "task", "status": "planned", "parentId": None}}
+agents = {}
+documents = {}          # (issue_id, key) -> doc
+comments = {}           # issue_id -> [comment]
+activity = []
 seq = [0]
 
 
 def new_id():
     seq[0] += 1
     return f"PAP-{seq[0]}"
+
+
+def rid():
+    return str(uuid.uuid4())
+
+
+def issue_view(it):
+    out = dict(it)
+    blockers = []
+    for b in it.get("blockedByIssueIds") or []:
+        bi = issues.get(b)
+        if bi:
+            blockers.append({"id": bi["id"], "identifier": bi["id"],
+                             "title": bi["title"], "status": bi["status"],
+                             "priority": bi["priority"],
+                             "assigneeAgentId": bi.get("assigneeAgentId")})
+    out["blockedBy"] = blockers
+    out["blocks"] = []
+    return out
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -46,109 +100,260 @@ class Handler(BaseHTTPRequestHandler):
 
     def payload(self):
         n = int(self.headers.get("Content-Length") or 0)
-        return json.loads(self.rfile.read(n) or b"{}")
+        if not n:
+            return {}
+        try:
+            return json.loads(self.rfile.read(n) or b"{}")
+        except ValueError:
+            return {}
 
-    def route(self):
-        m = re.match(r"^/api/companies/[^/]+(/.*)$", self.path)
-        return m.group(1) if m else self.path
+    # --- routing ------------------------------------------------------
+    def company_scoped(self):
+        """Return the tail of a /api/companies/<id>/... path, or None.
+
+        Single-issue routes are deliberately NOT reachable this way.
+        """
+        m = re.match(r"^/api/companies/([^/]+)(/.*)?$", self.path)
+        if not m:
+            return None
+        return m.group(2) or "/"
 
     def do_GET(self):
-        p = self.route()
-        if p.startswith("/issues?"):
-            state = p.split("state=")[1].split("&")[0]
-            return self.reply(200, [i for i in issues.values() if i["state"] == state])
-        if p == "/issues":
-            return self.reply(200, list(issues.values()))
-        m = re.match(r"^/issues/([^/]+)$", p)
+        if self.path == "/api/health":
+            return self.reply(200, {"status": "ok", "version": VERSION,
+                                    "deploymentMode": "local_trusted",
+                                    "bootstrapStatus": "ready", "authReady": True})
+        cs = self.company_scoped()
+        if cs is not None:
+            if cs == "/":
+                return self.reply(200, COMPANY)
+            if cs == "/issues":
+                # The list projection omits blockedBy, exactly as live.
+                return self.reply(200, [{k: v for k, v in it.items()
+                                         if k != "blockedByIssueIds"}
+                                        for it in issues.values()])
+            if cs == "/goals":
+                return self.reply(200, list(goals.values()))
+            if cs == "/agents":
+                return self.reply(200, list(agents.values()))
+            if cs == "/activity":
+                return self.reply(200, activity)
+            return self.reply(404, {"error": "API route not found"})
+
+        m = re.match(r"^/api/issues/([^/]+)$", self.path)
         if m:
-            i = issues.get(m.group(1))
-            return self.reply(200, i) if i else self.reply(404, {"error": "not found"})
-        m = re.match(r"^/goals/([^/]+)$", p)
+            it = issues.get(m.group(1))
+            return self.reply(200, issue_view(it)) if it else self.reply(404, {"error": "not found"})
+        m = re.match(r"^/api/issues/([^/]+)/documents/([^/]+)$", self.path)
+        if m:
+            doc = documents.get((m.group(1), m.group(2)))
+            return self.reply(200, doc) if doc else self.reply(404, {"error": "Document not found"})
+        m = re.match(r"^/api/issues/([^/]+)/documents$", self.path)
+        if m:
+            return self.reply(200, [d for (i, _k), d in documents.items() if i == m.group(1)])
+        m = re.match(r"^/api/issues/([^/]+)/comments$", self.path)
+        if m:
+            return self.reply(200, comments.get(m.group(1), []))
+        m = re.match(r"^/api/goals/([^/]+)$", self.path)
         if m:
             g = goals.get(m.group(1))
             return self.reply(200, g) if g else self.reply(404, {"error": "not found"})
-        self.reply(404, {"error": "no route"})
+        m = re.match(r"^/api/agents/([^/]+)$", self.path)
+        if m:
+            a = agents.get(m.group(1))
+            return self.reply(200, a) if a else self.reply(404, {"error": "not found"})
+        return self.reply(404, {"error": "API route not found"})
 
     def do_POST(self):
-        p = self.route()
         d = self.payload()
-        if p == "/issues":
-            if not d.get("goalId"):
-                return self.reply(422, {"error": "goal ancestry required"})
-            if d["goalId"] not in goals:
-                return self.reply(422, {"error": "unknown goal"})
-            if d.get("parentId") and d["parentId"] not in issues:
-                return self.reply(422, {"error": "unknown parent issue"})
-            if any(b not in issues for b in d.get("blockerIds", [])):
-                return self.reply(422, {"error": "unknown blocker issue"})
-            i = {
-                "id": new_id(), "title": d.get("title", ""), "description": d.get("description", ""),
-                "priority": d.get("priority", "medium"), "state": d.get("state", "backlog"),
-                "goalId": d["goalId"], "parentId": d.get("parentId", ""),
-                "blockerIds": d.get("blockerIds", []),
-                "assignee": d.get("assignee", ""), "checkoutAgent": "",
-                "metadata": d.get("metadata", {}), "comments": [], "createdAt": "2026-08-22T00:00:00Z",
-            }
-            issues[i["id"]] = i
-            return self.reply(201, {"id": i["id"]})
-        m = re.match(r"^/issues/([^/]+)/checkout$", p)
+        cs = self.company_scoped()
+        if cs is not None:
+            if cs == "/issues":
+                if not d.get("title"):
+                    return self.reply(400, {"error": "Validation error"})
+                goal = d.get("goalId")
+                if not goal or goal not in goals:
+                    return self.reply(400, {"error": "goalId required (ancestry is mandatory)"})
+                status = d.get("status", "backlog")
+                if status not in STATUSES:
+                    return self.reply(400, {"error": "Validation error"})
+                parent = d.get("parentId")
+                if parent and parent not in issues:
+                    return self.reply(404, {"error": "parent not found"})
+                iid = new_id()
+                issues[iid] = {
+                    "id": iid, "companyId": COMPANY["id"], "title": d["title"],
+                    "description": d.get("description", ""), "status": status,
+                    "priority": d.get("priority", "medium"), "goalId": goal,
+                    "parentId": parent, "assigneeAgentId": None,
+                    "checkoutRunId": None,
+                    "blockedByIssueIds": list(d.get("blockedByIssueIds") or []),
+                    "unblockDescriptor": None, "createdAt": f"2026-01-01T00:00:{seq[0]:02d}Z",
+                }
+                return self.reply(201, issue_view(issues[iid]))
+            if cs == "/goals":
+                gid = f"goal-{len(goals) + 1}"
+                goals[gid] = {"id": gid, "companyId": COMPANY["id"],
+                              "title": d.get("title", ""), "level": "task",
+                              "status": "planned", "parentId": None}
+                return self.reply(201, goals[gid])
+            if cs == "/agents":
+                role = d.get("role")
+                if role not in ROLES:
+                    return self.reply(400, {"error": "Validation error",
+                                            "details": [{"path": ["role"],
+                                                         "options": sorted(ROLES)}]})
+                aid = rid()
+                name = d.get("name", "")
+                # `status` is ignored on create, exactly as live: pausing
+                # is a separate PATCH.
+                agents[aid] = {"id": aid, "companyId": COMPANY["id"], "name": name,
+                               "role": role, "status": "idle",
+                               "urlKey": name.lower().replace(" ", "-")}
+                return self.reply(201, agents[aid])
+            if cs == "/activity":
+                missing = [k for k in ("actorId", "action", "entityType", "entityId")
+                           if not d.get(k)]
+                if missing:
+                    return self.reply(400, {"error": "Validation error",
+                                            "details": [{"path": [k]} for k in missing]})
+                ev = {"id": rid(), "companyId": COMPANY["id"], "actorType": "system",
+                      "actorId": d["actorId"], "action": d["action"],
+                      "entityType": d["entityType"], "entityId": d["entityId"],
+                      "details": d.get("details")}
+                activity.append(ev)
+                return self.reply(201, ev)
+            return self.reply(404, {"error": "API route not found"})
+
+        m = re.match(r"^/api/issues/([^/]+)/checkout$", self.path)
         if m:
-            i = issues.get(m.group(1))
-            if not i:
-                return self.reply(404, {})
-            # A held checkout is contention for EVERYONE, the same agent
-            # included: checkout + token mint must form one exclusive claim,
-            # so a repeated same-owner checkout may not silently succeed
-            # (it would let two processes of one actor both claim, the
-            # second overwriting the first's fence token).
-            if i["checkoutAgent"]:
-                return self.reply(409, {"holder": i["checkoutAgent"]})
-            if i["state"] not in ("todo", "in_progress"):
-                return self.reply(409, {"error": f"not claimable from {i['state']}"})
-            i["checkoutAgent"] = d.get("agent", "")
-            i["assignee"] = d.get("agent", "")
-            i["state"] = "in_progress"
-            return self.reply(200, {"checkoutRunId": "run-1"})
-        m = re.match(r"^/issues/([^/]+)/release$", p)
+            it = issues.get(m.group(1))
+            if not it:
+                return self.reply(404, {"error": "not found"})
+            agent_id = d.get("agentId")
+            expected = d.get("expectedStatuses")
+            if not agent_id or not isinstance(expected, list):
+                return self.reply(400, {"error": "Validation error",
+                                        "details": [{"path": ["agentId"]},
+                                                    {"path": ["expectedStatuses"]}]})
+            if agent_id not in agents:
+                return self.reply(400, {"error": "Validation error",
+                                        "details": [{"path": ["agentId"],
+                                                     "message": "Invalid uuid"}]})
+            # ANY held lock is a conflict, the same agent included.
+            if it.get("assigneeAgentId") or it["status"] not in expected:
+                return self.reply(409, {"error": "Issue checkout conflict",
+                                        "details": {"issueId": it["id"],
+                                                    "status": it["status"],
+                                                    "assigneeAgentId": it.get("assigneeAgentId"),
+                                                    "checkoutRunId": None}})
+            it["assigneeAgentId"] = agent_id
+            it["status"] = "in_progress"
+            return self.reply(200, issue_view(it))
+
+        m = re.match(r"^/api/issues/([^/]+)/release$", self.path)
         if m:
-            i = issues.get(m.group(1))
-            if not i:
-                return self.reply(404, {})
-            i["checkoutAgent"] = ""
-            i["assignee"] = ""
-            return self.reply(200, {})
-        m = re.match(r"^/issues/([^/]+)/comments$", p)
+            it = issues.get(m.group(1))
+            if not it:
+                return self.reply(404, {"error": "not found"})
+            it["assigneeAgentId"] = None
+            return self.reply(200, issue_view(it))
+
+        m = re.match(r"^/api/issues/([^/]+)/comments$", self.path)
         if m:
-            i = issues.get(m.group(1))
-            if not i:
-                return self.reply(404, {})
-            i["comments"].append(d.get("body", ""))
-            return self.reply(201, {})
-        if p == "/events":
-            events.append(d)
-            return self.reply(201, {})
-        self.reply(404, {"error": "no route"})
+            it = issues.get(m.group(1))
+            if not it:
+                return self.reply(404, {"error": "not found"})
+            c = {"id": rid(), "companyId": COMPANY["id"], "body": d.get("body", ""),
+                 "authorType": "user", "authorUserId": "local-board"}
+            comments.setdefault(it["id"], []).append(c)
+            return self.reply(201, c)
+        return self.reply(404, {"error": "API route not found"})
+
+    def do_PUT(self):
+        d = self.payload()
+        m = re.match(r"^/api/issues/([^/]+)/documents/([^/]+)$", self.path)
+        if m:
+            iid, key = m.group(1), m.group(2)
+            if iid not in issues:
+                return self.reply(404, {"error": "not found"})
+            if d.get("format") != "markdown" or "body" not in d:
+                return self.reply(400, {"error": "Validation error",
+                                        "details": [{"path": ["format"]},
+                                                    {"path": ["body"]}]})
+            existing = documents.get((iid, key))
+            if existing:
+                # Optimistic concurrency: this is the CAS the adapter's
+                # atomic fence stands on. No base revision, no write.
+                base = d.get("baseRevisionId")
+                if not base:
+                    return self.reply(409, {"error": "Document update requires baseRevisionId",
+                                            "details": {"currentRevisionId": existing["latestRevisionId"]}})
+                if base != existing["latestRevisionId"]:
+                    return self.reply(409, {"error": "Document revision conflict",
+                                            "details": {"currentRevisionId": existing["latestRevisionId"]}})
+                existing["body"] = d["body"]
+                existing["latestRevisionId"] = rid()
+                existing["latestRevisionNumber"] += 1
+                return self.reply(200, existing)
+            doc = {"id": rid(), "issueId": iid, "key": key, "format": "markdown",
+                   "body": d["body"], "latestRevisionId": rid(),
+                   "latestRevisionNumber": 1}
+            documents[(iid, key)] = doc
+            return self.reply(201, doc)
+        return self.reply(404, {"error": "API route not found"})
 
     def do_PATCH(self):
-        p = self.route()
         d = self.payload()
-        m = re.match(r"^/issues/([^/]+)$", p)
+        if self.company_scoped() is not None:
+            # Single-issue writes are not company-scoped: 404, as live.
+            return self.reply(404, {"error": "API route not found"})
+
+        m = re.match(r"^/api/agents/([^/]+)$", self.path)
+        if m:
+            a = agents.get(m.group(1))
+            if not a:
+                return self.reply(404, {"error": "not found"})
+            if "status" in d:
+                a["status"] = d["status"]
+            return self.reply(200, a)
+
+        m = re.match(r"^/api/issues/([^/]+)$", self.path)
         if not m:
-            return self.reply(404, {})
-        i = issues.get(m.group(1))
-        if not i:
-            return self.reply(404, {})
-        if "state" in d:
-            # assertTransition: the server, not the client, is the arbiter.
-            if d["state"] not in TRANSITIONS.get(i["state"], set()):
-                return self.reply(409, {"error": f"invalid transition {i['state']} -> {d['state']}"})
-            i["state"] = d["state"]
-            if d["state"] in ("done", "cancelled", "todo", "blocked", "in_review"):
-                i["checkoutAgent"] = ""
-        if "metadata" in d:
-            i["metadata"] = d["metadata"]
-        return self.reply(200, i)
+            return self.reply(404, {"error": "API route not found"})
+        it = issues.get(m.group(1))
+        if not it:
+            return self.reply(404, {"error": "not found"})
+
+        # Unknown keys are accepted and dropped, exactly as live. This is
+        # the behaviour that let a `state` PATCH look successful; the
+        # corpus catches it by re-reading, which is the real defence.
+        known = {k: v for k, v in d.items() if k in ISSUE_PATCH_FIELDS}
+        if "status" in known:
+            want = known["status"]
+            if want not in STATUSES:
+                return self.reply(400, {"error": "Validation error"})
+            cur = it["status"]
+            if want != cur:
+                if want not in TRANSITIONS[cur]:
+                    return self.reply(409, {"error": f"assertTransition: {cur} -> {want}"})
+                if want == "blocked":
+                    has_blockers = any(
+                        issues.get(b, {}).get("status") not in ("done", "cancelled")
+                        for b in (it.get("blockedByIssueIds") or []))
+                    if not (has_blockers or known.get("unblockDescriptor")
+                            or it.get("unblockDescriptor")):
+                        return self.reply(422, {"error": "Entering blocked requires unresolved "
+                                                         "blockers, a pending interaction/approval, "
+                                                         "or unblockDescriptor"})
+            it["status"] = want
+        for k in ("title", "description", "priority", "goalId", "parentId",
+                  "assigneeAgentId", "blockedByIssueIds", "unblockDescriptor"):
+            if k in known:
+                it[k] = known[k]
+        return self.reply(200, issue_view(it))
 
 
 if __name__ == "__main__":
-    HTTPServer(("127.0.0.1", int(sys.argv[1])), Handler).serve_forever()
+    port = int(sys.argv[1])
+    HTTPServer(("127.0.0.1", port), Handler).serve_forever()
