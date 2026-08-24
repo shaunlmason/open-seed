@@ -289,3 +289,4 @@
 {"actor":"shaunlmason","data":{"comment_id":"cm-a7762818","kind":"comment"},"task":"os-df1eb375","ts":"2026-08-24T03:45:22Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:57","to":"ready"},"task":"os-7b6afa4d","ts":"2026-08-24T03:54:06Z","verb":"plan-unblock"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:61","to":"ready"},"task":"os-a353ef17","ts":"2026-08-24T03:59:01Z","verb":"plan-unblock"}
+{"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-a9915564","ts":"2026-08-24T04:31:46Z","verb":"transition"}
