@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-501a29c2",
-  "merge_base": "18ce80f539f7501dd5a460d5df78c4ad1b70fa29",
-  "head": "e83b1ea86b7a5ef51823629e2afc9bb1cfec9b46",
+  "merge_base": "3d0c59101a1ebb5631a8171665f15d2a7c45300f",
+  "head": "aef14782d67177b1933e91c95cfceda0efd1e2b2",
   "plan_path": "plans/os-501a29c2.md",
   "plan_sha256": "4dab7078071f3e9c422df94dc9d2153060771a733fff6aafa9f3965f34d86c96",
   "diff_files": [
@@ -12,6 +12,7 @@
     "decisions/0002-template-flavors.md",
     "docs/handbook.md",
     "flavors/README.md",
+    "flavors/core-Makefile",
     "flavors/typescript/Makefile",
     "flavors/typescript/README.md",
     "flavors/typescript/biome.json",
@@ -27,7 +28,7 @@
     "scripts/seed-flavor",
     "scripts/validate.sh"
   ],
-  "diff_sha256": "2593680a8a5a236a75971d50d19b05e05c24114288c672f231f8a2dc707144d3",
+  "diff_sha256": "160a6f8a048be9ba0dc57c21bfa9f2fae097175f52177078e517b64683d5d484",
   "validation": [
     {
       "cmd": "make check",
