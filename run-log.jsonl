@@ -248,3 +248,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-7b6afa4d","ts":"2026-08-24T02:29:27Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-a353ef17","ts":"2026-08-24T02:29:30Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-af5cb439","ts":"2026-08-24T02:29:32Z","verb":"promote"}
+{"actor":"opencode","data":{"lease_expires":"2026-08-24T03:29:59Z"},"task":"os-7b6afa4d","ts":"2026-08-24T02:29:59Z","verb":"claim"}
