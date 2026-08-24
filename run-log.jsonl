@@ -285,3 +285,4 @@
 {"actor":"shaunlmason","data":{"comment_id":"cm-dd241d1c","kind":"comment"},"task":"os-df1eb375","ts":"2026-08-24T03:34:44Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":true},"task":"os-df1eb375","ts":"2026-08-24T03:34:46Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"evidence_id":"ev-7063c594","kind":"pr"},"task":"os-221f5929","ts":"2026-08-24T03:41:07Z","verb":"attach-evidence"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:64","to":"ready"},"task":"os-df1eb375","ts":"2026-08-24T03:45:19Z","verb":"plan-unblock"}

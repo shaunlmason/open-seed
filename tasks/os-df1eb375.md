@@ -1,13 +1,11 @@
 ---
 id: os-df1eb375
 title: 'paperclip: surface the paused-agent setup step in Connect'
-state: blocked
+state: ready
 priority: P3
 squad: core
-blocked_on:
-    - plan:64
 created_at: "2026-08-24T03:33:41Z"
-updated_at: "2026-08-24T03:34:46Z"
+updated_at: "2026-08-24T03:45:19Z"
 ---
 
 Follow-up from os-2c0c474c. Paperclip's checkout dispatches work rather than merely locking: assigning an issue wakes the agent, a runtime-less agent's run fails, and recovery.reconcile_stranded_assigned_issue moves the issue in_progress -> blocked within ~10s. Agents a seed deployment owns must therefore be paused (PATCH /api/agents/<id> {"status":"paused"}; the field is ignored on create).
