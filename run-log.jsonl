@@ -282,3 +282,4 @@
 {"actor":"shaunlmason","data":{"title":"paperclip: surface the paused-agent setup step in Connect"},"task":"os-df1eb375","ts":"2026-08-24T03:33:42Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-df1eb375","ts":"2026-08-24T03:33:50Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"lease_expires":"2026-08-24T04:33:52Z"},"task":"os-df1eb375","ts":"2026-08-24T03:33:52Z","verb":"claim"}
+{"actor":"shaunlmason","data":{"comment_id":"cm-dd241d1c","kind":"comment"},"task":"os-df1eb375","ts":"2026-08-24T03:34:44Z","verb":"comment"}
