@@ -88,13 +88,25 @@ mechanism should be read as promising automatic flavor updates.
 ## Keeping the flavor out of the core
 
 §10 Q3 is only true if the core gate does not depend on the flavor machinery.
-Two invariants enforce it, both offline and both meaningful on any branch
-(`scripts/flavor-test.sh`, run from `scripts/validate.sh`):
+Three invariants enforce it, all meaningful on any branch
+(`scripts/flavor-test.sh`), split by what they cost to run:
 
-- **Core-gate independence:** an unflavored instantiation's `make check` output
-  is identical with and without `flavors/` and `scripts/seed-flavor` present.
+Offline, in `scripts/validate.sh` and therefore in every `make check`:
+
 - **Install confinement:** the set of paths `install` changes is exactly the
   manifest's declared destination set.
+- **Core-gate independence, statically:** `validate` remains the first
+  prerequisite of the flavored `check`, and the core `validate`/`smoke`
+  recipes survive verbatim in the flavor's `Makefile`.
+
+Behavioural, in `make flavor-test` only:
+
+- **Core-gate independence, observed:** an unflavored instantiation's `make
+  check` output is identical with and without `flavors/` and
+  `scripts/seed-flavor` present. This one costs two `make check` runs, so it
+  cannot live in the gate: putting it there would triple `make check` and
+  re-enter it (a flavored `check` runs `validate`). That is the same §2.6
+  constraint that keeps the integration test out of the gate.
 
 The flavor's own integration test needs a dependency install, so it hangs off
 `make flavor-test` and is deliberately **not** wired into `check` or

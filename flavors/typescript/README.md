@@ -14,9 +14,10 @@ language-agnostic core has with your stack (design §10 Q3).
 | `lint` | `biome lint src` | One dependency, one binary; ESLint's plugin graph is not worth the install time in a gate that runs on every merge |
 | `test` | `node --test` | Node strips types natively (>= 22.18), so the test runner costs **zero** dependencies |
 
-Two devDependencies total. `make check` is the term that multiplies at scale
-(R12), so the flavor spends its dependency budget only where a built-in will
-not do.
+Three devDependencies total: `typescript`, `@types/node` (without it `tsc`
+cannot resolve the `node:` builtins the tests import), and `@biomejs/biome`.
+`make check` is the term that multiplies at scale (R12), so the flavor spends
+its dependency budget only where a built-in will not do.
 
 ## Layout, and why it is split this way
 

@@ -136,15 +136,16 @@ verb_status() {
   [ -f "$lock" ] || { say "no flavor installed"; return 0; }
   say "flavor: $(lock_get flavor)"
   say "installed at template version: $(lock_get template_version)"
-  awk '$1=="file" {print $2, $3}' "$lock" > "${TMPDIR:-/tmp}/.sf-status.$$"
+  _st=$(mktemp) || die "cannot create a temporary file" 1
+  awk '$1=="file" {print $2, $3}' "$lock" > "$_st"
   while read -r dst want; do
     [ -n "${want:-}" ] || continue
     if [ ! -e "$root/$dst" ]; then say "  MISSING  $dst"
     elif [ "$(hash_of "$root/$dst")" != "$want" ]; then say "  diverged $dst"
     else say "  clean    $dst"
     fi
-  done < "${TMPDIR:-/tmp}/.sf-status.$$"
-  rm -f "${TMPDIR:-/tmp}/.sf-status.$$"
+  done < "$_st"
+  rm -f "$_st"
 }
 
 verb_upgrade() {
