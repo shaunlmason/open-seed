@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "open-seed",
+  "displayName": "open-seed",
+  "version": "0.1.0",
+  "description": "open-seed's evolving capabilities: agent skills and role definitions, distributed as a plugin so an instantiated repo can take capability updates without a template merge (R8).",
+  "author": {
+    "name": "shaunlmason",
+    "url": "https://github.com/shaunlmason"
+  },
+  "homepage": "https://github.com/shaunlmason/open-seed",
+  "repository": "https://github.com/shaunlmason/open-seed",
+  "license": "MIT",
+  "keywords": [
+    "open-seed",
+    "orchestration",
+    "agents",
+    "skills",
+    "task-tracking"
+  ]
+}

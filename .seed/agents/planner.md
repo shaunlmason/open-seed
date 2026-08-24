@@ -1,4 +1,6 @@
 ---
+name: planner
+description: Turn one unplanned card into a reviewable plan PR. Use when a card above L1 has no plan yet (planning only, never implementation).
 role: planner
 run-agent: claude
 permission: read-only

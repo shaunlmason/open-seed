@@ -1,4 +1,6 @@
 ---
+name: dispatcher
+description: Route incoming work into task cards and surface stalled state. Use when triaging issues, commands, or schedule ticks into the queue.
 role: dispatcher
 run-agent: claude
 permission: read-only

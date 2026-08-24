@@ -62,6 +62,16 @@ if out=$(cd "$root" && sh scripts/seed spec lint 2>&1); then
     say "FAIL: workflow validate: $out"
     fail=1
   fi
+  # Cross-channel drift (os-221f5929): when this repo opts into the plugin
+  # channel, the marketplace ref it pins must name the release
+  # .seed/template.lock does. A template-only repo has nothing to check and
+  # passes trivially, so the channel stays additive.
+  if out=$(cd "$root" && sh scripts/seed plugin status --check 2>&1); then
+    say "$out"
+  else
+    say "FAIL: $out"
+    fail=1
+  fi
 else
   say "WARNING: engine unavailable, skipped spec lint + validate ($out)"
 fi

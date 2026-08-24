@@ -1,4 +1,6 @@
 ---
+name: reviewer
+description: Review a card in review against the approved plan at the PR's merge-base. Use when checking that a task PR implements its plan and nothing more.
 role: reviewer
 run-agent: claude
 permission: read-only
