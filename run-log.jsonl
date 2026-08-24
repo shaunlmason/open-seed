@@ -251,3 +251,4 @@
 {"actor":"opencode","data":{"lease_expires":"2026-08-24T03:29:59Z"},"task":"os-7b6afa4d","ts":"2026-08-24T02:29:59Z","verb":"claim"}
 {"actor":"shaun","data":{"title":"engine: human-readable output for the read-only task verbs (list/ready/get, maintain report)"},"task":"os-a9915564","ts":"2026-08-24T02:35:50Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"sync: prune orphaned files in the harness fan-outs (.claude/agents, .claude/skills, .agents/skills)"},"task":"os-fa598c76","ts":"2026-08-24T02:36:21Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-a9915564","ts":"2026-08-24T02:38:50Z","verb":"promote"}
