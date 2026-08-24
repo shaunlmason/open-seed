@@ -291,3 +291,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:61","to":"ready"},"task":"os-a353ef17","ts":"2026-08-24T03:59:01Z","verb":"plan-unblock"}
 {"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-a9915564","ts":"2026-08-24T04:31:46Z","verb":"transition"}
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:63","to":"ready"},"task":"os-af5cb439","ts":"2026-08-24T04:31:50Z","verb":"plan-unblock"}
+{"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-221f5929","ts":"2026-08-24T04:31:53Z","verb":"close"}
