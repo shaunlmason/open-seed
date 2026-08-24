@@ -18,6 +18,27 @@ for f in .seed/version .seed/engine.lock .seed/template.lock .seed/config.toml .
   fi
 done
 
+# CI definition syntax (structural, engine-independent): every workflow file
+# must parse as YAML before GitHub can even load it. An unquoted
+# `name: X (label: rest)` is a mapping-value error that GitHub reports as a
+# 0-second failure with zero jobs; this catches it at gate time. Degrades
+# like the other optional checks when python3/PyYAML are absent (CI runners
+# always have both).
+if command -v python3 >/dev/null 2>&1 && python3 -c 'import yaml' 2>/dev/null; then
+  for wf in "$root"/.github/workflows/*.yml; do
+    [ -f "$wf" ] || continue
+    if out=$(python3 -c 'import sys, yaml; yaml.safe_load(open(sys.argv[1]))' "$wf" 2>&1); then
+      :
+    else
+      say "FAIL: $(basename "$wf") does not parse as YAML: $out"
+      fail=1
+    fi
+  done
+  say "ci-workflows ok: all .github/workflows/*.yml parse as YAML"
+else
+  say "WARNING: python3/PyYAML unavailable, skipped workflow YAML parse"
+fi
+
 # Engine-backed lints (spec, guardrails, teams, role variants, plans) when the
 # engine can be bootstrapped; degrade with a warning otherwise (differentiator
 # #4: the repo must work without the engine).
