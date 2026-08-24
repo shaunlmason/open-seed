@@ -63,9 +63,12 @@ if out=$(cd "$root" && sh scripts/seed spec lint 2>&1); then
     fail=1
   fi
   # Cross-channel drift (os-221f5929): when this repo opts into the plugin
-  # channel, the marketplace ref it pins must name the release
-  # .seed/template.lock does. A template-only repo has nothing to check and
-  # passes trivially, so the channel stays additive.
+  # channel, a marketplace ref left BEHIND the release .seed/template.lock
+  # names is drift, because a template upgrade landed and nobody re-pinned.
+  # A ref deliberately ahead of it, or a moving ref, is a capability-only
+  # update and passes: this gate must not forbid the operation the channel
+  # exists for. A template-only repo has nothing to check and passes
+  # trivially, so the channel stays additive.
   if out=$(cd "$root" && sh scripts/seed plugin status --check 2>&1); then
     say "$out"
   else

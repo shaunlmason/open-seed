@@ -560,8 +560,10 @@ exactly like `.claude/agents/` and `.agents/skills/`. So `seed sync
 --check` already fails offline if the published channel and the in-tree
 sources disagree, and it runs in `make check` and CI. The other half is
 cross-channel: `scripts/seed plugin status --check` fails when the
-marketplace ref you pinned no longer names the release
-`.seed/template.lock` does. A repo that has not opted in passes trivially.
+marketplace ref you pinned is *behind* the release `.seed/template.lock`
+names, which means a template upgrade landed and the pin never followed. A
+ref deliberately ahead of it, or a moving ref, is reported and passes, per
+the relation table above. A repo that has not opted in passes trivially.
 
 **Honest limits.**
 
