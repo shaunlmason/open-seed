@@ -263,3 +263,4 @@
 {"actor":"claude","data":{"to":"blocked","transitioned":true},"task":"os-a9915564","ts":"2026-08-24T02:45:23Z","verb":"transition"}
 {"actor":"claude","data":{"evidence_id":"ev-7e2a64ab","kind":"pr"},"task":"os-501a29c2","ts":"2026-08-24T02:46:13Z","verb":"attach-evidence"}
 {"actor":"claude","data":{"evidence_id":"ev-ef9e51b3","kind":"receipt"},"task":"os-501a29c2","ts":"2026-08-24T02:46:15Z","verb":"attach-evidence"}
+{"actor":"claude","data":{"to":"review","transitioned":true},"task":"os-501a29c2","ts":"2026-08-24T02:46:23Z","verb":"transition"}
