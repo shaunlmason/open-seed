@@ -74,6 +74,9 @@ the current build; unmarked items exist at least partially today and must be kep
       non-empty stores; migration between any two backends is a documented two-command path.
 - [ ] The store degrades gracefully offline: local backends work with zero network; git
       backends queue and reconcile.
+- [ ] ◇ Disposable-compute completability: a card can be taken to done by a worker on a
+      machine that is destroyed afterward, with nothing lost — packet, receipts, and state
+      ref carry everything; no coordination feature assumes a persistent host.
 
 ### B. Work lifecycle (cards, plans, review, done)
 
@@ -124,6 +127,9 @@ the current build; unmarked items exist at least partially today and must be kep
 - [ ] Budgets exist at org/agent/task granularity; advisory by default on file backends;
       ◇ opt-in hard-stop enforcement (soft alert at threshold, stop at cap, reset window,
       manual resume) on backends that can enforce.
+- [ ] ◇ Budgets are denominated in real spend: token/cost usage is captured per run
+      (via the audit hooks) and attributed to cards and actors — hard stops act on
+      measured burn, not guesses.
 - [ ] Operator identity is a roster; operator-only verbs refuse non-roster actors; agents
       can never approve their own work into done.
 - [ ] Card bodies, mail, and issue text are data, not instructions — stated in the
@@ -178,6 +184,14 @@ the current build; unmarked items exist at least partially today and must be kep
 - [ ] GitHub is an integration, not a dependency: ◇ the CI lanes, dispatch, mirror, and
       protections reconciler have forge adapters (Gitea/Forgejo, GitLab) or documented
       equivalents, and the core loop runs on any git remote with zero forge features.
+- [ ] ◇ Execution substrates are adapters: a claimed card can be dispatched to a local
+      worktree, a cloud agent session, an ephemeral VM (Orb-style), or an enrolled remote
+      worker — with "nudge/wake" generalized per adapter (tmux, session message, webhook
+      URL) so unblock wakeups reach any executor.
+- [ ] ◇ Who plays employer is decided and recorded: either a native supervisor loop that
+      schedules/wakes the agent roster (concurrency caps, budget preflight), or an explicit
+      delegation of employment to executor adapters plus external schedulers — never left
+      implicit.
 
 ### G. Backends and portability
 
@@ -238,6 +252,12 @@ the current build; unmarked items exist at least partially today and must be kep
 - [ ] Every refusal is a structured envelope a machine can branch on and a human can read.
 - [ ] ◇ Metrics that matter are derivable from git alone: cycle time per card, review
       latency, rework rate, budget burn, packet-resume success.
+- [ ] ◇ A visibility plane exists and is projection-only: dashboards (static report
+      artifact and/or live server) render solely from port-queryable state, issue writes
+      solely through port verbs under the same guardrails and audit, and hold zero state
+      of their own beyond view preferences.
+- [ ] ◇ Agents are qualified, not assumed: an eval/skill-test mode runs an agent against
+      test cards and gates its admission to roles and higher autonomy tiers.
 
 ### J. Distribution, upgrades, and supply chain
 

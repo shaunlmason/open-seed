@@ -8,7 +8,9 @@
 >
 > Sources: git.swamp-club.com/swamp-club/swamp (source + design/ docs, read from a local
 > clone at version 20260206.200442.0), github.com/browser-use/workflow-use,
-> github.com/lxc/incus, plus the Paperclip/Factory/Augment findings in
+> github.com/lxc/incus, ampcode.com (what-are-orbs, orbs-explained, event-driven-orbs),
+> github.com/MiaAI-Lab/sparkDash, github.com/paperclipai/paperclip (re-read Aug 29), plus
+> the Paperclip/Factory/Augment findings in
 > [10-org-control-planes.md](./10-org-control-planes.md) and the web sources cited there.
 > Facts are from these reads (Aug 29, 2026) unless flagged uncertain.
 
@@ -58,7 +60,67 @@ Priority: **Now** (high value, fits current architecture) / **Next** (valuable, 
 | F1 | **Initiative rollup.** Factory's pitch: plan a complex initiative, delegate to parallel agents, watch progress. | Cards already carry `parent`; add an initiative view (`seed task tree <id>` / report section) rolling up child states into progress. | Next | S |
 | A1 | **Context quality beats agent cleverness.** Augment's context engine thesis. | Enrich the handoff packet — still mechanical-only: the plan's validation commands, last failing check output, diffstat vs. merge base. The packet is the seam that decides whether a cold resume succeeds. | Now | S |
 
-## Part 5 — Loose ends already identified elsewhere
+## Part 5 — From Amp Orbs (ampcode.com)
+
+Orbs are Amp's execution substrate: one thread = one ephemeral remote VM (repo, plugins,
+tools pre-cloned), pause-at-idle at zero cost, minute billing, event-driven wakeups via a
+per-orb external URL, agents spawning agents in fresh orbs. Not a competitor — a substrate
+open-seed workers could run on. Two abstractions worth taking:
+
+| # | Idea | What open-seed does with it | Priority | Effort |
+|---|------|-----------------------------|----------|--------|
+| O1 | **"Only diffs leave the orb."** The machine is cattle; git output is the record. Orbs prove disposable compute composes with a git-only source of truth. | An explicit AC criterion: a card must be completable by a worker on a machine destroyed afterward, with nothing lost — packet, receipts, and state ref carry everything. Exposes the tmux mail-nudge as the one substrate-coupled assumption. | Now | S (criterion) |
+| O2 | **Executor adapters + wake-by-webhook.** Orbs wake on GitHub webhooks, CI failures, issue trackers, monitors. | A substrate-adapter seam: dispatch a claimed card to a local worktree, a cloud session, an Orb, an enrolled worker — with "nudge" generalized to "wake the executor" (webhook URL, session message, or tmux, per adapter). Generalizes P1 beyond local tmux. | Next | M–L |
+
+## Part 6 — Decision: visibility plane — build, don't adopt
+
+**Question.** Use Paperclip as the visibility/control plane, or build one? (Prompted by
+sparkDash, a fleet dashboard for DGX Spark hosts: central server + WebSocket snapshots,
+"one model, N instances" hot config, per-unit tab pages, sparklines, one-click batch ops.)
+
+**Decision: build.** Paperclip is not a visibility layer you attach; it is a control plane
+you move into — its truth lives in its Postgres, and its repo-side surface is a `cwd` plus
+REST (doc 10). Adopting it for visibility means dual sources of truth and a permanent sync,
+violating the first pillar (no out-of-band database is ever authoritative). Open-seed
+already emits everything a dashboard needs as JSON (cards, claims/leases, mail, report,
+run-log events, receipts, workflow runs, anchors); a dashboard is a **projection**, and its
+control actions are existing port verbs invoked as an authenticated port client — same
+guardrails, roster, and audit.
+
+| # | Idea | Shape | Priority | Effort |
+|---|------|-------|----------|--------|
+| D1 | **Projection-only dashboard, tiered.** Tier 0: `seed report --html` — static dashboard artifact per maintenance tick, zero server. Tier 1: live read-mostly server (state-ref watch → WebSocket snapshots → React) with verb buttons, shipped as an optional component like the MCP server. Tier 2: multi-repo via remotes (I2 — the dashboard is what makes remotes worth building), live event feed, packet viewer. sparkDash donates the shape: hot config for adding repos, per-card tab pages (card/plan/receipt/PR/events), sparklines (queue depth, review latency, lease countdowns, budget burn), batch ops (reap all expired, nudge all idle). **Hard rule from day one: the dashboard holds zero state beyond view preferences** — the moment it caches writes or grows annotations, it has rebuilt Paperclip's Postgres by accident. | Build | Now (T0) / Next (T1) | S / M |
+
+## Part 7 — Gap analysis: what Swamp and Paperclip offer that open-seed (+ dashboard) still lacks
+
+Gaps already on this catalog: S1 audit, S2 doctor, S5 vault, S6 data layer, P3 hard
+budgets, P4 tool policy, O2 executor adapters, D1 dashboard. Beyond those:
+
+**Structural gaps — Paperclip:**
+
+| # | Gap | Notes | Disposition |
+|---|-----|-------|-------------|
+| R1 | **The employer runtime.** Paperclip *starts* agents: heartbeat scheduler with intervals/event wakeups, concurrency caps, budget preflight, workspace resolution, secret injection, adapter invocation (DB-backed wakeup queue with coalescing). Open-seed coordinates work but assumes agents show up — humans, cron, CI lanes play employer today. | The one gap that changes what open-seed *is*. Either a native supervisor loop (`seed run <role>`) or an explicit decision to delegate employment to executor adapters (O2) + schedulers/Routines/CI. Needs a decision record either way. | Decide, then Next |
+| R2 | **Cost/token capture.** Paperclip records token usage and cost per run, attributed to issues/agents. Open-seed budgets are denominated in nothing — the engine never sees model spend; P3 hard stops are meaningless without this feed. | Harness hooks (the S1 audit pipeline) are the natural capture point. | Next |
+| R3 | **Agent evals / qualification.** Paperclip's skill_test work mode runs an agent against test issues before trusting it. Open-seed has no notion of qualifying an agent for a tier or role. | Pairs with autonomy tiers: qualification as the gate to higher tiers. | Later |
+| — | Delegation economy (agents formally requesting hires under a budget gate); per-issue watchdogs; work-product docs with edit locks; attachments; multi-org hosting; self-healing run retries. | Smaller; revisit after R1. | Later |
+
+**Structural gaps — Swamp:**
+
+| # | Gap | Notes | Disposition |
+|---|-----|-------|-------------|
+| — | **Models + drivers for external systems.** Swamp's core: typed models of infrastructure (EC2, DNS, servers) whose method runs produce versioned queryable data — deterministic *ops* automation. A whole adjacent domain. | **Declared out of scope** (see non-goals). S6 covers only the receipts/artifacts sliver. | Non-goal |
+| — | **Enrolled remote workers** (`swamp worker`, enrollment tokens) — dispatch-to-registered-device, which Paperclip also lacks. | Subsumed by O2 executor adapters. | Next (via O2) |
+| — | **Daemon mode** (`swamp serve`, WebSocket API). Open-seed is invocation-only (CLI + stdio MCP). | The Tier-1 dashboard (D1) is the first daemon; generalize only if demand appears. | Later |
+| — | **Real expression language** (CEL) vs. the deliberately minimal `when:` grammar. | Adopt only when workflow conditions demonstrably outgrow the grammar. | Later |
+| — | **General extension ecosystem** (packaged drivers/vaults/datastores with publishing). | Skills + backend plugins cover current need; a registry is a hosted service — concept ports, service doesn't. | Later |
+
+**Deliberate non-goals (the inverse of the vision — do not "fix"):** Paperclip's
+Postgres-as-truth, web-first control, and org-chart-as-database; Swamp's telemetry, hosted
+auth/registry/Lab, employees-only contributions, and ops-domain modeling. Losing these is
+the point of open-seed.
+
+## Part 8 — Loose ends already identified elsewhere
 
 - **Engine-side release resolution fallback** (from os-0f76f772's evidence): `seed template
   upgrade` follows the unauthenticated `/releases/latest` HTML redirect; add an
@@ -69,7 +131,9 @@ Priority: **Now** (high value, fits current architecture) / **Next** (valuable, 
 
 Three cards, in order: **S1 audit surface**, **S2 `seed doctor`**, **A1 handoff-packet
 enrichment** — all small, all immediately visible. Second wave: **I3 protections reconciler**,
-**I4 anchor retention + restore**, **P1 unblock wakeups**, **I6 governance statement**. The
-differentiating bet after that is **W1+W2** (distill + self-heal), which turns the audit log
-and workflow engine into a compounding loop: every chore an agent does twice becomes a
-deterministic workflow that agents only maintain.
+**I4 anchor retention + restore**, **P1 unblock wakeups**, **I6 governance statement**,
+**D1 Tier-0 dashboard**. The differentiating bet after that is **W1+W2** (distill +
+self-heal), which turns the audit log and workflow engine into a compounding loop: every
+chore an agent does twice becomes a deterministic workflow that agents only maintain. The
+open *decision* (not card) is **R1**: who plays employer — a native supervisor loop or
+executor adapters plus external schedulers.
