@@ -1,5 +1,10 @@
 # AC.md — Vision and Acceptance Criteria
 
+> **Authority note.** This file is vision and acceptance criteria, not design authority:
+> [`docs/design-options.md`](docs/design-options.md) remains binding, and where this file
+> and the design doc disagree, the design doc wins. ◇ items are proposals — implementing
+> one that changes settled design requires a `docs/design-options.md` PR first.
+
 ## 1. What open-seed is trying to accomplish
 
 Open-seed exists so that **a software organization can run most of its engineering through
@@ -49,10 +54,15 @@ the current build; unmarked items exist at least partially today and must be kep
 
 ### A. Coordination substrate (state, truth, safety)
 
-- [ ] All coordination state lives in git (repo files or a dedicated state ref); no
-      out-of-band database is ever authoritative.
-- [ ] Every state mutation goes through the port: one verb, one commit, one appended
-      run-log event with actor, verb, timestamp, and task id.
+- [ ] Exactly one configured store is authoritative per repo. On the default filecards
+      backend all coordination state lives in git (the `seed-state` ref); fastcards is
+      machine-local by declaration; an external backend (Jira, Linear, Paperclip, …) is
+      itself the authority when selected. Portability is machine-readable
+      (`state_portability`) and lossless export/import guarantees no store — proprietary
+      or otherwise — ever holds the only copy.
+- [ ] Every state mutation goes through the port: one verb, one atomic transaction (a
+      single commit on git-backed stores), one appended run-log event with actor, verb,
+      timestamp, and task id.
 - [ ] The port is specified as data (states, transitions, verb classes, effects,
       preconditions) and the spec validates itself; an inconsistent spec refuses to load.
 - [ ] Protocol version is pinned in the repo and enforced with a distinct exit code on
@@ -65,7 +75,8 @@ the current build; unmarked items exist at least partially today and must be kep
       partial multi-file commits (atomicity lint proves it on replay).
 - [ ] A HALT marker stops all mutation until an operator resumes; halts are attributable.
 - [ ] State lint verifies full-history conformance (legal transitions, run-log atomicity,
-      done-consistency: evidence present, reviewer on roster, plan resolvable or exempt).
+      done-consistency: evidence present, review attribution verifiable — no-PR closes
+      resolving to the human-operator roster — plan resolvable or exempt).
 - [ ] Anchors make history tamper-evident; sync verifies anchor ancestry and refuses
       forged or rewritten state.
 - [ ] ◇ Anchor retention policy (keep N / expire after D) with maintenance pruning, and a
@@ -82,16 +93,19 @@ the current build; unmarked items exist at least partially today and must be kep
 
 - [ ] A card is the unit of work: id, title, state, priority, squad, author, labels,
       links, blocked_on, claim, review block, body-as-work-order.
-- [ ] The state machine covers the full life: backlog/ready → claimed → in_progress →
-      review → done, with block/unblock, park, release, reject, cancel, reinstate — and
-      nothing else.
+- [ ] The state machine covers the full life — backlog, ready, in_progress, review, done,
+      blocked, cancelled, exactly the design doc's state set (claim is the ready →
+      in_progress transition, not a state) — with block/unblock, park, release, reject,
+      cancel, reinstate, and nothing else.
 - [ ] Above the trivial tier, claiming an unplanned card authorizes planning only; the
       plan is a file, merged via its own single-file PR before implementation starts.
 - [ ] Plans are lintable: required sections, validation commands, hashable content.
 - [ ] Task PRs and plan PRs are structurally disjoint (task PRs never touch `plans/**`);
       CI classifies branches and enforces purity.
-- [ ] Done requires: evidence attached, reviewer distinct from implementer and on the
-      operator roster, merged PR (or an explicit, server-attributed no-PR exemption).
+- [ ] Done requires: evidence attached, reviewer distinct from implementer (D4.5 — the
+      reviewer lane's server-attributed app identity qualifies), merged PR (or an
+      explicit, server-attributed no-PR exemption, whose closing actor must resolve to
+      the human-operator roster).
 - [ ] Dependencies cascade: closing a card unblocks dependents; plan merges unpark
       plan-blocked cards; ◇ every unblock wakes the affected party (mail + nudge), so no
       card waits on a poll.
@@ -195,8 +209,9 @@ the current build; unmarked items exist at least partially today and must be kep
 
 ### G. Backends and portability
 
-- [ ] Builtin backends cover the spectrum: filecards (zero-dep), fastcards (single-machine
-      SQLite speed), git state ref (distributed, anchored).
+- [ ] The two builtin backends cover the spectrum: filecards (the default — cards ride
+      the anchored `seed-state` git ref, offline-native) and fastcards (machine-local
+      SQLite for single-machine throughput, same layout).
 - [ ] External backends are plugins: manifest with declared capabilities, lockfile with
       source + content hash, hash verified before every invocation, minimal environment
       (PATH/HOME + declared requires_env), envelope-validated output, exit codes passed
