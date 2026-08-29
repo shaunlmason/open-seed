@@ -301,15 +301,20 @@ the model. Mechanics and consequences:
   ref-scoped push rules) is the mitigation — enrollment ergonomics must never bypass it.
 - **Fleet correctness needs no new primitives — with the declared claim variance intact.**
   Two devices racing for one card, a device dying mid-task, a stale worker resuming: on
-  backends declaring `atomic_claim: native` (filecards push-wins, fastcards transactions)
-  these are already solved by atomic claims, fencing tokens, leases, reap, and packets
-  (§7.1). On **emulated-claim backends** (Linear, Jira: last-write-wins with post-claim
-  verification, per their declared variances) the §7.1 variance stands, not this
-  paragraph: fencing still prevents duplicate *state* — the loser's next fenced verb
-  exits 6 — but it cannot prevent duplicate *effort* in the window between verification
-  and that verb; a multi-supervisor fleet on such a backend must re-verify ownership
-  before expensive phases and accept (or avoid, by choosing an atomic rung) the wasted
-  work. A central scheduler would re-solve all of this worse, in a second store.
+  `atomic_claim: native` backends (fastcards' single transaction) and on **filecards** —
+  whose manifest honestly declares `emulated`, but whose push-wins emulation is
+  *synchronous server arbitration*: the loser's claim push is rejected and the verb exits
+  2 before any work begins, leaving no duplicate-effort window — these are already solved
+  by the claim protocol, fencing tokens, leases, reap, and packets (§7.1). On
+  **emulated-claim backends with a read-check-assign window** (Linear, Jira:
+  last-write-wins with post-claim verification, per their declared variances) the §7.1
+  variance stands, not this paragraph: fencing still prevents duplicate *state* — the
+  loser's next fenced verb exits 6 — but it cannot prevent duplicate *effort* in the
+  window between verification and that verb; a multi-supervisor fleet on such a backend
+  must re-verify ownership before expensive phases and accept (or avoid, by choosing a
+  window-free rung) the wasted work. Supervisors read the distinction from the capability
+  manifest plus its declared variance, never from this prose alone. A central scheduler
+  would re-solve all of this worse, in a second store.
 - **Wake is an accelerator, never a correctness dependency.** Polling at the supervisor's
   cadence is the floor; wake *adapters* — a forge webhook, an external scheduler tick, a
   tmux nudge, a hosted session's event trigger — only shrink latency. The system must be
@@ -340,7 +345,12 @@ as requests"). This decision promotes that rule from a property of one component
 **normative law for every pairing of stores**: per §7.1 backend selection, **exactly one
 store is authoritative per repo** — filecards' truth is the `seed-state` ref; fastcards is
 a machine-local authority by declaration; a selected external backend (Jira, Linear,
-Paperclip, …) is itself the authority, and the seed-state ref is then simply not in play.
+Paperclip, …) is itself the authority — for the *cards*. The seed-state ref is then not
+the task-card authority, but it is not gone: the backend-independent coordination
+artifacts specified to live there — mail (`mail/<recipient>/…`) and handoff packets
+(`handoff/<id>.md`), which the supervisor contract (§7.6) reads on every loop — remain on
+the state ref regardless of the selected card backend, unless a later decision defines an
+alternative store for them.
 Where a second system must *see* the cards, the authority **projects outward one-way**
 (export always wins, deletions included), and edits made on the projection side re-enter
 only as **requests**: the dispatcher translates them into port verbs, which may refuse.
