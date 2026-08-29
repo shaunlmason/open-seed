@@ -58,8 +58,12 @@ the current build; unmarked items exist at least partially today and must be kep
       backend all coordination state lives in git (the `seed-state` ref); fastcards is
       machine-local by declaration; an external backend (Jira, Linear, Paperclip, …) is
       itself the authority when selected. Portability is machine-readable
-      (`state_portability`) and lossless export/import guarantees no store — proprietary
-      or otherwise — ever holds the only copy.
+      (`state_portability`), and a lossless export can be produced on demand — a
+      migration path out of any store always exists (export/import is a migration
+      capability, not a live replica).
+- [ ] ◇ Loss protection matches the declared portability: on `machine`- and
+      `server`-portability backends, a scheduled `state export` snapshot (retained like
+      anchors) bounds what a lost laptop or a vanished external service can take with it.
 - [ ] Every state mutation goes through the port: one verb, one atomic transaction (a
       single commit on git-backed stores), one appended run-log event with actor, verb,
       timestamp, and task id.
