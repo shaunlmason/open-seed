@@ -273,6 +273,76 @@ The squad model's documented failure modes (per the [ideaplan case study](https:
 - **Degradation guarantee (differentiator #4 holds):** a clone with no engine installed is still a working repo: cards are readable files, PRs still gate on CODEOWNERS + server-side checks, a human can work bare-handed. The binary adds the protocol conveniences; it is not a hard dependency for participation.
 - **Accepted costs:** a release pipeline to maintain; one network fetch before first use (vendor path mitigates); a new "shim can't fetch the engine" failure mode `seed init` must report clearly; slightly higher friction for engine contributions than editing a script in place.
 
+**7.6 Employment is pull-based: supervisors, not a scheduler (proposed 2026-08-29).**
+The question this decides: *who starts agents* when the goal is around-the-clock operation
+across many projects and devices. Control planes in the surveyed field (Paperclip's
+heartbeat engine; research/10, research/11 R1) answer it with **push-based central
+employment**: a server owns the roster and fires heartbeats at adapters — which is exactly
+the always-on, database-authoritative infrastructure §7.2 exists to avoid. Open-seed
+adopts the inverse, and it is the only shape consistent with the substrate: **pull-based
+distributed employment**. An *employer* is any number of independent **supervisor loops**,
+each bound to an actor identity, that: sync state → read the mailbox → claim one eligible
+`ready` card (atomic, §7.1) → spawn the configured harness in a worktree → renew the lease
+at half-cadence → on any exit, leave through a deliberate verb and a handoff packet. v1's
+`loop.sh` *is* this supervisor in single-card form and remains the hackable script layer
+(§7.5); an engine-grade `seed run <role>` may later harden the loop (crash-safe
+re-entry, concurrency cap, budget preflight once R2 cost capture exists) without changing
+the model. Mechanics and consequences:
+
+- **Enrollment is an identity, not a connection.** A device joins the fleet with an actor
+  name, a git credential for the state remote, and whatever roster/guardrails bindings its
+  role needs — nothing else. No inbound connectivity, no control-plane session, no
+  heartbeat registration: any machine that can `git fetch` (laptop behind NAT, closet
+  Mac mini, CI runner, cloud session, ephemeral VM) is a worker. The per-device credential
+  is the security surface, and the Q5/§10.5 hardening (dedicated machine identities,
+  ref-scoped push rules) is the mitigation — enrollment ergonomics must never bypass it.
+- **Fleet correctness needs no new primitives.** Two devices racing for one card, a device
+  dying mid-task, a stale worker resuming — these are already solved by atomic claims,
+  fencing tokens, leases, reap, and packets (§7.1). A central scheduler would re-solve
+  them worse, in a second store.
+- **Wake is an accelerator, never a correctness dependency.** Polling at the supervisor's
+  cadence is the floor; wake *adapters* — a forge webhook, an external scheduler tick, a
+  tmux nudge, a hosted session's event trigger — only shrink latency. The system must be
+  fully correct with polling alone (offline-native, §7.2), so wake adapters can be added
+  per substrate without design changes.
+- **Execution substrates are adapters below the supervisor.** Where the harness process
+  runs — local worktree, cloud agent session, Orb-class ephemeral VM, an enrolled remote
+  box — is invisible to the port. The portable contract is the supervisor loop plus the
+  disposable-compute rule: a worker's machine may be destroyed after any card with nothing
+  lost, because packet, receipts, and the state ref carry everything.
+- **Consequence for the field:** external control planes (Paperclip and kin) are
+  *integration targets* (a backend selection per §7.1, or a projection per §7.7), never
+  required infrastructure; any visibility plane open-seed adopts observes and issues port
+  verbs but never employs. Accepted costs: pull latency as the wake floor; N devices mean
+  N credentials to manage; per-actor budget enforcement stays advisory until cost capture
+  lands.
+
+**7.7 One authority, one-way projections: the mirror rule generalized (proposed
+2026-08-29).** §D1 already settles this for the GitHub Issues mirror ("cards are
+authoritative and the export direction always wins; human label edits are read back only
+as requests"). This decision promotes that rule from a property of one component to the
+**normative law for every pairing of stores**: per §7.1 backend selection, **exactly one
+store is authoritative per repo** — filecards' truth is the `seed-state` ref; fastcards is
+a machine-local authority by declaration; a selected external backend (Jira, Linear,
+Paperclip, …) is itself the authority, and the seed-state ref is then simply not in play.
+Where a second system must *see* the cards, the authority **projects outward one-way**
+(export always wins, deletions included), and edits made on the projection side re-enter
+only as **requests**: the dispatcher translates them into port verbs, which may refuse.
+**Bidirectional synchronization between stores is forbidden**, not discouraged: two
+authorities cannot both honor an atomic claim (each side's claimant "wins" locally),
+replay lint becomes unverifiable against a history partly written elsewhere, and every
+conflict-resolution policy — last-write-wins, CRDT merge — resolves by silently discarding
+someone's claim or transition, which are precisely the failure classes the §7.1 fence
+exists to prevent. One sanctioned reflection exists: the **reverse mirror** — when an
+external backend is authoritative, a strictly read-only projection of its cards *into* the
+seed-state ref may restore git-native visibility (dashboards, lint cross-checks, receipt
+references); it is a projection with the direction bit flipped, carries a machine-written
+"projection, not authority" marker at the ref root, accepts no writes, and is v2+ work
+gated on a card. Validators, AC criteria, and adopter docs must describe backends in these
+terms: substrate-portable guarantees (port semantics, atomic claims, lossless export on
+demand) versus authority-specific guarantees (git history, anchors, replay lint — the
+filecards/state-ref rung only).
+
 ## 8. Risks, gotchas, and mitigations
 
 - **R1: Fan-out drift.** Source tree vs per-harness copies diverge silently. Mitigation: fan-out generated only by `seed sync`; `seed sync --check` (offline, hash-based) in CI; "do not edit here" markers.
