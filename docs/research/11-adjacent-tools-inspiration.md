@@ -72,13 +72,17 @@ open-seed workers could run on. Two abstractions worth taking:
 | O1 | **"Only diffs leave the orb."** The machine is cattle; git output is the record. Orbs prove disposable compute composes with a git-only source of truth. | An explicit AC criterion: a card must be completable by a worker on a machine destroyed afterward, with nothing lost — packet, receipts, and state ref carry everything. Exposes the tmux mail-nudge as the one substrate-coupled assumption. | Now | S (criterion) |
 | O2 | **Executor adapters + wake-by-webhook.** Orbs wake on GitHub webhooks, CI failures, issue trackers, monitors. | A substrate-adapter seam: dispatch a claimed card to a local worktree, a cloud session, an Orb, an enrolled worker — with "nudge" generalized to "wake the executor" (webhook URL, session message, or tmux, per adapter). Generalizes P1 beyond local tmux. | Next | M–L |
 
-## Part 6 — Decision: visibility plane — build, don't adopt
+## Part 6 — Recommendation: visibility plane — build, don't adopt
+
+> This file is research evidence, not authority. Adopting this recommendation is a design
+> decision: it becomes binding only via a PR to `docs/design-options.md` (authority order,
+> CONTRIBUTING-AGENTS). Until then, nothing here puts a dashboard in scope.
 
 **Question.** Use Paperclip as the visibility/control plane, or build one? (Prompted by
 sparkDash, a fleet dashboard for DGX Spark hosts: central server + WebSocket snapshots,
 "one model, N instances" hot config, per-unit tab pages, sparklines, one-click batch ops.)
 
-**Decision: build.** Paperclip is not a visibility layer you attach; it is a control plane
+**Recommendation: build.** Paperclip is not a visibility layer you attach; it is a control plane
 you move into — its truth lives in its Postgres, and its repo-side surface is a `cwd` plus
 REST (doc 10). Adopting it for visibility means dual sources of truth and a permanent sync,
 violating the first pillar (no out-of-band database is ever authoritative). Open-seed
@@ -109,16 +113,34 @@ budgets, P4 tool policy, O2 executor adapters, D1 dashboard. Beyond those:
 
 | # | Gap | Notes | Disposition |
 |---|-----|-------|-------------|
-| — | **Models + drivers for external systems.** Swamp's core: typed models of infrastructure (EC2, DNS, servers) whose method runs produce versioned queryable data — deterministic *ops* automation. A whole adjacent domain. | **Declared out of scope** (see non-goals). S6 covers only the receipts/artifacts sliver. | Non-goal |
+| — | **Models + drivers for external systems.** Swamp's core: typed models of infrastructure (EC2, DNS, servers) whose method runs produce versioned queryable data — deterministic *ops* automation. A whole adjacent domain. | **Recommended non-goal** (see below; binding only via a design-doc decision). S6 covers only the receipts/artifacts sliver. | Non-goal (proposed) |
 | — | **Enrolled remote workers** (`swamp worker`, enrollment tokens) — dispatch-to-registered-device, which Paperclip also lacks. | Subsumed by O2 executor adapters. | Next (via O2) |
 | — | **Daemon mode** (`swamp serve`, WebSocket API). Open-seed is invocation-only (CLI + stdio MCP). | The Tier-1 dashboard (D1) is the first daemon; generalize only if demand appears. | Later |
 | — | **Real expression language** (CEL) vs. the deliberately minimal `when:` grammar. | Adopt only when workflow conditions demonstrably outgrow the grammar. | Later |
 | — | **General extension ecosystem** (packaged drivers/vaults/datastores with publishing). | Skills + backend plugins cover current need; a registry is a hosted service — concept ports, service doesn't. | Later |
 
-**Deliberate non-goals (the inverse of the vision — do not "fix"):** Paperclip's
-Postgres-as-truth, web-first control, and org-chart-as-database; Swamp's telemetry, hosted
-auth/registry/Lab, employees-only contributions, and ops-domain modeling. Losing these is
-the point of open-seed.
+**Recommended non-goals (the inverse of the vision — do not "fix"; binding only once
+recorded in the design doc):** Paperclip's Postgres-as-truth, web-first control, and
+org-chart-as-database; Swamp's telemetry, hosted auth/registry/Lab, employees-only
+contributions, and ops-domain modeling. Losing these is the point of open-seed.
+
+**Backends: one authority + projections, never bidirectional sync.** A recurring question
+this survey sharpens: should the card backends be *reflections* of `seed-state`, kept in
+sync both ways? The design already answers no, and the survey confirms why. Per backend
+selection, exactly one store is authoritative — filecards' truth *is* the seed-state ref;
+fastcards is a machine-local authority by declaration; an external backend (Jira, Linear,
+Paperclip) is the authority when chosen, and seed-state is then simply not in play. Where
+two systems must both see the cards, the D1 mirror rule generalizes: **the authority
+projects outward one-way (export always wins), and inbound edits are read back only as
+*requests*** — commands routed through the dispatcher into port verbs, which may refuse.
+True bidirectional sync would make two stores authoritative at once: atomic claims cannot
+span two masters, replay lint becomes unverifiable, and every conflict-resolution policy
+(last-write-wins, CRDT merge) silently discards someone's claim or transition — exactly
+the failure classes the port exists to prevent. The one useful variant is a **reverse
+mirror**: when an external backend is authoritative, a strictly read-only projection of
+its cards *into* the seed-state ref would restore git-native visibility (dashboards,
+lint, receipts cross-checks) without a second writer. That is a projection with a
+direction bit, not sync — worth a card if external-backend adoption materializes.
 
 ## Part 8 — Loose ends already identified elsewhere
 
