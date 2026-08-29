@@ -124,15 +124,19 @@ recorded in the design doc):** Paperclip's Postgres-as-truth, web-first control,
 org-chart-as-database; Swamp's telemetry, hosted auth/registry/Lab, employees-only
 contributions, and ops-domain modeling. Losing these is the point of open-seed.
 
-**Backends: one authority + projections, never bidirectional sync.** A recurring question
-this survey sharpens: should the card backends be *reflections* of `seed-state`, kept in
-sync both ways? The design already answers no, and the survey confirms why. Per backend
-selection, exactly one store is authoritative — filecards' truth *is* the seed-state ref;
-fastcards is a machine-local authority by declaration; an external backend (Jira, Linear,
-Paperclip) is the authority when chosen, and seed-state is then simply not in play. Where
-two systems must both see the cards, the D1 mirror rule generalizes: **the authority
-projects outward one-way (export always wins), and inbound edits are read back only as
-*requests*** — commands routed through the dispatcher into port verbs, which may refuse.
+**Backends: one authority + projections, never bidirectional sync (recommendation —
+proposed to the design authority as §7.7; binding only if that design-doc PR merges).**
+A recurring question this survey sharpens: should the card backends be *reflections* of
+`seed-state`, kept in sync both ways? The recommendation is no. The binding design decides
+this today only for the GitHub Issues mirror (D1: cards authoritative, export wins,
+inbound label edits are requests); everything beyond that sentence is this file's
+proposal, not settled ground. The proposed generalization: per backend selection, exactly
+one store is authoritative — filecards' truth *is* the seed-state ref; fastcards is a
+machine-local authority by declaration; an external backend (Jira, Linear, Paperclip) is
+the authority when chosen, and seed-state is then simply not in play. Where two systems
+must both see the cards, **the authority projects outward one-way (export always wins),
+and inbound edits are read back only as *requests*** — commands routed through the
+dispatcher into port verbs, which may refuse.
 True bidirectional sync would make two stores authoritative at once: atomic claims cannot
 span two masters, replay lint becomes unverifiable, and every conflict-resolution policy
 (last-write-wins, CRDT merge) silently discards someone's claim or transition — exactly
@@ -140,7 +144,8 @@ the failure classes the port exists to prevent. The one useful variant is a **re
 mirror**: when an external backend is authoritative, a strictly read-only projection of
 its cards *into* the seed-state ref would restore git-native visibility (dashboards,
 lint, receipts cross-checks) without a second writer. That is a projection with a
-direction bit, not sync — worth a card if external-backend adoption materializes.
+direction bit, not sync — sanctioned in the proposed §7.7 and worth a card only if
+external-backend adoption materializes.
 
 ## Part 8 — Loose ends already identified elsewhere
 
