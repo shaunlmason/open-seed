@@ -283,7 +283,10 @@ adopts the inverse, and it is the only shape consistent with the substrate: **pu
 distributed employment**. An *employer* is any number of independent **supervisor loops**,
 each bound to an actor identity, that: sync state → read the mailbox → claim one eligible
 `ready` card (atomic, §7.1) → spawn the configured harness in a worktree → renew the lease
-at half-cadence → on any exit, leave through a deliberate verb and a handoff packet. v1's
+at half-cadence → on any exit, leave through a deliberate verb — with a handoff packet on
+every *continuation* exit (release, park, reap, cancel: exactly the transition table's
+`write_handoff` effects), while the success exit `in_progress → review` needs no packet
+because its continuation record is the pushed task branch, PR, and receipt. v1's
 `loop.sh` *is* this supervisor in single-card form and remains the hackable script layer
 (§7.5); an engine-grade `seed run <role>` may later harden the loop (crash-safe
 re-entry, concurrency cap, budget preflight once R2 cost capture exists) without changing
@@ -296,10 +299,17 @@ the model. Mechanics and consequences:
   Mac mini, CI runner, cloud session, ephemeral VM) is a worker. The per-device credential
   is the security surface, and the Q5/§10.5 hardening (dedicated machine identities,
   ref-scoped push rules) is the mitigation — enrollment ergonomics must never bypass it.
-- **Fleet correctness needs no new primitives.** Two devices racing for one card, a device
-  dying mid-task, a stale worker resuming — these are already solved by atomic claims,
-  fencing tokens, leases, reap, and packets (§7.1). A central scheduler would re-solve
-  them worse, in a second store.
+- **Fleet correctness needs no new primitives — with the declared claim variance intact.**
+  Two devices racing for one card, a device dying mid-task, a stale worker resuming: on
+  backends declaring `atomic_claim: native` (filecards push-wins, fastcards transactions)
+  these are already solved by atomic claims, fencing tokens, leases, reap, and packets
+  (§7.1). On **emulated-claim backends** (Linear, Jira: last-write-wins with post-claim
+  verification, per their declared variances) the §7.1 variance stands, not this
+  paragraph: fencing still prevents duplicate *state* — the loser's next fenced verb
+  exits 6 — but it cannot prevent duplicate *effort* in the window between verification
+  and that verb; a multi-supervisor fleet on such a backend must re-verify ownership
+  before expensive phases and accept (or avoid, by choosing an atomic rung) the wasted
+  work. A central scheduler would re-solve all of this worse, in a second store.
 - **Wake is an accelerator, never a correctness dependency.** Polling at the supervisor's
   cadence is the floor; wake *adapters* — a forge webhook, an external scheduler tick, a
   tmux nudge, a hosted session's event trigger — only shrink latency. The system must be
@@ -309,7 +319,13 @@ the model. Mechanics and consequences:
   runs — local worktree, cloud agent session, Orb-class ephemeral VM, an enrolled remote
   box — is invisible to the port. The portable contract is the supervisor loop plus the
   disposable-compute rule: a worker's machine may be destroyed after any card with nothing
-  lost, because packet, receipts, and the state ref carry everything.
+  lost, because packet, receipts, and the state ref carry everything. **Disposability
+  begins only once every durable artifact has confirmably left the machine**: the
+  supervisor must treat a failed task-branch push as blocking — retry, then park the card
+  with the failure in the packet, never advance to `review` — because a review card
+  pointing at commits that exist only on a dead worker is exactly the loss this rule
+  forbids. (v1's `loop.sh` currently warns and proceeds on push failure; adopting this
+  decision makes that a defect to card and fix.)
 - **Consequence for the field:** external control planes (Paperclip and kin) are
   *integration targets* (a backend selection per §7.1, or a projection per §7.7), never
   required infrastructure; any visibility plane open-seed adopts observes and issues port
