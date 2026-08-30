@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-ead12024",
   "merge_base": "e78fc44534f91a3ba83e27d601cd3b134b4b8173",
-  "head": "449b2d1c24e755935e41f972e37ea817aadddce8",
+  "head": "3fb1a4e0c6972d4f0ec187022687375c5f0529d2",
   "plan_path": "plans/os-ead12024.md",
   "plan_sha256": "02ef9aca320657852115bb7681a5314e266f8e73b13246668a09b73755fbdd2b",
   "diff_files": [
@@ -19,7 +19,7 @@
     "next/internal/ledger/testdata/valid-chain/segments/2026-09-03.jsonl",
     "next/internal/ledger/verify.go"
   ],
-  "diff_sha256": "d76d211bd3fad965f8fc90133c354231a72150141931670f9f7adcef791c1241",
+  "diff_sha256": "0a288ab56bf0315ad510e64b35b9378eacf61904d4542e2266f0890e7ae7b1d1",
   "validation": [
     {
       "cmd": "make check-next",
