@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "task": "os-d6f81ec6",
+  "merge_base": "3cd2358161f664fb13961050e5c92fcf199f7556",
+  "head": "28a3279828e2df38f62119161be55cea7317cc85",
+  "plan_path": "plans/os-d6f81ec6.md",
+  "plan_sha256": "3bf00c7d12d646f6a7a0664035679e556485aa5f874932b9d8d4fc7a4ec7d3b0",
+  "diff_files": [
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/classify/classify.go",
+    "next/internal/classify/classify_test.go",
+    "next/internal/classify/rules.json",
+    "next/internal/classify/testdata/benign/claim.json",
+    "next/internal/classify/testdata/benign/many-hash-refs.json",
+    "next/internal/classify/testdata/benign/milestone.json",
+    "next/internal/classify/testdata/benign/refs.json",
+    "next/internal/classify/testdata/hostile/base64-blob.embedded_blob.json",
+    "next/internal/classify/testdata/hostile/chunked-body.aggregate_text_budget.json",
+    "next/internal/classify/testdata/hostile/huge-array.array_too_long.json",
+    "next/internal/classify/testdata/hostile/long-prose.string_too_long.json",
+    "next/internal/classify/testdata/hostile/nesting-bomb.too_deep.json",
+    "next/internal/classify/testdata/hostile/oversized-total.payload_too_large.json",
+    "next/internal/classify/testdata/hostile/smuggled-nested.string_too_long.json",
+    "next/spec/classify.json"
+  ],
+  "diff_sha256": "53ba267925357d9857d552e553007d5d206e5ec5075c462d9639d27c055c689b",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/classify/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
