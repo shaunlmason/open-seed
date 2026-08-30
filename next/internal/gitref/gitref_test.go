@@ -384,3 +384,44 @@ func TestSmallErrorPaths(t *testing.T) {
 		t.Error("NewClient under a file path must error")
 	}
 }
+
+// RecordVerifiedHead arms the monotonic-head rule for a caller that
+// verified a fetched tip itself, before any AppendLoop persistence
+// (plans/os-895bf828.md step 1: the pre-flight rollback window).
+func TestRecordVerifiedHeadArmsRegressionRefusal(t *testing.T) {
+	remote := bareRemote(t)
+	signer := fixtureKey(t, 1)
+	resolve := seedGenesis(t, remote, signer)
+	c, err := NewClient(t.TempDir(), remote, ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisTip, err := c.Fetch()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.AppendLoop(milestoneDraft(t, signer, 1),
+		func(e event.Event) (*event.Record, error) { return event.Sign(e, signer) }, resolve, nil, 5); err != nil {
+		t.Fatal(err)
+	}
+
+	fresh, err := NewClient(t.TempDir(), remote, ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tip, err := fresh.Fetch()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fresh.RecordVerifiedHead(tip); err != nil {
+		t.Fatal(err)
+	}
+	// Roll the remote back to the earlier valid tip: the recorded head
+	// must make the next fetch refuse, with no append in between.
+	if out, err := exec.Command("git", "--git-dir", remote, "update-ref", ref, genesisTip).CombinedOutput(); err != nil {
+		t.Fatalf("rollback: %v %s", err, out)
+	}
+	if _, err := fresh.Fetch(); !errors.Is(err, ErrHeadRegression) {
+		t.Fatalf("recorded head must refuse the rollback, got %v", err)
+	}
+}

@@ -46,8 +46,12 @@ type Result struct {
 // losses up to maxAttempts. The resolver verifies the record's signature
 // at append (the genesis bootstrap or, from Phase 3, the keyring
 // projection supplies it). The persisted verified head advances after
-// each successful validate, and again after a winning push.
-func (c *Client) AppendLoop(draft Draft, sign Signer, resolve ledger.Resolver, validate Validate, maxAttempts int) (*Result, error) {
+// each successful validate, and again after a winning push. Trailing
+// verify options (e.g. ledger.WithSupportedVersions) apply to the
+// per-attempt stream re-verification, so a client appending past a
+// protocol upgrade verifies with the same set it admits with
+// (plans/os-895bf828.md step 1).
+func (c *Client) AppendLoop(draft Draft, sign Signer, resolve ledger.Resolver, validate Validate, maxAttempts int, vopts ...ledger.VerifyOption) (*Result, error) {
 	if maxAttempts < 1 {
 		maxAttempts = 1
 	}
@@ -61,7 +65,7 @@ func (c *Client) AppendLoop(draft Draft, sign Signer, resolve ledger.Resolver, v
 		if err != nil {
 			return nil, err
 		}
-		res, err := c.attempt(draft, sign, resolve, validate, tipCommit, workDir)
+		res, err := c.attempt(draft, sign, resolve, validate, tipCommit, workDir, vopts)
 		os.RemoveAll(workDir)
 		if err == nil {
 			res.Attempts = attempt
@@ -76,7 +80,7 @@ func (c *Client) AppendLoop(draft Draft, sign Signer, resolve ledger.Resolver, v
 	return nil, fmt.Errorf("%w after %d attempts: %v", ErrRetriesSpent, maxAttempts, lastErr)
 }
 
-func (c *Client) attempt(draft Draft, sign Signer, resolve ledger.Resolver, validate Validate, tipCommit, workDir string) (*Result, error) {
+func (c *Client) attempt(draft Draft, sign Signer, resolve ledger.Resolver, validate Validate, tipCommit, workDir string, vopts []ledger.VerifyOption) (*Result, error) {
 	storeDir := filepath.Join(workDir, "ledger")
 	if err := c.Materialize(tipCommit, storeDir); err != nil {
 		return nil, err
@@ -86,7 +90,7 @@ func (c *Client) attempt(draft Draft, sign Signer, resolve ledger.Resolver, vali
 		return nil, err
 	}
 	if tipCommit != "" {
-		if _, err := store.VerifyFromGenesis(resolve); err != nil {
+		if _, err := store.VerifyFromGenesis(resolve, vopts...); err != nil {
 			return nil, fmt.Errorf("fetched stream failed verification: %w", err)
 		}
 	}

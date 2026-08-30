@@ -48,6 +48,8 @@ func TestExitCodesMatchSpecTable(t *testing.T) {
 		"chain_invalid":      {ExitChainInvalid, 8},
 		"classification":     {ExitClassificationRef, 9},
 		"version_mismatch":   {ExitVersionMismatch, 10},
+		"remote_rejected":    {ExitRemoteRejected, 11},
+		"head_regression":    {ExitHeadRegression, 12},
 		"usage":              {ExitUsage, 64},
 	}
 	for name, c := range table {

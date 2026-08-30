@@ -56,6 +56,8 @@ for tooling continuity. Inherited allocations:
 | 8 | `chain_invalid` | ledger verification failed (parse, linkage, signature, actor, or HEAD trouble); the error message carries `position N: <reason>: <detail>` |
 | 9 | `classification_refused` | payload failed the data-classification lint; the error message joins the violations' pointers and rules |
 | 10 | `version_mismatch` | protocol or envelope version mismatch |
+| 11 | `remote_rejected` | the remote's own admission refused the push (e.g. a `pre-receive` policy hook declined); the error message carries the remote's reason verbatim |
+| 12 | `head_regression` | the remote serves a chain that regresses this client's persisted verified head (rollback or vanished ref): a freshness refusal, distinct from failed chain verification |
 | 64 | `usage` | CLI usage error (EX_USAGE); never a verb result |
 
 **Allocation rule for new codes**: a new condition takes the lowest unused

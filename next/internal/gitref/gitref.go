@@ -75,6 +75,15 @@ func (c *Client) headKey() string {
 	return filepath.Join(c.cacheDir, hex.EncodeToString(sum[:16]))
 }
 
+// RecordVerifiedHead persists commit as the newest verified remote
+// head: the caller's statement that it fetched and fully verified this
+// tip. From then on Fetch refuses anything that regresses it (the
+// monotonic-head rule), including later in the same invocation, before
+// AppendLoop's own persistence kicks in (plans/os-895bf828.md step 1).
+func (c *Client) RecordVerifiedHead(commit string) error {
+	return c.persistHead(commit)
+}
+
 // PersistedHead returns the last verified remote commit, if any.
 func (c *Client) PersistedHead() (string, bool, error) {
 	b, err := os.ReadFile(c.headKey())
@@ -188,15 +197,19 @@ func (c *Client) CommitAndPush(dir, parent, message string) (string, error) {
 		// Only a lost race retries, and races have specific shapes: the
 		// stale-parent rejection (reasons "non-fast-forward", "fetch
 		// first", "stale info"), server-side receive contention ("failed
-		// to lock"), and mid-push ref-lock contention ("cannot lock ref
-		// ... but expected") when the other writer lands between our fetch
-		// and our update. Any other rejection (a pre-receive policy hook
-		// declining, say) is a refusal to surface, never to retry
-		// (#86 review).
+		// to lock", and its update-phase shape "failed to update ref",
+		// which a rival landing between advertisement and update produces
+		// on the receiving side), and mid-push ref-lock contention
+		// ("cannot lock ref ... but expected") when the other writer
+		// lands between our fetch and our update. Any other rejection
+		// (a pre-receive policy hook declining, say) is a refusal to
+		// surface, never to retry (#86 review; the update-phase shape
+		// was observed in the 2.2 CLI race drill).
 		race := strings.Contains(combined, "non-fast-forward") ||
 			strings.Contains(combined, "fetch first") ||
 			strings.Contains(combined, "stale info") ||
 			strings.Contains(combined, "failed to lock") ||
+			strings.Contains(combined, "failed to update ref") ||
 			(strings.Contains(combined, "cannot lock ref") && strings.Contains(combined, "but expected"))
 		if race {
 			return "", ErrNonFastForward

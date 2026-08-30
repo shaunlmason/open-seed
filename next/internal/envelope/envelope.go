@@ -27,6 +27,8 @@ const (
 	ExitChainInvalid      = 8
 	ExitClassificationRef = 9
 	ExitVersionMismatch   = 10
+	ExitRemoteRejected    = 11
+	ExitHeadRegression    = 12
 	ExitUsage             = 64
 )
 
