@@ -538,3 +538,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:121","to":"ready"},"task":"os-2ff8dbf1","ts":"2026-08-30T23:56:36Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-f68cc33d","kind":""},"task":"os-b07b0f59","ts":"2026-08-30T23:56:57Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-b07b0f59","ts":"2026-08-30T23:56:59Z","verb":"transition"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T00:58:02Z"},"task":"os-73c00a50","ts":"2026-08-30T23:58:02Z","verb":"claim"}
