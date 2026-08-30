@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "task": "os-3979d48b",
+  "merge_base": "a8d287153a88e13a4f4d059314275f97d4e93273",
+  "head": "5470b9ac40cc7a0bbd82b741c73609b0cb2084df",
+  "plan_path": "plans/os-3979d48b.md",
+  "plan_sha256": "bd85c869b48abdc1878a3e7fecfab431ad5a42d0ca2a1ec058ae51ebc849a767",
+  "diff_files": [
+    "next/cmd/seed-admit/actors_test.go",
+    "next/cmd/seed/actors_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/grant_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/spec/actors.md",
+    "next/spec/envelope.md"
+  ],
+  "diff_sha256": "7cb76949ebb18a213b2291d7808f74d4138454ac9b9452eba50f766acc5b33a7",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/keyring/... ./internal/admit/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
