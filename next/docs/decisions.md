@@ -125,6 +125,13 @@ here. Newest last.
   fast-forward alone would admit a descendant commit whose tree rewrites
   admitted records. Actor and version rules are not re-run per record:
   the completed replay already enforced them. (PR #94)
+- 2026-08-30 — Drill fixtures select postures through the production
+  declaration (`internal/posture.Load`), never a test-only switch; the
+  cooperative half of the adversary drill asserts the landed raw push
+  (the named consequence observable) beside the client's local refusal;
+  kill-and-replace compares the hook's refusal lines byte-for-byte
+  across a host rebuilt from a fresh mirror clone (replicated Git data
+  only, so no host-local state can leak into the comparison). (PR #99)
 - 2026-08-30 — Posture declaration is client/deployment state in a
   strict JSON file (never ledger content; the guarded ref's tree stays
   HEAD + segments); the charter's cooperative consequence lives as one
