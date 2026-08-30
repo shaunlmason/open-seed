@@ -426,3 +426,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: key rotation and revocation drill (Phase 3.3)"},"task":"os-d1f35a8c","ts":"2026-08-30T10:28:34Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-52a2d688","ts":"2026-08-30T10:28:42Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T11:28:45Z"},"task":"os-52a2d688","ts":"2026-08-30T10:28:45Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-52a2d688","ts":"2026-08-30T10:31:45Z","verb":"transition"}
