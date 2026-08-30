@@ -16,7 +16,17 @@ appenders, no lost updates, one linear chain.
    materialize the ledger tree into a store directory, commit the store
    directory as a tree on the ref, push, and detect non-fast-forward
    rejection distinctly from other push failures.
-2. **The loop.** `AppendLoop(remote, ref, draft, sign, validate)`:
+2. **Monotonic head (charter III.A "freshness")**: the client persists the
+   newest verified remote head per (remote, ref) in a local head cache
+   outside the ledger tree (`next/var/heads/`, gitignored; client state,
+   never ledger state). Fetch/materialization refuses **head regression**:
+   a fetched tip that is not a descendant of the persisted head (equal or
+   extending it) is a typed `head_regression` refusal naming both heads,
+   never silently accepted; the cache updates only after verification of
+   the fetched stream. The rollback drill: roll the bare remote back to an
+   earlier but internally valid tip; the loop refuses to append and the
+   refusal surfaces the divergence.
+3. **The loop.** `AppendLoop(remote, ref, draft, sign, validate)`:
    fetch → materialize → derive tip → **re-link** the draft (`prev` = the
    fresh tip) → **re-sign** (prev is inside the signed form, so only the
    key holder can re-link; the loop therefore takes a signing closure,
@@ -27,20 +37,21 @@ appenders, no lost updates, one linear chain.
    fails re-validation after a refetch is reported with the losing reason,
    never silently re-appended** (the plan's normative sentence); retry
    exhaustion is a distinct typed error.
-3. **Race drill** (conformance III.A): a local bare repository as the
+4. **Race drill** (conformance III.A): a local bare repository as the
    remote; two writers append interleaved batches concurrently (goroutines
    with real subprocess pushes); the drill asserts every event landed,
    exactly once, on one linear verifying chain, and that at least one
    non-fast-forward retry actually occurred (the race was real). A
    validate-refusal case shows the losing draft surfacing its reason.
-4. **Tests** beyond the drill: materialize round-trip (ref → store →
+5. **Tests** beyond the drill: materialize round-trip (ref → store →
    commit → ref, byte-stable); non-fast-forward detection; retry bound;
    offline remote surfaces a typed unavailable error (the offline-boundary
    groundwork: exclusivity-taking verbs are online-only, charter §II.6).
 
 ## File Scope
 
-- `next/internal/gitref/**` (new package + drill)
+- `next/internal/gitref/**` (new package + drill + the persisted
+  head cache under `next/var/heads/`, gitignored)
 - `next/docs/decisions.md`, `next/docs/progress.md`
 
 ## Acceptance Criteria
@@ -56,6 +67,11 @@ appenders, no lost updates, one linear chain.
   caller; nothing silently re-appends; retry exhaustion is typed.
 - Non-fast-forward, other push failures, and unreachable remotes are
   distinct typed errors.
+- The monotonic-head rule holds: the persisted head only advances after
+  verification, a rolled-back remote refuses with `head_regression`
+  (drilled against the bare-remote fixture), and a fresh client with no
+  persisted head verifies integrity but is documented as bounding
+  freshness only by out-of-band anchors (the charter's honest residual).
 
 **Retention set (existing, shown unharmed):**
 
