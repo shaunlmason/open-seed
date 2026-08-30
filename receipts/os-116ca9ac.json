@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-116ca9ac",
   "merge_base": "00a39a1bfd73b74da5e6d44f981a9d72e6400729",
-  "head": "7d487ed281349a3900213416d6d40655ab7a3d26",
+  "head": "7fcaacdb824d661a23a5669ad8b53e38b6774dec",
   "plan_path": "plans/os-116ca9ac.md",
   "plan_sha256": "4b6e5ff5b294c8712a8fdf983408436fb7ea8fcb7a168600f9c5fa2e7ccc0c18",
   "diff_files": [
@@ -23,7 +23,7 @@
     "next/spec/envelope.md",
     "next/spec/protocol.md"
   ],
-  "diff_sha256": "9f1ec67403554dd8e53c83309da83c9187eb94eab2676b2e9276c2b77751e1d5",
+  "diff_sha256": "251b7e9e1323d73c931812dda7c8240c921ac35ffc8bf7c2900e3d8cea85f977",
   "validation": [
     {
       "cmd": "make check-next",
