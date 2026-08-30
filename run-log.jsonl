@@ -368,3 +368,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-ca98b267","kind":""},"task":"os-89412090","ts":"2026-08-30T06:24:45Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-89412090","ts":"2026-08-30T06:24:47Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-f4f23154","kind":""},"task":"os-62e2aa1d","ts":"2026-08-30T06:24:50Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-62e2aa1d","ts":"2026-08-30T06:24:53Z","verb":"transition"}
