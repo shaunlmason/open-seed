@@ -70,7 +70,50 @@ func Open(dir string, opts ...Option) (*Store, error) {
 	if err := os.MkdirAll(filepath.Join(dir, segmentsDir), 0o755); err != nil {
 		return nil, err
 	}
+	s.healHead()
 	return s, nil
+}
+
+// healHead reconciles the crash window at open: when the segment stream
+// extends past a missing or consistently-behind HEAD (the durable line
+// landed, the rename did not), the cache is rewritten from the stream,
+// which is the truth. Best-effort by design: an unparseable stream or a
+// HEAD that contradicts the stream is left untouched for verification to
+// report; healing never papers over corruption.
+func (s *Store) healHead() {
+	tip := event.EmptyHash
+	count := 0
+	lastSegment := ""
+	claimed := map[int]string{0: event.EmptyHash}
+	err := s.scan(func(pos int, segment string, line []byte) error {
+		rec, perr := event.ParseRecord(line)
+		if perr != nil {
+			return perr
+		}
+		h, herr := rec.Event.Hash()
+		if herr != nil {
+			return herr
+		}
+		tip, count, lastSegment = h, pos+1, segment
+		claimed[count] = h
+		return nil
+	})
+	if err != nil || count == 0 {
+		return
+	}
+	head, exists, err := s.ReadHead()
+	if err != nil {
+		return
+	}
+	if exists {
+		if head.Count >= count {
+			return
+		}
+		if want, ok := claimed[head.Count]; !ok || head.Tip != want {
+			return
+		}
+	}
+	_ = s.writeHead(Head{Tip: tip, Count: count, Segment: lastSegment})
 }
 
 // segmentNames returns the segment file names in read order.
