@@ -79,3 +79,26 @@ func TestUppercaseSignatureRefuses(t *testing.T) {
 		}
 	}
 }
+
+func TestDuplicateKeysInsideArraysRefuse(t *testing.T) {
+	line, _ := validLine(t)
+	mutated := strings.Replace(line, `"alpha":"ü"`, `"alpha":[{"x":1,"x":2}]`, 1)
+	if mutated == line {
+		t.Fatal("mutation did not apply")
+	}
+	if _, err := ParseRecord([]byte(mutated)); err == nil {
+		t.Fatal("duplicate keys inside array elements must refuse")
+	}
+	ok := strings.Replace(line, `"alpha":"ü"`, `"alpha":[{"x":1},{"x":2}]`, 1)
+	if _, err := ParseRecord([]byte(ok)); err != nil {
+		t.Fatalf("distinct keys across array elements are fine, got %v", err)
+	}
+}
+
+func TestTruncatedRecordRefuses(t *testing.T) {
+	for _, frag := range []string{`{"event":{"v":`, `{"event":[`, `{"event"`} {
+		if _, err := ParseRecord([]byte(frag)); err == nil {
+			t.Fatalf("truncated record %q must refuse", frag)
+		}
+	}
+}
