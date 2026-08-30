@@ -519,3 +519,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T22:57:57Z"},"task":"os-16c1d142","ts":"2026-08-30T21:57:57Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-16c1d142","ts":"2026-08-30T21:59:44Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: observation streams v0, monotonic progress, expiry-vs-wedge in report (build plan 5.6)"},"task":"os-2ff8dbf1","ts":"2026-08-30T22:01:18Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-2ff8dbf1","ts":"2026-08-30T22:01:27Z","verb":"promote"}
