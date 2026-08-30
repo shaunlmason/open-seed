@@ -382,3 +382,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-3898f232","ts":"2026-08-30T06:54:44Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T07:54:47Z"},"task":"os-beac85e1","ts":"2026-08-30T06:54:47Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T07:54:49Z"},"task":"os-3898f232","ts":"2026-08-30T06:54:49Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-beac85e1","ts":"2026-08-30T06:58:15Z","verb":"transition"}
