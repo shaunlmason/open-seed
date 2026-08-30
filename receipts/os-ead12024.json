@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "task": "os-ead12024",
+  "merge_base": "e78fc44534f91a3ba83e27d601cd3b134b4b8173",
+  "head": "449b2d1c24e755935e41f972e37ea817aadddce8",
+  "plan_path": "plans/os-ead12024.md",
+  "plan_sha256": "02ef9aca320657852115bb7681a5314e266f8e73b13246668a09b73755fbdd2b",
+  "diff_files": [
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/ledger/corruption_test.go",
+    "next/internal/ledger/errorpaths_test.go",
+    "next/internal/ledger/gen_fixture.go",
+    "next/internal/ledger/ledger.go",
+    "next/internal/ledger/ledger_test.go",
+    "next/internal/ledger/testdata/valid-chain/HEAD",
+    "next/internal/ledger/testdata/valid-chain/segments/2026-09-01.jsonl",
+    "next/internal/ledger/testdata/valid-chain/segments/2026-09-02.jsonl",
+    "next/internal/ledger/testdata/valid-chain/segments/2026-09-03.jsonl",
+    "next/internal/ledger/verify.go"
+  ],
+  "diff_sha256": "d76d211bd3fad965f8fc90133c354231a72150141931670f9f7adcef791c1241",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/ledger/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/event/... ./internal/envelope/... ./cmd/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go run ./cmd/seed version",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
