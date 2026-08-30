@@ -375,3 +375,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 1 exit — frontier update (progress.md)"},"task":"os-beac85e1","ts":"2026-08-30T06:53:56Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: 2.1 admission rule set library (internal/admit)"},"task":"os-3898f232","ts":"2026-08-30T06:53:58Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: 2.2 cooperative posture (client self-validation)"},"task":"os-895bf828","ts":"2026-08-30T06:54:07Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: 2.3 enforced posture — seed-admit pre-receive hook"},"task":"os-d3591e09","ts":"2026-08-30T06:54:10Z","verb":"create"}
