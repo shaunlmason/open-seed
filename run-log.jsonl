@@ -410,3 +410,5 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-895bf828","ts":"2026-08-30T08:29:14Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-27d15a3a","kind":""},"task":"os-d3591e09","ts":"2026-08-30T08:29:17Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-d3591e09","ts":"2026-08-30T08:29:19Z","verb":"transition"}
+{"actor":"shim","data":{"removed":"dep:os-895bf828"},"task":"os-3c72f93f","ts":"2026-08-30T08:43:53Z","verb":"blocker_resolved"}
+{"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-895bf828","ts":"2026-08-30T08:43:53Z","verb":"close"}
