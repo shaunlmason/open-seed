@@ -7,11 +7,18 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/genesis"
+	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -36,9 +43,93 @@ func run(args []string, stdout, stderr io.Writer) int {
 			"version":  version.Version,
 			"protocol": version.Protocol,
 		}), stdout, stderr)
+	case "init":
+		return runInit(args[1:], stdout, stderr)
 	default:
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown verb %q — try 'seed version'", args[0])), stdout, stderr)
 	}
+}
+
+type repeatedFlag []string
+
+func (r *repeatedFlag) String() string     { return fmt.Sprint([]string(*r)) }
+func (r *repeatedFlag) Set(v string) error { *r = append(*r, v); return nil }
+
+// runInit writes the signed genesis into an empty ledger: the operator's
+// key signs and always joins the governance root; extra --operator public
+// keys widen it. A non-empty ledger refuses with exit 3 (invalid
+// transition) and the machine code ledger_not_empty.
+func runInit(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("init", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	dir := fs.String("ledger", "", "ledger directory (created if absent)")
+	keyPath := fs.String("key", "", "OpenSSH ed25519 private key of the initializing operator")
+	var operators repeatedFlag
+	fs.Var(&operators, "operator", "OpenSSH ed25519 public key of an additional governance-root operator (repeatable)")
+	if err := fs.Parse(args); err != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
+	}
+	if *dir == "" || *keyPath == "" || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "init requires --ledger <dir> and --key <openssh-ed25519-private>"), stdout, stderr)
+	}
+	keyBytes, err := os.ReadFile(*keyPath)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --key: %v", err)), stdout, stderr)
+	}
+	signer, err := event.ParsePrivateKey(keyBytes)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--key: %v", err)), stdout, stderr)
+	}
+	var extras []ed25519.PublicKey
+	for _, p := range operators {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --operator %s: %v", p, err)), stdout, stderr)
+		}
+		pub, err := event.ParsePublicKey(b)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--operator %s: %v", p, err)), stdout, stderr)
+		}
+		extras = append(extras, pub)
+	}
+	store, err := ledger.Open(*dir)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot open ledger dir: %v", err)), stdout, stderr)
+	}
+	rec, err := genesis.Init(store, signer, extras, time.Now())
+	if errors.Is(err, ledger.ErrNotEmpty) {
+		env := envelope.Fail(envelope.ExitInvalidTransition, "ledger_not_empty", err.Error())
+		// The refusal is computed from ledger state, so it stamps the
+		// position it observed (#83 review finding).
+		if _, count, terr := store.Tip(); terr == nil && count > 0 {
+			pos := fmt.Sprintf("%d", count-1)
+			env.Position = &pos
+		}
+		return render(env, stdout, stderr)
+	}
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	hash, err := rec.Event.Hash()
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	payload, err := genesis.Parse(rec)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	roots := make([]string, 0, len(payload.GovernanceRoot))
+	for _, rk := range payload.GovernanceRoot {
+		roots = append(roots, rk.Fingerprint)
+	}
+	env := envelope.OK(map[string]any{
+		"genesis":         hash,
+		"protocol":        payload.Protocol,
+		"governance_root": roots,
+	})
+	pos := "0"
+	env.Position = &pos
+	return render(env, stdout, stderr)
 }
 
 // render writes the envelope; a render failure is the one condition that

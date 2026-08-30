@@ -31,26 +31,31 @@ frontier.
   #76 — **done** (merged; strict wire parsing + lowercase-only hex per
   review; card closed)
 - 1.2 chain/segments/HEAD — os-ead12024 — plan PR #74 (merged, amended),
-  task PR #79 — review
+  task PR #79 — **done** (merged; card closed)
 - 1.3 genesis via `seed init` — os-d636299d — plan PR #75 (merged,
-  amended) — blocked on dep:os-ead12024 (frees when 1.2 closes)
-- 1.4 push-race append loop — os-62e2aa1d — backlog (deps 1.2, 1.3; plan
-  when claimed)
-- 1.5 halt semantics in the rule set — os-bce3fb98 — plan PR #78 open
-  (amended: exit code 7, reason-carrying state) — parked on plan:78
-  (+dep:os-ead12024)
+  amended), task PR #83 — review (genesis-payload version bootstrap +
+  position-stamped init refusal per review)
+- 1.4 push-race append loop — os-62e2aa1d — plan PR #81 (merged, amended:
+  monotonic head + rollback drill) — blocked on dep:os-d636299d
+- 1.5 halt semantics in the rule set — os-bce3fb98 — plan PR #78 (merged,
+  amended: exit code 7, reason-carrying state), task PR #84 — review
+  (halted refusal ordering + empty lift payload per review)
 - 1.6 payload classification lint + hostile corpus — os-d6f81ec6 — plan
-  PR #77 open (amended: aggregate free-text budget, embedded rules) —
-  parked on plan:77
-- 1.7 CLI `seed ledger verify/append/show` — os-89412090 — backlog (dep 1.3)
+  PR #77 (merged, amended: aggregate free-text budget, embedded rules),
+  task PR #80 — **done** (merged; narrowed anchor exemption + RFC 6901
+  pointers per review; card closed)
+- 1.7 CLI `seed ledger verify/append/show` — os-89412090 — plan PR #82
+  (merged, amended: envelope v0 preserved, exit 9) — blocked on
+  dep:os-d636299d
 
 ## Frontier
 
-Phase 0 and 1.1 are merged and closed; 1.2 (`next/internal/ledger`) is
-implemented and in review on task PR #79. **Next action: when #79 merges,
-close os-ead12024 (the cascade frees os-d636299d and os-bce3fb98's dep
-entries) and implement 1.3 (`seed init`, plan merged) on
-`seed/os-d636299d`; plans #77 (1.6) and #78 (1.5) unblock their cards on
-merge. 1.4 (os-62e2aa1d) and 1.7 (os-89412090) get planned when their deps
-close.** If #79 is red or carries review feedback, drive it green first —
-nothing merges out of order (CI's plan-at-merge-base rule).
+Phase 0, 1.1, 1.2, and 1.6 are done; 1.3 (task PR #83) and 1.5 (task PR
+#84) are in review with review findings addressed. **Next action: as
+#83/#84 merge, close their cards (os-d636299d, os-bce3fb98); closing 1.3
+frees os-89412090 and os-62e2aa1d — claim each and implement 1.7 (ledger
+CLI, exits 8/9) then 1.4 (`internal/gitref`, monotonic head + race
+drill); both plans are merged. Phase 1 exit then needs all seven items
+merged; Phase 2 (admission) cards get filed after that.** If an open task
+PR is red or carries review feedback, drive it green first — nothing
+merges out of order.

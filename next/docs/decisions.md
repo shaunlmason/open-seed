@@ -76,6 +76,11 @@ here. Newest last.
   bytes, depth 8, array 64, base64 run 256; the anchor exemption requires
   a filename-alphabet path (no whitespace, 200 bytes max); pointers are
   RFC 6901-escaped; lint canonicalizes (JCS) before walking. (PR #80)
+- 2026-08-30 — Genesis payload carries raw root keys hex-encoded and is
+  the trust bootstrap (Resolver refuses fingerprint/key mismatches and
+  signers outside the root); init refusal is exit 3 with machine code
+  `ledger_not_empty`; smallest-home decision placed genesis in its own
+  `internal/genesis`. (PR #83)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under

@@ -5,22 +5,31 @@
 package ledger
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 // Reason codes for verification failures.
 const (
-	ReasonBadParse     = "bad_parse"
-	ReasonBadPayload   = "bad_payload"
-	ReasonBadSignature = "bad_signature"
-	ReasonBadPrev      = "bad_prev"
-	ReasonUnknownActor = "unknown_actor"
-	ReasonHeadBehind   = "head_behind"
-	ReasonHeadWrong    = "head_wrong"
+	ReasonBadParse           = "bad_parse"
+	ReasonBadPayload         = "bad_payload"
+	ReasonBadSignature       = "bad_signature"
+	ReasonBadPrev            = "bad_prev"
+	ReasonUnknownActor       = "unknown_actor"
+	ReasonHeadBehind         = "head_behind"
+	ReasonHeadWrong          = "head_wrong"
+	ReasonVersionMismatch    = "version_mismatch"
+	ReasonVersionUnsupported = "version_unsupported"
 )
+
+// UpgradeVerb switches the active protocol version: the upgrade event is
+// the last event of the old version and names the new one in its payload
+// (next/spec/protocol.md, "Protocol version").
+const UpgradeVerb = "system.protocol.upgraded"
 
 // Failure is one verification finding.
 type Failure struct {
@@ -39,23 +48,76 @@ type Report struct {
 	Tip   string
 }
 
-// VerifyFromGenesis replays the whole stream: parse every record,
-// recompute canonical bytes, check prev linkage from the empty hash,
-// verify every signature against the resolver, then compare HEAD. The
-// first failure returns as a *Failure. A HEAD that is merely behind the
-// stream must still be *consistent*: its tip must equal the chain hash at
-// its claimed position, or it is wrong, not recoverable; and a missing
-// HEAD over a non-empty stream is itself a behind state, never a pass.
-func (s *Store) VerifyFromGenesis(resolve Resolver) (*Report, error) {
+// VerifyOption configures a verification replay.
+type VerifyOption func(*verifyConfig)
+
+type verifyConfig struct {
+	supported map[string]bool
+}
+
+// WithSupportedVersions declares the protocol versions this verification
+// accepts as active anywhere in the chain (next/spec/protocol.md,
+// "Verification across history"). The default is the implementation's own
+// protocol version.
+func WithSupportedVersions(versions ...string) VerifyOption {
+	return func(c *verifyConfig) {
+		c.supported = map[string]bool{}
+		for _, v := range versions {
+			c.supported[v] = true
+		}
+	}
+}
+
+// VerifyFromGenesis replays the whole stream: parse every record, enforce
+// the version discipline (every event carries the version active at its
+// position; UpgradeVerb switches it; every active version must be
+// supported), recompute canonical bytes, check prev linkage from the empty
+// hash, verify every signature against the resolver, then compare HEAD.
+// The first failure returns as a *Failure. A HEAD that is merely behind
+// the stream must still be *consistent*: its tip must equal the chain
+// hash at its claimed position, or it is wrong, not recoverable; and a
+// missing HEAD over a non-empty stream is itself a behind state, never a
+// pass.
+func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Report, error) {
+	cfg := verifyConfig{supported: map[string]bool{version.Protocol: true}}
+	for _, o := range opts {
+		o(&cfg)
+	}
 	head, headExists, headErr := s.ReadHead()
 
 	tip := event.EmptyHash
 	count := 0
 	claimedTip := event.EmptyHash
+	active := ""
 	err := s.scan(func(pos int, segment string, line []byte) error {
 		rec, err := event.ParseRecord(line)
 		if err != nil {
 			return &Failure{Position: pos, Reason: ReasonBadParse, Detail: err.Error()}
+		}
+		if active == "" {
+			// The initial active version is the version genesis NAMES, not
+			// the version the genesis event carries: seeding from the
+			// event's own v would make the equality check below
+			// tautological (#83 review finding). Chains that do not begin
+			// with a genesis fall back to the first event's v (the store
+			// stays generic; the CLI refuses genesis-less chains anyway).
+			active = rec.Event.V
+			if pos == 0 && rec.Event.Verb == "system.genesis" && rec.Event.Subject == "system" {
+				var g struct {
+					Protocol string `json:"protocol"`
+				}
+				if err := json.Unmarshal(rec.Event.Payload, &g); err == nil && g.Protocol != "" {
+					active = g.Protocol
+				}
+			}
+		}
+		if !cfg.supported[active] {
+			return &Failure{Position: pos, Reason: ReasonVersionUnsupported,
+				Detail: fmt.Sprintf("active version %q is not in this implementation's supported set", active)}
+		}
+		if rec.Event.V != active {
+			return &Failure{Position: pos, Reason: ReasonVersionMismatch,
+				Detail: fmt.Sprintf("event carries %q, the version active at this position is %q", rec.Event.V, active)}
 		}
 		if rec.Event.Prev != tip {
 			return &Failure{Position: pos, Reason: ReasonBadPrev,
@@ -75,6 +137,16 @@ func (s *Store) VerifyFromGenesis(resolve Resolver) (*Report, error) {
 		h, err := rec.Event.Hash()
 		if err != nil {
 			return &Failure{Position: pos, Reason: ReasonBadPayload, Detail: err.Error()}
+		}
+		if rec.Event.Verb == UpgradeVerb && rec.Event.Subject == "system" {
+			var up struct {
+				To string `json:"to"`
+			}
+			if err := json.Unmarshal(rec.Event.Payload, &up); err != nil || up.To == "" {
+				return &Failure{Position: pos, Reason: ReasonBadPayload,
+					Detail: "protocol.upgraded payload must name the new version in 'to'"}
+			}
+			active = up.To
 		}
 		tip = h
 		count = pos + 1
