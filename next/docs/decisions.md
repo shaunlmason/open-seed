@@ -116,6 +116,15 @@ here. Newest last.
   keep surfacing as `ErrRemoteRejected`. `AppendLoop` grew a trailing
   variadic `ledger.VerifyOption` so per-attempt re-verification honors
   the caller's supported set. (PR #93)
+- 2026-08-30 — seed-admit's division of labor: one full
+  VerifyFromGenesis proves parse, linkage, signatures, actor resolution,
+  version discipline, and upgrade schemas for every pushed record; the
+  per-new-record admission pass then applies only what verification
+  tolerates in history (halted, halt shapes, classification), and a
+  record-level prefix check pins append-only-ness, since commit
+  fast-forward alone would admit a descendant commit whose tree rewrites
+  admitted records. Actor and version rules are not re-run per record:
+  the completed replay already enforced them. (PR #94)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under
