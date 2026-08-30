@@ -69,7 +69,9 @@ func candidateFingerprints(records []*event.Record) []string {
 	return order
 }
 
-func buildRoster(records []*event.Record) (map[string][]byte, error) {
+// rosterEntries is the roster derivation shared by the JSON view and
+// the cache tables: every keyring entry in first-appearance order.
+func rosterEntries(records []*event.Record) ([]RosterEntry, error) {
 	state, _, err := keyring.StateAt(records)
 	if err != nil {
 		return nil, err
@@ -93,6 +95,14 @@ func buildRoster(records []*event.Record) (map[string][]byte, error) {
 			Root:        e.Root,
 			Grants:      grants,
 		})
+	}
+	return entries, nil
+}
+
+func buildRoster(records []*event.Record) (map[string][]byte, error) {
+	entries, err := rosterEntries(records)
+	if err != nil {
+		return nil, err
 	}
 	// Chain order is deterministic already (first appearance); keep it,
 	// so the roster reads as an enrollment history.

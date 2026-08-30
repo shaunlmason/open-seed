@@ -55,8 +55,8 @@ func TestProjectRebuildCLI(t *testing.T) {
 		t.Fatalf("the envelope must stamp the tip position, got %+v", e.Position)
 	}
 	list, ok := e.Result["projections"].([]any)
-	if !ok || len(list) != 5 {
-		t.Fatalf("the result must list all five registered projections, got %+v", e.Result)
+	if !ok || len(list) != 6 {
+		t.Fatalf("the result must list all six registered projections, got %+v", e.Result)
 	}
 	row := list[0].(map[string]any)
 	if row["name"] != "roster" || row["position"] != "3" {
@@ -66,7 +66,7 @@ func TestProjectRebuildCLI(t *testing.T) {
 	for _, r := range list {
 		names[r.(map[string]any)["name"].(string)] = true
 	}
-	for _, want := range []string{"roster", "contracts", "queue", "actors", "report"} {
+	for _, want := range []string{"roster", "contracts", "queue", "actors", "report", "cache"} {
 		if !names[want] {
 			t.Fatalf("registry must include %s: %+v", want, names)
 		}

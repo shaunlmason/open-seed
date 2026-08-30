@@ -151,8 +151,8 @@ Phase 7, as added rules on the shared set.
 - 4.3 SQLite cache projection + mid-operation deletion drill —
   os-acc1ac78 — plan PR #108 (merged) + amendment PR #110 (merged:
   the cache is a registered projection, byte-identical like every
-  view; the stamp table carries exactly the tree stamp's fields) —
-  **ready to implement**, stacked on the Phase 4 stack tip
+  view; the stamp table carries exactly the tree stamp's fields),
+  task PR #119 — review (stacked on #118's branch)
 - 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
   PR #107 (merged, amended: seam/write-separation lint + locked trees
   `0444`/`0555` with the engine unlock window, deletion via rebuild,

@@ -115,7 +115,33 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   facts (claims, offers, budgets, expiry-vs-wedge, divergence) are
   extension points named here, not emitted empty.
 
-The SQLite cache lands in 4.3; the write-boundary lint in 4.4.
+- **`cache`** (`cache.db`): the single-machine read-throughput
+  surface — one SQLite database mirroring the views (`roster`,
+  `contracts` indexed by subject, `queue` + `queue_meta`,
+  `actor_history`/`actor_signed` indexed by fingerprint, `report`
+  key-values) plus a one-row `stamp` table carrying **exactly** the
+  tree stamp's fields (name, position, tip, version), so a pure-SQL
+  consumer demands a minimum position with one query:
+  `SELECT position >= :min FROM stamp`. The database is the API:
+  consumers open it read-only (`mode=ro&immutable=1`); a writable
+  open is a programming error, and the locked publication refuses
+  in-place writes mechanically. Builds are **byte-identical** like
+  every view: the builder closes SQLite's variance sources (one
+  connection, one ordered transaction, rollback journal — never
+  WAL, whose headers embed salts — fixed `page_size`, no
+  `auto_vacuum`, no `ANALYZE`, no `AUTOINCREMENT`) against the
+  `go.sum`-pinned driver, and the registry's byte-identical drill
+  enforces it; the database's own schema generation is stamped via
+  `PRAGMA user_version`, bumping with the table set. The builder
+  assembles the file in an engine-owned temp directory and hands the
+  engine bytes (coordination-scale ledgers make that cheap; a
+  streaming seam is deliberately deferred until a real ledger
+  outgrows it). Tamper recovery is the documented deletion walk plus
+  one rebuild — a same-id republish deliberately keeps the existing
+  tree for readers that hold it; the locks, not the discard, are the
+  anti-tamper layer.
+
+The write-boundary lint is 4.4's.
 Registration is data: later phases append.
 
 ## The consumer verb and staleness
@@ -224,5 +250,11 @@ files.
   consumers can demand a minimum position" — every view is stamped and
   `seed project current --min-position` refuses stale builds with exit
   15, drilled end-to-end.
-- III.D cache row — 4.3; mirrors, observation inputs, and the CI
-  rebuild-everything drill — with their phases.
+- III.D cache row — "The cache projection delivers single-machine
+  read throughput with zero authority (mid-operation deletion loses
+  nothing)" — the `cache` projection above, drilled: indexed lookups
+  equal the views, deletion under an open read handle loses nothing
+  (the ledger byte-unchanged, one rebuild republishing the identical
+  build), and a poisoned copy never feeds a rebuild.
+- III.D mirrors, observation inputs, and the CI rebuild-everything
+  drill — with their phases.

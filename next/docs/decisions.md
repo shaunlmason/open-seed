@@ -290,3 +290,17 @@ here. Newest last.
   freshly published layout — unexported deliberately, since exporting
   it would hand non-engine code the very path piece the lint denies.
   (PR #118)
+- 2026-08-30 — The cache is registered projection number six
+  (plans/os-acc1ac78.md as amended by #110): modernc.org/sqlite
+  v1.57.0 pinned; byte-determinism engineered by closing the variance
+  sources (one connection, one ordered transaction, rollback journal,
+  fixed page_size, no auto_vacuum/ANALYZE/AUTOINCREMENT) and enforced
+  by the registry's existing byte-identical drill; the stamp table
+  derives the same (name, position, tip, version) the engine stamps
+  in projection.json (position = len(records), tip = last event hash,
+  both provably equal the verification report); PRAGMA user_version
+  carries the table-set generation. A same-id republish deliberately
+  keeps the existing tree for readers that hold it, so tamper
+  recovery is the documented deletion walk plus one rebuild; the
+  locks are the anti-tamper layer, and the drill proves the poison is
+  never an input. (PR #119)
