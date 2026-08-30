@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "task": "os-bce3fb98",
+  "merge_base": "446748b14911f3ce80a3f61683ae43e63dbe4813",
+  "head": "bdf1993b1248af2c1e5a74c39bf8236743ec861f",
+  "plan_path": "plans/os-bce3fb98.md",
+  "plan_sha256": "09104f4069df4bf7ea0f5bee66313200e7ca084c22d3a32496372507afeb21ec",
+  "diff_files": [
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/envelope/envelope.go",
+    "next/internal/envelope/envelope_test.go",
+    "next/internal/halt/halt.go",
+    "next/internal/halt/halt_test.go",
+    "next/spec/envelope.md"
+  ],
+  "diff_sha256": "63ca2cf1267f5a8110e9bb27b9f5d086d8df8de16c36dd646906b86b787da7f0",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/halt/... ./internal/envelope/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
