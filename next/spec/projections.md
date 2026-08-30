@@ -69,15 +69,77 @@ minimum position, and never treat the view as authoritative. The
 
 ## Registered projections
 
+Candidate actors derive from the chain itself (the genesis payload's
+governance roots plus every enrollment subject, first-appearance
+order); every actor-bearing view keys off that one derivation. The v0
+**work classifier** is a prefix rule: verbs outside the `system.*` and
+`actor.*` governance namespaces are work vocabulary, keyed by subject;
+Phase 5's transition table replaces the rule with explicit vocabulary.
+
 - **`roster`** (`roster.json`): every keyring entry — genesis
   governance roots included, appearing with `root: true` and empty
   kind/name (they are seeded from the genesis payload, not enrolled) —
   plus every enrolled actor with kind, name, standing, root flag, and
   accumulated grants, in first-appearance chain order.
+- **`contracts`** (`contracts.json`): every work subject in
+  first-appearance order — `{subject, first_position, last_position,
+  events: [{position, verb, actor, payload}]}` with the signer
+  fingerprint as `actor` and the payload's JSON content unchanged
+  (the view re-indents for readability; canonical bytes live only in
+  the ledger). No
+  `state` field exists yet: state derivation arrives with Phase 5's
+  transition table rather than a field that would always read null.
+  One file, not per-subject files (subjects are opaque strings; the
+  cache is the lookup-throughput surface). An empty chain yields an
+  empty array, not a missing file.
+- **`queue`** (`queue.json`): the claimable-work surface, schema fixed
+  now — `{schema_version: "1", derivation, ready: […]}`, entries
+  carrying at least `{subject, since_position}` (the field set is
+  Phase 5's to extend). The v0 `derivation` is `"none"`: the Phase 4
+  vocabulary defines no claimable states, so `ready` is empty **by
+  definition** and the marker says so machine-readably — a consumer
+  MUST NOT treat an underived queue as meaning "nothing to do".
+  Phase 5 item 1 replaces the derivation and its marker; the
+  eligibility filter follows later, per the build plan.
+- **`actors`** (`actors.json`): the per-actor drill-down — the roster
+  fields plus `standing_history` (each `actor.*` event on the subject:
+  position, verb, acting signer) and `signed` (position, verb, subject
+  of every record the fingerprint signed). The attribution surface: a
+  revoked key keeps its full history here while the roster shows the
+  ended standing.
+- **`report`** (`report.json`): the operational summary — `chain`
+  (position, tip, active version), `actors` (counts by standing,
+  roots, total), `halt` (halted flag; declaring position and actor
+  while halted), `checkpoints` (count; last position when any exist),
+  `contracts` (subject and event counts). Sections needing Phase 5+
+  facts (claims, offers, budgets, expiry-vs-wedge, divergence) are
+  extension points named here, not emitted empty.
 
-The standard work projections (contract detail, ready queue, actor
-view, report) land in Phase 4.2; the SQLite cache in 4.3; the
-write-boundary lint in 4.4. Registration is data: later phases append.
+The SQLite cache lands in 4.3; the write-boundary lint in 4.4.
+Registration is data: later phases append.
+
+## The consumer verb and staleness
+
+`seed project current --name <projection> [--out <dir>]
+[--min-position <n>]` resolves `CURRENT`, reads the build's stamp,
+and reports `{name, position, tip, version, path}`. Two position
+conventions coexist and are both normative: the **stamp** (and this
+verb's envelope) carries the verified record **count**; the **rebuild
+envelope** stamps the tip's zero-based **index** (count-1), the
+CLI-wide tip convention. Consumers demanding freshness pass
+`--min-position`: a stamp below the demand refuses with exit 15
+`stale`, naming the stamped and demanded positions — charter III.D's
+"consumers can demand a minimum position", made scriptable. Only
+**registered** projections resolve: a name outside the registry
+refuses exit 4 `not_found` whatever directories exist under the
+output root (which also keeps traversal components out of the path),
+and a registered name with nothing published refuses 4 the same way;
+a published layout that exists but cannot be resolved — an unreadable
+or empty `CURRENT`, an unreadable or unparseable stamp — refuses
+exit 5 `unavailable`, an operational failure, never mistaken for an
+unpublished projection. The verb takes no `--ledger` flag: it is
+structurally a consumer and cannot touch authoritative state; no
+refusal creates or modifies anything.
 
 ## Conformance mapping
 
@@ -88,5 +150,9 @@ write-boundary lint in 4.4. Registration is data: later phases append.
 - III.D "no code path writes a projection directly …; the
   write-boundary lint enforces it" — the lint lands in 4.4; the engine
   is the only writer this spec admits.
+- III.D "Staleness is visible everywhere projected state is shown;
+  consumers can demand a minimum position" — every view is stamped and
+  `seed project current --min-position` refuses stale builds with exit
+  15, drilled end-to-end.
 - III.D cache row — 4.3; mirrors, observation inputs, and the CI
   rebuild-everything drill — with their phases.

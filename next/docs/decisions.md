@@ -217,3 +217,26 @@ here. Newest last.
   tree (older builds and stray partials prune; losing two consecutive
   swaps means re-resolving). The stamp gains the version field, giving
   consumers the derivation identity beside the position. (PR #109)
+- 2026-08-30 — Standard-projection semantics (plans/os-fecfb3f7.md): the
+  v0 work classifier is the prefix rule (everything outside `system.*`
+  and `actor.*` is work vocabulary) until Phase 5's transition table
+  replaces it with explicit vocabulary; the queue publishes with
+  `derivation: "none"` so an underived queue is machine-distinguishable
+  from "nothing ready" (per #106 review); contract payloads are
+  content-preserved but re-indented by the view (canonical bytes live
+  only in the ledger, and the spec says so); exit 15 `stale` is
+  allocated for the minimum-position demand, spec row and constant in
+  one change per the allocation rule. Two position conventions coexist
+  deliberately: stamps carry the verified count, tip-stamped envelopes
+  carry the zero-based index; `seed project current` reports the count
+  verbatim and the spec states both. (PR #111)
+- 2026-08-30 — Consumer-verb refusal discipline (review findings on
+  #111): `seed project current` resolves only registered projections
+  (a name outside the registry is not_found whatever directories
+  exist, which also keeps traversal components out of the path), and
+  splits absence from damage: nothing published refuses 4 not_found,
+  while a layout that exists but cannot resolve (unreadable or empty
+  CURRENT, unreadable or unparseable stamp) refuses 5 unavailable, so
+  automation branching on exit codes never mistakes a damaged
+  publication for an unpublished one. The verb and the rebuild rows
+  also surface the stamp's derivation version. (PR #111)
