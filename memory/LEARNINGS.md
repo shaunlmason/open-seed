@@ -175,3 +175,13 @@ Fresh sessions read this file instead of rediscovering.
   push protection blocks the push (GH013) regardless of the key being a
   deterministic dummy. Generate key fixtures at test runtime into t.TempDir()
   (x/crypto ssh.MarshalPrivateKey emits the same wire format the loaders parse).
+
+- 2026-08-30 (os-beac85e1): Parallel `next:` task PRs conflict on exactly
+  two kinds of line: tail appends (`next/docs/decisions.md`, adjacent
+  exit-code table rows) and the shared frontier. The pattern that kept
+  five simultaneous PRs merge-order-independent: resolve tail appends by
+  keeping both sides in order, and make every in-flight PR carry a
+  **byte-identical** `next/docs/progress.md` (identical changes never
+  conflict; the first merge lands the file, the rest rebase to a zero
+  delta). Receipts must be regenerated after every rebase since they bind
+  to the merge-base diff.
