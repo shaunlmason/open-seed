@@ -58,7 +58,9 @@ for tooling continuity. Inherited allocations:
 | 10 | `version_mismatch` | protocol or envelope version mismatch |
 | 11 | `remote_rejected` | the remote's own admission refused the push (e.g. a `pre-receive` policy hook declined); the error message carries the remote's reason verbatim |
 | 12 | `head_regression` | the remote serves a chain that regresses this client's persisted verified head (rollback or vanished ref): a freshness refusal, distinct from failed chain verification |
+| 13 | `posture_invalid` | the deployment's posture declaration is malformed or names an unknown posture; every deployment MUST declare exactly one of the three charter postures (SEED-NEXT.md Part II "Postures"), and the message names the valid ones — distinct from `not_found`, which covers a deployment with no declaration at all |
 | 64 | `usage` | CLI usage error (EX_USAGE); never a verb result |
+| 66 | `unreadable` | an input the invocation names exists but cannot be opened or read (EX_NOINPUT: a directory, denied permissions, an I/O failure): an operational failure in the usage class, distinct from a judgment on the content (`posture_invalid`) and from a missing declaration (`not_found`) |
 
 **Allocation rule for new codes**: a new condition takes the lowest unused
 integer in 7–63, lands as a PR editing this table before any code emits it,

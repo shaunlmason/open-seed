@@ -67,22 +67,35 @@ os-beac85e1's task PR (an administrative card, not a Phase 2 item).
   schema in scope), task PR #90 — **done** (merged; card closed)
 - 2.2 cooperative posture (client self-validation) — os-895bf828 —
   plan PR #91 (merged, amended: gitref verify-option pass-through +
-  update-phase race marker), task PR #93 — review
+  update-phase race marker), task PR #93 — **done** (merged; state-dir
+  lock + position-stamped refusals per review; card closed)
 - 2.3 enforced posture, `seed-admit` pre-receive hook — os-d3591e09 —
-  plan PR #92 (merged), task PR #94 — review
-- 2.4 posture declaration + `seed doctor` — os-3c72f93f — backlog (deps
-  2.2, 2.3)
+  plan PR #92 (merged), task PR #94 — **done** (merged; tree-shape gate
+  + exclusion-based rule selection per review; card closed)
+- 2.4 posture declaration + `seed doctor` — os-3c72f93f — plan PR #95
+  (merged, amended: exit 13 `posture_invalid` allocation per review),
+  task PR #98 — review
 - 2.5 admission drills (raw-git adversary; kill-and-replace) —
-  os-028dda91 — backlog (deps 2.3, 2.4)
+  os-028dda91 — plan PR #96 (in review, amended: fresh-clone
+  kill-and-replace per review); implementation staged
+
+## Phase 3 — Identity and grants (docs/next-build-plan.md Phase 3; deps: 2)
+
+- 3.1 actor events + keyring projection — os-52a2d688 — plan PR #97
+  (in review, amended: root-liveness guard + seed/1 activation boundary
+  per review); implementation staged
+- 3.2 admission checks grants per verb — os-3979d48b — backlog
+- 3.3 key rotation/revocation drill — os-d1f35a8c — backlog
 
 ## Frontier
 
-Phase 0, all of Phase 1, and 2.1 are done and closed. 2.2 (task PR #93)
-and 2.3 (task PR #94) are in review against their merged plans.
-**Next action: as #93/#94 merge, close their cards (os-895bf828,
-os-d3591e09); closing both frees 2.4 (os-3c72f93f, posture declaration +
-`seed doctor` — promote, plan-first); 2.5 (os-028dda91, the drills)
-follows 2.3 and 2.4. Phase 2 exit needs the III.B
+Phase 0, Phase 1, and 2.1 through 2.3 are done and closed. 2.4 (task PR
+#98) is in review against its merged plan #95. 2.5's plan (#96) and
+3.1's plan (#97) are in review with implementations staged on their
+worktrees; 3.2 and 3.3 cards are filed behind 3.1. **Next action: as
+#96/#97 merge, ship their task PRs (2.5's carries the Phase 2 exit
+record with the drill evidence); as task PRs merge, close their cards
+(os-3c72f93f, os-028dda91, os-52a2d688). Phase 2 exit needs the III.B
 subset: sole-writer enforced posture, statelessness (kill-and-replace),
 posture declaration with the cooperative consequence printed verbatim,
 and the direct-push refusal drill.** If an open task PR is red or carries

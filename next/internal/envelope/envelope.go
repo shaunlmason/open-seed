@@ -29,7 +29,9 @@ const (
 	ExitVersionMismatch   = 10
 	ExitRemoteRejected    = 11
 	ExitHeadRegression    = 12
+	ExitPostureInvalid    = 13
 	ExitUsage             = 64
+	ExitUnreadable        = 66
 )
 
 // Error is the machine-branchable half of a refusal: a stable code to
