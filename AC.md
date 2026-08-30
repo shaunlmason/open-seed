@@ -129,6 +129,10 @@ the current build; unmarked items exist at least partially today and must be kep
 - [ ] The reviewer lane reviews against the plan at the merge-base — implements the plan,
       nothing more — and its verdict transitions the card (approve → review passes;
       request-changes → reject with implementer lockout that actually persists).
+- [ ] Review is grounded in independent evidence: the reviewer's verdict rests on
+      independently executed checks (validation commands re-run, diff read against the
+      plan), never on the implementer's claims or summary — a review that introduces no
+      new information is not a review (the information-gain test).
 - [ ] A red required check is unmergeable; the verify check stays red until a qualifying
       (non-implementer) approval exists.
 - [ ] ◇ Verification runs as dogfooded workflows in per-run-ID worktrees (parallel-safe),
@@ -178,9 +182,17 @@ the current build; unmarked items exist at least partially today and must be kep
       blocked_on, evidence trail, dirty-file inventory), written on release/park/reap and
       on demand.
 - [ ] ◇ Packet enrichment, still mechanical-only: plan validation commands, last failing
-      check output, diffstat vs merge-base.
+      check output, diffstat vs merge-base — organized as the three-part handoff schema
+      (acceptance criteria; settled decisions and constraints, so the recipient never
+      relitigates them; artifact references by path, never contents).
 - [ ] Memory compounds: LEARNINGS.md and DEADENDS.md are append-paths in every task PR;
       ◇ retrieval guidance so agents actually consult them before repeating history.
+- [ ] ◇ Memory entries carry provenance: each learning states its applies-when
+      conditions, cites supporting task/PR IDs (a recommended practice needs more than
+      one accidental success behind it), and bears a last-validated stamp; dead-ends
+      record the failure condition and environment so they can be retired when the
+      environment changes. Entries are retired precisely — evidence kept, conclusion
+      revoked — never silently deleted.
 - [ ] Skills are packaged, locked (manifest + lockfile), and installed reproducibly;
       frozen installs refuse drift.
 - [ ] ◇ Activity-scoped convention docs (planning / implementation / verification /
@@ -263,6 +275,10 @@ the current build; unmarked items exist at least partially today and must be kep
       git/file side channels; doctor verifies hook health.
 - [ ] `maintain report` surfaces queue health: stalled reviews, long-parked plans, unread
       mail, expired leases, ancestry gaps; ◇ human-vs-agent actor breakdown.
+- [ ] ◇ Progress liveness is a second signal beside the lease: a claimed card's worker
+      maintains a lightweight progress note whose staleness is the stuck signal — a
+      wedged worker renews leases forever, but its progress stops moving. Report, reap
+      heuristics, and the dashboard read freshness, not just lease expiry.
 - [ ] `maintain reap` is safe to run on a schedule; the maintenance lane (reap, lint,
       close-on-merge, mirror, prune, anchor) runs green unattended and is itself audited.
 - [ ] ◇ `seed doctor`: one preflight command that checks everything (state ref, backend
@@ -308,6 +324,9 @@ the current build; unmarked items exist at least partially today and must be kep
       <commit>` with a CI lint that flags stale stamps on behavior-changing PRs.
 - [ ] The research corpus (docs/research/) is maintained: adjacent tools surveyed, adopted
       ideas traced to their source, rejected ideas recorded with reasons.
+- [ ] ◇ Process changes pass boundary + retention: a change to a role file, guardrail, or
+      workflow names the failing case it fixes and demonstrates the previously-working
+      cases still pass — a fix validated only against its trigger case is not accepted.
 - [ ] Decisions are recorded (decisions/) and binding; contributor instructions state the
       authority order.
 - [ ] Governance is explicitly fork-friendly: MIT, no CLA, external PRs welcome, no
