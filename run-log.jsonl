@@ -298,3 +298,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-116ca9ac","ts":"2026-08-30T03:23:27Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-9302b649","kind":"comment"},"task":"os-116ca9ac","ts":"2026-08-30T03:23:30Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:71","to":"ready"},"task":"os-116ca9ac","ts":"2026-08-30T03:27:36Z","verb":"plan-unblock"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T04:27:39Z"},"task":"os-116ca9ac","ts":"2026-08-30T03:27:39Z","verb":"claim"}
