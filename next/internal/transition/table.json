@@ -12,7 +12,7 @@
   "transitions": [
     {"verb": "intent.filed", "from": null, "to": "backlog"},
     {"verb": "contract.specified", "from": ["backlog"], "to": "ready"},
-    {"verb": "claim.taken", "from": ["ready"], "to": "in_progress"},
+    {"verb": "claim.taken", "from": ["ready"], "to": "in_progress", "exclusive": true},
     {"verb": "submission.made", "from": ["in_progress"], "to": "review"},
     {"verb": "claim.released", "from": ["in_progress"], "to": "ready"},
     {"verb": "claim.parked", "from": ["in_progress"], "to": "blocked"},

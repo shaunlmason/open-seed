@@ -79,16 +79,29 @@ func TestLifecycleViews(t *testing.T) {
 	wantState("c-C", "backlog", 1)
 	wantState("c-D", "", 0)
 
-	// The derivation bump is in the identity: v2 build ids for the
-	// changed derivations (Phase 4's version-in-identity machinery on
-	// a real derivation change).
-	for _, name := range []string{"contracts", "queue", "cache"} {
+	// The claim object rides exactly the in_progress entry: holder and
+	// fence (the admitted claim.taken position, string form), absent
+	// everywhere else (plans/os-5dc16a7c.md).
+	if c := bys["c-A"].Claim; c == nil || c.Holder != pFP(t, worker) || c.Fence != "5" {
+		t.Fatalf("c-A must carry the claim object {holder, fence}: %+v", c)
+	}
+	for _, subject := range []string{"c-B", "c-C", "c-D"} {
+		if bys[subject].Claim != nil {
+			t.Fatalf("%s is not in_progress and must carry no claim", subject)
+		}
+	}
+
+	// The derivation bumps are in the identity (Phase 4's
+	// version-in-identity machinery on real derivation changes): the
+	// queue is at v2 (5.1), contracts and cache at v3 (5.2's claim
+	// object and columns).
+	for name, want := range map[string]string{"queue": "-v2", "contracts": "-v3", "cache": "-v3"} {
 		b, err := os.ReadFile(filepath.Join(out, name, "CURRENT"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if id := strings.TrimSpace(string(b)); !strings.HasSuffix(id, "-v2") {
-			t.Fatalf("%s must publish under a v2 build id, got %s", name, id)
+		if id := strings.TrimSpace(string(b)); !strings.HasSuffix(id, want) {
+			t.Fatalf("%s must publish under a %s build id, got %s", name, want, id)
 		}
 	}
 
@@ -106,6 +119,19 @@ func TestLifecycleViews(t *testing.T) {
 	}
 	if n := one[int](t, db, `SELECT anomalies FROM contract_state WHERE subject = 'c-C'`); n != 1 {
 		t.Fatalf("cache c-C anomalies: %d", n)
+	}
+	if h := one[string](t, db, `SELECT holder FROM contract_state WHERE subject = 'c-A'`); h != pFP(t, worker) {
+		t.Fatalf("cache c-A holder: %s", h)
+	}
+	if f := one[string](t, db, `SELECT fence FROM contract_state WHERE subject = 'c-A'`); f != "5" {
+		t.Fatalf("cache c-A fence: %s", f)
+	}
+	var noClaim sql.NullString
+	if err := db.QueryRow(`SELECT holder FROM contract_state WHERE subject = 'c-B'`).Scan(&noClaim); err != nil {
+		t.Fatal(err)
+	}
+	if noClaim.Valid {
+		t.Fatalf("no claim window, no holder: %q", noClaim.String)
 	}
 	var null sql.NullString
 	if err := db.QueryRow(`SELECT state FROM contract_state WHERE subject = 'c-D'`).Scan(&null); err != nil {

@@ -36,10 +36,14 @@ type stateDecl struct {
 }
 
 // row is one transition row: from is nil for the single birth verb.
+// Exclusive marks a verb whose admission grants exclusivity (claims):
+// online-only by construction, since only the admission boundary can
+// order two rivals (plans/os-5dc16a7c.md).
 type row struct {
-	Verb string    `json:"verb"`
-	From *[]string `json:"from"`
-	To   string    `json:"to"`
+	Verb      string    `json:"verb"`
+	From      *[]string `json:"from"`
+	To        string    `json:"to"`
+	Exclusive bool      `json:"exclusive"`
 }
 
 type tableFile struct {
@@ -58,8 +62,9 @@ type Table struct {
 	birthTo       string
 	// legal maps verb -> (from-state -> to-state); the birth verb has
 	// no entry here.
-	legal map[string]map[string]string
-	verbs []string
+	legal     map[string]map[string]string
+	exclusive map[string]bool
+	verbs     []string
 }
 
 // InvalidTransitionError is the typed lifecycle refusal (exit 3
@@ -105,6 +110,7 @@ func Parse(b []byte) (*Table, error) {
 		terminal:      map[string]bool{},
 		states:        map[string]bool{},
 		legal:         map[string]map[string]string{},
+		exclusive:     map[string]bool{},
 	}
 	for _, s := range f.States {
 		if t.states[s.Name] {
@@ -131,6 +137,14 @@ func Parse(b []byte) (*Table, error) {
 		}
 		if !t.states[r.To] {
 			return nil, fmt.Errorf("invalid transition table: verb %q targets unknown state %q", r.Verb, r.To)
+		}
+		if r.Exclusive {
+			// Exclusivity is meaningful only for a verb that enters a
+			// held state from somewhere: a birth verb cannot be a claim.
+			if r.From == nil {
+				return nil, fmt.Errorf("invalid transition table: the birth verb %q cannot be exclusive", r.Verb)
+			}
+			t.exclusive[r.Verb] = true
 		}
 		if r.From == nil {
 			if t.birth != "" {
@@ -260,6 +274,15 @@ func (t *Table) Terminal(state string) bool { return t.terminal[state] }
 // Verbs returns the lifecycle vocabulary in table order.
 func (t *Table) Verbs() []string { return append([]string(nil), t.verbs...) }
 
+// Exclusive reports whether the verb's admission grants exclusivity.
+func (t *Table) Exclusive(verb string) bool { return t.exclusive[verb] }
+
+// Allows reports whether the verb legally leaves the given state.
+func (t *Table) Allows(from, verb string) bool {
+	_, ok := t.legal[verb][from]
+	return ok
+}
+
 // IsLifecycleVerb reports whether the verb has a transition row.
 func (t *Table) IsLifecycleVerb(verb string) bool {
 	if verb == t.birth {
@@ -288,6 +311,14 @@ func (t *Table) Check(subject, current, verb string) (string, error) {
 	return "", &InvalidTransitionError{Subject: subject, From: current, Verb: verb}
 }
 
+// Claim is the active claim on an in_progress subject: the fence is
+// the chain position of the admitted claim.taken record — derived,
+// never asserted (plans/os-5dc16a7c.md) — and the holder its signer.
+type Claim struct {
+	Holder string
+	Fence  int
+}
+
 // SubjectState is one subject's folded lifecycle state.
 type SubjectState struct {
 	State string
@@ -299,6 +330,14 @@ type SubjectState struct {
 	// chain validity), the fold skips them, and the projections
 	// surface the count, never silence (plans/os-d69a6c91.md).
 	Anomalies int
+	// Claim is the active claim while the subject is in_progress,
+	// cleared by every deliberate exit; nil otherwise.
+	Claim *Claim
+	// PriorClaimants is every fingerprint that has ever held a claim
+	// on this subject: the fence rule's who-must-cite input — a
+	// reaped or released worker cannot demote itself to observer
+	// (plans/os-5dc16a7c.md, review finding on #114).
+	PriorClaimants map[string]bool
 }
 
 // Fold is the folded lifecycle state of every subject in a record
@@ -338,6 +377,17 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			f.order = append(f.order, e.Subject)
 		}
 		s.State, s.Since = to, pos
+		if t.exclusive[e.Verb] {
+			s.Claim = &Claim{Holder: e.Actor, Fence: pos}
+			if s.PriorClaimants == nil {
+				s.PriorClaimants = map[string]bool{}
+			}
+			s.PriorClaimants[e.Actor] = true
+		} else if s.Claim != nil && s.State != "in_progress" {
+			// Every deliberate exit ends the claim window; the fence
+			// dies with it.
+			s.Claim = nil
+		}
 	}
 	return f
 }

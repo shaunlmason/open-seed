@@ -164,8 +164,13 @@ Phase 7, as added rules on the shared set.
   across rule set/hook/CLI, dispatch/claim capability lanes,
   contracts v2 (state + anomalies), queue v2 ("transitions/1"),
   cache generation 2, spec/lifecycle.md
-- 5.2 claims with fences — os-5dc16a7c — plan PR #114 (merged) —
-  ready to implement after 5.1
+- 5.2 claims with fences — os-5dc16a7c — plan PR #114 (merged,
+  amended: prior claimants stay fenced, per review) —
+  **implementing** (stacked on 5.1's branch): the exclusive table
+  flag, the claim fold (holder, fence, prior claimants), the fence
+  rule between grant and lifecycle, structured contention, the
+  online-only client seam, contracts v3 with the claim object, cache
+  generation 3, the claim race storm and offline-boundary drills
 - 5.3 four-part handoff packets — os-b07b0f59 — plan PR #115
   (merged) — after 5.2
 - 5.4 acceptance-spec field + spec gate — os-73c00a50 — plan PR #116
@@ -192,8 +197,9 @@ Phase 7, as added rules on the shared set.
 Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
 plan is merged or open-amended: #113–#116 and #120 merged, #121 (5.6)
-open. **This PR implements 5.1** (os-d69a6c91, the transition table);
-**next action: 5.2 (os-5dc16a7c, fences) once 5.1 merges, then 5.3;
-5.4 after 5.1; 5.5 after 5.2; 5.6 when #121 merges and 5.2 lands.**
+open. 5.1 (os-d69a6c91, #122) is in review; **this PR implements 5.2**
+(os-5dc16a7c, fences), stacked on #122's branch. **Next action: 5.3
+(packets) stacks on this; 5.4 after 5.1 merges; 5.5 after 5.2; 5.6
+when #121 merges and 5.2 lands.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

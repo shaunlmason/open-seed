@@ -31,7 +31,7 @@ later phase's machinery):
   "transitions": [
     {"verb": "intent.filed", "from": null, "to": "backlog"},
     {"verb": "contract.specified", "from": ["backlog"], "to": "ready"},
-    {"verb": "claim.taken", "from": ["ready"], "to": "in_progress"},
+    {"verb": "claim.taken", "from": ["ready"], "to": "in_progress", "exclusive": true},
     {"verb": "submission.made", "from": ["in_progress"], "to": "review"},
     {"verb": "claim.released", "from": ["in_progress"], "to": "ready"},
     {"verb": "claim.parked", "from": ["in_progress"], "to": "blocked"},
@@ -71,15 +71,63 @@ them, and a failed verdict's return path out of `review` is Phase 6's
 **named extension point**, not guessed here (`review` reaches a
 terminal state today via `contract.cancelled`).
 
+## Claims and fences
+
+**The fence is derived, never asserted** (plans/os-5dc16a7c.md): it
+is the chain position of the active `claim.taken` record, established
+when the claim admits — ordering authority is admitted ancestry, so a
+client cannot mint a fence, only cite one, as a payload field
+`{"fence": "<position>"}` (string, the envelope position convention).
+
+**Who must cite it**, on a subject whose folded state is
+`in_progress`: every deliberate exit (`submission.made`,
+`claim.released`, `claim.parked`, and `claim.reaped`, which names the
+claim it kills); and every free-stream event signed by the current
+holder **or by any prior claimant of the subject** — a reaped or
+released worker's delayed observation must not slip through
+fence-free and contaminate progress or later expiry/wedge math, so a
+prior claimant cannot demote itself to observer (review finding on
+#114). Any citation present must match the **active** fence, whoever
+signs; a prior claimant citing the active fence is explicitly
+acknowledging the current claim. Free events from signers who have
+never claimed the subject are genuine observations and pass without a
+fence. A missing-but-required or stale citation refuses exit 6
+`fenced_out`, naming the cited fence, the active fence, and the
+holder. **Outside `in_progress` there is no active fence**: none is
+required, citing one refuses (a fence dies with its claim window),
+and claim-scoped contamination is impossible because nothing outside
+a claim window carries a fence. A re-claim mints a new fence; the old
+one is stale everywhere.
+
+**Contention is its own refusal**: `claim.taken` on an `in_progress`
+subject refuses exit 2 `contention` with a structured envelope naming
+the holding fingerprint and the active fence position (the position
+the claim was taken at) — the loser learns who holds and since when.
+All other illegal lifecycle jumps stay exit 3.
+
+**Claiming is online-only**: the transition row for `claim.taken`
+carries `"exclusive": true` (self-validation refuses an exclusive
+birth verb), and exclusivity is a property granted at admission —
+only the push round-trip can order two rivals, so two offline actors
+claiming the same contract have not claimed anything. The cooperative
+client refuses to draft an exclusive verb through the local dev-tool
+append (exit 2, quoting this posture); the boundary enforces
+exclusivity regardless — the client rule prevents drafting doomed
+work. Reading, planning, and continuing an admitted claim stay fully
+offline. **Racing mode is deferred entirely** (the build plan's
+binding default), and `wedge.declared` lands with 5.6's
+expiry-vs-wedge work — both named extension points, not gaps.
+
 ## Self-validation
 
 The table refuses to load unless: every `from`/`to` names a declared
 state; exactly one initial state and exactly one birth verb
 (`from: null`) landing on it; terminal states have no outgoing rows;
 no duplicate verb; every state is reachable from the initial state;
-every non-terminal state reaches a terminal one (no wedge); and the
-`in_progress` outgoing set is exactly the four deliberate exits. Each
-violation refuses by name, drilled on planted tables.
+every non-terminal state reaches a terminal one (no wedge); the
+`in_progress` outgoing set is exactly the four deliberate exits; and
+an exclusive row must not be the birth verb. Each violation refuses
+by name, drilled on planted tables.
 
 ## Completeness at the claimability transition
 
@@ -124,14 +172,15 @@ subjects in every state and appear in contract streams untouched.
 
 The contracts view carries the folded `state` (null for a subject no
 lifecycle event ever validly created) and `anomalies` per entry
-(contracts `Version: "2"`); the queue's derivation is the table's
+(contracts `Version: "3"`, which also carries the claim object); the queue's derivation is the table's
 ready set — `derivation: "transitions/1"`, listing subjects whose
 folded state is `ready`, oldest first, `since_position` the position
 that made them ready (queue `Version: "2"`) — retiring the v0
 `"none"` marker exactly as [`projections.md`](projections.md)
-promised. Both republish under new version-bearing build ids at an
-unchanged tip; the cache mirrors both derivations
-(`contract_state`, the derived `queue` rows, schema generation 2).
+promised. Every derivation change republishes under a new
+version-bearing build id at an unchanged tip; the cache mirrors the
+same derivations (`contract_state` with the claim columns, the
+derived `queue` rows, schema generation 3).
 
 ## Conformance mapping
 

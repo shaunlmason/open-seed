@@ -30,12 +30,13 @@ const CacheFile = "cache.db"
 // cacheSchemaVersion is the database's own schema generation, stamped
 // via PRAGMA user_version; it bumps with the table set, not with the
 // chain position. Generation 2 added contract_state and the derived
-// queue rows (plans/os-d69a6c91.md).
-const cacheSchemaVersion = 2
+// queue rows (plans/os-d69a6c91.md); generation 3 the claim columns
+// (plans/os-5dc16a7c.md).
+const cacheSchemaVersion = 3
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-const cacheVersion = "2"
+const cacheVersion = "3"
 
 // Cache returns the cache projection.
 func Cache() Projection {
@@ -51,7 +52,7 @@ var cacheDDL = []string{
 	`CREATE TABLE contracts (subject TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL)`,
 	`CREATE INDEX contracts_subject ON contracts(subject)`,
 	`CREATE TABLE queue (subject TEXT NOT NULL, since_position INTEGER NOT NULL)`,
-	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL) WITHOUT ROWID`,
+	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT) WITHOUT ROWID`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
 	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
 	`CREATE INDEX actor_history_fp ON actor_history(fingerprint)`,
@@ -142,15 +143,18 @@ func buildCache(records []*event.Record) (files map[string][]byte, err error) {
 			w.exec(`INSERT INTO contracts VALUES (?, ?, ?, ?, ?)`,
 				c.Subject, e.Position, e.Verb, e.Actor, string(e.Payload))
 		}
-		var state any
+		var state, holder, fence any
 		anomalies := 0
 		if s, ok := fold.State(c.Subject); ok {
 			anomalies = s.Anomalies
 			if s.State != "" {
 				state = s.State
 			}
+			if s.Claim != nil {
+				holder, fence = s.Claim.Holder, fmt.Sprintf("%d", s.Claim.Fence)
+			}
 		}
-		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?)`, c.Subject, state, anomalies)
+		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence)
 	}
 	// The queue mirrors the JSON view's derivation exactly: the
 	// transition table's ready set, oldest first.

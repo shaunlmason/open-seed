@@ -24,6 +24,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -166,6 +167,15 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 	}
 	if *remote != "" {
 		return runLedgerAppendRemote(*remote, *refName, *stateDir, *verb, *subject, *payload, *supported, signer, stdout, stderr)
+	}
+	// Claiming is online-only (plans/os-5dc16a7c.md): exclusivity is a
+	// property granted at admission, and only the push round-trip can
+	// order two rivals — two offline actors claiming the same contract
+	// have not claimed anything. The boundary enforces this regardless;
+	// refusing here keeps the dev tool from drafting doomed work.
+	if table, terr := transition.Default(); terr == nil && table.Exclusive(*verb) {
+		return render(envelope.Fail(envelope.ExitContention, "contention",
+			fmt.Sprintf("%s is an exclusive verb and claiming is online-only — exclusivity is granted at admission, so it needs --remote: two offline actors claiming the same contract have not claimed anything", *verb)), stdout, stderr)
 	}
 	store, failEnv := openStore(*dir)
 	if failEnv != nil {

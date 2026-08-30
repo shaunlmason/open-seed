@@ -227,6 +227,14 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	if errors.As(err, &itr) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
 	}
+	var ce *admit.ContentionError
+	if errors.As(err, &ce) {
+		return envelope.Fail(envelope.ExitContention, "contention", err.Error())
+	}
+	var fe *admit.FenceError
+	if errors.As(err, &fe) {
+		return envelope.Fail(envelope.ExitFenced, "fenced_out", err.Error())
+	}
 	var fail *ledger.Failure
 	if errors.As(err, &fail) {
 		return failureEnvelope(fail)

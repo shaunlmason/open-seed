@@ -11,6 +11,7 @@ package admit
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -41,10 +42,11 @@ func TestLifecycleHappyPathAdmits(t *testing.T) {
 		t.Fatalf("a claim-granted worker must take a ready contract: %v", err)
 	}
 	ctx = step(worker, version.Seed1, "claim.taken", "c-1", `{}`)
-	if err := Check(ctx, draftV(t, worker, version.Seed1, "submission.made", "c-1", `{"branch": "seed/c-1"}`, ctx.Tip)); err != nil {
+	made := `{"branch": "seed/c-1", "fence": "` + activeFence(t, ctx, "c-1") + `"}`
+	if err := Check(ctx, draftV(t, worker, version.Seed1, "submission.made", "c-1", made, ctx.Tip)); err != nil {
 		t.Fatalf("submission must admit: %v", err)
 	}
-	ctx = step(worker, version.Seed1, "submission.made", "c-1", `{"branch": "seed/c-1"}`)
+	ctx = step(worker, version.Seed1, "submission.made", "c-1", made)
 	if err := Check(ctx, draftV(t, signer, version.Seed1, "merge.observed", "c-1", `{"pr": "1"}`, ctx.Tip)); err != nil {
 		t.Fatalf("the done observation must admit: %v", err)
 	}
@@ -90,28 +92,29 @@ func TestLifecycleDeliberateExits(t *testing.T) {
 	ctx = step(signer, version.Seed1, "claim.taken", "c-1", `{}`)
 
 	// Cancelling in_progress work is structurally impossible; the four
-	// deliberate exits all admit from here.
-	err := Check(ctx, draftV(t, signer, version.Seed1, "contract.cancelled", "c-1", `{}`, ctx.Tip))
+	// deliberate exits all admit from here (each citing the fence).
+	err := Check(ctx, draftV(t, signer, version.Seed1, "contract.cancelled", "c-1", fenced(t, ctx, "c-1"), ctx.Tip))
 	var inv *transition.InvalidTransitionError
 	if !errors.As(err, &inv) || inv.From != "in_progress" {
 		t.Fatalf("cancelling in_progress must be impossible, got %v", err)
 	}
 	for _, verb := range []string{"claim.released", "claim.parked", "claim.reaped", "submission.made"} {
-		if err := Check(ctx, draftV(t, signer, version.Seed1, verb, "c-1", `{}`, ctx.Tip)); err != nil {
+		if err := Check(ctx, draftV(t, signer, version.Seed1, verb, "c-1", fenced(t, ctx, "c-1"), ctx.Tip)); err != nil {
 			t.Fatalf("%s must admit from in_progress: %v", verb, err)
 		}
 	}
 	// And each lands where the table says: park, unblock, re-take,
-	// release, re-take, reap — folded through real appends.
-	ctx = step(signer, version.Seed1, "claim.parked", "c-1", `{}`)
+	// release, re-take, reap — folded through real appends, every
+	// exit citing the fence of the claim it ends.
+	ctx = step(signer, version.Seed1, "claim.parked", "c-1", fenced(t, ctx, "c-1"))
 	if err := Check(ctx, draftV(t, signer, version.Seed1, "claim.taken", "c-1", `{}`, ctx.Tip)); err == nil {
 		t.Fatal("a parked (blocked) contract is not claimable")
 	}
 	ctx = step(signer, version.Seed1, "contract.unblocked", "c-1", `{}`)
 	ctx = step(signer, version.Seed1, "claim.taken", "c-1", `{}`)
-	ctx = step(signer, version.Seed1, "claim.released", "c-1", `{}`)
+	ctx = step(signer, version.Seed1, "claim.released", "c-1", fenced(t, ctx, "c-1"))
 	ctx = step(signer, version.Seed1, "claim.taken", "c-1", `{}`)
-	ctx = step(signer, version.Seed1, "claim.reaped", "c-1", `{}`)
+	ctx = step(signer, version.Seed1, "claim.reaped", "c-1", fenced(t, ctx, "c-1"))
 	if err := Check(ctx, draftV(t, signer, version.Seed1, "claim.taken", "c-1", `{}`, ctx.Tip)); err != nil {
 		t.Fatalf("released and reaped contracts return to ready and re-claim: %v", err)
 	}
@@ -184,14 +187,14 @@ func TestLifecycleCapabilityLanes(t *testing.T) {
 	ctx = step(worker, version.Seed1, "claim.taken", "c-1", `{}`)
 
 	// Reaping is dispatch's; the worker lane cannot reap itself.
-	if err := Check(ctx, draftV(t, worker, version.Seed1, "claim.reaped", "c-1", `{}`, ctx.Tip)); !errors.As(err, &oog) {
+	if err := Check(ctx, draftV(t, worker, version.Seed1, "claim.reaped", "c-1", fenced(t, ctx, "c-1"), ctx.Tip)); !errors.As(err, &oog) {
 		t.Fatalf("the claim lane cannot reap, got %v", err)
 	}
-	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "claim.reaped", "c-1", `{}`, ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "claim.reaped", "c-1", fenced(t, ctx, "c-1"), ctx.Tip)); err != nil {
 		t.Fatalf("dispatch reaps: %v", err)
 	}
 	// Cancellation and the done observation are operator-only in v0.
-	ctx = step(maintainer, version.Seed1, "claim.reaped", "c-1", `{}`)
+	ctx = step(maintainer, version.Seed1, "claim.reaped", "c-1", fenced(t, ctx, "c-1"))
 	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "contract.cancelled", "c-1", `{}`, ctx.Tip)); !errors.As(err, &oog) {
 		t.Fatalf("dispatch cannot cancel, got %v", err)
 	}
@@ -234,4 +237,21 @@ func TestLifecycleTolerantFold(t *testing.T) {
 	if err := Check(ctx, draftV(t, signer, version.Seed1, "contract.specified", "c-1", specBody, ctx.Tip)); err != nil {
 		t.Fatalf("admission follows the fold, not the anomalous history: %v", err)
 	}
+}
+
+// activeFence reads the live fence for a subject from the context's
+// fold; the tests never mint positions by hand.
+func activeFence(t *testing.T, ctx *Context, subject string) string {
+	t.Helper()
+	s, ok := ctx.Lifecycle.State(subject)
+	if !ok || s.Claim == nil {
+		t.Fatalf("no active claim on %s", subject)
+	}
+	return fmt.Sprintf("%d", s.Claim.Fence)
+}
+
+// fenced is a minimal payload citing the subject's active fence.
+func fenced(t *testing.T, ctx *Context, subject string) string {
+	t.Helper()
+	return `{"fence": "` + activeFence(t, ctx, subject) + `"}`
 }

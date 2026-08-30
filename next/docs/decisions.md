@@ -323,3 +323,25 @@ here. Newest last.
   bump exercising Phase 4's version-in-identity machinery in anger.
   The hook's per-record context now carries the fold, so the shared
   rule set enforces at the boundary too. (PR #122)
+- 2026-08-30 — Claims are fenced, structured, and online-only
+  (plans/os-5dc16a7c.md): the fence is the admitted claim.taken
+  position — derived, never asserted — cited as {"fence": "<n>"}; on
+  a held subject the four deliberate exits must cite it, so must
+  free events from the holder or any prior claimant (a reaped worker
+  cannot demote itself to observer, the #114 review binding), any
+  citation present must match the active fence whoever signs, and
+  outside a claim window citing a fence refuses because fences die
+  with their windows. The fence rule slots between grant and
+  lifecycle per the charter's check order, so out_of_grant beats
+  fenced_out beats invalid_transition, and citations are required
+  only for the verbs the table allows out of the held state — an
+  illegal jump stays exit 3, never a misleading 6. Contention is the
+  lifecycle rule's structured exit-2 refusal naming holder and fence
+  (a holder double-claiming loses too); the offline exclusive-verb
+  refusal reuses exit 2's own phrase (exclusivity not granted) at
+  the dev-tool seam, with the boundary enforcing regardless. The
+  contracts view carries {holder, fence} while in_progress
+  (Version 3), the cache mirrors it (generation 3), and the race
+  storm drives six concurrent claimants through the full rule set
+  against a real remote: one winner, structured losers, a verified
+  chain. (PR #123)
