@@ -38,6 +38,15 @@ here. Newest last.
   edit: the validator enforces byte-identity (its refusal names the fix), so
   the mirror is a mechanical fan-out of the named integration point, not a
   second v1 surface. (PR #72)
+- 2026-08-30 — Version semantics refined (review finding on #75): every
+  event carries the version *active at its position*; `system.protocol.upgraded`
+  is the last event of the old version; verification is against a declared
+  supported-versions set, so valid older prefixes replay after upgrades;
+  exit 10 covers discipline violations and unsupported versions only. (PR #72)
+- 2026-08-30 — `check-next` output made byte-stable (CI finding on #72):
+  tool output is captured and shown only on failure, because the
+  flavor-test core-gate-independence check diffs `make check` output across
+  runs and go's test timings and toolchain-download notices vary. (PR #72)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under

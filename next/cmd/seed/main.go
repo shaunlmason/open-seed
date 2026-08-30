@@ -28,6 +28,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	switch args[0] {
 	case "version":
+		if len(args) != 1 {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("version takes no arguments, got %q", args[1:])), stdout, stderr)
+		}
 		return render(envelope.OK(map[string]any{
 			"name":     version.Name,
 			"version":  version.Version,

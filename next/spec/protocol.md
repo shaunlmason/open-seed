@@ -10,16 +10,29 @@
 ## Protocol version
 
 - The protocol version is the string `seed/0`.
-- Genesis names it; **every event carries it** in its `v` field.
-- A validator or client meeting an event (or a ledger) whose version differs
-  from the one it implements refuses with the distinct exit code for version
-  mismatch (see `envelope.md`); it never guesses.
+- Genesis names it; **every event carries the version active at its
+  position** in its `v` field.
+- **Active version**: the version a chain runs at, starting as the version
+  genesis names and changing only at a `system.protocol.upgraded` event.
+  The upgrade event is the last event of the old version: it carries the
+  old version in `v` and names the new version in its payload; every later
+  event carries the new version.
+- **Verification across history**: an implementation declares the set of
+  versions it supports. Replay accepts a chain when every event's `v`
+  equals the version active at that event's position and every active
+  version is in the supported set. The version-mismatch refusal (exit 10,
+  see `envelope.md`) is reserved for an event whose `v` differs from the
+  active-at-position version, or an active version the implementation does
+  not support; a valid older prefix under a supported older version always
+  verifies. It never guesses.
+- **Admission**: proposals must carry the current active version; anything
+  else refuses with the same distinct code.
 - **Bump discipline**: `seed/N` increments on any change to the canonical
   form, the hash or signature algorithms, verb semantics, or validation rules
   that a conformant `seed/N-1` validator would judge differently. A bump
-  lands as a PR editing this file plus a `system.protocol.upgraded` event;
-  admission refuses mixed-version appends. Additive verb-catalog growth that
-  older validators safely refuse as unknown does not bump the version.
+  lands as a PR editing this file plus the `system.protocol.upgraded` event.
+  Additive verb-catalog growth that older validators safely refuse as
+  unknown does not bump the version.
 
 ## Canonical event form
 

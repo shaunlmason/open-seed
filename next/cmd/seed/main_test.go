@@ -69,6 +69,15 @@ func TestUnknownVerbIsUsage(t *testing.T) {
 	}
 }
 
+func TestVersionRefusesExtraOperands(t *testing.T) {
+	for _, extra := range [][]string{{"version", "--bogus"}, {"version", "now"}, {"version", "-v", "x"}} {
+		e, code, raw := drive(t, extra...)
+		if code != 64 || e.Exit != 64 || e.OK || e.Error == nil || e.Error.Code != "usage" {
+			t.Fatalf("version with extra operands %v must refuse with usage/64, got code=%d envelope=%s", extra[1:], code, raw)
+		}
+	}
+}
+
 func TestNoArgsIsUsage(t *testing.T) {
 	e, code, _ := drive(t)
 	if code != 64 || e.Exit != 64 || e.OK || e.Error == nil || e.Error.Code != "usage" {
