@@ -3,13 +3,26 @@
 # multiplies at scale (R12). Wire your project's real lint/test/typecheck
 # here when instantiating the template.
 
-.PHONY: check validate smoke flavor-test
+.PHONY: check validate smoke flavor-test check-next
 
-check: validate
+check: validate check-next
 	@echo "check: add your project's lint/test/typecheck here (keep it fast)"
 
 validate:
 	@sh scripts/validate.sh
+
+# Seed (the successor, next/**): build + vet + gofmt + tests + coverage gate,
+# the one v1 integration point docs/next-build-plan.md §0 names. Self-skips
+# when next/ is absent (template instantiations, flavor tests) so `check`
+# stays green off-tree; requires Go where next/ exists.
+check-next:
+	@if [ ! -d next ]; then echo "check-next: next/ absent — skipping (template instantiation)"; exit 0; fi
+	@command -v go >/dev/null 2>&1 || { echo "check-next: next/ exists but Go is not installed — install Go (next/go.mod pins the toolchain)"; exit 1; }
+	@cd next && badfmt="$$(gofmt -l .)" && { test -z "$$badfmt" || { echo "check-next: gofmt failures:"; echo "$$badfmt"; exit 1; }; }
+	@cd next && go vet ./...
+	@cd next && go build ./...
+	@cd next && go test ./... -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/...
+	@cd next && go tool cover -func=coverage.out | awk '/^total:/ { cov=$$3; sub(/%/,"",cov); if (cov+0.0 < 90.0) { printf "check-next: coverage %s%% is below the 90%% gate (docs/next-build-plan.md §0)\n", cov; exit 1 } printf "check-next: coverage %s%% (gate 90%%)\n", cov }'
 
 # End-to-end loop smoke in a temp instantiation (no model, no secrets).
 smoke:

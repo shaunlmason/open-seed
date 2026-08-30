@@ -1,0 +1,7 @@
+# Incubation build output: the binary is built here, never installed on PATH
+# (docs/next-build-plan.md section 0), and never committed.
+bin/
+# Observation-channel scratch (fixed default: per-executor files, lossy).
+var/
+# Coverage artifacts from make check-next.
+coverage.out
