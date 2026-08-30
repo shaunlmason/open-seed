@@ -219,3 +219,12 @@ Fresh sessions read this file instead of rediscovering.
   implementation. Before implementing any plan, diff the merged copy
   against the amended branch; a stranded amendment re-opens as a fresh
   plan PR and the card re-parks on it.
+- File-mode enforcement drills need an unprivileged runner: uid 0
+  bypasses permission checks (CAP_DAC_OVERRIDE), so refusal
+  assertions gate on os.Geteuid() != 0 and the dev-container root run
+  skips them while CI exercises them. Emulate CI before pushing with
+  a compiled test binary under setpriv --reuid=nobody; that run, not
+  the root run, is the one that catches t.TempDir cleanup failing on
+  locked trees (testing's own RemoveAll cannot descend 0555 dirs, so
+  every test publishing locked output must register an unlock
+  t.Cleanup, which LIFO-runs before the framework's).
