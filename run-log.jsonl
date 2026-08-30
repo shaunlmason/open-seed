@@ -517,3 +517,4 @@
 {"actor":"shaunlmason","data":{"title":"next: falsifiable-plan lint and plan-gating (build plan 5.5)"},"task":"os-16c1d142","ts":"2026-08-30T21:57:48Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-16c1d142","ts":"2026-08-30T21:57:54Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T22:57:57Z"},"task":"os-16c1d142","ts":"2026-08-30T21:57:57Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-16c1d142","ts":"2026-08-30T21:59:44Z","verb":"transition"}
