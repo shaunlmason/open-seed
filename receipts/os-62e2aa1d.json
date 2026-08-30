@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "task": "os-62e2aa1d",
+  "merge_base": "3575a5637cf67eadc7ace84a0f3144eb3bc1a520",
+  "head": "3139e2a12f66515d1d3605d0c05cf08564eafe9c",
+  "plan_path": "plans/os-62e2aa1d.md",
+  "plan_sha256": "a1e0683fb6ae9eb4cc73c3778ff0ac9bd66a6c71644703feb9d1aa38bcdd4b02",
+  "diff_files": [
+    "next/docs/decisions.md",
+    "next/internal/genesis/genesis_test.go",
+    "next/internal/gitref/gitref.go",
+    "next/internal/gitref/gitref_test.go",
+    "next/internal/gitref/loop.go"
+  ],
+  "diff_sha256": "d1a56d729e71558eb12c534f77b1e9235eae8f37c749a0cd97fa0cdd9d67fab8",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/gitref/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
