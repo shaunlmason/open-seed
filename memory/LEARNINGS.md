@@ -228,3 +228,12 @@ Fresh sessions read this file instead of rediscovering.
   locked trees (testing's own RemoveAll cannot descend 0555 dirs, so
   every test publishing locked output must register an unlock
   t.Cleanup, which LIFO-runs before the framework's).
+- 2026-08-30 — The unprivileged emulation must cover every package
+  that publishes locked output, cmd/seed included, not only the
+  engine package: the #118/#119 restack went red in CI on a
+  cmd-level refusal drill whose locked proj2/proj3 layouts lacked
+  unlock cleanups, while the local root run and the engine-only
+  nobody-run both passed. Before pushing mode-touching tests, build
+  and run each affected package's test binary under
+  setpriv --reuid=nobody; a green root run proves nothing about
+  cleanup under 0555.
