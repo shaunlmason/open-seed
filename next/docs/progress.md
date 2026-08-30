@@ -74,29 +74,43 @@ os-beac85e1's task PR (an administrative card, not a Phase 2 item).
   + exclusion-based rule selection per review; card closed)
 - 2.4 posture declaration + `seed doctor` — os-3c72f93f — plan PR #95
   (merged, amended: exit 13 `posture_invalid` allocation per review),
-  task PR #98 — review
+  task PR #98 — **done** (merged; exit 66 `unreadable` for read
+  failures + valid-postures wording per review; card closed)
 - 2.5 admission drills (raw-git adversary; kill-and-replace) —
-  os-028dda91 — plan PR #96 (in review, amended: fresh-clone
-  kill-and-replace per review); implementation staged
+  os-028dda91 — plan PR #96 (merged, amended: fresh-clone
+  kill-and-replace per review), task PR #99 — review
 
 ## Phase 3 — Identity and grants (docs/next-build-plan.md Phase 3; deps: 2)
 
 - 3.1 actor events + keyring projection — os-52a2d688 — plan PR #97
-  (in review, amended: root-liveness guard + seed/1 activation boundary
+  (merged, amended: root-liveness guard + seed/1 activation boundary
   per review); implementation staged
 - 3.2 admission checks grants per verb — os-3979d48b — backlog
 - 3.3 key rotation/revocation drill — os-d1f35a8c — backlog
 
+**Phase 2 exit (charter III.B subset): met.** The validator is the
+guarded ref's sole writer under enforced posture (#94: invalid-stream,
+rewrite, truncation, force-update, and deletion refusals, tree shape
+included); statelessness is drilled by kill-and-replace (#99: a fresh
+host rebuilt from a bare clone makes identical decisions and the chain
+verifies from genesis); the posture declaration prints the cooperative
+consequence verbatim (#98); the raw-git adversary drill runs per posture
+with the cooperative consequence made observable (#99); both postures
+are selectable in fixtures through the shared declaration (#99).
+Capability rules slot in at Phase 3, fences at Phase 5, reservations at
+Phase 7, as added rules on the shared set.
+
 ## Frontier
 
-Phase 0, Phase 1, and 2.1 through 2.3 are done and closed. 2.4 (task PR
-#98) is in review against its merged plan #95. 2.5's plan (#96) and
-3.1's plan (#97) are in review with implementations staged on their
-worktrees; 3.2 and 3.3 cards are filed behind 3.1. **Next action: as
-#96/#97 merge, ship their task PRs (2.5's carries the Phase 2 exit
-record with the drill evidence); as task PRs merge, close their cards
-(os-3c72f93f, os-028dda91, os-52a2d688). Phase 2 exit needs the III.B
-subset: sole-writer enforced posture, statelessness (kill-and-replace),
-posture declaration with the cooperative consequence printed verbatim,
-and the direct-push refusal drill.** If an open task PR is red or carries
-review feedback, drive it green first — nothing merges out of order.
+Phase 0, Phase 1, and 2.1 through 2.4 are done and closed. 2.5 (task PR
+#99) is in review against its merged plan and carries the Phase 2 exit
+record above. 3.1's plan (#97) is merged with its implementation
+staged — its task PR ships next; 3.2 and 3.3 cards are filed behind it.
+**Next action: as #99 merges, close os-028dda91 — Phase 2 then
+completes; ship 3.1's task PR (keyring projection, seed/1 boundary),
+then plan 3.2 (grants per verb). Phase 2 exit needs
+the III.B subset: sole-writer enforced posture, statelessness
+(kill-and-replace), posture declaration with the cooperative consequence
+printed verbatim, and the direct-push refusal drill — all cited above.**
+If an open task PR is red or carries review feedback, drive it green
+first — nothing merges out of order.
