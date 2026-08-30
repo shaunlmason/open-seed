@@ -463,3 +463,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: projection write-boundary lint wired into check-next (Phase 4.4)"},"task":"os-8d5e9c45","ts":"2026-08-30T13:13:30Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-4d5cacff","ts":"2026-08-30T13:13:43Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T14:13:46Z"},"task":"os-4d5cacff","ts":"2026-08-30T13:13:46Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-4d5cacff","ts":"2026-08-30T13:15:24Z","verb":"transition"}
