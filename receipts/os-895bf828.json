@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "task": "os-895bf828",
+  "merge_base": "db7d092e5786155c375992f3140ca0a086340893",
+  "head": "f768e5d38a4a67c4068c0a2fdb15d788bc6ed7c5",
+  "plan_path": "plans/os-895bf828.md",
+  "plan_sha256": "b51fa3ac5c2f9bcecaf6e551b27f74e6ad01e1a79030607a03b291b9bf9e981e",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/remote.go",
+    "next/cmd/seed/remote_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/envelope/envelope.go",
+    "next/internal/envelope/envelope_test.go",
+    "next/internal/gitref/gitref.go",
+    "next/internal/gitref/gitref_test.go",
+    "next/internal/gitref/loop.go",
+    "next/spec/envelope.md"
+  ],
+  "diff_sha256": "161b52a56a489ad5c84a2b77a692cab54ca12d2e997de6a7159ee4ed87b114ec",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
