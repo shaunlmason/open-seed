@@ -42,10 +42,16 @@ func (f *Failure) Error() string {
 	return fmt.Sprintf("position %d: %s: %s", f.Position, f.Reason, f.Detail)
 }
 
-// Report is a successful verification's summary.
+// Report is a successful verification's summary. ActiveVersion is the
+// protocol version active after the last record: what the next appended
+// event must carry (next/spec/protocol.md, "Protocol version"). It can
+// name a version outside the verifier's supported set when the chain ends
+// with an upgrade event; history verifies, and appending is then the new
+// version's business.
 type Report struct {
-	Count int
-	Tip   string
+	Count         int
+	Tip           string
+	ActiveVersion string
 }
 
 // VerifyOption configures a verification replay.
@@ -180,5 +186,5 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 		return nil, &Failure{Position: count, Reason: ReasonHeadWrong,
 			Detail: fmt.Sprintf("HEAD claims tip %.12s count %d, stream has tip %.12s count %d", head.Tip, head.Count, tip, count)}
 	}
-	return &Report{Count: count, Tip: tip}, nil
+	return &Report{Count: count, Tip: tip, ActiveVersion: active}, nil
 }

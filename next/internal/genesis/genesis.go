@@ -10,6 +10,7 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -150,4 +151,35 @@ func Init(store *ledger.Store, signer ed25519.PrivateKey, extraOperators []ed255
 		return nil, err
 	}
 	return rec, nil
+}
+
+// ErrNoGenesis names the refusal for chains that do not begin with a
+// system.genesis event.
+var ErrNoGenesis = errors.New("chain does not start with a system.genesis event")
+
+// Bootstrap reads the chain's first record, validates it as genesis, and
+// returns the governance-root resolver plus the parsed payload: the trust
+// bootstrap every ledger-aware CLI verb starts from.
+func Bootstrap(store *ledger.Store) (ledger.Resolver, *Payload, error) {
+	var first *event.Record
+	stop := errors.New("stop")
+	err := store.Records(func(pos int, rec *event.Record) error {
+		first = rec
+		return stop
+	})
+	if err != nil && !errors.Is(err, stop) {
+		return nil, nil, err
+	}
+	if first == nil {
+		return nil, nil, ErrNoGenesis
+	}
+	payload, err := Parse(first)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %v", ErrNoGenesis, err)
+	}
+	resolve, err := payload.Resolver(first.Event.Actor)
+	if err != nil {
+		return nil, nil, err
+	}
+	return resolve, payload, nil
 }
