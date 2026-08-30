@@ -30,13 +30,25 @@ on 5.1's branch once it exists, after the Phase 4 stack merges.
   state is `in_progress` — (a) every **lifecycle** event (the four
   deliberate exits, and `claim.reaped` from any authorized signer,
   which must name the claim it kills); (b) every **free-stream**
-  event signed by the claim holder (`progress.milestone` and kin:
-  "every subsequent event on that contract from that claimant cites
-  it"). Free events from other signers are observations and pass
-  without a fence. A missing or stale citation refuses **exit 6
+  event signed by the current holder **or by any prior claimant of
+  this subject** ("every subsequent event on that contract from that
+  claimant cites it" binds the claimant whose claim it was, not only
+  whoever holds now — a reaped or released worker's delayed
+  `progress.milestone` must not slip through as an observation and
+  contaminate progress or later expiry/wedge math; review finding on
+  #114). The fold therefore tracks the subject's claimant history,
+  and any citation present must match the **active** fence, whoever
+  signs. Free events from signers who have never claimed this
+  subject are genuine observations and pass without a fence; a prior
+  claimant citing the active fence is explicitly acknowledging the
+  current claim, which is exactly the assertion a late event needs
+  to make. A missing-but-required or stale citation refuses **exit 6
   `fenced_out`** (the existing v1-continuity row: "stale or missing
   fence (claim token)"), naming the cited fence, the active fence,
-  and the holder.
+  and the holder. Outside `in_progress` there is no active fence:
+  free events carry no citation and none is required — claim-scoped
+  contamination is impossible because nothing outside a claim window
+  carries a fence (stated in the spec).
 - **Contention is its own refusal, not a generic illegal
   transition**: `claim.taken` on an `in_progress` subject refuses
   **exit 2 `contention`** (existing row: "exclusivity not granted")
@@ -72,9 +84,12 @@ on 5.1's branch once it exists, after the Phase 4 stack merges.
    `internal/transition`): the optional `exclusive` row flag;
    self-validation extends (exclusive rows must be verbs of the
    table; `claim.taken` is marked). The fold gains the claim facts:
-   `StateAt` returns (state, anomalies, claim) where claim is
-   `{Holder, Fence}` for `in_progress` subjects (the position of the
-   active `claim.taken` and its signer), cleared by every exit.
+   `StateAt` returns (state, anomalies, claim, priorClaimants) where
+   claim is `{Holder, Fence}` for `in_progress` subjects (the
+   position of the active `claim.taken` and its signer), cleared by
+   every exit, and priorClaimants is the set of fingerprints that
+   have ever held a claim on this subject (the fence rule's
+   who-must-cite input; review finding on #114).
 2. **The fence rule** (`internal/admit`, between `grant` and
    `lifecycle`): derive the subject's claim from the fold; enforce
    the citation matrix above; typed `FenceError{Subject, Cited,
@@ -102,8 +117,15 @@ on 5.1's branch once it exists, after the Phase 4 stack merges.
    - *Fence lifecycle*: claim → cite → exit; a second claim after
      release gets a **new** fence and the old one refuses stale;
      reap cites the fence it kills; a missing fence on the holder's
-     milestone refuses 6; a non-holder's free observation passes
-     without a fence.
+     milestone refuses 6; a never-claimed signer's free observation
+     passes without a fence.
+   - *Prior claimants stay fenced* (review finding on #114): A claims
+     and is reaped, B claims; A's delayed milestone citing A's old
+     fence refuses 6 stale, and A's milestone with no citation
+     refuses 6 missing (a prior claimant cannot demote itself to
+     observer); the same event citing B's active fence admits; after
+     B releases (no active claim), A's fence-free milestone passes as
+     a plain observation, pinning the claim-scoped boundary.
    - *Contention*: `claim.taken` on a held contract refuses 2 with
      holder, fence, and since-position in the envelope, at the rule
      set, the hook, and the CLI.
