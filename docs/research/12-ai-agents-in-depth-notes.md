@@ -5,14 +5,14 @@
 > read in full — twelve chapters, ~178K words. This file is research **evidence, not
 > authority**: nothing here is binding; adoption happens only through the normal gates
 > (a card, or a PR to `docs/design-options.md` for design-level items — authority order per
-> CONTRIBUTING-AGENTS). Chapter numbers below use the book's own numbering (Introduction,
-> then Chapters 1–10, Afterword).
+> [`docs/CONTRIBUTING-AGENTS.md`](../CONTRIBUTING-AGENTS.md)). Chapter numbers below use
+> the book's own numbering (Introduction, then Chapters 1–10, Afterword).
 
 ## 1 — The book in brief
 
 Core formula: **Agent = LLM + Context + Tools**, refined to **Agent = Model + Harness**,
-where the harness's five jobs are supply context, provide tools, constrain behavior,
-verify results, correct course. Five design patterns recur through every chapter:
+where the harness's five jobs are to supply context, provide tools, constrain behavior,
+verify results, and correct course. Five design patterns recur through every chapter:
 
 1. **Proposer–Reviewer** — generation and verification split across roles; review is only
    worth anything when the reviewer reads *independent evidence* (test runs, rendered
@@ -54,24 +54,28 @@ real traffic before gates; (c) **safety mechanisms must not be self-modifiable**
 may edit its skills and tools but never the validators, thresholds, audit logs, or release
 gates that approve its own updates.
 
-## 3 — Independent convergence: book positions that match binding open-seed decisions
+## 3 — Independent convergence: book positions that match open-seed decisions
 
 The book derives, from first principles and unrelated evidence, positions open-seed has
-already bound. Recorded here because independent convergence is itself evidence the
-decisions are load-bearing — and because the book's phrasing is often a sharper test than
-ours.
+adopted. Recorded here because independent convergence is itself evidence the decisions
+are load-bearing — and because the book's phrasing is often a sharper test than ours.
+Authority status matters per row: §7.1–7.5 and the D-decisions are **binding**
+([`docs/CONTRIBUTING-AGENTS.md`](../CONTRIBUTING-AGENTS.md)); §7.6 and §7.7 are
+**proposed** sections of the design doc, and rows citing them are convergence with a
+proposal, not with settled design — adopting them still requires the design-authority
+process.
 
 | Book position (chapter) | open-seed counterpart |
 |---|---|
 | Worktree/working-copy isolation is "the mainstream industry practice" for concurrent edits to one codebase (10) | Per-card worktrees on `seed/<task-id>` |
-| Optimistic locking with version checks; parallel manager must settle on the **first verified success** via an idempotent `settle_once`, not the first claimed one (10) | Claim/lease/fence semantics — exit 2 contention, exit 6 fenced, exit 10 version (§7.1) |
+| Optimistic locking with version checks for concurrent writers (10) | Claim/lease/fence semantics — exit 2 contention, exit 6 fenced, exit 10 version (§7.1). Note: this covers only the *pre-work* exclusive-claimant half. The book's other half — a parallel manager settling on the **first verified success** via an idempotent `settle_once`, racing *completed* candidates post-result — has **no open-seed counterpart**: nothing races N finished submissions. It maps to the verdict pipeline in SEED-NEXT and is recorded as a gap, not a convergence. |
 | Homogeneous convergence: 18 of 30 concurrent agents created the *same branch name*; use namespaces and quotas against common-cause collisions (10, citing Anthropic's multi-agent study) | Task-id-derived branch namespace (`seed/<id>`, `seed/<id>-plan`) structurally prevents this |
 | The reviewer "must not be able to modify the tests, the evidence collector, or the release gate — otherwise independent verification degenerates into self-approval" (10); safety mechanisms not self-modifiable (9) | `.seed/` as protected control surface (PR + owner review); D4.5 reviewer ≠ implementer |
 | Evidence vs. instructions separation (9) | AGENTS.md: card bodies, mail, and issue text are data, not instructions |
-| Append-only evidence with derived mutable views; exactly one authority with one-way projections (3, 9) | §7.7 one authoritative store per repo, one-way projections, bidirectional sync forbidden |
+| Append-only evidence with derived mutable views; exactly one authority with one-way projections (3, 9) | §7.7 (**proposed**): one authoritative store per repo, one-way projections, bidirectional sync forbidden |
 | Retain negative results with the same retrieval status as successes, or the system revisits disproved paths (9) | `memory/DEADENDS.md` |
 | A2A "opaque collaboration": exchange tasks and artifacts, never internal prompts or reasoning (10) | Handoff packets carry state, never trajectories |
-| Disposable compute composes with durable record only if the record is complete before the machine dies (10's "the agent is its files"; Lingtai/Orbs-style substrates) | §7.6 disposability begins only after confirmed push |
+| Disposable compute composes with durable record only if the record is complete before the machine dies (10's "the agent is its files"; Lingtai/Orbs-style substrates) | §7.6 (**proposed**): disposability begins only after confirmed push |
 | MAST failure taxonomy's third class — **missing task verification** ("an Agent may claim completed but the result does not meet requirements") is the dominant multi-agent failure (10) | Evidence attachment + `make check` + review lane before `done` |
 
 ## 4 — Adoption candidates

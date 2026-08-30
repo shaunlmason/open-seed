@@ -2,8 +2,8 @@
 
 > **Authority note.** This document is the target architecture for the next major version
 > of open-seed, designed from first principles with everything the research program has
-> taught us (docs/research/01–12, the design decisions of §7.1–§7.7, and the adjacent-tool
-> field). It is **vision and acceptance criteria, not design authority**:
+> taught us (docs/research/01–12, the binding §7.1–7.5 decisions, the proposed §7.6–7.7
+> sections, and the adjacent-tool field). It is **vision and acceptance criteria, not design authority**:
 > [`docs/design-options.md`](docs/design-options.md) remains binding for the current
 > system, and any element here that contradicts settled design becomes real only through
 > a `docs/design-options.md` PR. This document will eventually replace
@@ -183,7 +183,8 @@ system's database writes coordination state.
 **What this deletes.** The entire authoritative-backend apparatus of the current system:
 backend plugins as truth stores, capability negotiation (`atomic_claim`,
 `state_portability`), the emulated-claim variance matrix, and the conformance burden of
-keeping a second brain honest. We built that machinery, then proved through §7.7 that its
+keeping a second brain honest. We built that machinery, then argued through §7.7 (a
+proposed design-doc section) that its
 central feature — an external system as the authority — is one we must never use. In
 SEED-NEXT it does not exist. Integration effort goes into exporters and request adapters,
 which are simple, and stays out of consensus, which is not. The current `fastcards`
@@ -299,7 +300,7 @@ human-scored gold set (§14).
 The employer question is answered natively: SEED-NEXT ships a **supervisor** — a runtime
 loop, not a service — that turns the roster and the queue into scheduled work.
 
-**Pull, never push.** Following §7.6 ●: workers pull work; nothing requires inbound
+**Pull, never push.** Following the proposed §7.6: workers pull work; nothing requires inbound
 connectivity to any executor. The supervisor is itself just a privileged actor running a
 loop: read the queue projection, decide assignments, wake executors, meter costs, reap
 the dead. It can run as a daemon, a cron, a CI schedule, or a human typing commands — the
