@@ -321,3 +321,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:73","to":"ready"},"task":"os-aa146827","ts":"2026-08-30T04:21:58Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T05:22:00Z"},"task":"os-aa146827","ts":"2026-08-30T04:22:00Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-a7222f0d","kind":""},"task":"os-aa146827","ts":"2026-08-30T04:26:27Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-aa146827","ts":"2026-08-30T04:26:30Z","verb":"transition"}
