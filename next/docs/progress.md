@@ -134,33 +134,40 @@ Phase 7, as added rules on the shared set.
   rebuild) — os-4d5cacff — plan PR #105 (merged, amended: immutable
   builds + `CURRENT` pointer publication, roster includes genesis
   roots, overlap refusal, full-tree immutability and stale-`HEAD`
-  fixtures, interrupted-publication drill, per review), task PR
-  #109 — review
+  fixtures, interrupted-publication drill, per review; second round:
+  version-bearing build ids so derivation changes republish, and the
+  superseded build survives one swap for in-flight readers), task PR
+  #109 — **done** (merged; card closed)
 - 4.2 standard projections (contract detail, ready queue, actor view,
-  report skeleton, `seed project current`) — os-fecfb3f7 — plan PR
-  #106 (merged, amended: the ready queue ships registered with
-  `derivation: "none"` v0, per review) — **ready to implement**,
-  stacks on 4.1's branch until #109 merges
+  report skeleton, `seed project current`, exit 15 `stale`) —
+  os-fecfb3f7 — plan PR #106 (merged, amended: the ready queue ships
+  registered with `derivation: "none"` v0, per review), task PR
+  #111 (merged into the stack base during the stack collapse — its
+  diff never reached main) — **re-landing as task PR #117** with the
+  registry-validated consumer verb and the absence-4/damage-5 split
+  per review
 - 4.3 SQLite cache projection + mid-operation deletion drill —
-  os-acc1ac78 — plan PR #108 (merged) — **superseded before
-  implementation**: #108 raced ahead of its review amendment, so the
-  plan on main still reads "semantic identity"; the binding version
-  (the cache is a registered projection, byte-identical like every
-  view) is amendment PR #110. Implement only after #110 merges.
+  os-acc1ac78 — plan PR #108 (merged) + amendment PR #110 (merged:
+  the cache is a registered projection, byte-identical like every
+  view; the stamp table carries exactly the tree stamp's fields) —
+  **ready to implement**, stacked on the Phase 4 stack tip
 - 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
   PR #107 (merged, amended: seam/write-separation lint + locked trees
   `0444`/`0555` with the engine unlock window, deletion via rebuild,
-  per review) — **ready to implement**, after 4.1 (it locks that
-  engine's publication)
+  per review), task PR #112 (merged into the stack base during the
+  stack collapse — its diff never reached main) — **re-landing as
+  task PR #118**, stacked on #117
 
 ## Frontier
 
-Phases 0 through 3 are done and closed. 4.1 is in review (#109); its
-engine (`internal/project`, `seed project rebuild`, the roster
-projection, spec/projections.md) is the seam 4.2/4.3/4.4 build on.
-**Next action: implement 4.2 (os-fecfb3f7, plan merged) on
-`seed/os-fecfb3f7` stacked on 4.1's branch; then 4.4 (os-8d5e9c45,
-plan merged); 4.3 waits for amendment PR #110 to merge. As #109
-merges, close os-4d5cacff and restack the stack onto main.**
+Phases 0 through 3 are done and closed; 4.1 is merged, and every
+Phase 4 and Phase 5 plan (#105–#108, #110, #113–#116) is merged.
+The #111/#112 stack collapse folded their diffs into stack branches
+without reaching main, so the 4.2 and 4.4 implementations are
+**re-landing as #117 ← #118** (same branches rebuilt from main, new
+PRs, per the merged-PR follow-up rule). **Next action: implement 4.3
+(os-acc1ac78) stacked on #118's branch; as #117/#118 merge, close
+os-fecfb3f7/os-8d5e9c45 and restack. 5.1 implements once the Phase 4
+implementations are on main.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
