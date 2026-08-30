@@ -92,6 +92,12 @@ here. Newest last.
   iterator: `ledger.Records` added as the smallest read surface (a plan
   gap, noted for review; genesis Bootstrap and `show` consume it).
   (PR #85)
+- 2026-08-30 — gitref rides the git CLI (the engine's gitx pattern, no
+  module deps); the loop verifies the fetched stream (full replay) before
+  the head cache advances, correctness over speed until Phase 12 budgets;
+  lost races surface as two rejection shapes (stale-parent non-fast-forward
+  and mid-push ref-lock contention), both mapped to the same retry path.
+  (PR #86)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under
