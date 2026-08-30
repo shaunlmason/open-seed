@@ -150,16 +150,18 @@ Phase 7, as added rules on the shared set.
 - 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
   PR #107 (merged, amended: seam/write-separation lint + locked trees
   `0444`/`0555` with the engine unlock window, deletion via rebuild,
-  per review) — **ready to implement**, after 4.1 (it locks that
-  engine's publication)
+  per review), task PR #112 — review (stacked on #111's branch)
 
 ## Frontier
 
-Phases 0 through 3 are done and closed. In review: #109 (4.1, the
-engine) and #111 (4.2, the standard projections, stacked on #109).
-**Next action: implement 4.4 (os-8d5e9c45, plan merged) on
-`seed/os-8d5e9c45` stacked on 4.2's branch; 4.3 waits for amendment
-PR #110 to merge. As #109/#111 merge, close their cards and restack
-the remaining stack onto main.**
+Phases 0 through 3 are done and closed. In review, as a stack on
+main: #109 (4.1, the engine) ← #111 (4.2, the standard projections)
+← #112 (4.4, the write boundary). **Next action: 4.3 implements when
+amendment PR #110 merges (the merged #108 plan is superseded; #110
+carries the binding byte-identical registered-cache version), stacked
+on the tip of the same stack. As each of #109/#111/#112 merges, close
+its card and restack the remainder onto main. Phase 4's exit line
+(byte-identical drill, stamps everywhere, lint in check-next) is
+green in the stack; the cache row completes it in 4.3.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

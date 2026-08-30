@@ -30,6 +30,20 @@ func TestProjectRebuildCLI(t *testing.T) {
 	}
 
 	out := filepath.Join(t.TempDir(), "proj")
+	t.Cleanup(func() {
+		// Published trees are locked (0555 directories); unlock before
+		// testing's own TempDir cleanup so RemoveAll succeeds on an
+		// unprivileged runner.
+		_ = filepath.WalkDir(out, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				_ = os.Chmod(p, 0o755)
+			}
+			return nil
+		})
+	})
 	e, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out)
 	if code != 0 || !e.OK {
 		t.Fatalf("rebuild failed: %d %+v", code, e)

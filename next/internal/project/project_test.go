@@ -149,7 +149,7 @@ func lifecycleChain(t *testing.T) (string, ledger.Resolver, ed25519.PrivateKey, 
 // stamp equals the verification report; growing the chain changes both.
 func TestRebuildByteIdenticalAndStamped(t *testing.T) {
 	dir, resolve, root, _ := lifecycleChain(t)
-	out := filepath.Join(t.TempDir(), "projections")
+	out := lockedTempOut(t, "projections")
 
 	results, err := project.Rebuild(dir, out, project.Default(), resolve)
 	if err != nil || len(results) != 5 {
@@ -173,9 +173,7 @@ func TestRebuildByteIdenticalAndStamped(t *testing.T) {
 	if treeHash(t, out) != first {
 		t.Fatal("a repeat rebuild over the same prefix must be byte-identical")
 	}
-	if err := os.RemoveAll(out); err != nil {
-		t.Fatal(err)
-	}
+	unlockAndRemove(t, out)
 	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +245,7 @@ func TestRebuildByteIdenticalAndStamped(t *testing.T) {
 // never preserve obsolete semantics (review finding on #109).
 func TestSemanticsChangeRepublishes(t *testing.T) {
 	dir, resolve, _, _ := lifecycleChain(t)
-	out := filepath.Join(t.TempDir(), "projections")
+	out := lockedTempOut(t, "projections")
 	probe := func(ver, body string) []project.Projection {
 		return []project.Projection{{Name: "probe", Version: ver, Build: func([]*event.Record) (map[string][]byte, error) {
 			return map[string][]byte{"probe.json": []byte(body + "\n")}, nil
@@ -307,7 +305,7 @@ func TestSemanticsChangeRepublishes(t *testing.T) {
 // full lifecycle standing; a root-only ledger is never empty.
 func TestRosterLifecycleAndRootOnly(t *testing.T) {
 	dir, resolve, root, worker := lifecycleChain(t)
-	out := filepath.Join(t.TempDir(), "p")
+	out := lockedTempOut(t, "p")
 	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +364,7 @@ func TestRosterLifecycleAndRootOnly(t *testing.T) {
 
 	// A root-only, freshly initialized ledger yields the genesis roots.
 	dir2, resolve2, _ := fixtureChain(t, pKey(t, 3))
-	out2 := filepath.Join(t.TempDir(), "p2")
+	out2 := lockedTempOut(t, "p2")
 	if _, err := project.Rebuild(dir2, out2, project.Default(), resolve2); err != nil {
 		t.Fatal(err)
 	}
@@ -397,7 +395,7 @@ func TestRefusalsAndLedgerImmutability(t *testing.T) {
 
 	// Success case: the whole ledger tree is untouched.
 	before := treeHash(t, dir)
-	out := filepath.Join(t.TempDir(), "p")
+	out := lockedTempOut(t, "p")
 	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
 		t.Fatal(err)
 	}
@@ -445,7 +443,7 @@ func TestRefusalsAndLedgerImmutability(t *testing.T) {
 		t.Fatal(err)
 	}
 	staleTree := treeHash(t, dir)
-	out2 := filepath.Join(t.TempDir(), "p2")
+	out2 := lockedTempOut(t, "p2")
 	if _, err := project.Rebuild(dir, out2, project.Default(), resolve); err == nil {
 		t.Fatal("a stale-HEAD ledger must refuse the build")
 	}
@@ -463,7 +461,7 @@ func TestRefusalsAndLedgerImmutability(t *testing.T) {
 // complete tree, pruning the leftovers.
 func TestInterruptedPublication(t *testing.T) {
 	dir, resolve, _, _ := lifecycleChain(t)
-	out := filepath.Join(t.TempDir(), "p")
+	out := lockedTempOut(t, "p")
 	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
 		t.Fatal(err)
 	}
@@ -476,8 +474,14 @@ func TestInterruptedPublication(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Simulate a build killed mid-write: a partial tree beside the
-	// active one, CURRENT still naming the old complete build.
+	// Simulate a build killed mid-write: the engine's window still
+	// open (a crash never reaches the relock), a partial tree beside
+	// the active one, CURRENT still naming the old complete build.
+	for _, d := range []string{out, filepath.Join(out, "roster"), filepath.Join(out, "roster", "builds")} {
+		if err := os.Chmod(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
 	partial := filepath.Join(out, "roster", "builds", "99999999-deadbeef0000.partial")
 	if err := os.MkdirAll(partial, 0o755); err != nil {
 		t.Fatal(err)

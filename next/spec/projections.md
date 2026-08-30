@@ -141,6 +141,63 @@ unpublished projection. The verb takes no `--ledger` flag: it is
 structurally a consumer and cannot touch authoritative state; no
 refusal creates or modifies anything.
 
+## Write boundary
+
+III.D's "no code path writes a projection directly" is enforced in
+three layers; the boundary is **code-path discipline**, which is what
+that row claims — not tamper-proofing against a root-privileged actor.
+
+1. **The vocabulary lint (Lint A).** No non-test Go file outside
+   `next/internal/project` may contain the publication vocabulary
+   literals (exactly `"CURRENT"`, `"projection.json"`, `"builds"`):
+   nobody constructs projection paths by hand. Test files are exempt
+   (drills read the layout to assert it; reading is not a violation).
+2. **Seam/write separation (Lint B).** A non-test file outside the
+   engine that imports the engine must contain no `os` write-family
+   calls (`WriteFile`, `Create`, `OpenFile`, `Rename`, `Remove`,
+   `RemoveAll`, `Mkdir`, `MkdirAll`, `Chmod`, `Truncate`, `Link`,
+   `Symlink`): the file that can obtain a published path (the engine
+   returns real paths by design; views exist to be found and read)
+   is a file that cannot write one. Both lints live in one
+   `go/parser` test in the engine's own suite — a test in the suite
+   is wired into `check-next` by construction — and both are
+   self-checked against planted fixtures, so a detector that fails to
+   fire is itself a test failure.
+3. **Locked publication.** Published trees carry `0444` files and
+   `0555` directories — the projection root **and the output root
+   itself** included, since rename permission lives in the parent and
+   a writable parent would let a whole projection root be renamed
+   away — so rename-over, unlink-plus-recreate, in-tree creation,
+   `CURRENT` repointing, and root renames all fail at the operating
+   system for every non-engine code path, however the path was
+   obtained. The engine opens a write window (`0755`) on exactly the
+   output root, the projection root, and `builds/` for its own swap
+   (after verification, keeping refuse-before-write intact) and every
+   return path relocks, failed publications included; every published
+   mode is set by explicit `chmod`, so the process umask cannot
+   weaken the protocol. Only a killed process leaves an open window —
+   at worst writable directories and an orphan partial, never a
+   broken view — and the next rebuild relocks everything.
+
+**Deletion.** With directories read-only, a bare `rm -rf` needs the
+mode walk first (`chmod 0755` every directory under the output root,
+then remove); `seed project rebuild` runs the same walk itself, so
+the sanctioned one-command recovery is unchanged: rebuild.
+
+**Residual risk, named.** The lints bind single files: deliberately
+splitting seam access and writes across files, or writing through
+`syscall` directly, evades them — the locked trees stop the former,
+root renames included. File modes stop no process that may `chmod`
+(uid 0 bypasses permission checks entirely), so mode-refusal drills
+require an unprivileged runner, which CI provides; and the output
+root's own parent belongs to the invoker's filesystem, so renaming
+the output root itself is outside the engine's ownership — it is
+equivalent to repointing `--out`, and consumers that name the root
+by configuration are unaffected by what modes cannot reach.
+Authority safety does not rest on any of this: projections stay
+non-authoritative, stamped, and rebuildable whatever happens to the
+files.
+
 ## Conformance mapping
 
 - III.D "every read surface is a deterministic function of a ledger
@@ -148,8 +205,10 @@ refusal creates or modifies anything.
   byte-identically with one command" — the engine + `seed project
   rebuild`, drilled in `internal/project`.
 - III.D "no code path writes a projection directly …; the
-  write-boundary lint enforces it" — the lint lands in 4.4; the engine
-  is the only writer this spec admits.
+  write-boundary lint enforces it" — the three layers above ("Write
+  boundary"), implemented as code-path discipline: both lints
+  self-checked and green over the tree, locked publication drilled
+  with refused replacement operations and bytes-unchanged assertions.
 - III.D "Staleness is visible everywhere projected state is shown;
   consumers can demand a minimum position" — every view is stamped and
   `seed project current --min-position` refuses stale builds with exit
