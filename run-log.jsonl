@@ -379,3 +379,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: 2.4 posture declaration + seed doctor"},"task":"os-3c72f93f","ts":"2026-08-30T06:54:20Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: 2.5 admission drills (raw-git adversary; kill-and-replace)"},"task":"os-028dda91","ts":"2026-08-30T06:54:22Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-beac85e1","ts":"2026-08-30T06:54:42Z","verb":"promote"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-3898f232","ts":"2026-08-30T06:54:44Z","verb":"promote"}
