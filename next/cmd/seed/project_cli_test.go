@@ -107,8 +107,9 @@ func TestProjectRebuildCLI(t *testing.T) {
 		t.Fatal("a satisfied minimum position must pass")
 	}
 	if e, code := runEnv(t, "project", "current", "--out", out, "--name", "roster", "--min-position", "4"); code != 15 ||
-		e.Error == nil || !strings.Contains(e.Error.Message, "3") || !strings.Contains(e.Error.Message, "4") {
-		t.Fatalf("a stale stamp must refuse with exit 15 naming both positions, got %d %+v", code, e)
+		e.Error == nil || !strings.Contains(e.Error.Message, "3") || !strings.Contains(e.Error.Message, "4") ||
+		e.Position == nil || *e.Position != "3" {
+		t.Fatalf("a stale stamp must refuse with exit 15 naming both positions and stamping the envelope position, got %d %+v", code, e)
 	}
 	if cur2.Result["version"] != "1" {
 		t.Fatalf("current must report the derivation version: %+v", cur2.Result)
@@ -135,6 +136,53 @@ func TestProjectRebuildCLI(t *testing.T) {
 	}
 	if e2, code := runEnv(t, "project", "current", "--out", broken, "--name", "roster"); code != 5 || e2.Error == nil {
 		t.Fatalf("an empty CURRENT pointer is a damaged layout and must refuse unavailable, got %d %+v", code, e2)
+	}
+	// A layout that was published and then lost its CURRENT pointer is
+	// the same damage, not absence (review finding on #117): the
+	// projection directory exists, so the missing pointer refuses
+	// unavailable, never not_found. The chmods are no-ops until the
+	// locked publication of 4.4 arrives and then open the lock.
+	out2 := filepath.Join(t.TempDir(), "proj2")
+	if _, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out2); code != 0 {
+		t.Fatal("second rebuild failed")
+	}
+	if err := os.Chmod(filepath.Join(out2, "roster"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(out2, "roster", "CURRENT")); err != nil {
+		t.Fatal(err)
+	}
+	if e3, code := runEnv(t, "project", "current", "--out", out2, "--name", "roster"); code != 5 || e3.Error == nil {
+		t.Fatalf("a deleted CURRENT under an existing layout is damage and must refuse unavailable, got %d %+v", code, e3)
+	}
+	// A stamp that parses but misses its fields is damage the same way
+	// (review finding on #117): an empty object must never read as a
+	// fresh published build, --min-position 0 included.
+	out3 := filepath.Join(t.TempDir(), "proj3")
+	if _, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out3); code != 0 {
+		t.Fatal("third rebuild failed")
+	}
+	cur3, err := os.ReadFile(filepath.Join(out3, "roster", "CURRENT"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	build3 := filepath.Join(out3, "roster", "builds", strings.TrimSpace(string(cur3)))
+	if err := os.Chmod(build3, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Join(build3, "projection.json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(build3, "projection.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		{"project", "current", "--out", out3, "--name", "roster"},
+		{"project", "current", "--out", out3, "--name", "roster", "--min-position", "0"},
+	} {
+		if e4, code := runEnv(t, args...); code != 5 || e4.Error == nil {
+			t.Fatalf("an incomplete stamp is a damaged layout and must refuse unavailable, got %d %+v", code, e4)
+		}
 	}
 	if _, code := runEnv(t, "project", "current", "--out", out); code != 64 {
 		t.Fatal("a missing --name is a usage error")
