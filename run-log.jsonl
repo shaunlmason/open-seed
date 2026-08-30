@@ -307,3 +307,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 1.4 — push-race append loop against a git remote"},"task":"os-62e2aa1d","ts":"2026-08-30T03:35:39Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 1.5 — halt semantics in the validation rule set"},"task":"os-bce3fb98","ts":"2026-08-30T03:35:41Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 1.6 — payload data classification lint + hostile corpus"},"task":"os-d6f81ec6","ts":"2026-08-30T03:35:44Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 1.7 — CLI: seed ledger verify / append (dev tool) / show"},"task":"os-89412090","ts":"2026-08-30T03:35:46Z","verb":"create"}
