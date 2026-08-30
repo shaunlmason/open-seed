@@ -4,6 +4,8 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -148,5 +150,19 @@ func TestResolverRefusals(t *testing.T) {
 	swapped.GovernanceRoot = []RootKey{{Fingerprint: strings.Repeat("a", 64), PublicKey: p.GovernanceRoot[0].PublicKey}}
 	if _, err := swapped.Resolver(rec.Event.Actor); err == nil {
 		t.Fatal("a fingerprint that does not match its key must refuse")
+	}
+}
+
+func TestInitSurfacesUnreadableStore(t *testing.T) {
+	dir := t.TempDir()
+	store, err := ledger.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "segments", "2026-09-01.jsonl"), []byte("garbage\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Init(store, key(t, 1), nil, now(t)); err == nil {
+		t.Fatal("init over an unparseable stream must error")
 	}
 }
