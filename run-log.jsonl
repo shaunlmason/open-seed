@@ -504,3 +504,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: acceptance-spec field + spec-gate flag (Phase 5.4)"},"task":"os-73c00a50","ts":"2026-08-30T20:28:05Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-73c00a50","ts":"2026-08-30T20:28:13Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T21:28:16Z"},"task":"os-73c00a50","ts":"2026-08-30T20:28:16Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-73c00a50","ts":"2026-08-30T20:29:33Z","verb":"transition"}
