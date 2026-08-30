@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -131,7 +132,7 @@ type Result struct {
 // verified records, and publish each tree. The build id derives from
 // the stamp, so identical prefixes reproduce identical trees, CURRENT
 // included: deleting the output loses nothing.
-func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.Resolver, vopts ...ledger.VerifyOption) ([]Result, error) {
+func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.Resolver, vopts ...ledger.VerifyOption) (results []Result, err error) {
 	if err := CheckOverlap(ledgerDir, outDir); err != nil {
 		return nil, err
 	}
@@ -147,7 +148,21 @@ func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.
 	if err != nil {
 		return nil, err
 	}
-	results := make([]Result, 0, len(projections))
+	// The output root itself locks between rebuilds: rename permission
+	// on a projection root lives in its parent, so a writable parent
+	// would let a whole root be renamed away however the path was
+	// obtained (review finding on #112). The window opens only after
+	// verification, keeping refuse-before-write intact, and every
+	// return path relocks.
+	if err := openDirs(outDir); err != nil {
+		return nil, err
+	}
+	defer func() {
+		if cerr := os.Chmod(outDir, 0o555); err == nil && cerr != nil {
+			err = cerr
+		}
+	}()
+	results = make([]Result, 0, len(projections))
 	for _, p := range projections {
 		ver := p.Version
 		if ver == "" {
@@ -179,14 +194,125 @@ func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.
 	return results, nil
 }
 
-// publish writes one immutable, complete build tree and only then
-// swaps CURRENT to it; superseded builds and stray partials prune
-// after the swap. A reader always resolves CURRENT to a complete tree;
-// a killed build leaves at worst an orphan directory.
-func publish(root, buildID string, files map[string][]byte) error {
+// Published trees are locked (plans/os-8d5e9c45.md): files 0444 and
+// directories 0555, the projection root included, so rename-over,
+// unlink-plus-recreate, and new-entry creation fail at the operating
+// system for every non-engine code path, however a published path was
+// obtained. The engine opens a write window (chmod 0755) on exactly
+// the two directories its swap must touch and closes it after; a
+// crash inside the window leaves at worst writable directories and an
+// orphan partial, never a broken view, and the next rebuild relocks
+// everything.
+
+// openDirs makes directories writable for the engine's own swap,
+// creating them on first publication. Modes are set by explicit chmod
+// in every case: MkdirAll's mode argument is weakened by the process
+// umask, and the lock protocol must not be (review finding on #112).
+func openDirs(dirs ...string) error {
+	for _, dir := range dirs {
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			if err := os.Chmod(dir, 0o755); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+		if err := os.Chmod(dir, 0o755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// closeWindow relocks the swap directories.
+func closeWindow(root, builds string) error {
+	if err := os.Chmod(builds, 0o555); err != nil {
+		return err
+	}
+	return os.Chmod(root, 0o555)
+}
+
+// lockTree locks a completed build tree: files 0444, directories 0555,
+// children before parents.
+func lockTree(path string) error {
+	var dirs []string
+	err := filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			dirs = append(dirs, p)
+			return nil
+		}
+		return os.Chmod(p, 0o444)
+	})
+	if err != nil {
+		return err
+	}
+	for i := len(dirs) - 1; i >= 0; i-- {
+		if err := os.Chmod(dirs[i], 0o555); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// unlockDirs is the mode walk that makes a locked tree removable: every
+// directory back to 0755 (files need no unlock; unlinking needs only
+// parent-directory write). It is also the documented recovery walk for
+// deleting projection output by hand; `seed project rebuild` runs it
+// itself.
+func unlockDirs(path string) error {
+	return filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return os.Chmod(p, 0o755)
+		}
+		return nil
+	})
+}
+
+// removeLocked removes a possibly locked tree or file.
+func removeLocked(path string) error {
+	info, err := os.Lstat(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		if err := unlockDirs(path); err != nil {
+			return err
+		}
+	}
+	return os.RemoveAll(path)
+}
+
+// publish writes one immutable, complete, locked build tree and only
+// then swaps CURRENT to it; superseded builds and stray partials prune
+// after the swap. A reader always resolves CURRENT to a complete tree.
+// Every return path after the window opens relocks it, a failed
+// publication included (review finding on #112); only a killed process
+// leaves an open window and at worst an orphan partial, and the next
+// rebuild relocks.
+func publish(root, buildID string, files map[string][]byte) (err error) {
 	buildRoot := filepath.Join(root, buildsDir, buildID)
+	builds := filepath.Join(root, buildsDir)
+	if err := openDirs(root, builds); err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := closeWindow(root, builds); err == nil {
+			err = cerr
+		}
+	}()
 	tmp := buildRoot + ".partial"
-	if err := os.RemoveAll(tmp); err != nil {
+	if err := removeLocked(tmp); err != nil {
 		return err
 	}
 	names := make([]string, 0, len(files))
@@ -206,11 +332,14 @@ func publish(root, buildID string, files map[string][]byte) error {
 			return err
 		}
 	}
+	if err := lockTree(tmp); err != nil {
+		return err
+	}
 	if _, err := os.Stat(buildRoot); err == nil {
 		// The same prefix rebuilt: determinism makes the existing tree
 		// byte-identical to the one just built, and a reader may be on
 		// it, so keep it and discard the duplicate.
-		if err := os.RemoveAll(tmp); err != nil {
+		if err := removeLocked(tmp); err != nil {
 			return err
 		}
 	} else if err := os.Rename(tmp, buildRoot); err != nil {
@@ -227,19 +356,27 @@ func publish(root, buildID string, files map[string][]byte) error {
 		prev = strings.TrimSpace(string(b))
 	}
 	tmpCur := cur + ".tmp"
-	if err := os.WriteFile(tmpCur, []byte(buildID+"\n"), 0o644); err != nil {
+	if err := os.Remove(tmpCur); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if err := os.WriteFile(tmpCur, []byte(buildID+"\n"), 0o444); err != nil {
+		return err
+	}
+	// WriteFile's mode is weakened by the process umask; the published
+	// pointer must be exactly 0444 (review finding on #112).
+	if err := os.Chmod(tmpCur, 0o444); err != nil {
 		return err
 	}
 	if err := os.Rename(tmpCur, cur); err != nil {
 		return err
 	}
-	entries, err := os.ReadDir(filepath.Join(root, buildsDir))
+	entries, err := os.ReadDir(builds)
 	if err != nil {
 		return err
 	}
 	for _, e := range entries {
 		if e.Name() != buildID && e.Name() != prev {
-			if err := os.RemoveAll(filepath.Join(root, buildsDir, e.Name())); err != nil {
+			if err := removeLocked(filepath.Join(builds, e.Name())); err != nil {
 				return err
 			}
 		}

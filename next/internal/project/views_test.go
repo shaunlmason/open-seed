@@ -38,7 +38,7 @@ func readView(t *testing.T, out, name, file string, into any) {
 
 func rebuildAll(t *testing.T, dir string, resolve ledger.Resolver) string {
 	t.Helper()
-	out := filepath.Join(t.TempDir(), "projections")
+	out := lockedTempOut(t, "projections")
 	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
 		t.Fatal(err)
 	}

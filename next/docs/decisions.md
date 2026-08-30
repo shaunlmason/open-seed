@@ -251,3 +251,31 @@ here. Newest last.
   stamps its envelope position with the observed count, per the
   envelope contract that every response computed at a verified
   position carries it structurally. (PR #117)
+- 2026-08-30 — Write-boundary enforcement shape (plans/os-8d5e9c45.md,
+  amended per #107 review): three layers — the vocabulary lint, the
+  seam/write-separation lint (a non-test file importing the engine
+  makes no os write-family calls; per-file because cmd/seed's importer
+  and writers are legitimately different files of one package), and
+  locked publication (0444 files, 0555 directories including the
+  projection root, engine-only 0755 window around the swap). Both
+  lints are one go/parser test in the engine suite, self-checked on
+  planted fixtures, which is what "wired into check-next" means: the
+  suite is the gate. Deletion becomes mode-walk-then-remove and the
+  sanctioned recovery stays `seed project rebuild`, which runs the
+  walk itself. Residual risks named in the spec instead of papered
+  over: cross-file splits (closed by modes), direct syscall, and
+  chmod-capable owners (uid 0 bypasses modes entirely, so the
+  OS-refusal drills gate on an unprivileged runner; CI provides one).
+  (PR #112)
+- 2026-08-30 — Boundary hardening round two (review findings on #112):
+  the output root itself locks 0555 between rebuilds because rename
+  permission lives in the parent (a writable parent let a whole
+  projection root be renamed away, evading both per-file lints); the
+  window opens only after verification so refuse-before-write holds,
+  and every return path relocks via defer, failed publications
+  included (only a killed process leaves a window open); every
+  published mode is set by explicit chmod so the process umask cannot
+  weaken the protocol (WriteFile's mode argument is umask-masked).
+  Renaming the output root from ITS parent stays outside the engine's
+  ownership, equivalent to repointing --out, and is named residual in
+  the spec. (PR #112)
