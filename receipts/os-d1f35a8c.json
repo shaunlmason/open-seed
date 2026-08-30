@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "task": "os-d1f35a8c",
+  "merge_base": "286541a95f2fbcc367edf540c68518caa5f07c92",
+  "head": "4094e2eda2a6f071c3b1a2ddcb01042cf7ac115e",
+  "plan_path": "plans/os-d1f35a8c.md",
+  "plan_sha256": "7d2415d13cb962b434425991dfd08d0b4c74911e857eb10b6b20ef49ad828dba",
+  "diff_files": [
+    "next/cmd/seed-admit/rotation_test.go",
+    "next/cmd/seed/actors_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md"
+  ],
+  "diff_sha256": "1bb71840ba1b3859c37217398fca70a8f72dbe80774087cbcfe988aa992de2cd",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed-admit/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
