@@ -129,13 +129,21 @@ envelope** stamps the tip's zero-based **index** (count-1), the
 CLI-wide tip convention. Consumers demanding freshness pass
 `--min-position`: a stamp below the demand refuses with exit 15
 `stale`, naming the stamped and demanded positions — charter III.D's
-"consumers can demand a minimum position", made scriptable. Only
-**registered** projections resolve: a name outside the registry
-refuses exit 4 `not_found` whatever directories exist under the
-output root (which also keeps traversal components out of the path),
-and a registered name with nothing published refuses 4 the same way;
-a published layout that exists but cannot be resolved — an unreadable
-or empty `CURRENT`, an unreadable or unparseable stamp — refuses
+"consumers can demand a minimum position", made scriptable. The stale
+refusal is computed at a verified stamp, so its envelope carries that
+stamp's position like any post-ledger response (`spec/envelope.md`):
+machine consumers detecting staleness read the observed position
+structurally, not out of the message text. Only **registered**
+projections resolve: a name outside the registry refuses exit 4
+`not_found` whatever directories exist under the output root (which
+also keeps traversal components out of the path), and a registered
+name with nothing published refuses 4 the same way — absence meaning
+the projection's own directory does not exist; a published layout
+that exists but cannot be resolved — a missing, unreadable, or empty
+`CURRENT` (publication swaps `CURRENT` atomically, so a layout
+without its pointer is a damaged publication, not an unpublished
+one), an unreadable, unparseable, or incomplete stamp (wrong name,
+empty version, a tip inconsistent with its position) — refuses
 exit 5 `unavailable`, an operational failure, never mistaken for an
 unpublished projection. The verb takes no `--ledger` flag: it is
 structurally a consumer and cannot touch authoritative state; no

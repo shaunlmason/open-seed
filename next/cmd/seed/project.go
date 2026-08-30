@@ -72,9 +72,16 @@ func runProjectCurrent(args []string, stdout, stderr io.Writer) int {
 		// Nothing published at all is not_found; a published layout
 		// that exists but cannot be resolved (an unreadable or empty
 		// CURRENT) is an operational failure, unavailable (review
-		// finding on #111).
+		// findings on #111 and #117). A missing CURRENT reads as
+		// absence only while the projection's own directory is absent
+		// too: publication swaps CURRENT atomically, so once a layout
+		// exists a lost pointer is damage, never an unpublished
+		// projection.
 		if errors.Is(err, fs.ErrNotExist) {
-			return render(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no published build for projection %q under %s: %v", *name, *out, err)), stdout, stderr)
+			if info, statErr := os.Stat(filepath.Join(*out, *name)); statErr != nil || !info.IsDir() {
+				return render(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no published build for projection %q under %s: %v", *name, *out, err)), stdout, stderr)
+			}
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("projection %q has a layout under %s but no CURRENT pointer — the published state is damaged; rebuild", *name, *out)), stdout, stderr)
 		}
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("projection %q has a published layout that does not resolve: %v", *name, err)), stdout, stderr)
 	}
@@ -86,8 +93,21 @@ func runProjectCurrent(args []string, stdout, stderr io.Writer) int {
 	if err := json.Unmarshal(raw, &stamp); err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("published stamp for %q does not parse: %v", *name, err)), stdout, stderr)
 	}
+	// A stamp that parses but misses or contradicts its fields is the
+	// same damage as one that does not parse (review finding on #117):
+	// success must never present a partial stamp as a published build,
+	// and a zero-value stamp must not satisfy --min-position 0.
+	if stamp.Name != *name || stamp.Version == "" || stamp.Position < 0 || (stamp.Tip == "") != (stamp.Position == 0) {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("published stamp for %q is incomplete or inconsistent (name %q, position %d, tip %q, version %q)", *name, stamp.Name, stamp.Position, stamp.Tip, stamp.Version)), stdout, stderr)
+	}
 	if *minPos >= 0 && stamp.Position < *minPos {
-		return render(envelope.Fail(envelope.ExitStale, "stale", fmt.Sprintf("projection %q is stamped at position %d, below the demanded minimum %d — rebuild before consuming", *name, stamp.Position, *minPos)), stdout, stderr)
+		env := envelope.Fail(envelope.ExitStale, "stale", fmt.Sprintf("projection %q is stamped at position %d, below the demanded minimum %d — rebuild before consuming", *name, stamp.Position, *minPos))
+		// The refusal is computed at a verified stamp, so it carries
+		// the envelope position like any post-ledger response
+		// (next/spec/envelope.md; review finding on #117).
+		pos := fmt.Sprintf("%d", stamp.Position)
+		env.Position = &pos
+		return render(env, stdout, stderr)
 	}
 	abs, err := filepath.Abs(build)
 	if err != nil {

@@ -240,3 +240,14 @@ here. Newest last.
   automation branching on exit codes never mistakes a damaged
   publication for an unpublished one. The verb and the rebuild rows
   also surface the stamp's derivation version. (PR #111)
+- 2026-08-30 — Refusal discipline round two (review findings on
+  #117): absence means the projection's own directory is absent — a
+  layout that exists without its CURRENT pointer is damage (5), since
+  publication swaps CURRENT atomically and a published pointer never
+  vanishes on its own; a stamp that parses but is incomplete or
+  inconsistent (wrong name, empty version, tip contradicting
+  position) is the same damage as an unparseable one, so a zero-value
+  stamp cannot satisfy even --min-position 0; and the stale refusal
+  stamps its envelope position with the observed count, per the
+  envelope contract that every response computed at a verified
+  position carries it structurally. (PR #117)
