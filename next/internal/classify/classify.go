@@ -65,15 +65,34 @@ var (
 	// " @ <hex>" is a content body wearing an anchor and stays subject to
 	// every text rule (#80 review finding).
 	anchorRef = regexp.MustCompile(`^[A-Za-z0-9._/-]{1,200} @ [0-9a-f]{7,64}(\.\.[0-9a-f]{7,64})?$`)
+	// A bare commit range is the packet's resume coordinate
+	// ("<merge-base>..<head>", plans/os-b07b0f59.md): pure anchors,
+	// exempt like the anchored-path forms; anything with prose in it
+	// fails the hex alphabet and stays budgeted.
+	rangeRef  = regexp.MustCompile(`^[0-9a-f]{7,64}\.\.[0-9a-f]{7,64}$`)
 	base64Run = regexp.MustCompile(`[A-Za-z0-9+/=]+`)
 )
 
 // isReference reports whether a string value is a coordination reference
-// (a full content hash, or a commit-anchored path per the packet grammar)
-// and therefore exempt from the free-text caps.
+// (a full content hash, a commit-anchored path per the packet grammar,
+// or a bare commit range) and therefore exempt from the free-text caps.
 func isReference(s string) bool {
-	return hashRef.MatchString(s) || anchorRef.MatchString(s)
+	return hashRef.MatchString(s) || anchorRef.MatchString(s) || rangeRef.MatchString(s)
 }
+
+// IsReference exposes the exemption predicate: the packet schema
+// (internal/packet) validates its anchors against the same grammar the
+// classifier exempts, so the two cannot drift.
+func IsReference(s string) bool { return isReference(s) }
+
+// IsAnchoredRef reports the combined-anchor forms alone ("path @
+// commit", "ref @ range"): the packet's refs entries must be anchored,
+// a bare hash or range is not enough to name an artifact.
+func IsAnchoredRef(s string) bool { return anchorRef.MatchString(s) }
+
+// IsRange reports the bare commit-range form, the packet's base
+// resume coordinate.
+func IsRange(s string) bool { return rangeRef.MatchString(s) }
 
 // LoadRules returns the embedded bound table.
 func LoadRules() (Rules, error) {

@@ -51,7 +51,7 @@ func TestFenceLifecycle(t *testing.T) {
 
 	// Exits cite the fence they end; after release the fence is dead:
 	// free events need no citation, and citing the dead fence refuses.
-	ctx = step(worker, version.Seed1, "claim.released", "c-1", `{"fence": "`+fence+`"}`)
+	ctx = step(worker, version.Seed1, "claim.released", "c-1", `{"fence": "`+fence+`", "packet": `+minPacket+`}`)
 	if err := Check(ctx, draftV(t, signer, version.Seed1, "progress.milestone", "c-1", `{"n": 3}`, ctx.Tip)); err != nil {
 		t.Fatalf("no active claim, no fence required: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestPriorClaimantsStayFenced(t *testing.T) {
 	ctx = step(signer, version.Seed1, "contract.specified", "c-1", specBody)
 	ctx = step(workerA, version.Seed1, "claim.taken", "c-1", `{}`)
 	fenceA := activeFence(t, ctx, "c-1")
-	ctx = step(signer, version.Seed1, "claim.reaped", "c-1", `{"fence": "`+fenceA+`"}`)
+	ctx = step(signer, version.Seed1, "claim.reaped", "c-1", `{"fence": "`+fenceA+`", "packet": `+minPacket+`}`)
 	ctx = step(workerB, version.Seed1, "claim.taken", "c-1", `{}`)
 	fenceB := activeFence(t, ctx, "c-1")
 
@@ -106,7 +106,7 @@ func TestPriorClaimantsStayFenced(t *testing.T) {
 		t.Fatalf("a prior claimant citing the active fence admits: %v", err)
 	}
 	// After B releases there is no claim window: A observes freely.
-	ctx = step(workerB, version.Seed1, "claim.released", "c-1", `{"fence": "`+fenceB+`"}`)
+	ctx = step(workerB, version.Seed1, "claim.released", "c-1", `{"fence": "`+fenceB+`", "packet": `+minPacket+`}`)
 	if err := Check(ctx, draftV(t, workerA, version.Seed1, "progress.milestone", "c-1", `{"n": 10}`, ctx.Tip)); err != nil {
 		t.Fatalf("outside a claim window a prior claimant is a plain observer: %v", err)
 	}

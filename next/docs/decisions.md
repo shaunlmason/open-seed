@@ -345,3 +345,22 @@ here. Newest last.
   storm drives six concurrent claimants through the full rule set
   against a real remote: one winner, structured losers, a verified
   chain. (PR #123)
+- 2026-08-31 — Packets are the only executor interface, enforced
+  (plans/os-b07b0f59.md): all four deliberate exits carry an inline
+  four-part packet under the payload's packet key — acceptance
+  non-empty, decisions structurally marked verified/asserted, the
+  mandatory bare base range (zero-length for no work) with combined
+  anchored refs, findings possibly empty but never absent — strict
+  keys, 3072 canonical bytes fitting the 4096 payload cap, and
+  packet_ref reserved for the Phase 6 artifact store. The packet
+  rule runs between fence and lifecycle so a shape-invalid packet
+  refuses before the transition applies; the classifier's reference
+  exemption gained the bare commit-range form (exported predicates
+  keep packet and classifier grammars from drifting); and the
+  tolerant fold now counts raw-pushed fence violations and
+  packetless exits as visible anomalies while still applying the
+  exit, because skipping it would wedge the subject on a dead
+  holder. Sufficiency is the A/B resume drill: B, a function of the
+  packet alone in a fresh clone, completes the acceptance list,
+  reproduces the artifacts from the anchors, and never re-tries the
+  recorded dead end. (PR #124)

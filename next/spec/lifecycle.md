@@ -58,12 +58,14 @@ the catalog's explicit `contract.*` ellipsis: `contract.unblocked`
 here as a catalog extension.
 
 **Claim is a transition, not a state**: `claim.taken` moves
-`ready`→`in_progress` and its fence mechanics land with 5.2. Leaving
+`ready`→`in_progress` with its fence mechanics below. Leaving
 `in_progress` happens **only** through the four deliberate exits —
 `submission.made`, `claim.released`, `claim.parked`, `claim.reaped` —
 and the self-validation pins that set, so silent abandonment is
 impossible by construction; `contract.cancelled` deliberately has no
-`in_progress` source. **Done is reached only through
+`in_progress` source. **Every deliberate exit carries a four-part
+handoff packet** ([`packets.md`](packets.md)), refused at admission
+without one. **Done is reached only through
 `merge.observed`**, the final observation of the §8 reconciliation
 chain (`verdict.rendered(pass) → merge.requested → merge.observed`);
 the chain's other events are free stream events until Phase 6 pipes

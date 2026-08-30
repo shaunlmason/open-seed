@@ -22,6 +22,9 @@ import (
 const (
 	filedBody = `{"intent": "fix the thing", "tier": "standard", "budget": "small", "routing": "core"}`
 	specBody  = `{"acceptance": "specs/thing.md @ abc123"}`
+	// minPacket is the minimal honest packet: empty decisions, refs,
+	// and findings, a zero-length base range (no work pushed).
+	minPacket = `{"acceptance": ["resume from here"], "decisions": [], "base": "1234567..1234567", "refs": [], "findings": []}`
 )
 
 func TestLifecycleHappyPathAdmits(t *testing.T) {
@@ -42,7 +45,7 @@ func TestLifecycleHappyPathAdmits(t *testing.T) {
 		t.Fatalf("a claim-granted worker must take a ready contract: %v", err)
 	}
 	ctx = step(worker, version.Seed1, "claim.taken", "c-1", `{}`)
-	made := `{"branch": "seed/c-1", "fence": "` + activeFence(t, ctx, "c-1") + `"}`
+	made := `{"branch": "seed/c-1", "fence": "` + activeFence(t, ctx, "c-1") + `", "packet": ` + minPacket + `}`
 	if err := Check(ctx, draftV(t, worker, version.Seed1, "submission.made", "c-1", made, ctx.Tip)); err != nil {
 		t.Fatalf("submission must admit: %v", err)
 	}
@@ -70,7 +73,7 @@ func TestLifecycleIllegalJumpsRefuseTyped(t *testing.T) {
 		"claim on backlog":          {"claim.taken", "c-1", "backlog", `{}`},
 		"done from backlog":         {"merge.observed", "c-1", "backlog", `{}`},
 		"birth on existing":         {"intent.filed", "c-1", "backlog", filedBody},
-		"non-birth on fresh":        {"submission.made", "c-9", "", `{}`},
+		"non-birth on fresh":        {"contract.blocked", "c-9", "", `{}`},
 		"unblock what is unblocked": {"contract.unblocked", "c-1", "backlog", `{}`},
 	}
 	for name, c := range cases {
@@ -99,22 +102,22 @@ func TestLifecycleDeliberateExits(t *testing.T) {
 		t.Fatalf("cancelling in_progress must be impossible, got %v", err)
 	}
 	for _, verb := range []string{"claim.released", "claim.parked", "claim.reaped", "submission.made"} {
-		if err := Check(ctx, draftV(t, signer, version.Seed1, verb, "c-1", fenced(t, ctx, "c-1"), ctx.Tip)); err != nil {
+		if err := Check(ctx, draftV(t, signer, version.Seed1, verb, "c-1", fencedExit(t, ctx, "c-1"), ctx.Tip)); err != nil {
 			t.Fatalf("%s must admit from in_progress: %v", verb, err)
 		}
 	}
 	// And each lands where the table says: park, unblock, re-take,
 	// release, re-take, reap — folded through real appends, every
 	// exit citing the fence of the claim it ends.
-	ctx = step(signer, version.Seed1, "claim.parked", "c-1", fenced(t, ctx, "c-1"))
+	ctx = step(signer, version.Seed1, "claim.parked", "c-1", fencedExit(t, ctx, "c-1"))
 	if err := Check(ctx, draftV(t, signer, version.Seed1, "claim.taken", "c-1", `{}`, ctx.Tip)); err == nil {
 		t.Fatal("a parked (blocked) contract is not claimable")
 	}
 	ctx = step(signer, version.Seed1, "contract.unblocked", "c-1", `{}`)
 	ctx = step(signer, version.Seed1, "claim.taken", "c-1", `{}`)
-	ctx = step(signer, version.Seed1, "claim.released", "c-1", fenced(t, ctx, "c-1"))
+	ctx = step(signer, version.Seed1, "claim.released", "c-1", fencedExit(t, ctx, "c-1"))
 	ctx = step(signer, version.Seed1, "claim.taken", "c-1", `{}`)
-	ctx = step(signer, version.Seed1, "claim.reaped", "c-1", fenced(t, ctx, "c-1"))
+	ctx = step(signer, version.Seed1, "claim.reaped", "c-1", fencedExit(t, ctx, "c-1"))
 	if err := Check(ctx, draftV(t, signer, version.Seed1, "claim.taken", "c-1", `{}`, ctx.Tip)); err != nil {
 		t.Fatalf("released and reaped contracts return to ready and re-claim: %v", err)
 	}
@@ -187,14 +190,14 @@ func TestLifecycleCapabilityLanes(t *testing.T) {
 	ctx = step(worker, version.Seed1, "claim.taken", "c-1", `{}`)
 
 	// Reaping is dispatch's; the worker lane cannot reap itself.
-	if err := Check(ctx, draftV(t, worker, version.Seed1, "claim.reaped", "c-1", fenced(t, ctx, "c-1"), ctx.Tip)); !errors.As(err, &oog) {
+	if err := Check(ctx, draftV(t, worker, version.Seed1, "claim.reaped", "c-1", fencedExit(t, ctx, "c-1"), ctx.Tip)); !errors.As(err, &oog) {
 		t.Fatalf("the claim lane cannot reap, got %v", err)
 	}
-	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "claim.reaped", "c-1", fenced(t, ctx, "c-1"), ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "claim.reaped", "c-1", fencedExit(t, ctx, "c-1"), ctx.Tip)); err != nil {
 		t.Fatalf("dispatch reaps: %v", err)
 	}
 	// Cancellation and the done observation are operator-only in v0.
-	ctx = step(maintainer, version.Seed1, "claim.reaped", "c-1", fenced(t, ctx, "c-1"))
+	ctx = step(maintainer, version.Seed1, "claim.reaped", "c-1", fencedExit(t, ctx, "c-1"))
 	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "contract.cancelled", "c-1", `{}`, ctx.Tip)); !errors.As(err, &oog) {
 		t.Fatalf("dispatch cannot cancel, got %v", err)
 	}
@@ -254,4 +257,11 @@ func activeFence(t *testing.T, ctx *Context, subject string) string {
 func fenced(t *testing.T, ctx *Context, subject string) string {
 	t.Helper()
 	return `{"fence": "` + activeFence(t, ctx, subject) + `"}`
+}
+
+// fencedExit is a deliberate-exit payload: the fence citation plus the
+// minimal honest packet every exit carries.
+func fencedExit(t *testing.T, ctx *Context, subject string) string {
+	t.Helper()
+	return `{"fence": "` + activeFence(t, ctx, subject) + `", "packet": ` + minPacket + `}`
 }

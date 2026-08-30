@@ -22,6 +22,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -334,6 +335,19 @@ func Default() []Rule {
 				return &FenceError{Subject: rec.Event.Subject, Cited: cited, Active: s.Claim.Fence, Holder: s.Claim.Holder}
 			}
 			return nil
+		}},
+		{Name: "packet", Check: func(c *Context, rec *event.Record) error {
+			// Every deliberate exit carries a four-part handoff packet
+			// (plans/os-b07b0f59.md): the shape refusal lands before the
+			// transition applies, after the fence. seed/0 stays inert.
+			if !keyring.Applies(c.Active) {
+				return nil
+			}
+			if !packet.Required(rec.Event.Verb) {
+				return nil
+			}
+			_, err := packet.FromPayload(rec.Event.Subject, rec.Event.Payload)
+			return err
 		}},
 		{Name: "lifecycle", Check: func(c *Context, rec *event.Record) error {
 			// Lifecycle legality is admission policy at seed/1, the
