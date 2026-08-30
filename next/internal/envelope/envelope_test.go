@@ -50,7 +50,9 @@ func TestExitCodesMatchSpecTable(t *testing.T) {
 		"version_mismatch":   {ExitVersionMismatch, 10},
 		"remote_rejected":    {ExitRemoteRejected, 11},
 		"head_regression":    {ExitHeadRegression, 12},
+		"posture_invalid":    {ExitPostureInvalid, 13},
 		"usage":              {ExitUsage, 64},
+		"unreadable":         {ExitUnreadable, 66},
 	}
 	for name, c := range table {
 		if c.got != c.want {

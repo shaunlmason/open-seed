@@ -125,6 +125,15 @@ here. Newest last.
   fast-forward alone would admit a descendant commit whose tree rewrites
   admitted records. Actor and version rules are not re-run per record:
   the completed replay already enforced them. (PR #94)
+- 2026-08-30 — Posture declaration is client/deployment state in a
+  strict JSON file (never ledger content; the guarded ref's tree stays
+  HEAD + segments); the charter's cooperative consequence lives as one
+  exported constant that the doctor quotes verbatim (machine field and
+  operator-facing stderr both); undeclared refuses at exit 4, invalid
+  declarations at the newly allocated exit 13 `posture_invalid` (spec
+  table row + envelope constant land in the same change, per the
+  lowest-unused rule; exit 3 stays reserved for illegal transitions);
+  the forge-hosted posture names its Phase 12 gap honestly. (PR #98)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under
