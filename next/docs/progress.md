@@ -142,10 +142,12 @@ Phase 7, as added rules on the shared set.
   report skeleton, `seed project current`, exit 15 `stale`) —
   os-fecfb3f7 — plan PR #106 (merged, amended: the ready queue ships
   registered with `derivation: "none"` v0, per review), task PR
-  #111 (merged into the stack base during the stack collapse — its
-  diff never reached main) — **re-landing as task PR #117** with the
-  registry-validated consumer verb and the absence-4/damage-5 split
-  per review
+  #111 (stack-collapsed; its diff never reached main), re-landed as
+  task PR #117 (merged, amended per review: registry-validated
+  consumer verb, absence-4/damage-5 split refined so a layout
+  missing its CURRENT pointer is damage, incomplete-stamp refusal,
+  stale envelope position, unprivileged-cleanup test fix) —
+  **done** (merged; card closed)
 - 4.3 SQLite cache projection + mid-operation deletion drill —
   os-acc1ac78 — plan PR #108 (merged) + amendment PR #110 (merged:
   the cache is a registered projection, byte-identical like every
@@ -163,11 +165,13 @@ Phase 7, as added rules on the shared set.
 Phases 0 through 3 are done and closed; 4.1 is merged, and every
 Phase 4 and Phase 5 plan (#105–#108, #110, #113–#116) is merged.
 The #111/#112 stack collapse folded their diffs into stack branches
-without reaching main, so the 4.2 and 4.4 implementations are
-**re-landing as #117 ← #118** (same branches rebuilt from main, new
-PRs, per the merged-PR follow-up rule). **Next action: implement 4.3
-(os-acc1ac78) stacked on #118's branch; as #117/#118 merge, close
-os-fecfb3f7/os-8d5e9c45 and restack. 5.1 implements once the Phase 4
-implementations are on main.**
+without reaching main; the re-land landed 4.2 as #117 (merged, card
+closed). 4.4 (#118, this PR) and 4.3 (#119, stacked on it) are in
+review with all Codex rounds addressed; the last two Phase 5 plans
+are open as #120 (5.5 falsifiable-plan lint) and #121 (5.6
+observations v0). **Next action: as #118/#119 merge, close
+os-8d5e9c45/os-acc1ac78 — Phase 4 complete. 5.1 implements once the
+Phase 4 implementations are on main; 5.2–5.4 follow per their plan
+dependencies; 5.5/5.6 implement when their plans merge.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
