@@ -461,3 +461,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: standard projections — contract detail, ready queue, actor view, report skeleton (Phase 4.2)"},"task":"os-fecfb3f7","ts":"2026-08-30T13:13:25Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: SQLite cache projection + mid-operation deletion drill (Phase 4.3)"},"task":"os-acc1ac78","ts":"2026-08-30T13:13:28Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: projection write-boundary lint wired into check-next (Phase 4.4)"},"task":"os-8d5e9c45","ts":"2026-08-30T13:13:30Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-4d5cacff","ts":"2026-08-30T13:13:43Z","verb":"promote"}
