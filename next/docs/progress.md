@@ -95,7 +95,8 @@ os-beac85e1's task PR (an administrative card, not a Phase 2 item).
   closed)
 - 3.3 key rotation/revocation drill — os-d1f35a8c — plan PR #103
   (merged, amended: exit record scoped to the III.E subset with the
-  full unmet-remainder enumeration, per review), task PR #104 — review
+  full unmet-remainder enumeration, per review), task PR #104 —
+  **done** (merged; card closed)
 
 **Phase 3 exit (the III.E subset docs/next-build-plan.md scopes): met.**
 Signature and grant checks live in admission (#100: standing-aware
@@ -127,16 +128,39 @@ are selectable in fixtures through the shared declaration (#99).
 Capability rules slot in at Phase 3, fences at Phase 5, reservations at
 Phase 7, as added rules on the shared set.
 
+## Phase 4 — Projections (docs/next-build-plan.md Phase 4; deps: 1 ✓)
+
+- 4.1 projection engine (deterministic build, stamps, one-command
+  rebuild) — os-4d5cacff — plan PR #105 (merged, amended: immutable
+  builds + `CURRENT` pointer publication, roster includes genesis
+  roots, overlap refusal, full-tree immutability and stale-`HEAD`
+  fixtures, interrupted-publication drill, per review), task PR
+  #109 — review
+- 4.2 standard projections (contract detail, ready queue, actor view,
+  report skeleton, `seed project current`) — os-fecfb3f7 — plan PR
+  #106 (merged, amended: the ready queue ships registered with
+  `derivation: "none"` v0, per review) — **ready to implement**,
+  stacks on 4.1's branch until #109 merges
+- 4.3 SQLite cache projection + mid-operation deletion drill —
+  os-acc1ac78 — plan PR #108 (merged) — **superseded before
+  implementation**: #108 raced ahead of its review amendment, so the
+  plan on main still reads "semantic identity"; the binding version
+  (the cache is a registered projection, byte-identical like every
+  view) is amendment PR #110. Implement only after #110 merges.
+- 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
+  PR #107 (merged, amended: seam/write-separation lint + locked trees
+  `0444`/`0555` with the engine unlock window, deletion via rebuild,
+  per review) — **ready to implement**, after 4.1 (it locks that
+  engine's publication)
+
 ## Frontier
 
-Phase 0 through Phase 2 are done and closed; Phase 3 completes when
-#104 (3.3, in review) merges and os-d1f35a8c closes — 3.1 and 3.2 are
-already merged and closed. **Next action: as #104 merges, close
-os-d1f35a8c, then file the Phase 4 (projections) cards per
-docs/next-build-plan.md — 4.1 projection engine (deterministic build
-from prefix, position stamps, one-command `seed project rebuild`), 4.2
-standard projections, 4.3 SQLite cache (modernc.org/sqlite) with the
-mid-operation deletion drill, 4.4 write-boundary lint wired into
-check-next — and plan 4.1 first, keep stacking.**
+Phases 0 through 3 are done and closed. 4.1 is in review (#109); its
+engine (`internal/project`, `seed project rebuild`, the roster
+projection, spec/projections.md) is the seam 4.2/4.3/4.4 build on.
+**Next action: implement 4.2 (os-fecfb3f7, plan merged) on
+`seed/os-fecfb3f7` stacked on 4.1's branch; then 4.4 (os-8d5e9c45,
+plan merged); 4.3 waits for amendment PR #110 to merge. As #109
+merges, close os-4d5cacff and restack the stack onto main.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
