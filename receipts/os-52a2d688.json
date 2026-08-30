@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "task": "os-52a2d688",
+  "merge_base": "c59479f5ca2f3f599aa25835ca10545bbd3ebc49",
+  "head": "e3c49a78b34e5293f23ddc75a625d8da7cab6f53",
+  "plan_path": "plans/os-52a2d688.md",
+  "plan_sha256": "7d5de2629b764b8a6ed2e44c678f11821ba3632a6872889bcaa18c84475d01c6",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed-admit/actors_test.go",
+    "next/cmd/seed-admit/main.go",
+    "next/cmd/seed/actors_cli_test.go",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/ledger_test.go",
+    "next/cmd/seed/remote.go",
+    "next/cmd/seed/remote_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/admit_test.go",
+    "next/internal/admit/standing_test.go",
+    "next/internal/envelope/envelope.go",
+    "next/internal/envelope/envelope_test.go",
+    "next/internal/gitref/loop.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/ledger/actors_verify_test.go",
+    "next/internal/ledger/verify.go",
+    "next/internal/ledger/version_test.go",
+    "next/internal/version/version.go",
+    "next/spec/actors.md",
+    "next/spec/envelope.md",
+    "next/spec/protocol.md"
+  ],
+  "diff_sha256": "4b918be572660a98adf4a4e743a58c18e2edb7a108a6c0050f25059f09fb3484",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/keyring/... ./internal/ledger/... ./internal/admit/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
