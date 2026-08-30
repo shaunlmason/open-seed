@@ -156,9 +156,12 @@ Phase 7, as added rules on the shared set.
 - 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
   PR #107 (merged, amended: seam/write-separation lint + locked trees
   `0444`/`0555` with the engine unlock window, deletion via rebuild,
-  per review), task PR #112 (merged into the stack base during the
-  stack collapse — its diff never reached main) — **re-landing as
-  task PR #118**, stacked on #117
+  per review), task PR #112 (stack-collapsed; its diff never reached
+  main), re-landed as task PR #118 (merged, amended per review:
+  openDirs partial-open rollback, lint vocabulary derived from the
+  engine's declarations with a behavioral layout probe,
+  unprivileged-cleanup lesson recorded) — **done** (merged; card
+  closed)
 
 ## Frontier
 
@@ -166,12 +169,12 @@ Phases 0 through 3 are done and closed; 4.1 is merged, and every
 Phase 4 and Phase 5 plan (#105–#108, #110, #113–#116) is merged.
 The #111/#112 stack collapse folded their diffs into stack branches
 without reaching main; the re-land landed 4.2 as #117 (merged, card
-closed). 4.4 (#118, this PR) and 4.3 (#119, stacked on it) are in
-review with all Codex rounds addressed; the last two Phase 5 plans
-are open as #120 (5.5 falsifiable-plan lint) and #121 (5.6
-observations v0). **Next action: as #118/#119 merge, close
-os-8d5e9c45/os-acc1ac78 — Phase 4 complete. 5.1 implements once the
-Phase 4 implementations are on main; 5.2–5.4 follow per their plan
+closed). 4.4 landed as #118 (merged, card closed), so 4.3 (#119,
+this PR, now based on main) is the last Phase 4 implementation; the
+last two Phase 5 plans are open as #120 (5.5 falsifiable-plan lint)
+and #121 (5.6 observations v0). **Next action: when #119 merges,
+close os-acc1ac78 — Phase 4 complete — and start the 5.1
+implementation (os-d69a6c91); 5.2–5.4 follow per their plan
 dependencies; 5.5/5.6 implement when their plans merge.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
