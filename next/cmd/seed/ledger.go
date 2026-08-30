@@ -140,9 +140,12 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 	subject := fs.String("subject", "", "event subject")
 	payload := fs.String("payload", "", "event payload (JSON object)")
 	supported := fs.String("supported", "", "comma-separated supported protocol versions (default: this build's)")
-	if err := fs.Parse(args); err != nil || *dir == "" || *keyPath == "" || *verb == "" || *subject == "" || *payload == "" || fs.NArg() != 0 {
+	remote := fs.String("remote", "", "remote ledger repository (cooperative posture: validate locally, then push)")
+	refName := fs.String("ref", "refs/seed/ledger", "remote ledger ref")
+	stateDir := fs.String("state", "", "client state dir for the persisted verified head (default: user cache)")
+	if err := fs.Parse(args); err != nil || (*dir == "") == (*remote == "") || *keyPath == "" || *verb == "" || *subject == "" || *payload == "" || fs.NArg() != 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
-			"ledger append (dev tool) requires --ledger, --key, --verb, --subject, --payload"), stdout, stderr)
+			"ledger append (dev tool) requires --ledger or --remote (not both), --key, --verb, --subject, --payload"), stdout, stderr)
 	}
 	if vs := classify.Lint([]byte(*payload)); len(vs) > 0 {
 		parts := make([]string, 0, len(vs))
@@ -159,6 +162,9 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 	signer, err := event.ParsePrivateKey(keyBytes)
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--key: %v", err)), stdout, stderr)
+	}
+	if *remote != "" {
+		return runLedgerAppendRemote(*remote, *refName, *stateDir, *verb, *subject, *payload, *supported, signer, stdout, stderr)
 	}
 	store, failEnv := openStore(*dir)
 	if failEnv != nil {

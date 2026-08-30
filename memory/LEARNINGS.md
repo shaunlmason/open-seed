@@ -185,3 +185,12 @@ Fresh sessions read this file instead of rediscovering.
   conflict; the first merge lands the file, the rest rebase to a zero
   delta). Receipts must be regenerated after every rebase since they bind
   to the merge-base diff.
+
+- 2026-08-30 (os-895bf828): git pre-receive hooks run in a quarantine
+  that forbids ref updates ("ref updates forbidden inside quarantine
+  environment"), so a hook cannot move the guarded ref mid-push. For
+  deterministic race drills the escape is unsetting GIT_QUARANTINE_PATH
+  inside the test hook (safe when the rival commits already live in the
+  main object store); the resulting client-visible rejection is
+  "[remote rejected] ... (failed to update ref)", which is genuine
+  update-phase contention, distinct from "(pre-receive hook declined)".

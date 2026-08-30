@@ -103,6 +103,19 @@ here. Newest last.
   survives composition; context is built by one verified replay
   (`ledger.WithObserver` feeds the halt projection); the version rule
   stamps refusals at the tip position. (PR #90)
+- 2026-08-30 — Exits 11 `remote_rejected` and 12 `head_regression`
+  allocated (lowest unused, one meaning per code): the remote's own
+  admission refusal carries its reason verbatim, and a rollback is a
+  freshness refusal, never misread as corrupt ledger data; loop
+  exhaustion maps to exit 2 `contention`. The pre-flight's verified tip
+  persists via the new `gitref.RecordVerifiedHead` before the loop runs,
+  closing the fresh-client rollback window between the two fetches. The
+  update-phase rejection shape ("failed to update ref") is a race marker
+  again: the 2.2 CLI race drill showed a rival landing between
+  advertisement and update produces it server-side, while hook declines
+  keep surfacing as `ErrRemoteRejected`. `AppendLoop` grew a trailing
+  variadic `ledger.VerifyOption` so per-attempt re-verification honors
+  the caller's supported set. (PR #93)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under

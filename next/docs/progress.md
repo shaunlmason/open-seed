@@ -64,11 +64,12 @@ os-beac85e1's task PR (an administrative card, not a Phase 2 item).
 
 - 2.1 admission rule set library (`internal/admit`) — os-3898f232 —
   plan PR #88 (merged, amended: ledger `WithObserver` + shared upgrade
-  schema in scope), task PR #90 — review
+  schema in scope), task PR #90 — **done** (merged; card closed)
 - 2.2 cooperative posture (client self-validation) — os-895bf828 —
-  backlog (dep 2.1)
+  plan PR #91 (merged, amended: gitref verify-option pass-through +
+  update-phase race marker), task PR #93 — review
 - 2.3 enforced posture, `seed-admit` pre-receive hook — os-d3591e09 —
-  backlog (dep 2.1)
+  plan PR #92 (merged), task PR #94 — review
 - 2.4 posture declaration + `seed doctor` — os-3c72f93f — backlog (deps
   2.2, 2.3)
 - 2.5 admission drills (raw-git adversary; kill-and-replace) —
@@ -76,12 +77,12 @@ os-beac85e1's task PR (an administrative card, not a Phase 2 item).
 
 ## Frontier
 
-Phase 0 and all of Phase 1 are done and closed. 2.1 (os-3898f232) is
-implemented against its merged plan (#88) and in review on task PR #90.
-**Next action: as #90 merges, close os-3898f232; closing 2.1 frees 2.2
-and 2.3 (promote from backlog, plan-first: author each
-`plans/<card>.md`, merge it, then implement); 2.4 then 2.5 follow their
-deps. Phase 2 exit needs the III.B
+Phase 0, all of Phase 1, and 2.1 are done and closed. 2.2 (task PR #93)
+and 2.3 (task PR #94) are in review against their merged plans.
+**Next action: as #93/#94 merge, close their cards (os-895bf828,
+os-d3591e09); closing both frees 2.4 (os-3c72f93f, posture declaration +
+`seed doctor` — promote, plan-first); 2.5 (os-028dda91, the drills)
+follows 2.3 and 2.4. Phase 2 exit needs the III.B
 subset: sole-writer enforced posture, statelessness (kill-and-replace),
 posture declaration with the cooperative consequence printed verbatim,
 and the direct-push refusal drill.** If an open task PR is red or carries
