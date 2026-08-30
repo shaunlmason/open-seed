@@ -53,6 +53,11 @@ here. Newest last.
   loaders only care about the wire format, which `ssh.MarshalPrivateKey`
   produces. Standing rule for every later fixture (verifier keyrings,
   sealed-check keys). (PR for os-aa146827)
+- 2026-08-30 — Strict wire parsing (review findings on #76): records refuse
+  unknown fields, duplicate keys at any level, and trailing data; hex
+  encodings refuse uppercase rather than normalizing. Spec amended in the
+  same PR (a normative addition beyond the plan's file scope, made under
+  the review-fix allowance and noted here). (PR #76)
 - 2026-08-30 — First module dependencies for 1.1: `github.com/gowebpki/jcs`
   v1.0.1 (RFC 8785 canonicalization; writing correct JCS by hand is
   subtle-risk with no upside) and `golang.org/x/crypto` (OpenSSH ed25519 key

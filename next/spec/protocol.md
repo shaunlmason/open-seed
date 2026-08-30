@@ -62,9 +62,17 @@ bytes of an event are the JCS serialization of exactly these fields:
   field order and whitespace are irrelevant to identity. Verifiers MUST
   recompute the JCS bytes from the parsed event; they never trust stored
   byte sequences.
+- **Strict parsing (one accepted wire form)**: parsers MUST refuse a record
+  carrying unknown fields in the wrapper or the event object, a duplicate
+  key at any level (payload included), or trailing data after the record.
+  Otherwise a record could carry correctly signed core fields plus unsigned
+  material that survives in storage while escaping canonicalization, schema
+  validation, and the classification lint; and duplicate keys let two
+  parsers disagree about the same bytes.
 - **Encodings, uniformly**: every hash, fingerprint, and signature in this
-  protocol is lowercase hex with no prefix. Base64 and multibase forms are
-  not used anywhere on the wire.
+  protocol is lowercase hex with no prefix; uppercase hex is refused, not
+  normalized, so exactly one encoding of a value is accepted on the wire.
+  Base64 and multibase forms are not used anywhere.
 - **Genesis**: the first event's `prev` is the **empty hash**: the SHA-256 of
   zero bytes, `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
   Genesis (`system.genesis`) names the initial governance root (operator
