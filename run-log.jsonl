@@ -434,3 +434,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:96","to":"ready"},"task":"os-028dda91","ts":"2026-08-30T12:11:32Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T13:11:35Z"},"task":"os-028dda91","ts":"2026-08-30T12:11:35Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-3c72f93f","ts":"2026-08-30T12:14:02Z","verb":"close"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-b06cd8b7","kind":""},"task":"os-028dda91","ts":"2026-08-30T12:16:13Z","verb":"attach-evidence"}
