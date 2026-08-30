@@ -52,6 +52,7 @@ func TestExitCodesMatchSpecTable(t *testing.T) {
 		"head_regression":    {ExitHeadRegression, 12},
 		"posture_invalid":    {ExitPostureInvalid, 13},
 		"out_of_grant":       {ExitOutOfGrant, 14},
+		"stale":              {ExitStale, 15},
 		"usage":              {ExitUsage, 64},
 		"unreadable":         {ExitUnreadable, 66},
 	}
