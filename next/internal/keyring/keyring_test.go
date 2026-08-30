@@ -5,12 +5,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
+	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/version"
@@ -293,5 +297,124 @@ func TestAppliesOnlyAtSeed1(t *testing.T) {
 	}
 	if !keyring.IsActorVerb("actor.enrolled") || keyring.IsActorVerb("progress.milestone") {
 		t.Fatal("actor verb detection is namespace-based")
+	}
+}
+
+// specVocabulary parses the normative capability table out of
+// next/spec/actors.md ("## Capabilities"): backticked tokens are the
+// data (prose asides are not), and the actor.* row covers every
+// lifecycle verb. Parsing the spec, rather than keeping a second
+// hard-coded table, makes a one-sided change to either side fail
+// (review finding on #102).
+func specVocabulary(t *testing.T) map[string][]string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("..", "..", "spec", "actors.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tick := regexp.MustCompile("`([^`]+)`")
+	rows := map[string][]string{}
+	in := false
+	for _, line := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(line, "## ") {
+			in = strings.HasPrefix(line, "## Capabilities")
+			continue
+		}
+		if !in || !strings.HasPrefix(line, "|") {
+			continue
+		}
+		cells := strings.Split(line, "|")
+		if len(cells) < 3 {
+			continue
+		}
+		verbs := tick.FindAllStringSubmatch(cells[1], -1)
+		caps := tick.FindAllStringSubmatch(cells[2], -1)
+		if len(verbs) == 0 || len(caps) == 0 {
+			continue
+		}
+		var cs []string
+		for _, m := range caps {
+			cs = append(cs, m[1])
+		}
+		if verbs[0][1] == "actor.*" {
+			for _, v := range []string{keyring.VerbEnrolled, keyring.VerbGranted, keyring.VerbSuspended, keyring.VerbRevoked} {
+				rows[v] = cs
+			}
+			continue
+		}
+		rows[verbs[0][1]] = cs
+	}
+	if len(rows) == 0 {
+		t.Fatal("no capability rows parsed from next/spec/actors.md")
+	}
+	return rows
+}
+
+// conformance: III.E — the capability vocabulary is pinned to the
+// normative table in next/spec/actors.md by parsing it: the spec and
+// the code cannot drift apart one-sidedly. Verb literals keyring
+// mirrors stay pinned to the owning packages.
+func TestCapabilityVocabulary(t *testing.T) {
+	if halt.DeclareVerb != "system.halt.declared" || halt.LiftVerb != "system.halt.lifted" || ledger.UpgradeVerb != "system.protocol.upgraded" {
+		t.Fatal("keyring's mirrored verb literals drifted from the owning packages")
+	}
+	spec := specVocabulary(t)
+	for verb, caps := range spec {
+		if got := keyring.AcceptedCapabilities(verb); fmt.Sprint(got) != fmt.Sprint(caps) {
+			t.Errorf("%s accepts %v in code, the spec table says %v", verb, got, caps)
+		}
+	}
+	// Completeness: every verb the code governs appears in the spec
+	// table, so removing a spec row without changing the code fails too.
+	for _, verb := range []string{
+		"system.halt.declared", "system.halt.lifted", "system.protocol.upgraded",
+		"system.checkpoint", keyring.VerbEnrolled, keyring.VerbGranted,
+		keyring.VerbSuspended, keyring.VerbRevoked,
+	} {
+		if _, ok := spec[verb]; !ok {
+			t.Errorf("%s is governed by code but missing from the spec table", verb)
+		}
+	}
+	// Ungoverned verbs need active standing only, on both sides.
+	for _, verb := range []string{"progress.milestone", "system.genesis"} {
+		if got := keyring.AcceptedCapabilities(verb); got != nil {
+			t.Errorf("%s must need active standing only, got %v", verb, got)
+		}
+		if _, ok := spec[verb]; ok {
+			t.Errorf("%s must not appear in the spec table", verb)
+		}
+	}
+}
+
+func TestHasAnyCapability(t *testing.T) {
+	root, worker := key(t, 1), key(t, 2)
+	s := seeded(t, root)
+	ops := []string{keyring.CapOperator}
+	if !s.HasAnyCapability(fp(t, root), ops) {
+		t.Fatal("a governance root holds operator implicitly")
+	}
+	if s.HasAnyCapability(fp(t, worker), ops) {
+		t.Fatal("an unenrolled key holds nothing")
+	}
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	must(s.Advance(rec(t, root, "actor.enrolled", fp(t, worker), enrollPayload(t, worker, "agent", "w"))))
+	if s.HasAnyCapability(fp(t, worker), ops) {
+		t.Fatal("enrollment alone grants no capabilities")
+	}
+	must(s.Advance(rec(t, root, "actor.granted", fp(t, worker), `{"capability": "maintenance"}`)))
+	if !s.HasAnyCapability(fp(t, worker), []string{keyring.CapMaintenance, keyring.CapOperator}) {
+		t.Fatal("a granted capability must satisfy an accepting set")
+	}
+	if s.HasAnyCapability(fp(t, worker), ops) {
+		t.Fatal("maintenance is not operator")
+	}
+	must(s.Advance(rec(t, root, "actor.suspended", fp(t, worker), `{"reason": "x"}`)))
+	if s.HasAnyCapability(fp(t, worker), []string{keyring.CapMaintenance}) {
+		t.Fatal("a suspended actor holds nothing")
 	}
 }

@@ -132,17 +132,19 @@ func (e *ClassificationError) Error() string {
 }
 
 // OutOfGrantError is the capability refusal the charter names
-// (SEED-NEXT.md Part II "Capabilities"): the actor is not granted what
-// the verb requires. Interim Phase 3.1 policy: actor.* verbs require an
-// active governance root; 3.2 generalizes this to grant checks per verb.
-// It maps to exit 14 out_of_grant (next/spec/envelope.md).
+// (SEED-NEXT.md Part II "Capabilities"): the actor holds none of the
+// capabilities the verb accepts. Grants are events (actor.granted),
+// checked at admission on every verb against the vocabulary in
+// next/spec/actors.md; governance roots hold operator implicitly. It
+// maps to exit 14 out_of_grant (next/spec/envelope.md).
 type OutOfGrantError struct {
-	Actor string
-	Verb  string
+	Actor    string
+	Verb     string
+	Accepted []string
 }
 
 func (e *OutOfGrantError) Error() string {
-	return fmt.Sprintf("actor %s is not granted %s — actor lifecycle verbs require an active governance root until grant checks land (plans/os-52a2d688.md)", e.Actor, e.Verb)
+	return fmt.Sprintf("actor %s is not granted any of [%s], which %s accepts — grants are capability data checked at admission (plans/os-3979d48b.md)", e.Actor, strings.Join(e.Accepted, ", "), e.Verb)
 }
 
 // VerbInactiveError refuses a verb whose semantics are not active under
@@ -224,16 +226,20 @@ func Default() []Rule {
 			return nil
 		}},
 		{Name: "grant", Check: func(c *Context, rec *event.Record) error {
-			if !keyring.IsActorVerb(rec.Event.Verb) || !keyring.Applies(c.Active) {
+			if !keyring.Applies(c.Active) || c.Keyring == nil {
 				return nil
 			}
-			if c.Keyring == nil || !c.Keyring.IsActiveRoot(rec.Event.Actor) {
-				return &OutOfGrantError{Actor: rec.Event.Actor, Verb: rec.Event.Verb}
+			if accepted := keyring.AcceptedCapabilities(rec.Event.Verb); len(accepted) > 0 &&
+				!c.Keyring.HasAnyCapability(rec.Event.Actor, accepted) {
+				return &OutOfGrantError{Actor: rec.Event.Actor, Verb: rec.Event.Verb, Accepted: accepted}
 			}
-			// The shared transition function is the shape and legality
-			// authority; admission previews it so a draft that history
-			// would refuse never leaves the client.
-			return c.Keyring.Preview(rec)
+			if keyring.IsActorVerb(rec.Event.Verb) {
+				// The shared transition function is the shape and
+				// legality authority; admission previews it so a draft
+				// that history would refuse never leaves the client.
+				return c.Keyring.Preview(rec)
+			}
+			return nil
 		}},
 	}
 }

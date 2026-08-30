@@ -33,13 +33,47 @@ const (
 	VerbRevoked   = "actor.revoked"
 )
 
-// These mirror ledger.UpgradeVerb and genesis.Verb; keyring cannot import
-// either package (ledger imports keyring), so the parity is pinned by a
-// test in internal/ledger.
+// These mirror ledger.UpgradeVerb, genesis.Verb, halt.DeclareVerb, and
+// halt.LiftVerb; keyring cannot import those packages (ledger imports
+// keyring), so the parity is pinned by tests.
 const (
-	upgradeVerb = "system.protocol.upgraded"
-	genesisVerb = "system.genesis"
+	upgradeVerb      = "system.protocol.upgraded"
+	genesisVerb      = "system.genesis"
+	haltDeclaredVerb = "system.halt.declared"
+	haltLiftedVerb   = "system.halt.lifted"
+	checkpointVerb   = "system.checkpoint"
 )
+
+// The capability vocabulary (plans/os-3979d48b.md; SEED-NEXT.md Part II
+// "Capabilities"): grants are events, checked at admission on every
+// verb.
+const (
+	CapOperator    = "operator"
+	CapMaintenance = "maintenance"
+)
+
+// AcceptedCapabilities returns the set of capabilities any one of which
+// admits the verb, mirroring the normative table in
+// next/spec/actors.md "Capabilities" (pinned by test). A nil result
+// means the verb needs active standing only. The table is data:
+// later phases append rows (claim rights by squad and tier, verdict
+// rights, curation-proposal rights) when their verbs land.
+func AcceptedCapabilities(verb string) []string {
+	if IsActorVerb(verb) {
+		return []string{CapOperator}
+	}
+	switch verb {
+	case haltDeclaredVerb, haltLiftedVerb, upgradeVerb:
+		return []string{CapOperator}
+	case checkpointVerb:
+		// The charter names checkpoints as signed by the maintenance
+		// actor or an operator; folding maintenance into operator would
+		// hand the Phase 9 loop halt and actor-management authority it
+		// must not hold (review finding on #101).
+		return []string{CapMaintenance, CapOperator}
+	}
+	return nil
+}
 
 // Applies reports whether the keyring semantics are active under the
 // given protocol version: seed/1 introduced them (next/spec/actors.md),
@@ -137,11 +171,33 @@ func (s *State) Get(fp string) (Entry, bool) {
 }
 
 // IsActiveRoot reports whether the fingerprint is a governance root in
-// active standing: the interim Phase 3.1 authorization bar for actor.*
-// verbs (grant-checked operator rights replace it in 3.2).
+// active standing.
 func (s *State) IsActiveRoot(fp string) bool {
 	e := s.entries[fp]
 	return e != nil && e.Root && e.Standing == StandingActive
+}
+
+// HasAnyCapability reports whether the actor holds any of the listed
+// capabilities: governance roots hold operator implicitly (the genesis
+// trust anchor a deployment's first grants must come from), enrolled
+// actors hold exactly what actor.granted accumulated, and only active
+// standing counts — a suspended or revoked actor holds nothing.
+func (s *State) HasAnyCapability(fp string, capabilities []string) bool {
+	e := s.entries[fp]
+	if e == nil || e.Standing != StandingActive {
+		return false
+	}
+	for _, want := range capabilities {
+		if want == CapOperator && e.Root {
+			return true
+		}
+		for _, g := range e.Grants {
+			if g == want {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (s *State) activeRoots() int {

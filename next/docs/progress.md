@@ -86,8 +86,11 @@ os-beac85e1's task PR (an administrative card, not a Phase 2 item).
 
 - 3.1 actor events + keyring projection — os-52a2d688 — plan PR #97
   (merged, amended: root-liveness guard + seed/1 activation boundary
-  per review), task PR #100 — review
-- 3.2 admission checks grants per verb — os-3979d48b — backlog
+  per review), task PR #100 — **done** (merged; standing/grant rule
+  split per review; card closed)
+- 3.2 admission checks grants per verb — os-3979d48b — plan PR #101
+  (merged, amended: versioning stance held, checkpoint accepts
+  maintenance|operator, per review), task PR #102 — review
 - 3.3 key rotation/revocation drill — os-d1f35a8c — backlog
 
 **Phase 2 exit (charter III.B subset): met.** The validator is the
@@ -104,12 +107,13 @@ Phase 7, as added rules on the shared set.
 
 ## Frontier
 
-Phase 0, Phase 1, and all of Phase 2 are done and closed — **the Phase 2
-exit above is met and merged (#99)**. 3.1 (task PR #100) is in review
-against merged plan #97; 3.2's plan is in review (#101, card
-os-3979d48b parked on it); 3.3 is filed behind it. **Next action: as
-#100 merges, close os-52a2d688; as #101 merges, implement 3.2 (grants
-per verb: replace the interim root-only authorization with grant checks
-on every verb); 3.3 (revocation drill) closes the phase.**
+Phase 0, Phase 1, all of Phase 2, and 3.1 are done and closed. 3.2
+(task PR #102) is in review against merged plan #101: grants checked on
+every verb from the actors.md vocabulary, delegation via actor.granted,
+the maintenance|operator checkpoint row, and the kind-parity drill.
+**Next action: as #102 merges, close os-3979d48b, then plan and
+implement 3.3 (key rotation/revocation drill, os-d1f35a8c) — it turns
+the verification lifecycle tests into the charter drill and closes the
+Phase 3 exit (III.E items except qualification tuples).**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
