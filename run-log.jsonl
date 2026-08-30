@@ -300,3 +300,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:71","to":"ready"},"task":"os-116ca9ac","ts":"2026-08-30T03:27:36Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T04:27:39Z"},"task":"os-116ca9ac","ts":"2026-08-30T03:27:39Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-462ea4ec","kind":""},"task":"os-116ca9ac","ts":"2026-08-30T03:33:58Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-116ca9ac","ts":"2026-08-30T03:34:00Z","verb":"transition"}
