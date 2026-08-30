@@ -12,6 +12,7 @@
 package admit
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -158,6 +159,42 @@ func (e *OutOfGrantError) Error() string {
 	return fmt.Sprintf("actor %s is not granted any of [%s], which %s accepts — grants are capability data checked at admission (plans/os-3979d48b.md)", e.Actor, strings.Join(e.Accepted, ", "), e.Verb)
 }
 
+// FenceError is the stale-or-missing fence refusal (exit 6
+// fenced_out, the v1-continuity row): on a subject with an active
+// claim, the event either had to cite the fence and did not, cited a
+// fence that is not the active one, or cited a fence when no claim is
+// active. Cited is empty for a missing citation; Active is -1 when no
+// claim is active (plans/os-5dc16a7c.md).
+type FenceError struct {
+	Subject string
+	Cited   string
+	Active  int
+	Holder  string
+}
+
+func (e *FenceError) Error() string {
+	if e.Active < 0 {
+		return fmt.Sprintf("event on %s cites fence %s but no claim is active — a fence dies with its claim window", e.Subject, e.Cited)
+	}
+	if e.Cited == "" {
+		return fmt.Sprintf("event on %s must cite the active fence %d held by %s — claim-scoped events carry {\"fence\": \"<position>\"}", e.Subject, e.Active, e.Holder)
+	}
+	return fmt.Sprintf("event on %s cites stale fence %s; the active fence is %d, held by %s", e.Subject, e.Cited, e.Active, e.Holder)
+}
+
+// ContentionError is the exclusivity refusal (exit 2 contention): the
+// subject is already held. The fence is the position the active claim
+// was taken at, so the loser learns who holds and since when.
+type ContentionError struct {
+	Subject string
+	Holder  string
+	Fence   int
+}
+
+func (e *ContentionError) Error() string {
+	return fmt.Sprintf("contract %s is already claimed by %s (fence %d, held since position %d) — exclusivity is granted at admission, one claim at a time", e.Subject, e.Holder, e.Fence, e.Fence)
+}
+
 // VerbInactiveError refuses a verb whose semantics are not active under
 // the chain's protocol version: an actor.* draft on a seed/0 tip is a
 // verb illegal in this state (exit 3) until the deployment upgrades.
@@ -252,6 +289,52 @@ func Default() []Rule {
 			}
 			return nil
 		}},
+		{Name: "fence", Check: func(c *Context, rec *event.Record) error {
+			// The fence rule (plans/os-5dc16a7c.md), between grant and
+			// lifecycle per the charter's check order. The fence is the
+			// admitted claim.taken position, derived never asserted; on
+			// a held subject the four deliberate exits must cite it, so
+			// must free events from the holder or any prior claimant of
+			// the subject (a reaped worker cannot demote itself to
+			// observer), and any citation present must match the active
+			// fence whoever signs. Outside a claim window no fence
+			// exists: none is required, and citing one refuses.
+			if !keyring.Applies(c.Active) || c.Table == nil || c.Lifecycle == nil {
+				return nil
+			}
+			verb := rec.Event.Verb
+			if c.Table.Exclusive(verb) {
+				// A rival claim is contention, the lifecycle rule's
+				// structured refusal, never a fence complaint.
+				return nil
+			}
+			cited, hasCited := fenceCitation(rec.Event.Payload)
+			s, ok := c.Lifecycle.State(rec.Event.Subject)
+			if !ok || s.Claim == nil {
+				if hasCited {
+					return &FenceError{Subject: rec.Event.Subject, Cited: cited, Active: -1}
+				}
+				return nil
+			}
+			required := false
+			if c.Table.IsLifecycleVerb(verb) {
+				// The deliberate exits are exactly the lifecycle verbs
+				// the table allows out of the held state.
+				required = c.Table.Allows(s.State, verb)
+			} else if rec.Event.Actor == s.Claim.Holder || s.PriorClaimants[rec.Event.Actor] {
+				required = true
+			}
+			if !hasCited {
+				if required {
+					return &FenceError{Subject: rec.Event.Subject, Active: s.Claim.Fence, Holder: s.Claim.Holder}
+				}
+				return nil
+			}
+			if cited != fmt.Sprintf("%d", s.Claim.Fence) {
+				return &FenceError{Subject: rec.Event.Subject, Cited: cited, Active: s.Claim.Fence, Holder: s.Claim.Holder}
+			}
+			return nil
+		}},
 		{Name: "lifecycle", Check: func(c *Context, rec *event.Record) error {
 			// Lifecycle legality is admission policy at seed/1, the
 			// halt/classification/grant precedent (plans/os-d69a6c91.md):
@@ -269,8 +352,15 @@ func Default() []Rule {
 				return err
 			}
 			current := ""
+			var claim *transition.Claim
 			if s, ok := c.Lifecycle.State(rec.Event.Subject); ok {
 				current = s.State
+				claim = s.Claim
+			}
+			if c.Table.Exclusive(verb) && claim != nil {
+				// Exclusivity not granted: the subject is held. The
+				// loser learns who holds and since when (exit 2).
+				return &ContentionError{Subject: rec.Event.Subject, Holder: claim.Holder, Fence: claim.Fence}
 			}
 			_, err := c.Table.Check(rec.Event.Subject, current, verb)
 			return err
@@ -306,4 +396,23 @@ func Validate(opts ...Option) func(*ledger.Store, *event.Record) error {
 		}
 		return Check(ctx, rec)
 	}
+}
+
+// fenceCitation extracts the payload's fence field: the string form
+// of the cited claim position, absent when the payload carries none.
+func fenceCitation(payload []byte) (string, bool) {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return "", false
+	}
+	raw, ok := m["fence"]
+	if !ok {
+		return "", false
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		// A non-string fence is a citation that matches nothing.
+		return strings.TrimSpace(string(raw)), true
+	}
+	return s, true
 }

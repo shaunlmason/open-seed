@@ -403,7 +403,9 @@ func TestRemoteAppendLifecycle(t *testing.T) {
 		{"intent.filed", "c-1", `{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`},
 		{"contract.specified", "c-1", `{"acceptance": "specs/c1.md @ abc"}`},
 		{"claim.taken", "c-1", `{}`},
-		{"submission.made", "c-1", `{"branch": "seed/c-1"}`},
+		// The claim admitted at position 4 (genesis, upgrade, filed,
+		// specified, taken): the submission cites that fence.
+		{"submission.made", "c-1", `{"branch": "seed/c-1", "fence": "4"}`},
 		{"merge.observed", "c-1", `{"pr": "9"}`},
 	}
 	for _, s := range steps {
@@ -435,5 +437,64 @@ func TestRemoteAppendLifecycle(t *testing.T) {
 	}
 	if after := remoteTip(t, remote); after != before {
 		t.Fatal("refused draft must push nothing")
+	}
+}
+
+// conformance: III.F — claims are exclusive with fencing at the CLI:
+// contention returns the structured envelope, a fence-free holder
+// event refuses 6, and exclusive verbs refuse offline (the cooperative
+// client's online-only seam; plans/os-5dc16a7c.md).
+func TestRemoteClaimFencingCLI(t *testing.T) {
+	dir, priv, _ := writeKeys(t)
+	remote := bareRemote(t)
+	resolve := seedRemoteGenesis(t, remote)
+	libAppend(t, remote, resolve, "seed/0", ledger.UpgradeVerb, "system", `{"to": "seed/1"}`)
+	state := filepath.Join(dir, "state")
+	appendCLI := func(verb, subject, payload string) (ledgerEnv, int) {
+		return runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
+			"--key", priv, "--verb", verb, "--subject", subject, "--payload", payload)
+	}
+	if _, code := appendCLI("intent.filed", "c-1", `{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`); code != 0 {
+		t.Fatal("filing failed")
+	}
+	if _, code := appendCLI("contract.specified", "c-1", `{"acceptance": "specs/c1.md @ abc"}`); code != 0 {
+		t.Fatal("specification failed")
+	}
+	if _, code := appendCLI("claim.taken", "c-1", `{}`); code != 0 {
+		t.Fatal("claim failed")
+	}
+
+	// Contention: the same key re-claiming its held contract loses
+	// with the structured envelope (one claim at a time, whoever asks).
+	e, code := appendCLI("claim.taken", "c-1", `{}`)
+	if code != 2 || e.Error == nil || e.Error.Code != "contention" ||
+		!strings.Contains(e.Error.Message, "fence 4") {
+		t.Fatalf("a rival claim must refuse structured contention at 2, got %d %+v", code, e)
+	}
+
+	// The holder's fence-free milestone refuses 6 naming the fence.
+	e, code = appendCLI("progress.milestone", "c-1", `{"n": 1}`)
+	if code != 6 || e.Error == nil || e.Error.Code != "fenced_out" ||
+		!strings.Contains(e.Error.Message, "4") {
+		t.Fatalf("a fence-free holder event must refuse 6, got %d %+v", code, e)
+	}
+	if _, code := appendCLI("progress.milestone", "c-1", `{"n": 1, "fence": "4"}`); code != 0 {
+		t.Fatal("the holder citing the active fence must admit")
+	}
+
+	// Offline: an exclusive verb refuses through the local dev tool
+	// with the charter's posture in the message; reading stays local.
+	ld := filepath.Join(t.TempDir(), "ledger")
+	if _, code := runEnv(t, "init", "--ledger", ld, "--key", priv); code != 0 {
+		t.Fatal("init failed")
+	}
+	e, code = runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+		"--verb", "claim.taken", "--subject", "c-9", "--payload", `{}`)
+	if code != 2 || e.Error == nil || e.Error.Code != "contention" ||
+		!strings.Contains(e.Error.Message, "online-only") {
+		t.Fatalf("an offline exclusive verb must refuse with the online-only posture, got %d %+v", code, e)
+	}
+	if _, code := runEnv(t, "ledger", "verify", "--ledger", ld); code != 0 {
+		t.Fatal("offline reading is unaffected")
 	}
 }

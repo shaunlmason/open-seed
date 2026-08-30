@@ -202,6 +202,15 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 		{"wrong version", "verify", func(dir string, store *ledger.Store) {
 			appendRaw(t, store, resolve, signedV(t, "seed/9", "progress.milestone", "c-0002", `{"n": 2}`, tipOf(t, store)))
 		}},
+		{"claim contention", "already claimed", func(dir string, store *ledger.Store) {
+			appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"to": "seed/1"}`, tipOf(t, store)))
+			appendRaw(t, store, resolve, signedV(t, "seed/1", "intent.filed", "c-0009",
+				`{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`, tipOf(t, store)))
+			appendRaw(t, store, resolve, signedV(t, "seed/1", "contract.specified", "c-0009",
+				`{"acceptance": "specs/c9.md @ abc"}`, tipOf(t, store)))
+			appendRaw(t, store, resolve, signedV(t, "seed/1", "claim.taken", "c-0009", `{}`, tipOf(t, store)))
+			appendRaw(t, store, resolve, signedV(t, "seed/1", "claim.taken", "c-0009", `{}`, tipOf(t, store)))
+		}},
 		{"illegal lifecycle transition", "lifecycle", func(dir string, store *ledger.Store) {
 			appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"to": "seed/1"}`, tipOf(t, store)))
 			appendRaw(t, store, resolve, signedV(t, "seed/1", "claim.taken", "c-0002", `{"note": "no such subject"}`, tipOf(t, store)))

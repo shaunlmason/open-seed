@@ -248,3 +248,14 @@ Fresh sessions read this file instead of rediscovering.
   after the stack root had merged, so the content needed re-landing
   PRs rebuilt from main. Verify the files exist on main before
   closing cards or claiming a phase exit.
+- 2026-08-31 — A same-key race fixture can converge rivals onto
+  byte-identical records: identical drafts (same signer, fixed ts,
+  same prev) build the same commit, and git treats pushing an
+  already-landed commit as an idempotent success, so every "rival"
+  reports victory while the chain correctly holds one record — the
+  race was never real. Give each simulated rival a distinct draft
+  (its own ts, or its own key) and assert the exact count of the
+  contested record on the converged chain, not just total length.
+  The storm only surfaced under the slower unprivileged run: timing
+  shifts change which fixture flaws fire, one more reason the
+  nobody-run is part of the gate.

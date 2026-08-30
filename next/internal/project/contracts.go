@@ -12,6 +12,7 @@ package project
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -40,16 +41,29 @@ type ContractEntry struct {
 	Subject       string          `json:"subject"`
 	State         *string         `json:"state"`
 	Anomalies     int             `json:"anomalies"`
+	Claim         *ContractClaim  `json:"claim,omitempty"`
 	FirstPosition int             `json:"first_position"`
 	LastPosition  int             `json:"last_position"`
 	Events        []ContractEvent `json:"events"`
 }
 
+// ContractClaim is the active claim while a subject is in_progress:
+// the holder's fingerprint and the fence (the admitted claim.taken
+// position, string per the envelope position convention), so
+// contention answers and stale-fence refusals are independently
+// checkable against the published view (plans/os-5dc16a7c.md). Absent
+// outside a claim window.
+type ContractClaim struct {
+	Holder string `json:"holder"`
+	Fence  string `json:"fence"`
+}
+
 // Contracts returns the contract-detail projection. Version "2" added
-// the folded state and anomaly count, republishing under a new build
-// id via the version-in-identity machinery.
+// the folded state and anomaly count; Version "3" the claim object,
+// each republishing under a new build id via the version-in-identity
+// machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "2", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "3", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -97,6 +111,9 @@ func buildContracts(records []*event.Record) (map[string][]byte, error) {
 			if s.State != "" {
 				st := s.State
 				e.State = &st
+			}
+			if s.Claim != nil {
+				e.Claim = &ContractClaim{Holder: s.Claim.Holder, Fence: fmt.Sprintf("%d", s.Claim.Fence)}
 			}
 		}
 		out = append(out, *e)

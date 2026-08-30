@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
@@ -423,5 +424,119 @@ func TestRecordVerifiedHeadArmsRegressionRefusal(t *testing.T) {
 	}
 	if _, err := fresh.Fetch(); !errors.Is(err, ErrHeadRegression) {
 		t.Fatalf("recorded head must refuse the rollback, got %v", err)
+	}
+}
+
+// conformance: III.F — the claim race storm (plans/os-5dc16a7c.md, the
+// Phase 5 exit drill): N concurrent claimants race one ready contract
+// through the full admission rule set against a real remote. Exactly
+// one claim admits, every loser receives the structured contention
+// refusal naming holder and fence, the converged chain verifies from
+// genesis, and no update is lost.
+func TestClaimRaceStorm(t *testing.T) {
+	remote := bareRemote(t)
+	signer := fixtureKey(t, 1)
+	resolve := seedGenesis(t, remote, signer)
+	fp, err := event.Fingerprint(signer.Public().(ed25519.PublicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sign := func(e event.Event) (*event.Record, error) { return event.Sign(e, signer) }
+
+	// Stage: upgrade to seed/1, file, specify — the contract is ready.
+	setup, err := NewClient(t.TempDir(), remote, ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []struct{ v, verb, subject, payload string }{
+		{"seed/0", "system.protocol.upgraded", "system", `{"to": "seed/1"}`},
+		{"seed/1", "intent.filed", "c-race", `{"intent": "storm", "tier": "standard", "budget": "s", "routing": "core"}`},
+		{"seed/1", "contract.specified", "c-race", `{"acceptance": "specs/race.md @ abc"}`},
+	} {
+		if _, err := setup.AppendLoop(Draft{
+			V: s.v, TS: "2026-09-01T01:00:00Z", Actor: fp,
+			Verb: s.verb, Subject: s.subject, Payload: json.RawMessage(s.payload),
+		}, sign, resolve, admit.Validate(), 5); err != nil {
+			t.Fatalf("staging %s: %v", s.verb, err)
+		}
+	}
+
+	// Each claimant carries its own timestamp: distinct drafts make
+	// the race real (byte-identical drafts from one key converge on
+	// one commit, and git treats pushing an already-landed commit as
+	// an idempotent success — the chain stays correct, but nobody
+	// races anything).
+	const claimants = 6
+	var wg sync.WaitGroup
+	results := make([]error, claimants)
+	for i := 0; i < claimants; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			c, err := NewClient(t.TempDir(), remote, ref)
+			if err != nil {
+				results[i] = err
+				return
+			}
+			_, err = c.AppendLoop(Draft{
+				V: "seed/1", TS: fmt.Sprintf("2026-09-01T01:00:%02dZ", i+1), Actor: fp,
+				Verb: "claim.taken", Subject: "c-race", Payload: json.RawMessage(`{}`),
+			}, sign, resolve, admit.Validate(), 30)
+			results[i] = err
+		}(i)
+	}
+	wg.Wait()
+
+	winners := 0
+	for i, err := range results {
+		if err == nil {
+			winners++
+			continue
+		}
+		var ce *admit.ContentionError
+		if !errors.As(err, &ce) || ce.Subject != "c-race" || ce.Holder != fp || ce.Fence < 0 {
+			t.Fatalf("claimant %d must lose with structured contention naming holder and fence, got %v", i, err)
+		}
+	}
+	if winners != 1 {
+		t.Fatalf("exactly one claim must admit, got %d", winners)
+	}
+
+	// The converged chain verifies from genesis with exactly one claim
+	// landed: genesis, upgrade, filed, specified, one claim.taken.
+	c, err := NewClient(t.TempDir(), remote, ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tip, err := c.Fetch()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := c.Materialize(tip, dir); err != nil {
+		t.Fatal(err)
+	}
+	store, err := ledger.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := store.VerifyFromGenesis(resolve)
+	if err != nil {
+		t.Fatalf("converged chain must verify: %v", err)
+	}
+	if rep.Count != 5 {
+		t.Fatalf("no lost or duplicated updates: chain has %d events, want 5", rep.Count)
+	}
+	claims := 0
+	if err := store.Records(func(pos int, r *event.Record) error {
+		if r.Event.Verb == "claim.taken" {
+			claims++
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if claims != 1 {
+		t.Fatalf("exactly one claim record may land, got %d", claims)
 	}
 }

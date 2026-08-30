@@ -90,8 +90,13 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   `state` (null for a subject no lifecycle event ever validly
   created) and an `anomalies` count — lifecycle events the table
   refused, tolerated in raw-pushed history per the cooperative
-  posture, skipped by the fold, surfaced here, never silent
-  (Version "2"; `lifecycle.md`).
+  posture, skipped by the fold, surfaced here, never silent — and,
+  while a subject is `in_progress`, a `claim` object
+  `{holder, fence}` (the holder's fingerprint and the admitted
+  `claim.taken` position, string form), absent outside a claim
+  window, so contention answers and stale-fence refusals are
+  independently checkable against the published view (Version "3";
+  `lifecycle.md`).
   One file, not per-subject files (subjects are opaque strings; the
   cache is the lookup-throughput surface). An empty chain yields an
   empty array, not a missing file.

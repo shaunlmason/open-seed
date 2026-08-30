@@ -47,11 +47,11 @@ for tooling continuity. Inherited allocations:
 | code | name | meaning |
 |---|---|---|
 | 0 | `ok` | verb succeeded |
-| 2 | `contention` | claim contention or author lockout: exclusivity not granted |
+| 2 | `contention` | claim contention or author lockout: exclusivity not granted — a rival `claim.taken` on a held contract returns the holding fingerprint and the active fence position (the loser learns who holds and since when), and an exclusive verb drafted offline refuses here too: claiming is online-only (`lifecycle.md`) |
 | 3 | `invalid_transition` | transition absent from the spec tables, or verb illegal in this state — the contract-lifecycle refusals included (`lifecycle.md`): an illegal (state, verb) pair, a birth verb on an existing subject, a non-birth verb on an unknown one, each naming subject, current state, and verb |
 | 4 | `not_found` | subject does not resolve |
 | 5 | `unavailable` | authoritative remote or backend unreachable |
-| 6 | `fenced_out` | stale or missing fence (claim token) |
+| 6 | `fenced_out` | stale or missing fence (claim token): on a held contract the deliberate exits and every event from the holder or a prior claimant must cite the active fence as `{"fence": "<position>"}`; the refusal names the cited fence, the active fence, and the holder (`lifecycle.md`) |
 | 7 | `halted` | admission is halted (`system.halt.declared`); only an operator's `system.halt.lifted` may append |
 | 8 | `chain_invalid` | ledger verification failed (parse, linkage, signature, actor, or HEAD trouble); the error message carries `position N: <reason>: <detail>` |
 | 9 | `classification_refused` | payload failed the data-classification lint; the error message joins the violations' pointers and rules |
