@@ -143,6 +143,7 @@ func TestProjectRebuildCLI(t *testing.T) {
 	// unavailable, never not_found. The chmods are no-ops until the
 	// locked publication of 4.4 arrives and then open the lock.
 	out2 := filepath.Join(t.TempDir(), "proj2")
+	unlockForCleanup(t, out2)
 	if _, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out2); code != 0 {
 		t.Fatal("second rebuild failed")
 	}
@@ -159,6 +160,7 @@ func TestProjectRebuildCLI(t *testing.T) {
 	// (review finding on #117): an empty object must never read as a
 	// fresh published build, --min-position 0 included.
 	out3 := filepath.Join(t.TempDir(), "proj3")
+	unlockForCleanup(t, out3)
 	if _, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out3); code != 0 {
 		t.Fatal("third rebuild failed")
 	}
@@ -190,4 +192,20 @@ func TestProjectRebuildCLI(t *testing.T) {
 	if b, err := os.ReadFile(filepath.Join(out, "roster", "CURRENT")); err != nil || strings.TrimSpace(string(b)) != strings.TrimSpace(string(cur)) {
 		t.Fatal("the consumer verb's refusals must leave the published layout untouched")
 	}
+}
+
+// unlockForCleanup registers a walk that reopens directory modes so
+// t.TempDir removal succeeds for an unprivileged runner once 4.4's
+// locked publication arrives (a no-op before then). t.Cleanup runs
+// LIFO, so this fires before the TempDir removal it unblocks.
+func unlockForCleanup(t *testing.T, root string) {
+	t.Helper()
+	t.Cleanup(func() {
+		_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+			if err == nil && d.IsDir() {
+				_ = os.Chmod(p, 0o755)
+			}
+			return nil
+		})
+	})
 }
