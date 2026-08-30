@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "task": "os-028dda91",
+  "merge_base": "c18317dd7bbd256a291926e2f90913cc1bf27c4f",
+  "head": "da93ce1cb98e66a117f4cdc32719631c3c0549e5",
+  "plan_path": "plans/os-028dda91.md",
+  "plan_sha256": "c59b147cfb4cb269d3177de261ef48d62b7d425461902e1bcd3e99e6de1a17ae",
+  "diff_files": [
+    "next/cmd/seed-admit/drill_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md"
+  ],
+  "diff_sha256": "cbcaf60444a2077005eebfcf12b45c86699652090d417946ae804aaf3dcc8e08",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed-admit/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
