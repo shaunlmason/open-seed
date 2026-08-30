@@ -58,7 +58,7 @@ Priority: **Now** (high value, fits current architecture) / **Next** (valuable, 
 | P3 | **Hard budget stops.** 80% soft alert, 100% hard stop with reset window and manual resume. | Opt-in `enforcement: hard` for budgets in `guardrails.yaml` on backends that can enforce (advisory stays the file-backend default). | Later | M |
 | P4 | **Per-tool policy on the MCP surface.** Allow / deny / require-approval per tool, per agent, by risk class (read/write/destructive); approval-gated calls go to a human inbox. | Guardrails-driven verb policy for `seed mcp serve`: which actors may call which port verbs, with `require_approval` routing an operator-ack request through seed mail. | Next | M |
 | F1 | **Initiative rollup.** Factory's pitch: plan a complex initiative, delegate to parallel agents, watch progress. | Cards already carry `parent`; add an initiative view (`seed task tree <id>` / report section) rolling up child states into progress. | Next | S |
-| A1 | **Context quality beats agent cleverness.** Augment's context engine thesis. | Enrich the handoff packet — still mechanical-only: the plan's validation commands, last failing check output, diffstat vs. merge base. The packet is the seam that decides whether a cold resume succeeds. | Now | S |
+| A1 | **Context quality beats agent cleverness.** Augment's context engine thesis. | Enrich the handoff packet — still mechanical-only: the plan's validation commands, last failing check output, diffstat vs. merge base. The packet is the seam that decides whether a cold resume succeeds. *Schema: the three-part handoff-package spec from "AI Agents in Depth" — acceptance criteria, settled decisions, artifact refs by path (B1 in [doc 12](./12-ai-agents-in-depth-notes.md)).* | Now | S |
 
 ## Part 5 — From Amp Orbs (ampcode.com)
 
@@ -153,13 +153,21 @@ external-backend adoption materializes.
   upgrade` follows the unauthenticated `/releases/latest` HTML redirect; add an
   `api.github.com` fallback with optional token for private forks. Engine change; file as an
   engine card. (Now / S)
+- **Book cross-check** ([doc 12](./12-ai-agents-in-depth-notes.md), "AI Agents in Depth"):
+  **B1** three-part handoff-package spec folds into A1 (see the A1 row); **B2**
+  provenance-bearing entry template for `memory/LEARNINGS.md`/`DEADENDS.md` — applies-when,
+  supporting task IDs, last-validated stamp (Now / S); **B3** progress-file liveness —
+  worker-maintained `progress.md` whose mtime is a heartbeat, complementing lease renewal
+  and feeding D1 Tier-0 (Next / S). Doc 12 §5 also carries design tests (information-gain,
+  boundary+retention set) worth applying when the reviewer lane and role files evolve.
 
 ## Suggested first wave
 
 Three cards, in order: **S1 audit surface**, **S2 `seed doctor`**, **A1 handoff-packet
-enrichment** — all small, all immediately visible. Second wave: **I3 protections reconciler**,
-**I4 anchor retention + restore**, **P1 unblock wakeups**, **I6 governance statement**,
-**D1 Tier-0 dashboard**. The differentiating bet after that is **W1+W2** (distill +
+enrichment** (with the B1 packet schema from doc 12) — all small, all immediately visible.
+Second wave: **I3 protections reconciler**, **I4 anchor retention + restore**, **P1 unblock
+wakeups**, **I6 governance statement**, **D1 Tier-0 dashboard**, **B2 learnings provenance
+template** (doc 12). The differentiating bet after that is **W1+W2** (distill +
 self-heal), which turns the audit log and workflow engine into a compounding loop: every
 chore an agent does twice becomes a deterministic workflow that agents only maintain. The
 open *decision* (not card) is **R1**: who plays employer — a native supervisor loop or
