@@ -14,8 +14,8 @@ Phase 2 with the enforced posture).
 ## Steps
 
 1. **Halt state as a projection of the chain.** `next/internal/halt`:
-   `StateAt(records) (halted bool, by string)` derives the current halt
-   state by replaying `system.halt.declared` / `system.halt.lifted` events
+   `StateAt(records) State` derives the current halt state (`State`
+   carries `Halted`, `By`, and the declaration `Reason`) by replaying `system.halt.declared` / `system.halt.lifted` events
    (payload schemas for both verbs: `reason` for declare, empty for lift;
    subject `system`). No stored flag anywhere: the chain is the only
    source, per the no-second-store rule.
@@ -37,14 +37,14 @@ Phase 2 with the enforced posture).
    fixture chain containing a halt window replays green under
    `VerifyFromGenesis` (halt gates *admission of new events*, never the
    validity of admitted history); envelope exit-code table test extended
-   for code 11.
+   for code 7.
 
 ## File Scope
 
 - `next/internal/halt/**` (new package)
 - `next/internal/envelope/envelope.go` (+ test) — the `halted` exit-code
-  constant (11) mirroring the spec table
-- `next/spec/envelope.md` — allocate code 11 per the documented rule
+  constant (7) mirroring the spec table
+- `next/spec/envelope.md` — allocate code 7 per the documented rule
 - `next/docs/decisions.md`, `next/docs/progress.md`
 
 ## Acceptance Criteria
@@ -54,9 +54,10 @@ Phase 2 with the enforced posture).
 - `StateAt` derives halt state solely from the chain; no flag file or
   second store exists.
 - While halted, `Check` refuses every verb except `system.halt.lifted`
-  with a typed error naming the halting actor and reason; after a lift,
+  with a typed error carrying the halting actor and the declaration reason
+  (both preserved by `StateAt`'s projected state); after a lift,
   ordinary verbs pass again; toggling is idempotent and order-driven.
-- Exit code 11 (`halted`) is allocated in `next/spec/envelope.md` and
+- Exit code 7 (`halted`) is allocated in `next/spec/envelope.md` and
   mirrored by a tested constant in `internal/envelope`.
 - A halt window inside an admitted chain does not fail
   `VerifyFromGenesis` (history stays valid; halt gates admission).
