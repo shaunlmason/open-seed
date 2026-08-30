@@ -423,3 +423,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-028dda91","ts":"2026-08-30T08:48:10Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"title":"next: actor events and keyring projection (Phase 3.1)"},"task":"os-52a2d688","ts":"2026-08-30T10:28:20Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: admission checks grants per verb; operator-only verbs (Phase 3.2)"},"task":"os-3979d48b","ts":"2026-08-30T10:28:31Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: key rotation and revocation drill (Phase 3.3)"},"task":"os-d1f35a8c","ts":"2026-08-30T10:28:34Z","verb":"create"}
