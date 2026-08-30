@@ -493,3 +493,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-d69a6c91","ts":"2026-08-30T17:17:05Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T18:17:08Z"},"task":"os-d69a6c91","ts":"2026-08-30T17:17:08Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-d69a6c91","ts":"2026-08-30T17:18:35Z","verb":"transition"}
+{"actor":"seed-next-implementer","data":{"title":"next: claims with fences — exclusivity, stale-fence refusal, contention (Phase 5.2)"},"task":"os-5dc16a7c","ts":"2026-08-30T18:20:33Z","verb":"create"}
