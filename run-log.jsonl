@@ -490,3 +490,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-06d62c39","kind":""},"task":"os-8d5e9c45","ts":"2026-08-30T16:49:31Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-8d5e9c45","ts":"2026-08-30T16:49:34Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"title":"next: transition table as data + lifecycle verbs (Phase 5.1)"},"task":"os-d69a6c91","ts":"2026-08-30T17:16:56Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-d69a6c91","ts":"2026-08-30T17:17:05Z","verb":"promote"}
