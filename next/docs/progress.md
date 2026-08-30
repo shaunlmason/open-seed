@@ -33,10 +33,10 @@ frontier.
 - 1.2 chain/segments/HEAD — os-ead12024 — plan PR #74 (merged, amended),
   task PR #79 — **done** (merged; card closed)
 - 1.3 genesis via `seed init` — os-d636299d — plan PR #75 (merged,
-  amended), task PR #83 — review (genesis-payload version bootstrap +
-  position-stamped init refusal per review)
-- 1.4 push-race append loop — os-62e2aa1d — plan PR #81 (merged, amended:
-  monotonic head + rollback drill) — blocked on dep:os-d636299d
+  amended), task PR #83 — **done** (merged; genesis-payload version
+  bootstrap + position-stamped init refusal per review; card closed)
+- 1.4 push-race append loop — os-62e2aa1d — plan PR #81 (merged,
+  amended: monotonic head + rollback drill), task PR #86 — review
 - 1.5 halt semantics in the rule set — os-bce3fb98 — plan PR #78 (merged,
   amended: exit code 7, reason-carrying state), task PR #84 — review
   (halted refusal ordering + empty lift payload per review)
@@ -45,17 +45,16 @@ frontier.
   task PR #80 — **done** (merged; narrowed anchor exemption + RFC 6901
   pointers per review; card closed)
 - 1.7 CLI `seed ledger verify/append/show` — os-89412090 — plan PR #82
-  (merged, amended: envelope v0 preserved, exit 9) — blocked on
-  dep:os-d636299d
+  (merged, amended: envelope v0 preserved, exit 9), task PR #85 —
+  review
 
 ## Frontier
 
-Phase 0, 1.1, 1.2, and 1.6 are done; 1.3 (task PR #83) and 1.5 (task PR
-#84) are in review with review findings addressed. **Next action: as
-#83/#84 merge, close their cards (os-d636299d, os-bce3fb98); closing 1.3
-frees os-89412090 and os-62e2aa1d — claim each and implement 1.7 (ledger
-CLI, exits 8/9) then 1.4 (`internal/gitref`, monotonic head + race
-drill); both plans are merged. Phase 1 exit then needs all seven items
-merged; Phase 2 (admission) cards get filed after that.** If an open task
-PR is red or carries review feedback, drive it green first — nothing
-merges out of order.
+Phase 0, 1.1, 1.2, 1.3, and 1.6 are done; 1.5 (task PR #84), 1.7 (task
+PR #85), and 1.4 (task PR #86) are in review. **Next action: as
+#84/#85/#86 merge, close their cards (os-bce3fb98, os-89412090,
+os-62e2aa1d). That completes all seven Phase 1 items: flip this frontier
+to the Phase 1 exit, file the Phase 2 (admission) cards, and start 2.1
+(`internal/admit`, the rule-set library) per docs/next-build-plan.md.**
+If an open task PR is red or carries review feedback, drive it green
+first — nothing merges out of order.

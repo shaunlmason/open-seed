@@ -52,6 +52,7 @@ for tooling continuity. Inherited allocations:
 | 4 | `not_found` | subject does not resolve |
 | 5 | `unavailable` | authoritative remote or backend unreachable |
 | 6 | `fenced_out` | stale or missing fence (claim token) |
+| 7 | `halted` | admission is halted (`system.halt.declared`); only an operator's `system.halt.lifted` may append |
 | 10 | `version_mismatch` | protocol or envelope version mismatch |
 | 64 | `usage` | CLI usage error (EX_USAGE); never a verb result |
 

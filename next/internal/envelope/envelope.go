@@ -23,6 +23,7 @@ const (
 	ExitNotFound          = 4
 	ExitUnavailable       = 5
 	ExitFenced            = 6
+	ExitHalted            = 7
 	ExitVersionMismatch   = 10
 	ExitUsage             = 64
 )
