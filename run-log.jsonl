@@ -397,3 +397,4 @@
 {"actor":"shim","data":{"removed":"dep:os-3898f232"},"task":"os-d3591e09","ts":"2026-08-30T07:38:22Z","verb":"blocker_resolved"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-3898f232","ts":"2026-08-30T07:38:22Z","verb":"close"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-895bf828","ts":"2026-08-30T07:38:39Z","verb":"promote"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-d3591e09","ts":"2026-08-30T07:38:42Z","verb":"promote"}
