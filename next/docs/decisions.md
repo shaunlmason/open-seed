@@ -71,6 +71,11 @@ here. Newest last.
   (correctness first); the segment-seek optimization the plan sketches is
   deferred until the Phase 12 performance budgets exist to justify it.
   (PR #79)
+- 2026-08-30 — Classification v0 bounds (plan os-d6f81ec6): canonical
+  payload 4096 bytes, string 512 bytes, aggregate non-reference text 1024
+  bytes, depth 8, array 64, base64 run 256; the anchor exemption requires
+  a filename-alphabet path (no whitespace, 200 bytes max); pointers are
+  RFC 6901-escaped; lint canonicalizes (JCS) before walking. (PR #80)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under
