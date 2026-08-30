@@ -279,3 +279,14 @@ here. Newest last.
   Renaming the output root from ITS parent stays outside the engine's
   ownership, equivalent to repointing --out, and is named residual in
   the spec. (PR #112)
+- 2026-08-30 — Boundary hardening round three (review findings on
+  #118): a partial window open rolls itself back — openDirs relocks
+  the directories it already opened before surfacing the error, so a
+  refusing directory (builds/ occupied by a regular file) never
+  strands a projection root writable until some later successful
+  rebuild; and the lint vocabulary derives from the engine's own
+  declarations (CurrentFile, StampFile) instead of re-typed literals,
+  with the unexported builds directory pinned behaviorally against a
+  freshly published layout — unexported deliberately, since exporting
+  it would hand non-engine code the very path piece the lint denies.
+  (PR #118)

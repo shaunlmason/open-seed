@@ -181,7 +181,10 @@ that row claims — not tamper-proofing against a root-privileged actor.
    obtained. The engine opens a write window (`0755`) on exactly the
    output root, the projection root, and `builds/` for its own swap
    (after verification, keeping refuse-before-write intact) and every
-   return path relocks, failed publications included; every published
+   return path relocks, failed publications included — a *partial*
+   open rolls itself back too, so a directory that refuses to open
+   (say `builds/` occupied by a regular file) never strands the ones
+   already opened writable; every published
    mode is set by explicit `chmod`, so the process umask cannot
    weaken the protocol. Only a killed process leaves an open window —
    at worst writable directories and an orphan partial, never a
