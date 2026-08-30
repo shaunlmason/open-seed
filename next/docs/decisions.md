@@ -148,3 +148,22 @@ here. Newest last.
   merge as a draft PR when the owner is merging in batches (CI's
   plan-at-merge-base gate still orders the merges). ADR:
   `decisions/0003-next-loop-delegation.md`. (PR #72)
+- 2026-08-30 — The keyring semantics activate behind a **`seed/1`
+  boundary** (review finding on #97): they are a validation-rule change a
+  conformant `seed/0` validator judges differently, so per protocol.md's
+  own bump discipline `actor.*` records at `seed/0` positions stay inert
+  and grandfathered, an `actor.*` draft at a `seed/0` tip refuses as an
+  illegal verb, and `version.Supported()` ({seed/0, seed/1}) seeds every
+  default supported set. `version.Protocol` (the genesis default) stays
+  `seed/0` until a recorded decision moves it. (PR #100)
+- 2026-08-30 — One transition function: `keyring.Advance` owns actor
+  payload shapes, standing legality (re-enrollment reinstates a
+  suspended actor; revocation is terminal; root liveness never leaves
+  zero active roots — review finding on #97), and effects, consumed by
+  verification replay (chain validity, `bad_actor_event` at the failing
+  position) and admission preview alike. The interim root-only
+  authorization for `actor.*` verbs is **admission policy** like halt
+  and classification — verification tolerates it in history (the
+  cooperative posture's named consequence) — so 3.2 swaps it for grant
+  checks without another protocol bump; exit 14 `out_of_grant`
+  allocated for the refusal the charter names. (PR #100)

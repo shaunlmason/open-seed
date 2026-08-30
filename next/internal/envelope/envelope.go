@@ -30,6 +30,7 @@ const (
 	ExitRemoteRejected    = 11
 	ExitHeadRegression    = 12
 	ExitPostureInvalid    = 13
+	ExitOutOfGrant        = 14
 	ExitUsage             = 64
 	ExitUnreadable        = 66
 )

@@ -57,8 +57,8 @@ func TestUpgradedChainVerifiesWithSupportedSet(t *testing.T) {
 	if err != nil || rep.Count != 3 {
 		t.Fatalf("upgraded chain must verify with both versions supported: %+v %v", rep, err)
 	}
-	if _, err := s.VerifyFromGenesis(resolve); err == nil {
-		t.Fatal("default supported set (seed/0 only) must refuse the seed/1 suffix")
+	if _, err := s.VerifyFromGenesis(resolve, WithSupportedVersions("seed/0")); err == nil {
+		t.Fatal("a seed/0-only supported set must refuse the seed/1 suffix")
 	}
 }
 
@@ -144,13 +144,14 @@ func TestObserverSeesVerifiedRecordsOnly(t *testing.T) {
 		t.Fatalf("report must carry the active version, got %q", rep.ActiveVersion)
 	}
 
-	// Under the default supported set the same chain fails at position 2;
-	// the observer must not see the failing record.
+	// Under a seed/0-only set the same chain fails at position 2; the
+	// observer must not see the failing record.
 	seen = nil
-	if _, err := s.VerifyFromGenesis(resolve, WithObserver(func(pos int, rec *event.Record) {
-		seen = append(seen, pos)
-	})); err == nil {
-		t.Fatal("default set must refuse the upgraded suffix")
+	if _, err := s.VerifyFromGenesis(resolve, WithSupportedVersions("seed/0"),
+		WithObserver(func(pos int, rec *event.Record) {
+			seen = append(seen, pos)
+		})); err == nil {
+		t.Fatal("a seed/0-only set must refuse the upgraded suffix")
 	}
 	if len(seen) != 2 {
 		t.Fatalf("observer must stop at the failure, got %v", seen)

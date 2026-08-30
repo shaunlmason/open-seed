@@ -81,7 +81,10 @@ func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, su
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
-	supportedSet := map[string]bool{version.Protocol: true}
+	supportedSet := map[string]bool{}
+	for _, v := range version.Supported() {
+		supportedSet[v] = true
+	}
 	var vopts []ledger.VerifyOption
 	var aopts []admit.Option
 	if supported != "" {
@@ -210,6 +213,14 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	var cerr *admit.ClassificationError
 	if errors.As(err, &cerr) {
 		return envelope.Fail(envelope.ExitClassificationRef, "classification_refused", err.Error())
+	}
+	var oog *admit.OutOfGrantError
+	if errors.As(err, &oog) {
+		return envelope.Fail(envelope.ExitOutOfGrant, "out_of_grant", err.Error())
+	}
+	var vin *admit.VerbInactiveError
+	if errors.As(err, &vin) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
 	}
 	var fail *ledger.Failure
 	if errors.As(err, &fail) {

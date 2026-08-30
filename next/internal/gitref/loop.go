@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 )
 
@@ -116,7 +117,28 @@ func (c *Client) attempt(draft Draft, sign Signer, resolve ledger.Resolver, vali
 			return nil, err
 		}
 	}
-	pos, err := store.Append(rec, resolve)
+	// From seed/1 the keyring projection is the append-time resolver:
+	// standing decides who signs at this tip, so an enrolled key appends
+	// and a suspended or revoked one refuses, while seed/0 chains keep
+	// the caller's root-seam resolver untouched.
+	appendResolve := resolve
+	if tipCommit != "" {
+		var records []*event.Record
+		if err := store.Records(func(pos int, r *event.Record) error {
+			records = append(records, r)
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		ring, ringActive, err := keyring.StateAt(records)
+		if err != nil {
+			return nil, err
+		}
+		if keyring.Applies(ringActive) && ring.Seeded() {
+			appendResolve = ring.Resolver()
+		}
+	}
+	pos, err := store.Append(rec, appendResolve)
 	if err != nil {
 		return nil, err
 	}

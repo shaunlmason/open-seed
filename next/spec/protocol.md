@@ -33,6 +33,17 @@
   lands as a PR editing this file plus the `system.protocol.upgraded` event.
   Additive verb-catalog growth that older validators safely refuse as
   unknown does not bump the version.
+- **Version register**:
+  - `seed/0` — the genesis default: chain form, halt, upgrade schemas,
+    payload classification.
+  - `seed/1` — activates the actor keyring semantics
+    ([`actors.md`](actors.md)): `actor.*` payload schemas, standing
+    transitions (root liveness included), and standing-aware signature
+    resolution. A `seed/0` validator imposes no actor schema, so it
+    judges these records differently — hence the bump; `actor.*` records
+    at `seed/0` positions stay inert and grandfathered, and a new
+    `actor.*` proposal at a `seed/0` tip refuses until the deployment
+    upgrades.
 
 ## Canonical event form
 
@@ -120,7 +131,8 @@ admission).
 - `system.*` — `genesis`, `halt.declared`, `halt.lifted`, `checkpoint`,
   `protocol.upgraded`.
 - `actor.*` — `enrolled`, `granted`, `suspended`, `revoked`, `qualified`
-  (cites eval results and the runtime tuple).
+  (cites eval results and the runtime tuple). Payload schemas and
+  standing semantics: [`actors.md`](actors.md), active from `seed/1`.
 - `intent.*` / `contract.*` — `intent.filed`, `contract.specified`
   (acceptance spec gate passed; sealed commitment), `contract.blocked`,
   `contract.cancelled` ….

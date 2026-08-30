@@ -19,6 +19,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -31,6 +32,7 @@ type Context struct {
 	Active    string
 	Halt      halt.State
 	Resolve   ledger.Resolver
+	Keyring   *keyring.State
 	Supported map[string]bool
 }
 
@@ -59,7 +61,10 @@ func ContextAt(store *ledger.Store, opts ...Option) (*Context, error) {
 	if err != nil {
 		return nil, fmt.Errorf("admission context: %w", err)
 	}
-	supported := map[string]bool{version.Protocol: true}
+	supported := map[string]bool{}
+	for _, v := range version.Supported() {
+		supported[v] = true
+	}
 	var vopts []ledger.VerifyOption
 	if len(o.supported) > 0 {
 		vopts = append(vopts, ledger.WithSupportedVersions(o.supported...))
@@ -76,12 +81,25 @@ func ContextAt(store *ledger.Store, opts ...Option) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
+	ring, _, err := keyring.StateAt(records)
+	if err != nil {
+		// A verified chain cannot fail the keyring projection: the
+		// replay above already applied the same transitions.
+		return nil, err
+	}
+	if keyring.Applies(rep.ActiveVersion) && ring.Seeded() {
+		// From seed/1 the keyring is the resolver: standing decides who
+		// signs at the tip (the Phase 3 projection replacing the genesis
+		// resolver, exactly as the package doc promised).
+		resolve = ring.Resolver()
+	}
 	return &Context{
 		Count:     rep.Count,
 		Tip:       rep.Tip,
 		Active:    rep.ActiveVersion,
 		Halt:      halt.StateAt(records),
 		Resolve:   resolve,
+		Keyring:   ring,
 		Supported: supported,
 	}, nil
 }
@@ -111,6 +129,33 @@ func (e *ClassificationError) Error() string {
 		parts = append(parts, fmt.Sprintf("%s: %s", v.Pointer, v.Rule))
 	}
 	return "payload fails data classification: " + strings.Join(parts, "; ")
+}
+
+// OutOfGrantError is the capability refusal the charter names
+// (SEED-NEXT.md Part II "Capabilities"): the actor is not granted what
+// the verb requires. Interim Phase 3.1 policy: actor.* verbs require an
+// active governance root; 3.2 generalizes this to grant checks per verb.
+// It maps to exit 14 out_of_grant (next/spec/envelope.md).
+type OutOfGrantError struct {
+	Actor string
+	Verb  string
+}
+
+func (e *OutOfGrantError) Error() string {
+	return fmt.Sprintf("actor %s is not granted %s — actor lifecycle verbs require an active governance root until grant checks land (plans/os-52a2d688.md)", e.Actor, e.Verb)
+}
+
+// VerbInactiveError refuses a verb whose semantics are not active under
+// the chain's protocol version: an actor.* draft on a seed/0 tip is a
+// verb illegal in this state (exit 3) until the deployment upgrades.
+type VerbInactiveError struct {
+	Verb   string
+	Active string
+	Needs  string
+}
+
+func (e *VerbInactiveError) Error() string {
+	return fmt.Sprintf("verb %s is not active at protocol %s: it activates at %s (append system.protocol.upgraded first)", e.Verb, e.Active, e.Needs)
 }
 
 // Rule is one named admission rule.
@@ -143,6 +188,17 @@ func Default() []Rule {
 			// would wedge every later verification at bad_payload.
 			return ledger.ValidateUpgradeShape(&rec.Event)
 		}},
+		{Name: "standing", Check: func(c *Context, rec *event.Record) error {
+			// The activation check precedes signer resolution: an actor
+			// verb before the seed/1 boundary is illegal for every
+			// signer, so the cooperative client must refuse it exactly
+			// as the hook does (exit 3; review finding on #100), never
+			// as an unresolvable-signer chain complaint.
+			if keyring.IsActorVerb(rec.Event.Verb) && !keyring.Applies(c.Active) {
+				return &VerbInactiveError{Verb: rec.Event.Verb, Active: c.Active, Needs: version.Seed1}
+			}
+			return nil
+		}},
 		{Name: "actor", Check: func(c *Context, rec *event.Record) error {
 			pub, ok := c.Resolve(rec.Event.Actor)
 			if !ok {
@@ -166,6 +222,18 @@ func Default() []Rule {
 				return &ClassificationError{Violations: vs}
 			}
 			return nil
+		}},
+		{Name: "grant", Check: func(c *Context, rec *event.Record) error {
+			if !keyring.IsActorVerb(rec.Event.Verb) || !keyring.Applies(c.Active) {
+				return nil
+			}
+			if c.Keyring == nil || !c.Keyring.IsActiveRoot(rec.Event.Actor) {
+				return &OutOfGrantError{Actor: rec.Event.Actor, Verb: rec.Event.Verb}
+			}
+			// The shared transition function is the shape and legality
+			// authority; admission previews it so a draft that history
+			// would refuse never leaves the client.
+			return c.Keyring.Preview(rec)
 		}},
 	}
 }

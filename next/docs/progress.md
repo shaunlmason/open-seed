@@ -78,13 +78,15 @@ os-beac85e1's task PR (an administrative card, not a Phase 2 item).
   failures + valid-postures wording per review; card closed)
 - 2.5 admission drills (raw-git adversary; kill-and-replace) —
   os-028dda91 — plan PR #96 (merged, amended: fresh-clone
-  kill-and-replace per review), task PR #99 — review
+  kill-and-replace per review), task PR #99 — **done** (merged;
+  shared adversary table under both postures + original host deleted
+  with an independently installed hook copy, per review; card closed)
 
 ## Phase 3 — Identity and grants (docs/next-build-plan.md Phase 3; deps: 2)
 
 - 3.1 actor events + keyring projection — os-52a2d688 — plan PR #97
   (merged, amended: root-liveness guard + seed/1 activation boundary
-  per review); implementation staged
+  per review), task PR #100 — review
 - 3.2 admission checks grants per verb — os-3979d48b — backlog
 - 3.3 key rotation/revocation drill — os-d1f35a8c — backlog
 
@@ -102,15 +104,12 @@ Phase 7, as added rules on the shared set.
 
 ## Frontier
 
-Phase 0, Phase 1, and 2.1 through 2.4 are done and closed. 2.5 (task PR
-#99) is in review against its merged plan and carries the Phase 2 exit
-record above. 3.1's plan (#97) is merged with its implementation
-staged — its task PR ships next; 3.2 and 3.3 cards are filed behind it.
-**Next action: as #99 merges, close os-028dda91 — Phase 2 then
-completes; ship 3.1's task PR (keyring projection, seed/1 boundary),
-then plan 3.2 (grants per verb). Phase 2 exit needs
-the III.B subset: sole-writer enforced posture, statelessness
-(kill-and-replace), posture declaration with the cooperative consequence
-printed verbatim, and the direct-push refusal drill — all cited above.**
+Phase 0, Phase 1, and all of Phase 2 are done and closed — **the Phase 2
+exit above is met and merged (#99)**. 3.1 (task PR #100) is in review
+against merged plan #97; 3.2's plan is in review (#101, card
+os-3979d48b parked on it); 3.3 is filed behind it. **Next action: as
+#100 merges, close os-52a2d688; as #101 merges, implement 3.2 (grants
+per verb: replace the interim root-only authorization with grant checks
+on every verb); 3.3 (revocation drill) closes the phase.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

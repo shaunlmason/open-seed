@@ -194,3 +194,16 @@ Fresh sessions read this file instead of rediscovering.
   main object store); the resulting client-visible rejection is
   "[remote rejected] ... (failed to update ref)", which is genuine
   update-phase contention, distinct from "(pre-receive hook declined)".
+- When a protocol version joins the build's supported set, every test
+  that used it as the "unsupported future version" flips silently; use a
+  far sentinel (seed/9) for refusal fixtures and pin narrow sets with
+  WithSupportedVersions explicitly instead of leaning on the default.
+- The next/ coverage gate's cross-package -coverpkg aggregation can
+  mis-merge (warm mixed-flag caches routinely; even a cold run
+  occasionally), reading 85-89% on a 92%+ tree. The tell is an
+  impossible per-function number (a fully-tested function at 36%): that
+  marks a bad profile merge, not missing tests. Truth procedure:
+  cd next && go clean -testcache && go test ./... \
+  -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/...
+  repeated until two runs agree, sanity-checking per-function output,
+  then make check against the warmed cache.

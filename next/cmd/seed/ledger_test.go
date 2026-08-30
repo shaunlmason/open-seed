@@ -209,7 +209,7 @@ func TestLedgerAppendFollowsActiveVersion(t *testing.T) {
 	}
 	// The upgrade event is the last event of the old version.
 	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "system.protocol.upgraded", "--subject", "system", "--payload", `{"to": "seed/1"}`); code != 0 {
+		"--verb", "system.protocol.upgraded", "--subject", "system", "--payload", `{"to": "seed/9"}`); code != 0 {
 		t.Fatalf("upgrade append failed: %d %+v", code, e)
 	}
 	// A build supporting only seed/0 must refuse to grow the upgraded
@@ -223,7 +223,7 @@ func TestLedgerAppendFollowsActiveVersion(t *testing.T) {
 		t.Fatalf("the refusal is stamped at the tip, got %+v", e.Position)
 	}
 	// A build supporting the new version signs at it.
-	e, code = runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv, "--supported", "seed/0,seed/1",
+	e, code = runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv, "--supported", "seed/0,seed/9",
 		"--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`)
 	if code != 0 || !e.OK || e.Position == nil || *e.Position != "2" {
 		t.Fatalf("append with the upgraded set failed: %d %+v", code, e)
@@ -232,12 +232,12 @@ func TestLedgerAppendFollowsActiveVersion(t *testing.T) {
 	if code != 0 || !e.OK {
 		t.Fatal("show failed")
 	}
-	if v := e.Result["event"].(map[string]any)["v"]; v != "seed/1" {
+	if v := e.Result["event"].(map[string]any)["v"]; v != "seed/9" {
 		t.Fatalf("the appended event must carry the active version, got %v", v)
 	}
 	// The grown chain is coherent: green under the upgraded set, version
 	// trouble at the exact position under the old set.
-	if e, code := runEnv(t, "ledger", "verify", "--ledger", ld, "--supported", "seed/0,seed/1"); code != 0 || e.Result["count"].(float64) != 3 {
+	if e, code := runEnv(t, "ledger", "verify", "--ledger", ld, "--supported", "seed/0,seed/9"); code != 0 || e.Result["count"].(float64) != 3 {
 		t.Fatalf("upgraded chain must verify under its set: %d %+v", code, e)
 	}
 	e, code = runEnv(t, "ledger", "verify", "--ledger", ld)
