@@ -191,11 +191,31 @@ data, secrets, or material someone may later be obliged to erase — lives in an
 classification at admission; erasing a referenced artifact never breaks chain
 verification, and the erasure is itself an attributable event.
 
+**What the chain proves — and what it cannot.** Chain verification proves the
+*integrity of retained history*: any reorder, rewrite, interior deletion, or forgery
+breaks a hash or a signature. It cannot prove *freshness*: a ledger truncated or rolled
+back to a valid earlier tip is a perfectly verifying prefix, indistinguishable in
+isolation from the legitimate current ledger. Freshness therefore has its own layered
+mechanisms: every append implicitly **witnesses** the tip it extends, so a rollback
+diverges from every other actor's next proposal and from every clone that saw the later
+tip — divergence surfaces on the next fetch; every client persists the newest verified
+head it has seen and **refuses head regression** (monotonic-head rule); enforced
+remotes refuse non-fast-forward updates of the ledger ref; and signed checkpoints
+anchor known-good positions. The honest residual is stated, not hidden: a **fresh clone
+with no prior head** can verify integrity but can bound staleness only by the newest
+checkpoint or witnessed head it obtains out-of-band (from an operator, another actor,
+or a published attestation such as a release tag). Deployments needing stronger
+fresh-clone freshness publish head attestations through such a channel.
+
 **Checkpoints.** Periodic `checkpoint` events embed the hash of the canonical projection
 state at that point, **signed by the maintenance or operator identity**. What a
 checkpoint buys is explicit: a reader who has *once* verified a checkpoint against full
 replay (or who explicitly trusts the checkpoint signer set — a declared trust choice,
-never a default) may start from it. The checkpointed state's materialization format is
+never a default) may start from it. The checkpointed **snapshot itself is
+retrievable**: the canonical materialization is written to the artifact store, and the
+checkpoint event carries its hash and location, so a fresh reader fetches the snapshot,
+verifies it against the signed checkpoint, and starts — without first rebuilding the
+very state the checkpoint was meant to spare it. The materialization format is
 specified and versioned; a fresh clone's verification obligations are documented, not
 implied. Checkpoints never truncate retained history.
 
@@ -423,9 +443,10 @@ assertion that a successor does *not* re-try recorded dead ends.
 
 ### 7. Dependencies, routing, and escalation
 
-Dependencies cascade with wakeups: closing a contract unblocks dependents; plan merges
-unpark plan-blocked contracts; every unblock notifies the affected party through its
-adapter. Holds cascade down subtrees and suppress wakeups; initiative trees roll up
+Dependencies cascade: closing a contract unblocks dependents; plan merges unpark
+plan-blocked contracts; every unblock emits a wake through the affected party's adapter
+**where a wake channel exists** — an accelerator per §9, never the correctness path: a
+poll-only worker discovers the unblock from the queue, losing only latency. Holds cascade down subtrees and suppress wakeups; initiative trees roll up
 progress. Priorities and squads route; ready-queues filter by eligibility; goal-ancestry
 warnings fire when open work cannot trace to a stated mission. Escalation is
 `blocked(needs-you)`: an event addressed to a human gate carrying the packet, the
@@ -587,7 +608,7 @@ observations → hypotheses → validated lessons → policy
   lesson implicated in a regression rolls back by reverting its PR — one command,
   because it was a PR.
 
-**Dead ends** record failure condition and environment, un-retirable when the
+**Dead ends** record failure condition and environment, and can be un-retired when the
 environment changes; the curator checks dead-end applicability, not just lesson
 applicability.
 
@@ -759,9 +780,15 @@ document which criteria (marked *enforced-only*) do not hold for them.
       verifies from genesis with one command.
 - [ ] Ordering authority is admitted ancestry; no writer asserts a global sequence
       number; ordinals used by projections and citations are derived.
-- [ ] Any mutation of admitted history — reorder, rewrite, deletion, forgery — is
-      detected by chain verification and (*enforced-only*) refused at the remote; the
-      drill proves both with corrupted fixtures and a raw-git adversary.
+- [ ] Any mutation *within* retained history — reorder, rewrite, interior deletion,
+      forgery — is detected by chain verification and (*enforced-only*) refused at the
+      remote; the drill proves both with corrupted fixtures and a raw-git adversary.
+- [ ] Rollback to a valid earlier tip is treated honestly as a freshness problem, not
+      claimed as chain-detectable: clients persist and enforce head monotonicity;
+      witness divergence surfaces a rollback on the next fetch by any actor or clone
+      that saw the later tip; enforced remotes refuse non-fast-forward; the rollback
+      drill proves detection through each path; and the fresh-clone staleness bound
+      (newest out-of-band checkpoint or head attestation) is documented.
 - [ ] Payload data classification is enforced at admission: coordination facts and
       references only; content bodies live in an addressed artifact store with a
       documented erasure path, referenced by hash; the hostile-payload lint corpus
@@ -769,7 +796,9 @@ document which criteria (marked *enforced-only*) do not hold for them.
 - [ ] Erasure obligations are honorable: erasing a referenced artifact never breaks
       chain verification, and the erasure is itself an attributable event.
 - [ ] Checkpoints are signed by maintenance/operator identities, embed the projection
-      state hash, and specify their materialization format; a fresh clone's verification
+      state hash, and reference a retrievable canonical snapshot in the artifact store
+      (fetch → verify against the signed hash → start); the materialization format is
+      specified and versioned; a fresh clone's verification
       obligations (full replay once, or explicit trust in the signer set) are documented
       and the choice is declared, not defaulted; replay-from-checkpoint equals
       replay-from-genesis in CI.
@@ -898,8 +927,9 @@ document which criteria (marked *enforced-only*) do not hold for them.
 - [ ] Plans are falsifiable: boundary set, retention set, validation commands for both,
       expected diff shape; missing retention fails lint; plan and implementation PRs are
       structurally disjoint.
-- [ ] Dependencies cascade with wakeups; holds cascade with suppression; initiative
-      rollups render; goal ancestry warns.
+- [ ] Dependencies cascade, with advisory wakes where a channel exists (polling
+      remains the correctness path, consistent with the wakeless run in H); holds
+      cascade with suppression; initiative rollups render; goal ancestry warns.
 
 ### G. Verdicts and evidence
 
@@ -1003,7 +1033,7 @@ document which criteria (marked *enforced-only*) do not hold for them.
       contested lessons do not surface in envelopes.
 - [ ] Lessons expire for revalidation; retirement revokes conclusions and keeps
       evidence; a lesson implicated in a regression rolls back by reverting its PR.
-- [ ] Dead ends carry failure condition and environment and are un-retirable on
+- [ ] Dead ends carry failure condition and environment and can be un-retired on
       environment change.
 - [ ] The flywheel closes through gates: recurring shapes → drafted workflows → mock
       validation → PR; repair roles propose patches as PRs; conversion rate is tracked.
@@ -1127,6 +1157,14 @@ document which criteria (marked *enforced-only*) do not hold for them.
   (§II.6).
 - **Fence** — the token bound to a claim; every subsequent event on the claimed contract
   must cite it; staleness refuses at admission.
+- **Gate** — a named enforcement point where progress requires an approval outside the
+  acting key's control. The charter's gates, concretely: the **spec gate** (review
+  approval before acceptance-spec content is executable, §II.6); the **plan gate**
+  (plan PR merged before implementation above the trivial tier, §II.6); the **merge
+  gate** (forge required checks including the verdict, §II.8); the **promotion gate**
+  (PR review on curator proposals, §II.12); the **approval/review/check gates** inside
+  workflows (§II.13); and the **governance gate** (owner review on the protected
+  surface, §II.14). "Gate", unqualified, always means one of these.
 - **Governance root** — the named identities and process (operator keys + owner review)
   that may change the protected surface.
 - **Halt** — an operator-declared stop on all admission until lifted.
