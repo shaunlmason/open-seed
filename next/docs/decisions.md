@@ -63,6 +63,14 @@ here. Newest last.
   subtle-risk with no upside) and `golang.org/x/crypto` (OpenSSH ed25519 key
   parsing); both boring, both pinned by go.sum. Ed25519/SHA-256 themselves
   stay stdlib. (PR for os-aa146827)
+- 2026-08-30 — Ledger signature checks take a `Resolver` seam
+  (fingerprint to public key): the keyring is Phase 3's projection, genesis
+  bootstrap and tests inject fixture resolvers; verification stays pure and
+  the keyring lands as a parameter, not a rework. (PR #79)
+- 2026-08-30 — HEAD reconciliation reads the whole segment stream in v0
+  (correctness first); the segment-seek optimization the plan sketches is
+  deferred until the Phase 12 performance budgets exist to justify it.
+  (PR #79)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under
