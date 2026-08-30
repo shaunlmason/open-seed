@@ -475,3 +475,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-acc1ac78","ts":"2026-08-30T16:16:23Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-d1f35a8c","ts":"2026-08-30T16:20:58Z","verb":"close"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:105","to":"ready"},"task":"os-4d5cacff","ts":"2026-08-30T16:21:00Z","verb":"plan-unblock"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:106","to":"ready"},"task":"os-fecfb3f7","ts":"2026-08-30T16:21:03Z","verb":"plan-unblock"}
