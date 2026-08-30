@@ -130,7 +130,23 @@ func TestActorRemoteRefusalExits(t *testing.T) {
 	if code != 14 || e.Error == nil || e.Error.Code != "out_of_grant" {
 		t.Fatalf("a non-root actor verb must exit 14 out_of_grant, got %d %+v", code, e)
 	}
-	if !strings.Contains(e.Error.Message, "governance root") {
-		t.Fatalf("the refusal must name the interim policy, got %+v", e.Error)
+	if !strings.Contains(e.Error.Message, "operator") {
+		t.Fatalf("the refusal must name the accepted capability, got %+v", e.Error)
+	}
+
+	// Grant checks generalize beyond actor verbs, and delegation via
+	// actor.granted works over the wire (plans/os-3979d48b.md).
+	e, code = runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", wkey, "--verb", "system.halt.declared", "--subject", "system", "--payload", `{"reason": "x"}`)
+	if code != 14 || e.Error == nil || e.Error.Code != "out_of_grant" {
+		t.Fatalf("a non-operator halt must exit 14, got %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", priv, "--verb", "actor.granted", "--subject", wfp, "--payload", `{"capability": "operator"}`); code != 0 {
+		t.Fatalf("the operator grant failed: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", wkey, "--verb", "system.halt.declared", "--subject", "system", "--payload", `{"reason": "drill"}`); code != 0 {
+		t.Fatalf("a granted operator must declare halt over the wire: %d %+v", code, e)
 	}
 }

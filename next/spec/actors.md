@@ -65,16 +65,39 @@ it would leave zero active roots: no admitted transition may leave the
 deployment without a key admission accepts `actor.*` from. Root rotation
 beyond that guard is genesis-level governance, outside these events.
 
-## Authorization (interim, Phase 3.1)
+## Capabilities
 
-Until grant checks land (Phase 3.2), `actor.*` proposals are accepted
-only from an **active governance root**; anything else refuses at exit
-14 `out_of_grant` (`envelope.md`). This is admission policy, not chain
-validity: like the halt gate and payload classification, verification
-tolerates it in history, which is one of the cooperative posture's named
-consequences. Transition legality and payload shapes above, by
-contrast, are chain validity: an event violating them fails verification
-at its position (`bad_actor_event`), whichever posture admitted it.
+Grants are events (`actor.granted`) checked at admission on every verb
+(SEED-NEXT.md Part II "Capabilities"). The normative vocabulary maps
+each governed verb to the **set of capabilities any one of which
+admits** (mirrored by `internal/keyring.AcceptedCapabilities`, pinned by
+test); a verb with no row needs active standing only. Governance roots
+hold `operator` implicitly — the genesis trust anchor a deployment's
+first grants must come from. Only active standing counts: a suspended
+or revoked actor holds nothing, and grant-level withdrawal short of
+ending standing is deferred until the catalog grows a verb for it.
+
+| verb | accepted capabilities |
+|---|---|
+| `system.halt.declared` | `operator` |
+| `system.halt.lifted` | `operator` (the charter: only an operator's lift may append) |
+| `system.protocol.upgraded` | `operator` |
+| `system.checkpoint` | `maintenance`, `operator` (the charter names checkpoints as signed by the maintenance actor or an operator) |
+| `actor.*` (every lifecycle verb) | `operator` |
+
+A signer holding none of a verb's accepted capabilities refuses at exit
+14 `out_of_grant` (`envelope.md`), the message naming the accepted set.
+Later phases append rows (claim rights by squad and tier, verdict
+rights, curation-proposal rights) when their verbs land.
+
+**Authorization is admission policy, not chain validity**: like the
+halt gate and payload classification, verification tolerates it in
+history — one of the cooperative posture's named consequences — so the
+vocabulary evolves without protocol bumps (the versioning stance
+recorded in plans/os-3979d48b.md). Transition legality and payload
+shapes above, by contrast, are chain validity: an event violating them
+fails verification at its position (`bad_actor_event`), whichever
+posture admitted it.
 
 ## Conformance mapping
 

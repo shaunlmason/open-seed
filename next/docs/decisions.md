@@ -167,3 +167,15 @@ here. Newest last.
   cooperative posture's named consequence) — so 3.2 swaps it for grant
   checks without another protocol bump; exit 14 `out_of_grant`
   allocated for the refusal the charter names. (PR #100)
+- 2026-08-30 — Capability vocabulary v0 (plans/os-3979d48b.md): rows are
+  **sets of accepted capabilities** per verb (any one admits), mirrored
+  from the normative table in next/spec/actors.md and pinned by test;
+  halt declare/lift, protocol upgrade, and actor.* accept `operator`
+  only, `system.checkpoint` accepts `maintenance` or `operator` (the
+  charter's maintenance loop must not hold operator authority);
+  governance roots hold `operator` implicitly; grant-level withdrawal
+  short of ending standing is deferred until the catalog grows a verb.
+  The no-protocol-bump stance for admission-policy evolution (recorded
+  at 3.1, argued in the plan's versioning section) is applied: the
+  grant rule replaces root-only authorization at `seed/1` with no new
+  version. (PR #102)

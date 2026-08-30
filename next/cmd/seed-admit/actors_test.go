@@ -146,3 +146,33 @@ func TestHookRefusesActorVerbBeforeUpgrade(t *testing.T) {
 		t.Fatalf("the refusal must name the inactive semantics, got %v", err)
 	}
 }
+
+// conformance: III.E — the grant checks run at the enforced boundary
+// too: an operator verb from a non-operator refuses with the ref
+// unmoved, and a maintenance grant checkpoints without holding operator
+// authority (plans/os-3979d48b.md).
+func TestHookChecksGrants(t *testing.T) {
+	remote := guardedRemote(t)
+	seedGenesis(t, remote)
+	root, worker := fixtureKey(t), altKey(t, 9)
+	loose := anyResolver(t, root, worker)
+	if err := craftPush(t, remote, loose, func(dir string, store *ledger.Store) {
+		appendRaw(t, store, loose, signedBy(t, root, "seed/0", ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`, tipOf(t, store)))
+		appendRaw(t, store, loose, signedBy(t, root, version.Seed1, "actor.enrolled", fpFor(t, worker), enrollFor(t, worker, "agent", "worker"), tipOf(t, store)))
+	}); err != nil {
+		t.Fatalf("setup push must land: %v", err)
+	}
+	before := remoteTip(t, remote)
+	err := craftPush(t, remote, loose, func(dir string, store *ledger.Store) {
+		appendRaw(t, store, loose, signedBy(t, worker, version.Seed1, "system.halt.declared", "system", `{"reason": "x"}`, tipOf(t, store)))
+	})
+	if err == nil || remoteTip(t, remote) != before || !strings.Contains(err.Error(), "not granted") {
+		t.Fatalf("a non-operator halt must refuse at the boundary, got %v", err)
+	}
+	if err := craftPush(t, remote, loose, func(dir string, store *ledger.Store) {
+		appendRaw(t, store, loose, signedBy(t, root, version.Seed1, "actor.granted", fpFor(t, worker), `{"capability": "maintenance"}`, tipOf(t, store)))
+		appendRaw(t, store, loose, signedBy(t, worker, version.Seed1, "system.checkpoint", "system", `{"n": 1}`, tipOf(t, store)))
+	}); err != nil {
+		t.Fatalf("a maintenance checkpoint must admit at the boundary: %v", err)
+	}
+}
