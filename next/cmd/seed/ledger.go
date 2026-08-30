@@ -22,6 +22,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -178,7 +179,10 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 	// replay can name (an upgrade event anywhere in the chain moves it off
 	// the build default). The same replay refuses to grow a chain that
 	// does not verify.
-	supportedSet := map[string]bool{version.Protocol: true}
+	supportedSet := map[string]bool{}
+	for _, v := range version.Supported() {
+		supportedSet[v] = true
+	}
 	var opts []ledger.VerifyOption
 	if *supported != "" {
 		vs := strings.Split(*supported, ",")
@@ -188,6 +192,10 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 			supportedSet[v] = true
 		}
 	}
+	var records []*event.Record
+	opts = append(opts, ledger.WithObserver(func(pos int, r *event.Record) {
+		records = append(records, r)
+	}))
 	rep, err := store.VerifyFromGenesis(resolve, opts...)
 	if err != nil {
 		var fail *ledger.Failure
@@ -217,11 +225,25 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot sign event: %v", err)), stdout, stderr)
 	}
-	pos, err := store.Append(rec, resolve)
+	// From seed/1 the keyring projection resolves the signer (standing
+	// decides who appends) and previews actor events before anything is
+	// written: a local append must never create a record the next replay
+	// refuses.
+	appendResolve := resolve
+	ring, _, ringErr := keyring.StateAt(records)
+	if ringErr == nil && keyring.Applies(rep.ActiveVersion) && ring.Seeded() {
+		appendResolve = ring.Resolver()
+		if err := ring.Preview(rec); err != nil {
+			env := envelope.Fail(envelope.ExitChainInvalid, "chain_invalid",
+				fmt.Sprintf("actor event would fail verification: %v", err))
+			return render(stampTip(env, rep.Count), stdout, stderr)
+		}
+	}
+	pos, err := store.Append(rec, appendResolve)
 	if err != nil {
 		if errors.Is(err, ledger.ErrUnknownActor) {
 			return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid",
-				fmt.Sprintf("signer is not resolvable from the genesis governance root: %v", err)), stdout, stderr)
+				fmt.Sprintf("signer is not resolvable at the tip (genesis root, or keyring standing from %s): %v", version.Seed1, err)), stdout, stderr)
 		}
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}

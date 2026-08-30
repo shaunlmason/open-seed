@@ -29,6 +29,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 )
 
@@ -147,11 +148,25 @@ func admitUpdate(gitDir, oldID, newID string) error {
 		prev = h
 	}
 	for i := oldCount; i < len(records); i++ {
+		// The keyring projection over the prefix supplies the standing
+		// context for record i: the resolver (from seed/1) and the state
+		// the standing rule previews against. The full replay above
+		// already proved the prefix, so StateAt cannot fail.
+		ring, ringActive, err := keyring.StateAt(records[:i])
+		if err != nil {
+			return fmt.Errorf("rule ref: %v", err)
+		}
+		res := resolve
+		if keyring.Applies(ringActive) && ring.Seeded() {
+			res = ring.Resolver()
+		}
 		ctx := &admit.Context{
 			Count:   i,
 			Tip:     prev,
+			Active:  ringActive,
 			Halt:    halt.StateAt(records[:i]),
-			Resolve: resolve,
+			Resolve: res,
+			Keyring: ring,
 		}
 		if err := admit.Run(ctx, records[i], rules); err != nil {
 			return fmt.Errorf("position %d: %v", i, err)

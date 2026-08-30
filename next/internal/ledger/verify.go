@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -24,6 +25,7 @@ const (
 	ReasonHeadWrong          = "head_wrong"
 	ReasonVersionMismatch    = "version_mismatch"
 	ReasonVersionUnsupported = "version_unsupported"
+	ReasonActorEvent         = "bad_actor_event"
 )
 
 // UpgradeVerb switches the active protocol version: the upgrade event is
@@ -121,7 +123,10 @@ func ValidateUpgradeShape(e *event.Event) error {
 // missing HEAD over a non-empty stream is itself a behind state, never a
 // pass.
 func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Report, error) {
-	cfg := verifyConfig{supported: map[string]bool{version.Protocol: true}}
+	cfg := verifyConfig{supported: map[string]bool{}}
+	for _, v := range version.Supported() {
+		cfg.supported[v] = true
+	}
 	for _, o := range opts {
 		o(&cfg)
 	}
@@ -131,6 +136,7 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 	count := 0
 	claimedTip := event.EmptyHash
 	active := ""
+	ring := keyring.New()
 	err := s.scan(func(pos int, segment string, line []byte) error {
 		rec, err := event.ParseRecord(line)
 		if err != nil {
@@ -151,6 +157,10 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 				if err := json.Unmarshal(rec.Event.Payload, &g); err == nil && g.Protocol != "" {
 					active = g.Protocol
 				}
+				// The genesis governance root also seeds the keyring
+				// projection, so standing-aware resolution has its trust
+				// anchor once the chain upgrades to seed/1.
+				ring.SeedGenesis(rec)
 			}
 		}
 		if !cfg.supported[active] {
@@ -165,9 +175,21 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 			return &Failure{Position: pos, Reason: ReasonBadPrev,
 				Detail: fmt.Sprintf("prev %.12s does not cite tip %.12s", rec.Event.Prev, tip)}
 		}
+		// From seed/1 the seeded keyring is the authoritative resolver:
+		// standing decides who signs at this position (enrolled keys
+		// resolve, suspended and revoked ones do not), while earlier
+		// positions keep the caller's root-seam resolver
+		// (next/spec/actors.md; the seed/0 grandfathering).
 		pub, ok := resolve(rec.Event.Actor)
+		if keyring.Applies(active) && ring.Seeded() {
+			pub, ok = ring.Resolve(rec.Event.Actor)
+		}
 		if !ok {
-			return &Failure{Position: pos, Reason: ReasonUnknownActor, Detail: rec.Event.Actor}
+			detail := rec.Event.Actor
+			if e, known := ring.Get(rec.Event.Actor); known && keyring.Applies(active) {
+				detail = fmt.Sprintf("%s standing is %s at this position", rec.Event.Actor, e.Standing)
+			}
+			return &Failure{Position: pos, Reason: ReasonUnknownActor, Detail: detail}
 		}
 		if err := rec.Verify(pub); err != nil {
 			reason := ReasonBadSignature
@@ -179,6 +201,16 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 		h, err := rec.Event.Hash()
 		if err != nil {
 			return &Failure{Position: pos, Reason: ReasonBadPayload, Detail: err.Error()}
+		}
+		if keyring.Applies(active) {
+			// The keyring transition function enforces actor payload
+			// shapes and standing legality for every seed/1 record: a
+			// signed but broken actor event must fail here, at its
+			// position, not wedge later readers (the upgrade-schema
+			// discipline).
+			if err := ring.Advance(rec); err != nil {
+				return &Failure{Position: pos, Reason: ReasonActorEvent, Detail: err.Error()}
+			}
 		}
 		if rec.Event.Verb == UpgradeVerb && rec.Event.Subject == "system" {
 			if err := ValidateUpgradeShape(&rec.Event); err != nil {
