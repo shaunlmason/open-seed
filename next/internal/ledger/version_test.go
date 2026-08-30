@@ -117,3 +117,78 @@ func TestGenesisPayloadBootstrapsActiveVersion(t *testing.T) {
 		t.Fatalf("genesis carrying a v that differs from its named protocol must refuse as %s@0, got %v", ReasonVersionMismatch, err)
 	}
 }
+
+// WithObserver delivers each record after it fully verifies: in order,
+// exactly once, and never past a failure (plans/os-3898f232.md step 1).
+func TestObserverSeesVerifiedRecordsOnly(t *testing.T) {
+	recs := chainWithUpgrade(t)
+	s := buildChain(t, recs)
+	resolve := fixtureResolver(t, fixtureKey(t, 1))
+
+	var seen []int
+	rep, err := s.VerifyFromGenesis(resolve,
+		WithSupportedVersions("seed/0", "seed/1"),
+		WithObserver(func(pos int, rec *event.Record) {
+			seen = append(seen, pos)
+			if rec == nil {
+				t.Error("observer must receive the record")
+			}
+		}))
+	if err != nil || rep.Count != 3 {
+		t.Fatalf("green chain: %+v %v", rep, err)
+	}
+	if len(seen) != 3 || seen[0] != 0 || seen[1] != 1 || seen[2] != 2 {
+		t.Fatalf("observer must see every record once, in order, got %v", seen)
+	}
+	if rep.ActiveVersion != "seed/1" {
+		t.Fatalf("report must carry the active version, got %q", rep.ActiveVersion)
+	}
+
+	// Under the default supported set the same chain fails at position 2;
+	// the observer must not see the failing record.
+	seen = nil
+	if _, err := s.VerifyFromGenesis(resolve, WithObserver(func(pos int, rec *event.Record) {
+		seen = append(seen, pos)
+	})); err == nil {
+		t.Fatal("default set must refuse the upgraded suffix")
+	}
+	if len(seen) != 2 {
+		t.Fatalf("observer must stop at the failure, got %v", seen)
+	}
+}
+
+// The upgrade schema is one shared definition (plans/os-3898f232.md):
+// admission refuses schema-broken upgrades up front, while admitted
+// history containing an off-system upgrade-verb event stays verifiable.
+func TestValidateUpgradeShape(t *testing.T) {
+	cases := map[string]struct {
+		subject, payload string
+		ok               bool
+	}{
+		"good":       {"system", `{"to": "seed/1"}`, true},
+		"missing to": {"system", `{"note": "x"}`, false},
+		"empty to":   {"system", `{"to": ""}`, false},
+		"off-system": {"c-0001", `{"to": "seed/1"}`, false},
+	}
+	for name, tc := range cases {
+		rec := signedVersioned(t, "seed/0", UpgradeVerb, tc.subject, tc.payload, event.EmptyHash)
+		if err := ValidateUpgradeShape(&rec.Event); (err == nil) != tc.ok {
+			t.Errorf("%s: got %v", name, err)
+		}
+	}
+	plain := signedVersioned(t, "seed/0", "progress.milestone", "c-0001", `{"n": 1}`, event.EmptyHash)
+	if err := ValidateUpgradeShape(&plain.Event); err != nil {
+		t.Errorf("non-upgrade verbs pass through, got %v", err)
+	}
+
+	// History containing an off-system upgrade-verb event is an ordinary
+	// event to the verifier: no wedge, no version switch.
+	a := signedVersioned(t, "seed/0", UpgradeVerb, "c-0001", `{"to": "seed/9"}`, event.EmptyHash)
+	ha, _ := a.Event.Hash()
+	b := signedVersioned(t, "seed/0", "progress.milestone", "c-0001", `{"n": 2}`, ha)
+	s := buildChain(t, []*event.Record{a, b})
+	rep, err := s.VerifyFromGenesis(fixtureResolver(t, fixtureKey(t, 1)))
+	if err != nil || rep.Count != 2 || rep.ActiveVersion != "seed/0" {
+		t.Fatalf("off-system upgrade verb in history must stay ordinary: %+v %v", rep, err)
+	}
+}

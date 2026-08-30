@@ -98,6 +98,11 @@ here. Newest last.
   lost races surface as two rejection shapes (stale-parent non-fast-forward
   and mid-push ref-lock contention), both mapped to the same retry path.
   (PR #86)
+- 2026-08-30 — Admission refusals wrap in `admit.Refusal` (rule name +
+  `Unwrap` to the underlying typed error) so the exit map (7/8/9/10)
+  survives composition; context is built by one verified replay
+  (`ledger.WithObserver` feeds the halt projection); the version rule
+  stamps refusals at the tip position. (PR #90)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under
