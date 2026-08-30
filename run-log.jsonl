@@ -302,3 +302,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-462ea4ec","kind":""},"task":"os-116ca9ac","ts":"2026-08-30T03:33:58Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-116ca9ac","ts":"2026-08-30T03:34:00Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 1.1 — event model, JCS canonicalization, Ed25519 (internal/event)"},"task":"os-aa146827","ts":"2026-08-30T03:35:31Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 1.2 — chain append/verify, segment storage, HEAD (internal/ledger)"},"task":"os-ead12024","ts":"2026-08-30T03:35:34Z","verb":"create"}
