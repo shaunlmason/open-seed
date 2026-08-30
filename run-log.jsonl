@@ -295,3 +295,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 0 — workspace and spec skeleton"},"task":"os-116ca9ac","ts":"2026-08-30T03:15:45Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-116ca9ac","ts":"2026-08-30T03:21:00Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T04:21:02Z"},"task":"os-116ca9ac","ts":"2026-08-30T03:21:02Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-116ca9ac","ts":"2026-08-30T03:23:27Z","verb":"transition"}
