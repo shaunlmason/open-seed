@@ -176,6 +176,10 @@ the current build; unmarked items exist at least partially today and must be kep
       finish, mailbox discipline, status vocabulary — short enough to actually be read.
 - [ ] The CLI is the only interface an agent needs; every verb returns a versioned,
       schema-stable JSON envelope with structured errors and meaningful exit codes.
+- [ ] ◇ The envelope is an affordance surface, not just a result: card-reading verbs
+      report the verbs currently legal for this actor on this card (derived from the port
+      spec, card state, claim/fence, tier, and roster), so an agent learns what it may do
+      next before acting instead of by collecting refusals.
 - [ ] Mailboxes: send/read/ack/prune with types, threads, and task links; unread counts
       surface in reports; tmux nudges reach live sessions and no-op gracefully without.
 - [ ] Handoff packets: bounded (≤8KB), mechanical-first (card + git anchors, prior claim,
@@ -322,6 +326,10 @@ the current build; unmarked items exist at least partially today and must be kep
 - [ ] Docs are governed: handbook for operators, AGENTS.md for workers, design docs gated
       by the mechanism they enable, ◇ every design doc stamped `last-verified: <date> @
       <commit>` with a CI lint that flags stale stamps on behavior-changing PRs.
+- [ ] ◇ Docs that describe the state machine are generated from it: the lifecycle prose
+      in AGENTS.md and role files fans out from the port spec (like other sync targets),
+      so documentation of legal states and transitions structurally cannot drift from
+      `transitions.json`.
 - [ ] The research corpus (docs/research/) is maintained: adjacent tools surveyed, adopted
       ideas traced to their source, rejected ideas recorded with reasons.
 - [ ] ◇ Process changes pass boundary + retention: a change to a role file, guardrail, or

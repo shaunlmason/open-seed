@@ -12,7 +12,8 @@
 > github.com/MiaAI-Lab/sparkDash, github.com/paperclipai/paperclip (re-read Aug 29), plus
 > the Paperclip/Factory/Augment findings in
 > [10-org-control-planes.md](./10-org-control-planes.md) and the web sources cited there.
-> Facts are from these reads (Aug 29, 2026) unless flagged uncertain.
+> Facts are from these reads (Aug 29, 2026) unless flagged uncertain. Part 9
+> (github.com/statelyai/agent + stately.ai/docs/packages/agent/patterns) read Aug 30, 2026.
 
 Priority: **Now** (high value, fits current architecture) / **Next** (valuable, needs design) /
 **Later** (good idea, not urgent). Effort: S / M / L.
@@ -161,13 +162,40 @@ external-backend adoption materializes.
   and feeding D1 Tier-0 (Next / S). Doc 12 §5 also carries design tests (information-gain,
   boundary+retention set) worth applying when the reviewer lane and role files evolve.
 
+## Part 9 — From Stately Agent (@statelyai/agent, MIT)
+
+An XState-based library for building an agent's *inner* loop as a state machine: the model
+only proposes events constrained to `allowedEvents`; guards make illegal paths unreachable
+("gate states with guards, not prompt pleading"); an invalid proposal is returned without
+advancing state, forcing a same-turn retry; pause is an explicit idle state whose snapshot
+is plain JSON; `simulateAgent` runs everything on mock executors with no key or network.
+v2 is alpha on XState v6 alpha; actively maintained. Not a competitor — it governs a
+worker's inner loop where open-seed governs outer coordination; a worker built on it could
+sit behind the seed CLI unchanged.
+
+Mostly it is independent convergence with the port design: a data-defined state machine
+with structured refusals and no state movement on an illegal attempt *is*
+`transitions.json` + envelope exit codes; mock-total testing is the workflow engine's mock
+mode; durable JSON pause is blocked(needs-you) + the handoff packet; guard-enforced
+revision caps are the review gate's max-revisions. Two ideas transfer:
+
+| # | Idea | What open-seed does with it | Priority | Effort |
+|---|------|-----------------------------|----------|--------|
+| X1 | **Affordance surface: legal events narrowed by context.** Stately tells the model what is legal *now* (`allowedEvents` as a function of context), instead of letting it discover illegality by refusal. | `legal_verbs` in the JSON envelope: `task get` / claim responses list the verbs currently legal for *this actor on this card*, derived from the port spec + card state + claim/fence/tier/roster. Pure projection of existing data; turns every refusal class (exit 2/6/10, tier gates) into an affordance the agent sees before acting. | Now | S–M |
+| X2 | **Spec-derived docs.** Stately's machine definition is also the source of what the model is shown (`getRequests` pulls prompts from state descriptions) — one artifact, no drift. | Generate the lifecycle documentation (AGENTS.md state-machine section, role-file lifecycle tables) from `transitions.json` via the existing sync fan-out, so prose about the state machine structurally cannot drift from the machine. Complements S3's `last-verified` stamps with actual generation. | Later | S |
+
+**Rejected: statechart semantics for the workflow engine.** Hierarchical/history states and
+event-driven transitions would add expressiveness the DAG + gates model doesn't need and
+the validation suite would then have to chase; retries, `when`, gates, and loop groups
+already cover the observed use cases. Revisit only if a real workflow can't be expressed.
+
 ## Suggested first wave
 
 Three cards, in order: **S1 audit surface**, **S2 `seed doctor`**, **A1 handoff-packet
 enrichment** (with the B1 packet schema from doc 12) — all small, all immediately visible.
 Second wave: **I3 protections reconciler**, **I4 anchor retention + restore**, **P1 unblock
 wakeups**, **I6 governance statement**, **D1 Tier-0 dashboard**, **B2 learnings provenance
-template** (doc 12). The differentiating bet after that is **W1+W2** (distill +
+template** (doc 12), **X1 legal-verbs affordance surface**. The differentiating bet after that is **W1+W2** (distill +
 self-heal), which turns the audit log and workflow engine into a compounding loop: every
 chore an agent does twice becomes a deterministic workflow that agents only maintain. The
 open *decision* (not card) is **R1**: who plays employer — a native supervisor loop or
