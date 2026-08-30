@@ -202,6 +202,10 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 		{"wrong version", "verify", func(dir string, store *ledger.Store) {
 			appendRaw(t, store, resolve, signedV(t, "seed/9", "progress.milestone", "c-0002", `{"n": 2}`, tipOf(t, store)))
 		}},
+		{"illegal lifecycle transition", "lifecycle", func(dir string, store *ledger.Store) {
+			appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"to": "seed/1"}`, tipOf(t, store)))
+			appendRaw(t, store, resolve, signedV(t, "seed/1", "claim.taken", "c-0002", `{"note": "no such subject"}`, tipOf(t, store)))
+		}},
 		{"schema-broken upgrade", "verify", func(dir string, store *ledger.Store) {
 			appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"note": "missing to"}`, tipOf(t, store)))
 		}},
@@ -245,6 +249,19 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 		appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0004", `{"n": 4}`, tipOf(t, store)))
 	}); err != nil {
 		t.Fatalf("multi-record valid push must land: %v", err)
+	}
+
+	// The lifecycle happy path admits through the hook: upgrade, file,
+	// specify in one push, each record checked by the shared rule set
+	// (plans/os-d69a6c91.md step 7).
+	if err := craftPush(t, remote, resolve, func(dir string, store *ledger.Store) {
+		appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"to": "seed/1"}`, tipOf(t, store)))
+		appendRaw(t, store, resolve, signedV(t, "seed/1", "intent.filed", "c-0005",
+			`{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`, tipOf(t, store)))
+		appendRaw(t, store, resolve, signedV(t, "seed/1", "contract.specified", "c-0005",
+			`{"acceptance": "specs/c5.md @ abc"}`, tipOf(t, store)))
+	}); err != nil {
+		t.Fatalf("the lifecycle happy path must land through the hook: %v", err)
 	}
 }
 

@@ -370,6 +370,10 @@ func TestCapabilityVocabulary(t *testing.T) {
 		"system.halt.declared", "system.halt.lifted", "system.protocol.upgraded",
 		"system.checkpoint", keyring.VerbEnrolled, keyring.VerbGranted,
 		keyring.VerbSuspended, keyring.VerbRevoked,
+		"intent.filed", "contract.specified", "contract.blocked",
+		"contract.unblocked", "contract.cancelled", "claim.taken",
+		"claim.released", "claim.parked", "claim.reaped",
+		"submission.made", "merge.observed",
 	} {
 		if _, ok := spec[verb]; !ok {
 			t.Errorf("%s is governed by code but missing from the spec table", verb)

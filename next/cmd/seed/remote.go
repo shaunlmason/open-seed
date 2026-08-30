@@ -25,6 +25,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -220,6 +221,10 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	}
 	var vin *admit.VerbInactiveError
 	if errors.As(err, &vin) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
+	}
+	var itr *transition.InvalidTransitionError
+	if errors.As(err, &itr) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
 	}
 	var fail *ledger.Failure

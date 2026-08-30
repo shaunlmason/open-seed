@@ -1,18 +1,18 @@
-// The ready-queue projection (plans/os-fecfb3f7.md step 2): the
-// registered claimable-work surface, schema fixed now. The v0
-// derivation is "none": the Phase 4 vocabulary defines no claimable
-// states, so ready is empty by definition and the derivation field says
-// so machine-readably; a consumer can refuse to treat an underived
-// queue as meaning "nothing to do". Phase 5 item 1 replaces the
-// derivation (and its marker) with the transition table's; the
-// eligibility filter follows later, per the build plan.
+// The ready-queue projection (plans/os-fecfb3f7.md step 2;
+// plans/os-d69a6c91.md step 5): the registered claimable-work surface.
+// The derivation is the transition table's ready set — subjects whose
+// folded lifecycle state is ready, oldest first — retiring the v0
+// "none" marker exactly as the 4.2 spec promised; the eligibility
+// filter follows later, per the build plan.
 
 package project
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
 // QueueFile is the ready-queue projection's one view file.
@@ -22,9 +22,13 @@ const QueueFile = "queue.json"
 // field set is Phase 5's to extend.
 const QueueSchemaVersion = "1"
 
-// QueueDerivationNone marks the v0 derivation: no readiness vocabulary
-// exists before the transition table.
+// QueueDerivationNone marked the v0 derivation, before the transition
+// table existed; it survives for the derivation-bump drills.
 const QueueDerivationNone = "none"
+
+// QueueDerivationTransitions is the live derivation: the transition
+// table's ready set (next/spec/transitions.json, schema generation 1).
+const QueueDerivationTransitions = "transitions/1"
 
 // QueueEntry is one claimable subject. The field set is minimal by
 // design; Phase 5 extends it with what the transition table derives.
@@ -40,16 +44,43 @@ type QueueView struct {
 	Ready         []QueueEntry `json:"ready"`
 }
 
-// Queue returns the ready-queue projection.
+// Queue returns the ready-queue projection. Version "2" replaced the
+// underived v0 marker with the transition table's ready set,
+// republishing under a new build id via the version-in-identity
+// machinery.
 func Queue() Projection {
-	return Projection{Name: "queue", Build: buildQueue}
+	return Projection{Name: "queue", Version: "2", Build: buildQueue}
 }
 
-func buildQueue(_ []*event.Record) (map[string][]byte, error) {
+// readyEntries derives the claimable set: subjects whose folded state
+// is ready, since_position the position that made them ready, oldest
+// first (deterministic; the queue surfaces the longest-waiting work
+// first).
+func readyEntries(records []*event.Record) ([]QueueEntry, error) {
+	table, err := transition.Default()
+	if err != nil {
+		return nil, err
+	}
+	fold := table.FoldRecords(records)
+	ready := []QueueEntry{}
+	for _, subject := range fold.Subjects() {
+		if s, ok := fold.State(subject); ok && s.State == "ready" {
+			ready = append(ready, QueueEntry{Subject: subject, SincePosition: s.Since})
+		}
+	}
+	sort.Slice(ready, func(i, j int) bool { return ready[i].SincePosition < ready[j].SincePosition })
+	return ready, nil
+}
+
+func buildQueue(records []*event.Record) (map[string][]byte, error) {
+	ready, err := readyEntries(records)
+	if err != nil {
+		return nil, err
+	}
 	view := QueueView{
 		SchemaVersion: QueueSchemaVersion,
-		Derivation:    QueueDerivationNone,
-		Ready:         []QueueEntry{},
+		Derivation:    QueueDerivationTransitions,
+		Ready:         ready,
 	}
 	b, err := json.MarshalIndent(view, "", "  ")
 	if err != nil {

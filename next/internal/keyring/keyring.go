@@ -50,6 +50,12 @@ const (
 const (
 	CapOperator    = "operator"
 	CapMaintenance = "maintenance"
+	// CapDispatch is queue management: filing, specifying, blocking,
+	// unblocking, and reaping contracts (plans/os-d69a6c91.md).
+	CapDispatch = "dispatch"
+	// CapClaim is the worker set: taking, releasing, and parking
+	// claims, and submitting work.
+	CapClaim = "claim"
 )
 
 // AcceptedCapabilities returns the set of capabilities any one of which
@@ -71,6 +77,19 @@ func AcceptedCapabilities(verb string) []string {
 		// hand the Phase 9 loop halt and actor-management authority it
 		// must not hold (review finding on #101).
 		return []string{CapMaintenance, CapOperator}
+	// The contract-lifecycle rows (plans/os-d69a6c91.md, review
+	// finding on #113: a verb without a row needs active standing
+	// only, which would let any enrolled actor cancel or specify
+	// anything). Dispatch manages the queue; claim is the worker set;
+	// cancellation and the done observation stay operator-gated in v0
+	// (Phase 6 adds the observer lane for merge.observed).
+	case "intent.filed", "contract.specified", "contract.blocked",
+		"contract.unblocked", "claim.reaped":
+		return []string{CapDispatch, CapOperator}
+	case "claim.taken", "claim.released", "claim.parked", "submission.made":
+		return []string{CapClaim, CapOperator}
+	case "contract.cancelled", "merge.observed":
+		return []string{CapOperator}
 	}
 	return nil
 }

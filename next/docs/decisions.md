@@ -304,3 +304,22 @@ here. Newest last.
   recovery is the documented deletion walk plus one rebuild; the
   locks are the anti-tamper layer, and the drill proves the poison is
   never an input. (PR #119)
+- 2026-08-30 — The lifecycle contract is data (plans/os-d69a6c91.md):
+  transitions.json is the normative copy with a byte-identical
+  embedded twin (the classify.json precedent) and refuses to load
+  unless self-validation passes — one initial state, one birth verb
+  landing on it, no terminal outgoing rows, no duplicates, full
+  reachability, no wedge, and the in_progress exits pinned to the
+  four deliberate ones. Legality is admission policy at seed/1
+  (seed/0 inert, the keyring precedent): the lifecycle rule folds
+  the subject's history and refuses illegal (state, verb) pairs as
+  exit 3 naming subject, state, and verb; completeness presence for
+  intent.filed/contract.specified refuses at shape; capability lanes
+  dispatch/claim gate every lifecycle verb with cancellation and
+  merge.observed operator-only in v0. Raw-pushed illegal history
+  verifies and surfaces as per-contract anomaly counts; the fold
+  feeds contracts v2 (state + anomalies), queue v2 (transitions/1
+  ready set, oldest first), and cache generation 2 — the derivation
+  bump exercising Phase 4's version-in-identity machinery in anger.
+  The hook's per-record context now carries the fold, so the shared
+  rule set enforces at the boundary too. (PR #122)

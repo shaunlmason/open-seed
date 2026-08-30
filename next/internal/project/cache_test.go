@@ -74,7 +74,7 @@ func TestCacheEqualsTheViews(t *testing.T) {
 	if name != stamp.Name || position != stamp.Position || tip != stamp.Tip || version != stamp.Version {
 		t.Fatalf("stamp table %v/%v/%v/%v must equal projection.json %+v", name, position, tip, version, stamp)
 	}
-	if uv := one[int](t, db, `PRAGMA user_version`); uv != 1 {
+	if uv := one[int](t, db, `PRAGMA user_version`); uv != 2 {
 		t.Fatalf("user_version must carry the cache schema generation, got %d", uv)
 	}
 
@@ -99,7 +99,7 @@ func TestCacheEqualsTheViews(t *testing.T) {
 	}
 
 	// Queue mirrors the v0 derivation marker with an empty ready set.
-	if d := one[string](t, db, `SELECT derivation FROM queue_meta`); d != project.QueueDerivationNone {
+	if d := one[string](t, db, `SELECT derivation FROM queue_meta`); d != project.QueueDerivationTransitions {
 		t.Fatalf("queue derivation: %s", d)
 	}
 	if n := one[int](t, db, `SELECT COUNT(*) FROM queue`); n != 0 {

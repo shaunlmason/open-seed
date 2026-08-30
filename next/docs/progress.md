@@ -152,7 +152,31 @@ Phase 7, as added rules on the shared set.
   os-acc1ac78 — plan PR #108 (merged) + amendment PR #110 (merged:
   the cache is a registered projection, byte-identical like every
   view; the stamp table carries exactly the tree stamp's fields),
-  task PR #119 — review (stacked on #118's branch)
+  task PR #119 — **done** (merged; card closed; Phase 4 complete)
+
+## Phase 5 — Lifecycle, claims, packets  *(in progress)*
+
+- 5.1 transition table as data + lifecycle verbs — os-d69a6c91 —
+  plan PR #113 (merged, amended: charter Appendix catalog vocabulary,
+  merge.observed-only done, capability rows, completeness presence at
+  the claimability transition, per review) — **implementing**:
+  transitions.json + self-validation, the lifecycle admission rule
+  across rule set/hook/CLI, dispatch/claim capability lanes,
+  contracts v2 (state + anomalies), queue v2 ("transitions/1"),
+  cache generation 2, spec/lifecycle.md
+- 5.2 claims with fences — os-5dc16a7c — plan PR #114 (merged) —
+  ready to implement after 5.1
+- 5.3 four-part handoff packets — os-b07b0f59 — plan PR #115
+  (merged) — after 5.2
+- 5.4 acceptance-spec field + spec gate — os-73c00a50 — plan PR #116
+  (merged) — after 5.1
+- 5.5 falsifiable-plan lint + plan-gating — os-16c1d142 — plan PR
+  #120 (merged, amended: two-layer plan binding with the Phase 6
+  receipt closing the ancestry hole; classify ships as an invocable
+  check, per review) — after 5.1 and 5.2
+- 5.6 observation streams v0 + expiry vs. wedge — os-2ff8dbf1 — plan
+  PR #121 (open, amended per review: input-bearing build identity,
+  fence-keyed streams, position throttle) — after 5.2
 - 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
   PR #107 (merged, amended: seam/write-separation lint + locked trees
   `0444`/`0555` with the engine unlock window, deletion via rebuild,
@@ -165,16 +189,11 @@ Phase 7, as added rules on the shared set.
 
 ## Frontier
 
-Phases 0 through 3 are done and closed; 4.1 is merged, and every
-Phase 4 and Phase 5 plan (#105–#108, #110, #113–#116) is merged.
-The #111/#112 stack collapse folded their diffs into stack branches
-without reaching main; the re-land landed 4.2 as #117 (merged, card
-closed). 4.4 landed as #118 (merged, card closed), so 4.3 (#119,
-this PR, now based on main) is the last Phase 4 implementation; the
-last two Phase 5 plans are open as #120 (5.5 falsifiable-plan lint)
-and #121 (5.6 observations v0). **Next action: when #119 merges,
-close os-acc1ac78 — Phase 4 complete — and start the 5.1
-implementation (os-d69a6c91); 5.2–5.4 follow per their plan
-dependencies; 5.5/5.6 implement when their plans merge.**
+Phases 0 through 4 are done and closed (the #111/#112 stack collapse
+re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
+plan is merged or open-amended: #113–#116 and #120 merged, #121 (5.6)
+open. **This PR implements 5.1** (os-d69a6c91, the transition table);
+**next action: 5.2 (os-5dc16a7c, fences) once 5.1 merges, then 5.3;
+5.4 after 5.1; 5.5 after 5.2; 5.6 when #121 merges and 5.2 lands.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

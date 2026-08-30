@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
 // ContractsFile is the contract-detail projection's one view file.
@@ -29,17 +30,26 @@ type ContractEvent struct {
 	Payload  json.RawMessage `json:"payload"`
 }
 
-// ContractEntry is one work subject's stream, in chain order.
+// ContractEntry is one work subject's stream, in chain order. State
+// is the transition table's folded lifecycle state (null for a
+// subject no lifecycle event ever validly created), and Anomalies
+// counts the lifecycle events the table refused: tolerated in history
+// per the cooperative posture, skipped by the fold, surfaced here,
+// never silent (plans/os-d69a6c91.md).
 type ContractEntry struct {
 	Subject       string          `json:"subject"`
+	State         *string         `json:"state"`
+	Anomalies     int             `json:"anomalies"`
 	FirstPosition int             `json:"first_position"`
 	LastPosition  int             `json:"last_position"`
 	Events        []ContractEvent `json:"events"`
 }
 
-// Contracts returns the contract-detail projection.
+// Contracts returns the contract-detail projection. Version "2" added
+// the folded state and anomaly count, republishing under a new build
+// id via the version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "2", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -74,9 +84,21 @@ func contractEntries(records []*event.Record) []*ContractEntry {
 }
 
 func buildContracts(records []*event.Record) (map[string][]byte, error) {
+	table, err := transition.Default()
+	if err != nil {
+		return nil, err
+	}
+	fold := table.FoldRecords(records)
 	entries := contractEntries(records)
 	out := make([]ContractEntry, 0, len(entries))
 	for _, e := range entries {
+		if s, ok := fold.State(e.Subject); ok {
+			e.Anomalies = s.Anomalies
+			if s.State != "" {
+				st := s.State
+				e.State = &st
+			}
+		}
 		out = append(out, *e)
 	}
 	b, err := json.MarshalIndent(out, "", "  ")
