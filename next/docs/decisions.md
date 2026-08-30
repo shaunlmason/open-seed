@@ -21,6 +21,12 @@ here. Newest last.
 - 2026-08-30 — Genesis `prev` = SHA-256 of zero bytes (`e3b0c442…`); actor
   fingerprint = lowercase hex SHA-256 of the raw 32-byte Ed25519 public key;
   OpenSSH ed25519 keys accepted at key load only. (PR #72)
+- 2026-08-30 — Wire encodings fixed for `seed/0` (review finding on #71):
+  everything is lowercase hex (chain hash 64 chars, signature 128 chars,
+  fingerprint 64 chars); the ledger record is the wrapper
+  `{"event": …, "sig": …}` with canonicalization applying to the inner
+  event only; OpenSSH `SHA256:<base64>` display form excluded from the
+  wire. (PR #72)
 - 2026-08-30 — Coverage gate (≥90% on `next/internal/...`) enforced from
   Phase 0, not Phase 1: enabling it early is strictly harder, never weaker;
   implemented via `-coverpkg=./internal/...` so CLI-level tests count toward

@@ -36,11 +36,22 @@ bytes of an event are the JCS serialization of exactly these fields:
 | `payload` | object | verb-specific, schema-validated; coordination facts and references only (data classification, charter §II.1) |
 | `prev` | string | chain hash of the preceding event's canonical form |
 
-- **Signature**: `sig` is the Ed25519 signature over the canonical (JCS)
-  bytes of the event **including `prev`**. `sig` is carried alongside the
-  canonical form (it is not part of the signed bytes).
-- **Chain hash**: the SHA-256 of the same canonical bytes, lowercase hex.
-  The next event's `prev` cites it.
+- **Signature**: `sig` is the Ed25519 signature (RFC 8032) over the
+  canonical (JCS) bytes of the event **including `prev`**, encoded as
+  **lowercase hex** (64 bytes, 128 hex characters). `sig` is carried
+  alongside the canonical form (it is not part of the signed bytes).
+- **Chain hash**: the SHA-256 of the same canonical bytes, encoded as
+  **lowercase hex** (32 bytes, 64 hex characters). The next event's `prev`
+  cites it.
+- **Ledger record**: what storage and transport carry is the wrapper
+  `{"event": <event object>, "sig": "<hex>"}`. Canonicalization and hashing
+  apply to the inner `event` object alone, never the wrapper, so wrapper
+  field order and whitespace are irrelevant to identity. Verifiers MUST
+  recompute the JCS bytes from the parsed event; they never trust stored
+  byte sequences.
+- **Encodings, uniformly**: every hash, fingerprint, and signature in this
+  protocol is lowercase hex with no prefix. Base64 and multibase forms are
+  not used anywhere on the wire.
 - **Genesis**: the first event's `prev` is the **empty hash**: the SHA-256 of
   zero bytes, `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
   Genesis (`system.genesis`) names the initial governance root (operator
@@ -54,8 +65,12 @@ bytes of an event are the JCS serialization of exactly these fields:
   at key load so operators reuse existing keys; internally a key is the raw
   32-byte public key.
 - **Actor fingerprint**: the lowercase hex SHA-256 of the raw 32-byte Ed25519
-  public key. Display surfaces may shorten it; events always carry the full
-  fingerprint.
+  public key (64 hex characters). Display surfaces may shorten it; events
+  always carry the full fingerprint. The OpenSSH display form
+  (`SHA256:<base64>`) is **not** used in events or projections: OpenSSH
+  acceptance is a key-loading affordance only (the loader parses the OpenSSH
+  ed25519 key format down to the raw 32-byte public key, and fingerprints
+  that).
 
 ## Ordering
 
@@ -67,9 +82,10 @@ during projection, never proposed. (Charter §II.1; conformance III.A.)
 ## Storage reference (non-normative)
 
 The reference deployment stores the ledger on the git ref `refs/seed/ledger`
-as JSONL segments, one file per UTC day under `ledger/segments/`, with a
-`HEAD` record carrying the tip hash; the artifact store rides
-`refs/seed/artifacts` (git-addressed) with a filesystem fallback. These are
+as JSONL segments, one file per UTC day under `ledger/segments/`, each line
+one ledger record (`{"event": …, "sig": …}`), with a `HEAD` record carrying
+the tip hash; the artifact store rides `refs/seed/artifacts` (git-addressed)
+with a filesystem fallback. These are
 build-plan fixed defaults for the reference implementation, not protocol
 requirements; any storage satisfying the canonical form, ordering, and
 admission rules conforms.
