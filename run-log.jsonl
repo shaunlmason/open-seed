@@ -337,3 +337,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-9a8c2c4c","kind":""},"task":"os-ead12024","ts":"2026-08-30T04:54:54Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-ead12024","ts":"2026-08-30T04:54:56Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:77","to":"ready"},"task":"os-d6f81ec6","ts":"2026-08-30T04:55:00Z","verb":"plan-unblock"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:78"},"task":"os-bce3fb98","ts":"2026-08-30T04:55:02Z","verb":"plan-unblock"}

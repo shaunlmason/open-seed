@@ -6,9 +6,8 @@ priority: P1
 squad: core
 blocked_on:
     - dep:os-ead12024
-    - plan:78
 created_at: "2026-08-30T03:35:40Z"
-updated_at: "2026-08-30T04:35:52Z"
+updated_at: "2026-08-30T04:55:02Z"
 ---
 
 Build-plan item: Phase 1 item 5. halt.declared stops admission of everything except operator halt.lifted, as data-driven validation rules (the nascent rule set internal/admit consumes in Phase 2). Conformance: III.A halt item (boundary enforcement completes Phase 2). Intra-phase dep: 1.2 (os-ead12024).
