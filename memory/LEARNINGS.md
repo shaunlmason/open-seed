@@ -170,3 +170,8 @@ Fresh sessions read this file instead of rediscovering.
   operator-class with no agent path when dispatch is inert; the Seed workstream
   runs them under the session principal per decisions/0003-next-loop-delegation.md.
   Symptom if you hit it: `{"error":"operator_required"}` exit 3 on promote.
+
+- Never commit private-key-shaped bytes, even synthetic test fixtures: GitHub
+  push protection blocks the push (GH013) regardless of the key being a
+  deterministic dummy. Generate key fixtures at test runtime into t.TempDir()
+  (x/crypto ssh.MarshalPrivateKey emits the same wire format the loaders parse).

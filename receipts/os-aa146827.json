@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "task": "os-aa146827",
+  "merge_base": "8b099dfbcd25452d324d0e9180933ae4142122af",
+  "head": "d0eaa0c130264b858877233d78c4239fa2915da1",
+  "plan_path": "plans/os-aa146827.md",
+  "plan_sha256": "7672799087ac8534cc265f9f2377dcb4033cf74a6337b39eb0d60762a9fa5efa",
+  "diff_files": [
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/go.mod",
+    "next/go.sum",
+    "next/internal/event/errorpaths_test.go",
+    "next/internal/event/event.go",
+    "next/internal/event/event_test.go",
+    "next/internal/event/keys.go",
+    "next/internal/event/keys_test.go",
+    "next/internal/event/testdata/id_ed25519",
+    "next/internal/event/testdata/id_ed25519.pub",
+    "next/internal/event/testdata/id_ed25519_encrypted"
+  ],
+  "diff_sha256": "69bb9367dc33369854abc277471a948d692e9cf0909b1b81b6a71c9818cb429e",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/event/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

@@ -47,6 +47,17 @@ here. Newest last.
   tool output is captured and shown only on failure, because the
   flavor-test core-gate-independence check diffs `make check` output across
   runs and go's test timings and toolchain-download notices vary. (PR #72)
+- 2026-08-30 — OpenSSH key fixtures are generated at test runtime
+  (deterministic seed, `t.TempDir()`), never committed: forge push
+  protection refuses private-key-shaped bytes even when synthetic, and the
+  loaders only care about the wire format, which `ssh.MarshalPrivateKey`
+  produces. Standing rule for every later fixture (verifier keyrings,
+  sealed-check keys). (PR for os-aa146827)
+- 2026-08-30 — First module dependencies for 1.1: `github.com/gowebpki/jcs`
+  v1.0.1 (RFC 8785 canonicalization; writing correct JCS by hand is
+  subtle-risk with no upside) and `golang.org/x/crypto` (OpenSSH ed25519 key
+  parsing); both boring, both pinned by go.sum. Ed25519/SHA-256 themselves
+  stay stdlib. (PR for os-aa146827)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under
