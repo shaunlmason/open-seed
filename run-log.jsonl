@@ -304,3 +304,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 1.1 — event model, JCS canonicalization, Ed25519 (internal/event)"},"task":"os-aa146827","ts":"2026-08-30T03:35:31Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 1.2 — chain append/verify, segment storage, HEAD (internal/ledger)"},"task":"os-ead12024","ts":"2026-08-30T03:35:34Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 1.3 — genesis: seed init writes signed genesis (governance root, seed/0)"},"task":"os-d636299d","ts":"2026-08-30T03:35:36Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 1.4 — push-race append loop against a git remote"},"task":"os-62e2aa1d","ts":"2026-08-30T03:35:39Z","verb":"create"}
