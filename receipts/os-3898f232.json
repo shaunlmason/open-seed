@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "task": "os-3898f232",
+  "merge_base": "cafbc11dd1a6d4da4ac331e2be5fbef7412f0e17",
+  "head": "0960f67b6d3f0a8e9f93585d36f53af50bfb6089",
+  "plan_path": "plans/os-3898f232.md",
+  "plan_sha256": "95cdd9864b0dbaa3aa3acc9d09d09ef61e2e9718a9fd0147d9d8114f8756a90a",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/admit_test.go",
+    "next/internal/ledger/verify.go",
+    "next/internal/ledger/version_test.go"
+  ],
+  "diff_sha256": "e5f3423032e19bfced8cdc4ea6d761df9917cfe81fc282c86e5d7f81661b35ce",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/admit/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
