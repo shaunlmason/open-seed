@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "task": "os-d3591e09",
+  "merge_base": "2581c4249d0d90773b045b60392c3dd698595e30",
+  "head": "722f3a76a815007fa19efc449ccac8bcc47983c5",
+  "plan_path": "plans/os-d3591e09.md",
+  "plan_sha256": "fd06392815729f16d44339fa374ba1f79f428c91e8c272a2a7f87191152e5173",
+  "diff_files": [
+    "next/cmd/seed-admit/main.go",
+    "next/cmd/seed-admit/main_test.go",
+    "next/docs/decisions.md"
+  ],
+  "diff_sha256": "94ca664ac9a9de9b271bb753eeceda5d5a53b9551629abee41f442f3ec9a2048",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed-admit/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
