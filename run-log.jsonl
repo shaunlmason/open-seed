@@ -492,3 +492,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: transition table as data + lifecycle verbs (Phase 5.1)"},"task":"os-d69a6c91","ts":"2026-08-30T17:16:56Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-d69a6c91","ts":"2026-08-30T17:17:05Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T18:17:08Z"},"task":"os-d69a6c91","ts":"2026-08-30T17:17:08Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-d69a6c91","ts":"2026-08-30T17:18:35Z","verb":"transition"}
