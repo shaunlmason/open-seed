@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-aa146827",
   "merge_base": "8b099dfbcd25452d324d0e9180933ae4142122af",
-  "head": "8b2ae6108ae8fb26de326ca2e0535a40acc45874",
+  "head": "2b9aba3203661062f42c481448530cd0ed5a5f2c",
   "plan_path": "plans/os-aa146827.md",
   "plan_sha256": "7672799087ac8534cc265f9f2377dcb4033cf74a6337b39eb0d60762a9fa5efa",
   "diff_files": [
@@ -15,9 +15,11 @@
     "next/internal/event/event.go",
     "next/internal/event/event_test.go",
     "next/internal/event/keys.go",
-    "next/internal/event/keys_test.go"
+    "next/internal/event/keys_test.go",
+    "next/internal/event/strict_test.go",
+    "next/spec/protocol.md"
   ],
-  "diff_sha256": "10cab01b0dfe2e2fbbf2fa2ce6297ef3d86fd6c94e1ed27b964d47dd9df0baee",
+  "diff_sha256": "3262b930da7f4539bf968c87dc22e088580438ba9b68784217fab8ebf999906f",
   "validation": [
     {
       "cmd": "make check-next",
