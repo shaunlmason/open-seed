@@ -62,7 +62,7 @@ const (
 // Default returns the registered projections. Later phases append
 // (standard projections 4.2, the cache 4.3); registration is data.
 func Default() []Projection {
-	return []Projection{Roster(), Contracts(), Queue(), Actors(), Report()}
+	return []Projection{Roster(), Contracts(), Queue(), Actors(), Report(), Cache()}
 }
 
 // ErrOverlap refuses a ledger/output path overlap in either direction:

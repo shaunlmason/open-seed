@@ -71,7 +71,9 @@ func Report() Projection {
 	return Projection{Name: "report", Build: buildReport}
 }
 
-func buildReport(records []*event.Record) (map[string][]byte, error) {
+// reportView is the report derivation shared by the JSON view and the
+// cache tables.
+func reportView(records []*event.Record) (*ReportView, error) {
 	state, active, err := keyring.StateAt(records)
 	if err != nil {
 		return nil, err
@@ -120,6 +122,14 @@ func buildReport(records []*event.Record) (map[string][]byte, error) {
 	view.Contracts.Subjects = len(entries)
 	for _, e := range entries {
 		view.Contracts.Events += len(e.Events)
+	}
+	return &view, nil
+}
+
+func buildReport(records []*event.Record) (map[string][]byte, error) {
+	view, err := reportView(records)
+	if err != nil {
+		return nil, err
 	}
 	b, err := json.MarshalIndent(view, "", "  ")
 	if err != nil {

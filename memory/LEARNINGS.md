@@ -237,3 +237,14 @@ Fresh sessions read this file instead of rediscovering.
   and run each affected package's test binary under
   setpriv --reuid=nobody; a green root run proves nothing about
   cleanup under 0555.
+
+- Read the charter Appendix verb catalog before binding any event
+  vocabulary: the 5.1 plan invented promote/accept/submit names that
+  the catalog already assigns (contract.specified, merge.observed,
+  submission.made), and every later phase is scheduled around the
+  canonical strings.
+- A stacked PR "merged" into its base branch has not reached main:
+  the #111/#112 stack collapse folded both diffs into side branches
+  after the stack root had merged, so the content needed re-landing
+  PRs rebuilt from main. Verify the files exist on main before
+  closing cards or claiming a phase exit.
