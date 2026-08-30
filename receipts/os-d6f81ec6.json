@@ -1,13 +1,12 @@
 {
   "schema_version": "1.0",
   "task": "os-d6f81ec6",
-  "merge_base": "3cd2358161f664fb13961050e5c92fcf199f7556",
-  "head": "28a3279828e2df38f62119161be55cea7317cc85",
+  "merge_base": "62afc9b33566f2f113dfa2c6695ecd8e1dc488e0",
+  "head": "2ac8da4fb3204965c46aa2a79d6b5ba39453fee9",
   "plan_path": "plans/os-d6f81ec6.md",
   "plan_sha256": "3bf00c7d12d646f6a7a0664035679e556485aa5f874932b9d8d4fc7a4ec7d3b0",
   "diff_files": [
     "next/docs/decisions.md",
-    "next/docs/progress.md",
     "next/internal/classify/classify.go",
     "next/internal/classify/classify_test.go",
     "next/internal/classify/rules.json",
@@ -15,6 +14,7 @@
     "next/internal/classify/testdata/benign/many-hash-refs.json",
     "next/internal/classify/testdata/benign/milestone.json",
     "next/internal/classify/testdata/benign/refs.json",
+    "next/internal/classify/testdata/hostile/anchored-body.string_too_long.json",
     "next/internal/classify/testdata/hostile/base64-blob.embedded_blob.json",
     "next/internal/classify/testdata/hostile/chunked-body.aggregate_text_budget.json",
     "next/internal/classify/testdata/hostile/huge-array.array_too_long.json",
@@ -24,7 +24,7 @@
     "next/internal/classify/testdata/hostile/smuggled-nested.string_too_long.json",
     "next/spec/classify.json"
   ],
-  "diff_sha256": "53ba267925357d9857d552e553007d5d206e5ec5075c462d9639d27c055c689b",
+  "diff_sha256": "ebbed12a1ab4f061f280cb0b66601db1368d8b5d8aef6299b11da7db9fc2b512",
   "validation": [
     {
       "cmd": "make check-next",
