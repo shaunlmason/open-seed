@@ -152,11 +152,18 @@ func TestRebuildByteIdenticalAndStamped(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "projections")
 
 	results, err := project.Rebuild(dir, out, project.Default(), resolve)
-	if err != nil || len(results) != 1 {
+	if err != nil || len(results) != 5 {
 		t.Fatalf("rebuild: %+v %v", results, err)
 	}
 	if results[0].Name != "roster" || results[0].Position != 5 {
 		t.Fatalf("stamp result wrong: %+v", results[0])
+	}
+	for _, r := range results[1:] {
+		// Every registered view is stamped by the one verification
+		// report the rebuild ran.
+		if r.Position != results[0].Position || r.Tip != results[0].Tip {
+			t.Fatalf("stamps must agree across projections: %+v vs %+v", r, results[0])
+		}
 	}
 	first := treeHash(t, out)
 

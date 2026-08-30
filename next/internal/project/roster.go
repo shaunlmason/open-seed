@@ -35,11 +35,12 @@ func Roster() Projection {
 	return Projection{Name: "roster", Build: buildRoster}
 }
 
-func buildRoster(records []*event.Record) (map[string][]byte, error) {
-	state, _, err := keyring.StateAt(records)
-	if err != nil {
-		return nil, err
-	}
+// candidateFingerprints derives the keyring-candidate fingerprints
+// from the chain itself, in first-appearance order: the genesis
+// payload's governance roots plus every enrollment subject. The
+// roster, actor view, and report all key off this one derivation, so
+// every view agrees on who exists.
+func candidateFingerprints(records []*event.Record) []string {
 	seen := map[string]bool{}
 	var order []string
 	note := func(fp string) {
@@ -65,6 +66,15 @@ func buildRoster(records []*event.Record) (map[string][]byte, error) {
 			note(rec.Event.Subject)
 		}
 	}
+	return order
+}
+
+func buildRoster(records []*event.Record) (map[string][]byte, error) {
+	state, _, err := keyring.StateAt(records)
+	if err != nil {
+		return nil, err
+	}
+	order := candidateFingerprints(records)
 	entries := make([]RosterEntry, 0, len(order))
 	for _, fp := range order {
 		e, ok := state.Get(fp)

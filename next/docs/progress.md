@@ -137,10 +137,10 @@ Phase 7, as added rules on the shared set.
   fixtures, interrupted-publication drill, per review), task PR
   #109 — review
 - 4.2 standard projections (contract detail, ready queue, actor view,
-  report skeleton, `seed project current`) — os-fecfb3f7 — plan PR
-  #106 (merged, amended: the ready queue ships registered with
-  `derivation: "none"` v0, per review) — **ready to implement**,
-  stacks on 4.1's branch until #109 merges
+  report skeleton, `seed project current`, exit 15 `stale`) —
+  os-fecfb3f7 — plan PR #106 (merged, amended: the ready queue ships
+  registered with `derivation: "none"` v0, per review), task PR
+  #111 — review (stacked on #109's branch)
 - 4.3 SQLite cache projection + mid-operation deletion drill —
   os-acc1ac78 — plan PR #108 (merged) — **superseded before
   implementation**: #108 raced ahead of its review amendment, so the
@@ -155,12 +155,11 @@ Phase 7, as added rules on the shared set.
 
 ## Frontier
 
-Phases 0 through 3 are done and closed. 4.1 is in review (#109); its
-engine (`internal/project`, `seed project rebuild`, the roster
-projection, spec/projections.md) is the seam 4.2/4.3/4.4 build on.
-**Next action: implement 4.2 (os-fecfb3f7, plan merged) on
-`seed/os-fecfb3f7` stacked on 4.1's branch; then 4.4 (os-8d5e9c45,
-plan merged); 4.3 waits for amendment PR #110 to merge. As #109
-merges, close os-4d5cacff and restack the stack onto main.**
+Phases 0 through 3 are done and closed. In review: #109 (4.1, the
+engine) and #111 (4.2, the standard projections, stacked on #109).
+**Next action: implement 4.4 (os-8d5e9c45, plan merged) on
+`seed/os-8d5e9c45` stacked on 4.2's branch; 4.3 waits for amendment
+PR #110 to merge. As #109/#111 merge, close their cards and restack
+the remaining stack onto main.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
