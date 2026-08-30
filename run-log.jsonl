@@ -292,3 +292,4 @@
 {"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-a9915564","ts":"2026-08-24T04:31:46Z","verb":"transition"}
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:63","to":"ready"},"task":"os-af5cb439","ts":"2026-08-24T04:31:50Z","verb":"plan-unblock"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-221f5929","ts":"2026-08-24T04:31:53Z","verb":"close"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 0 — workspace and spec skeleton"},"task":"os-116ca9ac","ts":"2026-08-30T03:15:45Z","verb":"create"}
