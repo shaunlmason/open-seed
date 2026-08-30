@@ -189,6 +189,18 @@ func TestCorruptionsAreDetectedDistinctly(t *testing.T) {
 			},
 			reason: ReasonHeadWrong, position: 4,
 		},
+		"payload-not-object": {
+			corrupt: func(t *testing.T, dir string) {
+				rewriteFile(t, segmentPath(t, dir, "2026-09-02.jsonl"), func(s string) string {
+					out := strings.Replace(s, `"payload":{"n":2}`, `"payload":"a body"`, 1)
+					if out == s {
+						t.Fatal("payload rewrite did not apply — fixture drifted")
+					}
+					return out
+				})
+			},
+			reason: ReasonBadPayload, position: 2,
+		},
 		"garbage-line": {
 			corrupt: func(t *testing.T, dir string) {
 				rewriteFile(t, segmentPath(t, dir, "2026-09-03.jsonl"), func(s string) string {

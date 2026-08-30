@@ -5,6 +5,7 @@
 package ledger
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -41,10 +42,16 @@ type Report struct {
 // VerifyFromGenesis replays the whole stream: parse every record,
 // recompute canonical bytes, check prev linkage from the empty hash,
 // verify every signature against the resolver, then compare HEAD. The
-// first failure returns as a *Failure.
+// first failure returns as a *Failure. A HEAD that is merely behind the
+// stream must still be *consistent*: its tip must equal the chain hash at
+// its claimed position, or it is wrong, not recoverable; and a missing
+// HEAD over a non-empty stream is itself a behind state, never a pass.
 func (s *Store) VerifyFromGenesis(resolve Resolver) (*Report, error) {
+	head, headExists, headErr := s.ReadHead()
+
 	tip := event.EmptyHash
 	count := 0
+	claimedTip := event.EmptyHash
 	err := s.scan(func(pos int, segment string, line []byte) error {
 		rec, err := event.ParseRecord(line)
 		if err != nil {
@@ -59,7 +66,11 @@ func (s *Store) VerifyFromGenesis(resolve Resolver) (*Report, error) {
 			return &Failure{Position: pos, Reason: ReasonUnknownActor, Detail: rec.Event.Actor}
 		}
 		if err := rec.Verify(pub); err != nil {
-			return &Failure{Position: pos, Reason: ReasonBadSignature, Detail: err.Error()}
+			reason := ReasonBadSignature
+			if errors.Is(err, event.ErrBadPayload) {
+				reason = ReasonBadPayload
+			}
+			return &Failure{Position: pos, Reason: reason, Detail: err.Error()}
 		}
 		h, err := rec.Event.Hash()
 		if err != nil {
@@ -67,6 +78,9 @@ func (s *Store) VerifyFromGenesis(resolve Resolver) (*Report, error) {
 		}
 		tip = h
 		count = pos + 1
+		if headExists && count == head.Count {
+			claimedTip = h
+		}
 		return nil
 	})
 	if err != nil {
@@ -76,21 +90,23 @@ func (s *Store) VerifyFromGenesis(resolve Resolver) (*Report, error) {
 		return nil, err
 	}
 
-	head, exists, err := s.ReadHead()
-	if err != nil {
-		return nil, &Failure{Position: count, Reason: ReasonHeadWrong, Detail: err.Error()}
+	if headErr != nil {
+		return nil, &Failure{Position: count, Reason: ReasonHeadWrong, Detail: headErr.Error()}
 	}
-	if exists {
-		switch {
-		case head.Tip == tip && head.Count == count:
-			// clean
-		case head.Count < count:
-			return nil, &Failure{Position: count, Reason: ReasonHeadBehind,
-				Detail: fmt.Sprintf("HEAD at count %d behind stream count %d (healed on next append)", head.Count, count)}
-		default:
-			return nil, &Failure{Position: count, Reason: ReasonHeadWrong,
-				Detail: fmt.Sprintf("HEAD claims tip %.12s count %d, stream has tip %.12s count %d", head.Tip, head.Count, tip, count)}
-		}
+	switch {
+	case !headExists && count == 0:
+		// clean empty ledger
+	case !headExists:
+		return nil, &Failure{Position: count, Reason: ReasonHeadBehind,
+			Detail: fmt.Sprintf("HEAD missing over a %d-event stream (healed on next open or append)", count)}
+	case head.Tip == tip && head.Count == count:
+		// clean
+	case head.Count < count && head.Count >= 0 && head.Tip == claimedTip:
+		return nil, &Failure{Position: count, Reason: ReasonHeadBehind,
+			Detail: fmt.Sprintf("HEAD at count %d behind stream count %d, consistent with its position (healed on next open or append)", head.Count, count)}
+	default:
+		return nil, &Failure{Position: count, Reason: ReasonHeadWrong,
+			Detail: fmt.Sprintf("HEAD claims tip %.12s count %d, stream has tip %.12s count %d", head.Tip, head.Count, tip, count)}
 	}
 	return &Report{Count: count, Tip: tip}, nil
 }
