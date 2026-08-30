@@ -69,9 +69,13 @@ merge.
 
 ## Schema (v1, stated in the spec)
 
-- `stamp(schema_version TEXT, position INTEGER, tip TEXT)` — one row,
-  written last in the build transaction; must equal the tree's
-  `projection.json`.
+- `stamp(name TEXT, position INTEGER, tip TEXT, version TEXT)` — one
+  row, written last in the build transaction, carrying **exactly the
+  tree stamp's fields** so the equality drill and a pure-SQL consumer
+  compare it to `projection.json` field-for-field (review finding on
+  #110). The database's own schema generation is versioned separately
+  via `PRAGMA user_version = 1`, part of the deterministic recipe, and
+  bumps with the table set rather than sharing the stamp's row.
 - `roster(fingerprint TEXT PRIMARY KEY, kind TEXT, name TEXT,
   standing TEXT, root INTEGER, grants TEXT)` — grants as a JSON
   array, matching `roster.json`.
