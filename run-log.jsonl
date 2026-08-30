@@ -339,3 +339,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:77","to":"ready"},"task":"os-d6f81ec6","ts":"2026-08-30T04:55:00Z","verb":"plan-unblock"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:78"},"task":"os-bce3fb98","ts":"2026-08-30T04:55:02Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T05:55:45Z"},"task":"os-d6f81ec6","ts":"2026-08-30T04:55:45Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-5550dfaf","kind":""},"task":"os-d6f81ec6","ts":"2026-08-30T04:59:51Z","verb":"attach-evidence"}
