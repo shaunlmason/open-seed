@@ -186,9 +186,12 @@ the current build; unmarked items exist at least partially today and must be kep
       blocked_on, evidence trail, dirty-file inventory), written on release/park/reap and
       on demand.
 - [ ] ◇ Packet enrichment, still mechanical-only: plan validation commands, last failing
-      check output, diffstat vs merge-base — organized as the three-part handoff schema
-      (acceptance criteria; settled decisions and constraints, so the recipient never
-      relitigates them; artifact references by path, never contents).
+      check output, and the diff vs merge-base (or a commit range producing it — a
+      diffstat is not reviewable) — organized as the three-part handoff schema
+      (acceptance criteria; settled decisions and constraints, each marked
+      verified/asserted so upstream errors stay reviewable; artifact references
+      commit-anchored, never contents and never bare paths that assume a shared
+      filesystem).
 - [ ] Memory compounds: LEARNINGS.md and DEADENDS.md are append-paths in every task PR;
       ◇ retrieval guidance so agents actually consult them before repeating history.
 - [ ] ◇ Memory entries carry provenance: each learning states its applies-when
@@ -280,9 +283,12 @@ the current build; unmarked items exist at least partially today and must be kep
 - [ ] `maintain report` surfaces queue health: stalled reviews, long-parked plans, unread
       mail, expired leases, ancestry gaps; ◇ human-vs-agent actor breakdown.
 - [ ] ◇ Progress liveness is a second signal beside the lease: a claimed card's worker
-      maintains a lightweight progress note whose staleness is the stuck signal — a
-      wedged worker renews leases forever, but its progress stops moving. Report, reap
-      heuristics, and the dashboard read freshness, not just lease expiry.
+      maintains a lightweight progress note (outside the tree or gitignored) whose
+      **monotonic progress count** is the liveness measure — advancement, not file
+      modification time, since a looping worker rewrites files while stuck and a long
+      legitimate step writes nothing. A wedged worker renews leases forever, but its
+      progress stops advancing. Report, reap heuristics, and the dashboard read
+      advancement, not just lease expiry.
 - [ ] `maintain reap` is safe to run on a schedule; the maintenance lane (reap, lint,
       close-on-merge, mirror, prune, anchor) runs green unattended and is itself audited.
 - [ ] ◇ `seed doctor`: one preflight command that checks everything (state ref, backend

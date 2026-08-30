@@ -155,12 +155,16 @@ external-backend adoption materializes.
   `api.github.com` fallback with optional token for private forks. Engine change; file as an
   engine card. (Now / S)
 - **Book cross-check** ([doc 12](./12-ai-agents-in-depth-notes.md), "AI Agents in Depth"):
-  **B1** three-part handoff-package spec folds into A1 (see the A1 row); **B2**
-  provenance-bearing entry template for `memory/LEARNINGS.md`/`DEADENDS.md` — applies-when,
-  supporting task IDs, last-validated stamp (Now / S); **B3** progress-file liveness —
-  worker-maintained `progress.md` whose mtime is a heartbeat, complementing lease renewal
-  and feeding D1 Tier-0 (Next / S). Doc 12 §5 also carries design tests (information-gain,
-  boundary+retention set) worth applying when the reviewer lane and role files evolve.
+  **B1** three-part handoff-package spec folds into A1 (see the A1 row; settled decisions
+  carry verified/asserted markers, refs are commit-anchored, the packet carries the diff
+  vs. merge-base, not a diffstat); **B2** provenance-bearing entry template for
+  `memory/LEARNINGS.md`/`DEADENDS.md` — workers append candidates only; an offline gated
+  promotion pass applies the ≥2-support rule (Now / S template + M promotion gate);
+  **B3** progress-file liveness — monotonic progress counts (not mtime), gitignored,
+  consumed by reap/nudge/D1 (Next / M). Doc 12 §7 also carries design tests
+  (information-gain, boundary+retention set) worth applying when the reviewer lane and
+  role files evolve, and doc 12 §4 records the gaps the book surfaced (no eval/retention
+  set for the harness itself; log-vs-state authority; hidden-checks partiality).
 
 ## Part 9 — From Stately Agent (@statelyai/agent, MIT)
 
