@@ -90,8 +90,30 @@ os-beac85e1's task PR (an administrative card, not a Phase 2 item).
   split per review; card closed)
 - 3.2 admission checks grants per verb — os-3979d48b — plan PR #101
   (merged, amended: versioning stance held, checkpoint accepts
-  maintenance|operator, per review), task PR #102 — review
-- 3.3 key rotation/revocation drill — os-d1f35a8c — backlog
+  maintenance|operator, per review), task PR #102 — **done** (merged;
+  vocabulary test parses the normative spec table per review; card
+  closed)
+- 3.3 key rotation/revocation drill — os-d1f35a8c — plan PR #103
+  (merged, amended: exit record scoped to the III.E subset with the
+  full unmet-remainder enumeration, per review), task PR #104 — review
+
+**Phase 3 exit (the III.E subset docs/next-build-plan.md scopes): met.**
+Signature and grant checks live in admission (#100: standing-aware
+resolution behind the seed/1 boundary, root liveness, grandfathering;
+#102: the capability vocabulary checked on every verb, operator-only
+refusals structural, delegation via actor.granted proven end-to-end,
+kind a drilled assertion), and the revocation drill is green (#104:
+rotation with history attributed and every post-revocation proposal
+refused at the rule set, the seed-admit boundary, and the CLI; the
+compromised-key cut per posture with the cooperative consequence
+observable; terminality, grants-die-with-standing, and root liveness
+held at the boundary). Still-unmet III.E criteria, by landing phase:
+implementer-disjoint self-approval and sealed-check keyring rotation on
+verifier-key revocation (Phase 6); claim reaping on revocation (Phase
+5); qualification tuples, grants citing them, and scheduled spot-check
+suspension (Phase 10); the roster distinction consumed by agent-only
+guardrails and human/agent metrics (with those surfaces, Phases 8 and
+11).
 
 **Phase 2 exit (charter III.B subset): met.** The validator is the
 guarded ref's sole writer under enforced posture (#94: invalid-stream,
@@ -107,13 +129,14 @@ Phase 7, as added rules on the shared set.
 
 ## Frontier
 
-Phase 0, Phase 1, all of Phase 2, and 3.1 are done and closed. 3.2
-(task PR #102) is in review against merged plan #101: grants checked on
-every verb from the actors.md vocabulary, delegation via actor.granted,
-the maintenance|operator checkpoint row, and the kind-parity drill.
-**Next action: as #102 merges, close os-3979d48b, then plan and
-implement 3.3 (key rotation/revocation drill, os-d1f35a8c) — it turns
-the verification lifecycle tests into the charter drill and closes the
-Phase 3 exit (III.E items except qualification tuples).**
+Phase 0 through Phase 2 are done and closed; Phase 3 completes when
+#104 (3.3, in review) merges and os-d1f35a8c closes — 3.1 and 3.2 are
+already merged and closed. **Next action: as #104 merges, close
+os-d1f35a8c, then file the Phase 4 (projections) cards per
+docs/next-build-plan.md — 4.1 projection engine (deterministic build
+from prefix, position stamps, one-command `seed project rebuild`), 4.2
+standard projections, 4.3 SQLite cache (modernc.org/sqlite) with the
+mid-operation deletion drill, 4.4 write-boundary lint wired into
+check-next — and plan 4.1 first, keep stacking.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
