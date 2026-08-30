@@ -1,26 +1,25 @@
-# next-build-plan.md — Implementing Keel (SEED-NEXT)
+# next-build-plan.md — Implementing Seed (SEED-NEXT)
 
 > **Scope and authority.** This plan governs sequencing and per-phase acceptance for
-> implementing the system chartered in [`SEED-NEXT.md`](../SEED-NEXT.md) (working name
-> **Keel**). For everything under `next/**`, the charter is the design authority and this
+> implementing **Seed**, the system chartered in [`SEED-NEXT.md`](../SEED-NEXT.md). For everything under `next/**`, the charter is the design authority and this
 > plan is the build order — the same relationship `docs/design-options.md` and
 > `docs/build-plan.md` have for the v1 template. The charter's Part II is normative;
 > its Part III is the conformance checklist every phase's exit criteria cite. Where this
 > plan sets a default the charter leaves open, the default is binding until a recorded
 > decision changes it.
 >
-> **Autonomy contract.** This plan exists so agents can implement Keel **without human
+> **Autonomy contract.** This plan exists so agents can implement Seed **without human
 > intervention**. Every foreseeable decision has a default below. When you hit one that
 > doesn't: (1) prefer the charter's normative text; (2) prefer the smallest reversible
 > choice consistent with it; (3) record the choice in `decisions/` inside your task PR
 > and continue. Escalate to a human (card → `blocked(needs-you)`) **only** for:
 > amendments to the charter itself, changes to the protected surface outside `next/**`,
-> renaming Keel, publishing/spin-out, or granting new credentials. Everything else you
+> renaming Seed, publishing/spin-out, or granting new credentials. Everything else you
 > decide.
 
 ## 0. Ground rules
 
-- **Where work happens.** All Keel implementation lives under `next/` in this
+- **Where work happens.** All Seed implementation lives under `next/` in this
   repository. Nothing under `next/**` may modify v1 surfaces (`.seed/**`,
   `scripts/seed*`, the root template files) except the explicitly listed integration
   points: the `Makefile` (`check-next` target, Phase 0) and this docs tree. The v1
@@ -31,9 +30,13 @@
   a worktree on `seed/<task-id>`, attach evidence, `make check` green, move to review.
   The rules in AGENTS.md apply unchanged.
 - **Language and layout.** Go (matches the existing engine and its toolchain), one
-  module at `next/`: `next/cmd/keel/` (CLI), `next/internal/...` (packages),
+  module at `next/`: `next/cmd/seed/` (CLI), `next/internal/...` (packages),
   `next/spec/` (protocol schemas + versioned canonical-form spec), `next/fixtures/`
-  (drill fixtures), `next/docs/` (implementation notes). Binary name: `keel`.
+  (drill fixtures), `next/docs/` (implementation notes). Binary name: `seed` — the
+  successor claims the name. During incubation it is built into `next/bin/` and invoked
+  explicitly (`go run ./next/cmd/seed`, or `next/bin/seed`), never installed on PATH:
+  `scripts/seed` (v1) remains the only coordination entry point for doing the work
+  until spin-out.
 - **Quality bar.** Table-driven unit tests per package; every charter drill lands as an
   automated test the phase it becomes possible; ≥90% statement coverage for
   `next/internal/...` from Phase 1 on; `make check` stays green on main at every merge.
@@ -50,11 +53,11 @@
 | Signature scheme | Ed25519; accept OpenSSH `ed25519` keys so operators reuse existing keys | Ubiquitous, small, fast |
 | Hash | SHA-256 everywhere (chain, commitments, receipts) | Boring, universal |
 | Canonical event form | JSON per RFC 8785 (JCS); `sig` over the JCS bytes of the event including `prev` | Deterministic without a custom codec |
-| Protocol version | `keel/0` in genesis; bump discipline recorded in `next/spec/` | Versioned from day one |
-| Ledger ref | `refs/keel/ledger`; artifact store at `refs/keel/artifacts` (git-addressed) with filesystem fallback | Charter Reference deployment |
+| Protocol version | `seed/0` in genesis; bump discipline recorded in `next/spec/` | Versioned from day one |
+| Ledger ref | `refs/seed/ledger`; artifact store at `refs/seed/artifacts` (git-addressed) with filesystem fallback | Charter Reference deployment |
 | Segments | JSONL, one file per UTC day under `ledger/segments/`, `HEAD` record with tip hash | Simple, streamable |
 | Sealed-check encryption | `filippo.io/age` (X25519 recipients = verifier keyring) | Audited, minimal |
-| Observation channel | v0: per-executor file under `next/var/obs/` (gitignored) + optional `refs/keel/obs/<actor>` push; supervisor tails both | Lossy-by-declaration is the contract, so simplest channel first |
+| Observation channel | v0: per-executor file under `next/var/obs/` (gitignored) + optional `refs/seed/obs/<actor>` push; supervisor tails both | Lossy-by-declaration is the contract, so simplest channel first |
 | SQLite cache | `modernc.org/sqlite` (no cgo) | Portable builds |
 | Admission postures | Cooperative validation library first (same rule set), then enforced self-hosted (`pre-receive` hook binary) in Phase 2; forge-hosted service deferred to Phase 12 | Shared-rule-set requirement drives the order |
 | Racing mode | Deferred entirely to post-plan backlog | Opt-in feature, not core |
@@ -68,7 +71,7 @@ dependencies' exit criteria are merged, not before. Within a phase, items are or
 
 ### Phase 0 — Workspace and spec skeleton  *(deps: none)*
 
-1. Scaffold `next/` module, CLI skeleton (`keel version`), CI wiring: `make check-next`
+1. Scaffold `next/` module, CLI skeleton (`seed version`), CI wiring: `make check-next`
    (build + vet + test + coverage gate) and hook it into `make check`.
 2. Write `next/spec/protocol.md` v0: canonical form (JCS), event fields, hash/signature
    algorithms, verb namespace catalog copied from charter Appendix B, envelope shape,
@@ -83,13 +86,13 @@ charter Appendix B; a decision log exists.
 
 1. Event model + JCS canonicalization + Ed25519 sign/verify (`internal/event`).
 2. Chain: append, verify-from-genesis, `prev` linkage; segment storage; `HEAD`.
-3. Genesis (`keel init` writes signed genesis naming governance-root keys + `keel/0`).
+3. Genesis (`seed init` writes signed genesis naming governance-root keys + `seed/0`).
 4. Push-race append loop against a git remote: fetch → re-validate → re-link → push;
    losing events that fail re-validation are reported, never silently re-appended.
 5. Halt semantics in the validation rule set (`halt.declared`/`halt.lifted`).
 6. Payload data classification lint (references-not-bodies) with a hostile fixture
    corpus.
-7. CLI: `keel ledger verify`, `keel ledger append` (dev tool), `keel ledger show`.
+7. CLI: `seed ledger verify`, `seed ledger append` (dev tool), `seed ledger show`.
 
 *Exit:* charter III.A items — chain verifies from genesis in one command; corrupted
 fixtures (reordered, rewritten, forged-sig, bad-prev) all detected; classification
@@ -101,10 +104,10 @@ corpus passes; race drill (two concurrent appenders, no lost updates) green.
    capability, fence, transition, schema, classification, protocol version, halt,
    reservation — one rule set, importable by client, hook, and (later) service.
 2. Cooperative posture: client self-validates via the library before pushing.
-3. Enforced self-hosted posture: `keel-admit` `pre-receive` hook binary refusing
+3. Enforced self-hosted posture: `seed-admit` `pre-receive` hook binary refusing
    invalid pushes, force-updates, and deletions of the ledger ref; stateless
    (rebuilds context from the repo it guards).
-4. Posture declaration in config; `keel doctor` states the posture and, for
+4. Posture declaration in config; `seed doctor` states the posture and, for
    cooperative, prints the named consequence verbatim.
 5. Drills: raw-git adversary (direct push of invalid events) refused under enforced;
    kill-and-replace the hook host, revalidate.
@@ -125,7 +128,7 @@ grant checks live in admission; revocation drill green.
 ### Phase 4 — Projections  *(deps: 1; grants integration after 3)*
 
 1. Projection engine: deterministic build from prefix, position stamp, one-command
-   rebuild (`keel project rebuild`).
+   rebuild (`seed project rebuild`).
 2. Standard projections: contract detail, ready queue (eligibility-filtered after
    Phase 5), actor view, report skeleton.
 3. SQLite cache projection; mid-operation deletion drill.
@@ -247,7 +250,7 @@ converts to a workflow through the gates.
 3. Checkpoint trust docs + replay-equals-genesis CI proof; performance budgets
    (admission latency, replay, rebuild) tracked.
 4. Preseed file (config, guardrails, teams, protections, posture) — idempotent init.
-5. **Migration**: `keel import --from-seed <export>` — v1 lossless export → verify
+5. **Migration**: `seed import --from-open-seed <export>` — v1 lossless export → verify
    anchors → transform (cards→contracts, run-log→events, receipts→verdict records,
    mail→messages) → genesis import refusing non-empty ledgers; drilled against a real
    v1 fixture.

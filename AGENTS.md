@@ -9,10 +9,11 @@ orchestration, task tracking, and guardrails.
 > decisions) live in [`docs/CONTRIBUTING-AGENTS.md`](docs/CONTRIBUTING-AGENTS.md)
 >: read that first; it governs your work here.
 
-## Implementing the next version (Keel / SEED-NEXT)
+## Implementing the next version (Seed / SEED-NEXT)
 
 This repository also hosts the implementation of its successor, chartered in
-[`SEED-NEXT.md`](SEED-NEXT.md) (working name **Keel**). If you are here to build
+[`SEED-NEXT.md`](SEED-NEXT.md) — **Seed** (the successor claims the name; the v1
+template around you remains "open-seed"). If you are here to build
 it, you need exactly three documents, in this order:
 
 1. [`SEED-NEXT.md`](SEED-NEXT.md) — the charter: design authority for everything
@@ -28,7 +29,7 @@ it, you need exactly three documents, in this order:
 The work is designed to proceed **without human intervention**: coordinate it
 through the normal loop above (cards titled `next: …`, plan-first above L1,
 worktrees, evidence, `make check` green), decide open questions per the plan's
-decision rubric, and record decisions in your task PR. Keel work never modifies
+decision rubric, and record decisions in your task PR. Seed (`next/**`) work never modifies
 v1 surfaces except the integration points the plan names. Humans review PRs at
 the existing gates; they do not need to be asked before you start, continue, or
 finish plan work.

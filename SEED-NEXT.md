@@ -1,15 +1,16 @@
-# Keel — A Coordination Substrate for Agent Fleets
+# Seed — A Coordination Substrate for Agent Fleets
 
-> **Document status.** This is the founding charter of Keel: vision (Part I), design
+> **Document status.** This is the founding charter of Seed: vision (Part I), design
 > (Part II), conformance criteria (Part III), and appendices (glossary, wire-level
 > sketch, lineage, adoption). It is written to stand alone — implementable and adoptable
-> by a reader with no prior context. **Keel is a provisional working name**, chosen to be
-> replaced deliberately, not by drift.
+> by a reader with no prior context. **The name is Seed** — settled by the project owner
+> (2026-08-30), replacing the provisional "Keel": everything grows from seed, and the
+> successor of open-seed inherits the name it was always growing toward.
 >
 > *Incubation note*: this document currently lives in the open-seed repository (as
 > `SEED-NEXT.md`, its former name) while the system it describes is designed. Within
 > open-seed, design authority remains `docs/design-options.md` until adoption through
-> that document's own process; Keel's lineage from open-seed is recorded in Appendix C.
+> that document's own process; Seed's lineage from open-seed is recorded in Appendix C.
 > Once spun out, this charter is amended only by PR under the governance root it defines
 > (§II.14), and every amendment records its rationale.
 >
@@ -42,7 +43,7 @@ agents compound.
 
 ### 2. The security invariant
 
-Keel is built around one test, and the architecture is not settled until it passes:
+Seed is built around one test, and the architecture is not settled until it passes:
 
 > An enrolled implementer is fully compromised. It holds its legitimate private key and
 > its legitimate git credential. It can invoke arbitrary git commands, forge its own
@@ -159,7 +160,7 @@ repository cannot regenerate.
 ### 1. The Ledger
 
 The ledger is the authoritative coordination record: an append-only sequence of events on
-a dedicated git ref (**Reference:** `refs/keel/ledger`), replicated wherever the
+a dedicated git ref (**Reference:** `refs/seed/ledger`), replicated wherever the
 repository is replicated.
 
 **Event structure (normative).** Every event MUST carry:
@@ -302,7 +303,7 @@ both an export path and a coordination write path.
 enter the ledger as **observations** (`merge.observed`, `check.observed`) recorded by
 governed observers — the ledger never pretends to control what it can only watch (§8).
 
-**Why there are no pluggable authorities.** Keel deliberately has no notion of an
+**Why there are no pluggable authorities.** Seed deliberately has no notion of an
 external system (issue tracker, project-management SaaS) acting as the coordination
 authority. Supporting one requires capability negotiation, emulated atomicity, and a
 permanent two-way reconciliation burden — a consensus problem in integration clothing.
@@ -743,7 +744,7 @@ forgetfulness:
 
 ## Part III — Conformance
 
-An implementation is **Keel-conformant at a declared admission posture** when the
+An implementation is **Seed-conformant at a declared admission posture** when the
 criteria below hold and the drill suite (§II.16) passes; criteria are met only when
 implemented, tested, documented, and **enforceable** (by admission, lint, CI, drill, or
 protocol — not by convention alone). Cooperative-posture deployments MUST additionally
@@ -1227,14 +1228,15 @@ out-of-grant each have their own.
 
 ## Appendix C — Prior art and lineage
 
-Keel is the successor design to **open-seed** (github.com/shaunlmason/open-seed), a
+Seed is the successor design to **open-seed** (github.com/shaunlmason/open-seed) — and
+its heir by name: everything grows from seed. It succeeds a
 git-native multi-agent orchestration template, and inherits its production-validated
 mechanisms: the synchronous claim/fence protocol with structured contention exit codes;
 plan-before-implementation gating with single-file plan PRs structurally disjoint from
 task PRs; reviewer-distinct-from-implementer done-gating; protected-path governance
 (CODEOWNERS + branch protection + CI validators); handoff packets on every involuntary
 exit; mock-total workflow testing; hash-pinned engine distribution with bootstrap
-verification; and total dogfooding. Where Keel differs from open-seed, the differences
+verification; and total dogfooding. Where Seed differs from open-seed, the differences
 were argued in open-seed's research corpus (docs/research/01–12) and two design
 proposals (one authority with one-way projections; pull-based supervision with
 disposability-after-push), then hardened by two adversarial reviews — the first of which

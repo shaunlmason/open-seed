@@ -9,10 +9,10 @@ guardrails. Two streams of work exist here:
 - **v1 (the template)**: design is **complete**; the work is **implementing v1** per
   [`docs/build-plan.md`](docs/build-plan.md). Your job in this stream is to build
   open-seed, not to redesign it and not to extend the research.
-- **Keel (the successor, under `next/**`)**: chartered in [`SEED-NEXT.md`](../SEED-NEXT.md),
+- **Seed (the successor, under `next/**`)**: chartered in [`SEED-NEXT.md`](../SEED-NEXT.md),
   sequenced by [`docs/next-build-plan.md`](next-build-plan.md), designed to be
   implemented by agents **without human intervention** — see the "Implementing the
-  next version" section of the root AGENTS.md for the entry point. Keel work never
+  next version" section of the root AGENTS.md for the entry point. Seed (`next/**`) work never
   modifies v1 surfaces except the integration points the next-build-plan names.
 
 ## Authority order (binding)
@@ -24,7 +24,7 @@ guardrails. Two streams of work exist here:
    options tables around them are retained history, not an invitation to re-litigate.
 2. **[`docs/build-plan.md`](docs/build-plan.md)** governs v1 sequencing and per-phase
    acceptance criteria.
-3. **[`SEED-NEXT.md`](../SEED-NEXT.md)** (the Keel charter) is the design authority
+3. **[`SEED-NEXT.md`](../SEED-NEXT.md)** (the Seed charter) is the design authority
    **for `next/**`** (Part II normative, Part III conformance), and
    **[`docs/next-build-plan.md`](next-build-plan.md)** governs its sequencing and
    per-phase acceptance, including binding defaults for open decisions. The two
@@ -42,7 +42,7 @@ guardrails. Two streams of work exist here:
    erratum.
 
 To change a decision: open a PR editing `docs/design-options.md` (v1) or
-`SEED-NEXT.md` (Keel) with the rationale, and get it reviewed. Never silently
+`SEED-NEXT.md` (Seed) with the rationale, and get it reviewed. Never silently
 diverge in implementation.
 
 ## Rules of engagement
