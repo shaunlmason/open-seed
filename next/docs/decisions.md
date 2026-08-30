@@ -188,3 +188,32 @@ here. Newest last.
   exit record claims only the III.E subset and enumerates every unmet
   criterion with its landing phase (per #103 review): honest conformance
   bookkeeping outranks a tidy exit line. (PR #104)
+- 2026-08-30 — Projection publication scheme (plans/os-4d5cacff.md): a
+  directory rename cannot atomically replace a non-empty directory and
+  delete-then-rename opens the window atomicity forbids (review finding
+  on #105), so publication is **immutable builds plus a pointer**:
+  `<out>/<name>/builds/<position>-<tip12>/` trees named by the stamp
+  (identical prefixes reproduce identical ids) with an atomically
+  renamed `CURRENT` file; the pointer swaps only after the tree is
+  complete; superseded builds and stray partials prune after the swap;
+  a killed build leaves at worst an orphan. Stamp conventions:
+  `projection.json` carries the verified record **count**, the CLI
+  envelope stamps the tip's zero-based **index** (count-1), both stated
+  in spec/projections.md so consumers never conflate them. (PR #109)
+- 2026-08-30 — Roster candidates derive from the chain itself
+  (plans/os-4d5cacff.md): the genesis payload's governance roots plus
+  every enrollment subject, resolved through `keyring.StateAt` — every
+  keyring entry appears, roots included (`root: true`, empty kind and
+  name, per #105 review), and the projection stays a pure function of
+  the records without adding a keyring iterator the plan's file scope
+  did not name. (PR #109)
+- 2026-08-30 — Build identity carries the derivation version; the
+  superseded build survives one swap (review findings on #109). The id
+  is `<position>-<tip12>-v<version>`: a projection whose build logic
+  changes bumps its version and republishes at an unchanged tip, so
+  the same-id discard can never preserve obsolete semantics; and the
+  build CURRENT named before a swap is retained through the prune so a
+  reader that resolved just before the swap still holds a complete
+  tree (older builds and stray partials prune; losing two consecutive
+  swaps means re-resolving). The stamp gains the version field, giving
+  consumers the derivation identity beside the position. (PR #109)

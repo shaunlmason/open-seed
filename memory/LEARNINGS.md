@@ -207,3 +207,15 @@ Fresh sessions read this file instead of rediscovering.
   -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/...
   repeated until two runs agree, sanity-checking per-function output,
   then make check against the warmed cache.
+- Conformance checklists are conjunctive: a specific row (the cache's
+  throughput/zero-authority/deletion row) never narrows a universal one
+  ("every read surface rebuilds byte-identically"); reading redundancy
+  into overlap authorized a design the charter forbade, and the fix
+  (engineered SQLite byte-determinism: one ordered transaction,
+  rollback journal, fixed page_size, no auto_vacuum/ANALYZE) was
+  cheaper than the exemption it replaced.
+- An owner can merge a plan PR while its review amendment is still in
+  flight: the merged file, not the branch, is what authorizes
+  implementation. Before implementing any plan, diff the merged copy
+  against the amended branch; a stranded amendment re-opens as a fresh
+  plan PR and the card re-parks on it.
