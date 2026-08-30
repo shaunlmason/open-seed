@@ -5,55 +5,63 @@ item 3: "SQLite cache projection; mid-operation deletion drill", with the
 plan's binding default `modernc.org/sqlite` (no cgo, portable builds).
 Design authority: [`SEED-NEXT.md`](../SEED-NEXT.md) §II.2 (every cache is
 a one-way, rebuildable, disposable projection), §II.4 ("a local database
-cache for single-machine read throughput", "a local cache projection
-delivers machine-local speed without a second authority"), the
-what-Seed-does-not-have row ("A machine-local authoritative store — the
-cache projection provides the throughput without a second authority"),
-and conformance III.D's cache row: "The cache projection delivers
+cache for single-machine read throughput" among the **standard
+projections**; "a local cache projection delivers machine-local speed
+without a second authority"), the what-Seed-does-not-have row ("A
+machine-local authoritative store — the cache projection provides the
+throughput without a second authority"), and conformance III.D: row 1
+binds **every** read surface — this cache included — to deterministic,
+stamped, **byte-identical** rebuild, and the cache row adds "delivers
 single-machine read throughput with zero authority (mid-operation
-deletion loses nothing)." Deps: the 4.1 engine and 4.2 views
+deletion loses nothing)" on top. Deps: the 4.1 engine and 4.2 views
 (plans #105/#106); implementation stacks on their branches until they
 merge.
 
 ## Design decisions (binding for this task)
 
-- **The cache is not a registered projection and not byte-identical.**
-  III.D row 1 (byte-identical, one command) governs the file-tree read
-  surfaces; the cache carries its own conformance row with its own
-  rebuild property, which would be redundant if row 1 already bound it.
-  SQLite files are not byte-stable across library versions, so claiming
-  byte-identity would weld the drill to `modernc.org/sqlite` internals.
-  The cache's contract is **semantic identity**: two builds from the
-  same verified prefix hold the same logical content (schema, rows,
-  stamp), compared by a Go-side ordered dump-and-hash, never by file
-  bytes. The registry (`project.Default()`) stays view-only; the
-  byte-identical drill over the publication trees is untouched.
-- **Placement: outside the locked view trees.** The database publishes
-  to `<out>/cache.db`, sibling of the `<name>/` projection roots, never
-  inside them — so 4.4's locked directories (plan #107) stay fully
-  read-only, the whole-tree byte comparison never sees the DB, and the
-  engine atomically replaces the file by build-to-temp plus rename in
-  the writable `<out>/` root. One database for all views, not one per
-  view: single-machine throughput is the point and cross-view joins are
-  the payoff. When 4.4 lands, its vocabulary lint (Lint A) grows the
-  `"cache.db"` literal; whichever branch merges second carries the
-  union (recorded in both PRs).
+- **The cache is a registered standard projection, byte-identical like
+  every other.** §II.4 lists it among the standard projections and
+  III.D row 1 binds every read surface byte-identically; the cache
+  checklist row adds requirements, it does not narrow that one (review
+  finding on #108 — an earlier draft read it otherwise). So the cache
+  registers in `project.Default()` as projection `cache` with one view
+  file, `cache.db`, and the 4.1 engine's machinery applies unchanged:
+  immutable `builds/<position>-<tip12>/` trees, `CURRENT`, the
+  `projection.json` stamp, pruning, 4.4's locked directories, the
+  whole-output byte-identical drill, and `seed project current`
+  resolution — no separate publication path, no exemptions.
+- **Byte-determinism is engineered, then enforced by the existing
+  drill.** SQLite output is a pure function of the operation sequence
+  for a pinned library version when the variance sources are closed:
+  the builder uses one connection, one transaction, rollback journal
+  (never WAL — WAL headers embed salts), fixed `page_size`, no
+  `auto_vacuum`, no `ANALYZE`, no `AUTOINCREMENT`, tables created and
+  rows inserted in spec order. The registry's byte-identical drill
+  then proves it on every fixture: two builds from one prefix, same
+  bytes. A driver upgrade may change the encoding, which changes both
+  builds together and keeps the drill green; the drill compares builds
+  of one binary, and `go.sum` pins the driver. If real
+  nondeterminism ever surfaces, the drill fails loudly and the answer
+  is a builder fix or an escalated charter question — never a weaker
+  drill.
 - **Built from the records, not from the view files.** The cache
-  builder consumes the same verified record prefix as every Builder,
-  reusing the view derivations' intermediate state (roster entries,
-  contract streams, keyring state) rather than parsing published JSON
-  back in — one derivation, two serializations. `seed project rebuild`
-  builds it by default alongside the views (III.D's one-command posture
-  and the rebuild-everything drill cover both); `--no-cache` skips it.
+  builder is a `Builder` like the others: it consumes the verified
+  record prefix, reuses the view derivations' intermediate state
+  (roster entries, contract streams, keyring state) rather than
+  parsing published JSON back in, builds the database in a private
+  temp file, and returns its bytes. Coordination-scale ledgers make
+  the in-memory hand-off cheap; the size posture is stated in the
+  spec and a streaming publication seam is deliberately deferred
+  until a real ledger outgrows it.
 - **The consumer surface is SQL itself.** SQLite is the API: any
-  driver or the `sqlite3` shell reads the file directly, which is the
-  entire point of choosing the format. The engine's obligations are
-  the stamp table (staleness visible; a consumer demands a minimum
-  position with one documented query) and read-only-outward openness
-  (consumers open read-only; the spec says a writable open of the
-  cache is a programming error and why it cannot become authority).
-  No new query verbs; `seed project rebuild`'s envelope reports the
-  cache alongside the views.
+  driver or the `sqlite3` shell opens the published file read-only
+  (the spec states the read-only contract and why a writable open is
+  a programming error; 4.4's locked trees refuse in-place writes
+  mechanically). Staleness stays visible twice over: the build tree's
+  `projection.json` as everywhere, plus an in-database `stamp` table
+  equal to it, so a pure-SQL consumer demands a minimum position with
+  one documented query. No new verbs: `seed project rebuild` builds
+  it, `seed project current --name cache` resolves it.
 - **Throughput is the purpose, correctness is the test.** The drills
   assert indexed per-subject and per-actor lookups return exactly the
   view-equivalent facts; CI runs no benchmarks (timing assertions
@@ -62,11 +70,11 @@ merge.
 ## Schema (v1, stated in the spec)
 
 - `stamp(schema_version TEXT, position INTEGER, tip TEXT)` — one row,
-  written last inside the build transaction; equals the verification
-  report the views were stamped with.
+  written last in the build transaction; must equal the tree's
+  `projection.json`.
 - `roster(fingerprint TEXT PRIMARY KEY, kind TEXT, name TEXT,
-  standing TEXT, root INTEGER, grants TEXT)` — grants as a JSON array,
-  matching `roster.json`.
+  standing TEXT, root INTEGER, grants TEXT)` — grants as a JSON
+  array, matching `roster.json`.
 - `contracts(subject TEXT, position INTEGER, verb TEXT, actor TEXT,
   payload TEXT)` with an index on `subject` — the per-subject lookup
   the 4.2 plan deferred here as "the lookup-throughput answer".
@@ -81,57 +89,60 @@ merge.
 - `report(key TEXT PRIMARY KEY, value TEXT)` — the report skeleton's
   facts as JSON values.
 
-Deterministic build: one connection, fixed pragmas, tables created and
-rows inserted in spec order; determinism is asserted at the semantic
-layer (above), so pragma drift cannot silently weaken the drill.
-
 ## Steps
 
-1. **The cache builder** (`next/internal/project/cache.go`): build to
-   `cache.db.partial` in `<out>/`, insert everything in one
-   transaction from the shared derivations, write the stamp row last,
-   close, rename over `cache.db`; discard the partial on any error.
-   Wire into `Rebuild` after view publication (`--no-cache` in the CLI
-   maps to an engine option), reporting `{name: "cache", position,
-   tip}` in the results. Add `modernc.org/sqlite` to `next/go.mod`
-   pinned at the current stable release, recorded in `go.sum`.
-2. **Semantic dump** (`next/internal/project/cachedump.go`): open
-   read-only, walk tables in schema order with `ORDER BY` primary
-   key/rowid, hash the typed rows — the equality surface for every
-   drill below and the documented way an operator diffs two caches.
-3. **Drills** (library + CLI):
-   - *Semantic rebuild*: build twice from one prefix — equal dumps;
-     grow the chain — dumps differ and the stamp advances with the
-     report.
-   - *View equivalence*: every row set equals the published JSON views
+1. **The cache builder** (`next/internal/project/cache.go`): the
+   `Builder` above — deterministic pragmas, one ordered transaction
+   from the shared derivations, stamp row last, close, read the temp
+   file's bytes, return `{"cache.db": bytes}`; the temp file lives in
+   an engine-owned scratch directory and is removed on every path.
+   Register `cache` in `Default()`. Add `modernc.org/sqlite` to
+   `next/go.mod` pinned at the current stable release, recorded in
+   `go.sum`.
+2. **Drills** (library + CLI):
+   - *Byte-identical, via the registry*: the engine's existing
+     repeat-rebuild and delete-then-rebuild drills now cover the
+     cache automatically; assert they run with `cache` present and
+     that two independent builds of the same prefix produce identical
+     `cache.db` bytes on every fixture (populated, root-only, halted,
+     grown chain — growth changes bytes and advances the stamp).
+   - *View equivalence*: every row set equals the published JSON view
      it mirrors, fixture by fixture (roster, contracts, queue with
-     `derivation` `"none"`, actor streams, report facts).
-   - *Mid-operation deletion loses nothing*: delete `cache.db` while a
-     read connection holds it open (POSIX keeps the inode; reads
-     complete), after it, and mid-rebuild (kill the build before the
-     rename; only the partial is lost) — in every case the ledger tree
-     is byte-unchanged and one rebuild restores an equal dump. The
-     drill that gives the card its name.
-   - *Zero authority*: rebuild with a poisoned cache (extra row,
-     mutated standing) — the rebuilt cache matches the ledger, the
-     views never read it, and nothing downstream of the engine treated
-     it as input; plus the staleness demand: the documented
-     minimum-position query refuses (returns below-minimum) on a stale
-     cache and passes after rebuild.
+     `derivation` `"none"`, actor streams, report facts); the `stamp`
+     table equals `projection.json`.
+   - *Mid-operation deletion loses nothing*: delete the cache build
+     tree (mode walk, per 4.4) while a read connection holds
+     `cache.db` open (POSIX keeps the inode; in-flight reads
+     complete), and after close; kill a rebuild before publication
+     (only the engine's partial is lost) — in every case the ledger
+     tree is byte-unchanged and one rebuild republishes the identical
+     build. The drill that gives the card its name.
+   - *Zero authority*: corrupt an unlocked copy of the cache and show
+     a rebuild reproduces the ledger's truth without ever reading the
+     poisoned file (builders consume records only); the documented
+     minimum-position query refuses (returns below-minimum) against a
+     stale cache and passes after rebuild.
+   - *Consumer contract*: a read-only SQL open of the published
+     `cache.db` works under 4.4-style locked modes; the per-subject
+     and per-actor indexed lookups return the fixture facts.
    - *Refusals*: an unverifiable ledger (stale `HEAD`) refuses before
-     the partial is created; `--no-cache` leaves no `cache.db`; the
-     overlap refusals are unchanged.
-4. **Spec.** Extend `next/spec/projections.md` with a "Cache" section:
-   the schema above, semantic-vs-byte identity and why (with the
-   library-version argument), placement outside the locked trees, the
-   read-only consumer contract, the minimum-position query, and the
-   conformance mapping marking III.D's cache row drilled. State the
-   Phase 5 queue-derivation handoff applies to both serializations.
+     anything is written — unchanged engine behavior, asserted with
+     `cache` registered.
+3. **Spec.** Extend `next/spec/projections.md`: register `cache` in
+   the projections list; a "Cache" section with the schema above, the
+   determinism recipe (the closed variance sources) and its
+   enforcement by the byte-identical drill, the read-only consumer
+   contract and the minimum-position query, the in-memory size
+   posture, and the conformance mapping: III.D row 1 extended over
+   the cache, the cache row (throughput, zero authority,
+   deletion-loses-nothing) drilled. State that Phase 5's
+   queue-derivation swap applies to both serializations.
 
 ## File Scope
 
-- `next/internal/project/**` (cache builder, dump, drills)
-- `next/cmd/seed/**` (`--no-cache` flag, envelope rows, CLI drills)
+- `next/internal/project/**` (cache builder, drills)
+- `next/cmd/seed/**` (CLI drills; envelope already reports every
+  registered projection)
 - `next/go.mod`, `next/go.sum` (the pinned driver)
 - `next/spec/projections.md` (extend)
 - `next/docs/decisions.md`, `next/docs/progress.md`,
@@ -141,20 +152,22 @@ layer (above), so pragma drift cannot silently weaken the drill.
 
 **Boundary set (new, shown working):**
 
-- One `seed project rebuild` publishes the views and `cache.db`; the
-  envelope reports the cache with the same position/tip as the views;
-  the stamp table equals the verification report.
-- Two builds from one prefix produce equal semantic dumps; every
-  mirrored row set equals its published JSON view across the Phase 3/4
-  fixtures.
-- Deleting the database before, during (open handle), or mid-rebuild
-  (pre-rename kill) loses nothing: the ledger tree is byte-unchanged
-  and one rebuild restores an equal dump.
-- A poisoned cache never influences a rebuild or a view; the
-  documented minimum-position query exposes staleness and clears after
-  rebuild.
-- The view trees' byte-identical drill passes unchanged with the cache
-  present (the DB lives outside every `<name>/` tree).
+- One `seed project rebuild` publishes `cache` through the standard
+  layout (`CURRENT`, `builds/<position>-<tip12>/cache.db`,
+  `projection.json`); the envelope reports it beside the views with
+  the same position and tip; the `stamp` table equals the tree stamp.
+- Two builds from one prefix produce byte-identical `cache.db` on
+  every fixture; the registry-wide byte-identical and
+  delete-then-rebuild drills pass with `cache` registered.
+- Every mirrored row set equals its published JSON view across the
+  Phase 3/4 fixtures; the indexed lookups return exactly the fixture
+  facts through a read-only SQL open.
+- Deleting the cache build tree before or during an open read handle,
+  or killing a rebuild pre-publication, loses nothing: the ledger
+  tree is byte-unchanged and one rebuild republishes the identical
+  build.
+- A poisoned copy never influences a rebuild; the documented
+  minimum-position query exposes staleness and clears after rebuild.
 
 **Retention set (existing, shown unharmed):**
 
