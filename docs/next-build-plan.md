@@ -112,8 +112,14 @@ corpus passes; race drill (two concurrent appenders, no lost updates) green.
 5. Drills: raw-git adversary (direct push of invalid events) refused under enforced;
    kill-and-replace the hook host, revalidate.
 
-*Exit:* charter III.B minus the service posture — including the direct-push refusal
-drill and the stateless rebuild drill; both postures selectable in fixtures.
+*Exit:* the III.B subset implementable at this point — validator exists and is the
+ledger ref's sole writer under enforced posture; statelessness (kill-and-replace
+drill); posture declaration with cooperative consequences printed; direct-push refusal
+drill; both postures selectable in fixtures — with the rule set covering the checks
+that exist so far (signature, schema, classification, protocol version, halt).
+Capability rules slot in at Phase 3, fences at Phase 5, budget reservations at
+Phase 7, and the full III.B including the compromised-actor drill closes at Phase 12;
+the rule-set library is built so those land as added rules, not rework.
 
 ### Phase 3 — Identity and grants  *(deps: 2)*
 
@@ -261,13 +267,27 @@ converts to a workflow through the gates.
 III.P complete; the fixture organization runs a week-long simulated backlog
 (accelerated clock) meeting III.R's zero-violation bar.
 
-## 3. Backlog (post-plan, explicitly deferred)
+### Phase 13 — Conformance completion  *(deps: 12)*
 
-Racing mode; federation read-remotes; A2A boundary; dashboard tiers beyond the report;
-sharded admission intake; additional executor adapters (container, cloud session,
-remote worker beyond the interface stub); non-primary forge adapter. File cards when
-the plan above is exhausted; none of these blocks conformance at the enforced
-self-hosted posture.
+The items Part III requires that Phases 0–12 deliberately defer. **Full Part III
+conformance is claimable only after this phase**; Phases 0–12 deliver core conformance
+(every pillar's mechanisms at the enforced self-hosted posture with the local-worktree
+adapter), and the doctor reports which Phase 13 criteria remain open until then.
+
+1. Racing mode as the per-squad opt-in with first-verified settlement (III.F).
+2. Remaining executor adapters: container, cloud agent session, enrolled remote
+   worker (III.H).
+3. Non-primary forge adapter for the forge extras (III.N).
+4. Federation read remotes and cross-repo request ingress (III.N).
+5. A2A-shaped cross-organization boundary (III.N).
+
+*Exit:* the named III.F/III.H/III.N criteria green; the conformance report shows
+Part III complete at the enforced self-hosted posture.
+
+## 3. Backlog (true extras, not conformance-blocking)
+
+Dashboard tiers beyond the report (no Part III criterion requires them) and sharded
+admission intake (III.B says MAY). File cards when Phase 13 is exhausted.
 
 ## 4. Progress tracking
 

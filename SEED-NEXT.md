@@ -1013,8 +1013,10 @@ document which criteria (marked *enforced-only*) do not hold for them.
       rebuilds, lints, checkpoints — and is audited as an ordinary actor.
 - [ ] Escalations carry packet + question + minimal decision; waiting escalations
       surface with age; resolution latency is tracked.
-- [ ] Small-team mode (one actor, all grants) and fleet mode (disjoint actors per lane)
-      both run the full loop in CI.
+- [ ] Small-team mode (one *principal* operating a minimal set of actor identities —
+      at least an implementing actor and a distinct verifying actor, so verdict key
+      disjointness holds even when one person runs everything) and fleet mode
+      (disjoint actors per lane) both run the full loop in CI.
 
 ### K. Curation, memory, and the flywheel
 
