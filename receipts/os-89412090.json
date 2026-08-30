@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "task": "os-89412090",
+  "merge_base": "14206be2981655aa1b4360b738e8e6ef209b19ac",
+  "head": "716ccdd6dbb5f2a8da026f394271a1456f597706",
+  "plan_path": "plans/os-89412090.md",
+  "plan_sha256": "42618b4ba6f00dc9b4fba102e66f9a2e59a21c9f19aaa2e38c94e2320eeb7e7d",
+  "diff_files": [
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/ledger_test.go",
+    "next/cmd/seed/main.go",
+    "next/docs/decisions.md",
+    "next/internal/envelope/envelope.go",
+    "next/internal/envelope/envelope_test.go",
+    "next/internal/genesis/genesis.go",
+    "next/internal/ledger/ledger.go",
+    "next/internal/ledger/verify.go",
+    "next/spec/envelope.md"
+  ],
+  "diff_sha256": "89da0fa67694e9e6cc4abd6121cec55aa1b6a80783bfd743a60c71e2f91b63c6",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
