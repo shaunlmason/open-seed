@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "task": "os-4d5cacff",
+  "merge_base": "c21d19fea50c6d742ef95fdc26e0c996b9a32030",
+  "head": "c9bb91114725ff35e814fb8575386ba5f9c64615",
+  "plan_path": "plans/os-4d5cacff.md",
+  "plan_sha256": "52a0bcc0c1a116eded421adf5554c5886280086fbc12955d98b9d46393be0fa5",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/project.go",
+    "next/cmd/seed/project_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/project/project.go",
+    "next/internal/project/project_test.go",
+    "next/internal/project/roster.go",
+    "next/spec/projections.md"
+  ],
+  "diff_sha256": "9c53ceed5f6f9ef679a77f13355d818e1667d1aa7f35b8791b9088c56b1af9f1",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/project/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
