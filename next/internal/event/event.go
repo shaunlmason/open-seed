@@ -7,12 +7,15 @@
 package event
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/gowebpki/jcs"
 )
@@ -100,10 +103,16 @@ func Sign(e Event, priv ed25519.PrivateKey) (*Record, error) {
 }
 
 // Verify recomputes the canonical bytes from the parsed event and checks
-// the record's signature against pub.
+// the record's signature against pub. The signature must be the one
+// accepted wire form: exactly 128 lowercase hex characters (uppercase hex
+// decodes to the same bytes, and two accepted encodings for one signature
+// is a nonconformance admission must not allow).
 func (r *Record) Verify(pub ed25519.PublicKey) error {
+	if len(r.Sig) != 2*ed25519.SignatureSize || r.Sig != strings.ToLower(r.Sig) {
+		return ErrBadSigEncoding
+	}
 	sig, err := hex.DecodeString(r.Sig)
-	if err != nil || len(sig) != ed25519.SignatureSize {
+	if err != nil {
 		return ErrBadSigEncoding
 	}
 	b, err := r.Event.Canonical()
@@ -125,12 +134,80 @@ func (r *Record) Marshal() ([]byte, error) {
 	return append(b, '\n'), nil
 }
 
-// ParseRecord parses one ledger record line. It tolerates any wrapper field
-// order and whitespace; identity comes from recomputation, not bytes.
+// ParseRecord parses one ledger record line strictly. Field order and
+// whitespace do not matter (identity comes from recomputation, not bytes),
+// but the shape does: unknown fields anywhere in the wrapper or the event,
+// duplicate keys at any level (payload included), and trailing data all
+// refuse. Without this, a record could carry correctly signed core fields
+// plus unsigned extra material that survives in storage while escaping
+// canonicalization, schema checks, and the classification lint.
 func ParseRecord(line []byte) (*Record, error) {
-	var r Record
-	if err := json.Unmarshal(line, &r); err != nil {
+	if err := rejectDuplicateKeys(line); err != nil {
 		return nil, fmt.Errorf("ledger record does not parse: %w", err)
 	}
+	dec := json.NewDecoder(bytes.NewReader(line))
+	dec.DisallowUnknownFields()
+	var r Record
+	if err := dec.Decode(&r); err != nil {
+		return nil, fmt.Errorf("ledger record does not parse: %w", err)
+	}
+	var trailing json.RawMessage
+	if err := dec.Decode(&trailing); err != io.EOF {
+		return nil, errors.New("ledger record does not parse: trailing data after the record object")
+	}
 	return &r, nil
+}
+
+// rejectDuplicateKeys walks the JSON token stream and refuses an object
+// that states the same key twice at the same level. encoding/json silently
+// keeps the last duplicate, so two parsers can disagree about the same
+// bytes; one accepted wire form means duplicates are illegal everywhere.
+func rejectDuplicateKeys(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	var walk func() error
+	walk = func() error {
+		tok, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		delim, ok := tok.(json.Delim)
+		if !ok {
+			return nil
+		}
+		switch delim {
+		case '{':
+			seen := map[string]struct{}{}
+			for dec.More() {
+				keyTok, err := dec.Token()
+				if err != nil {
+					return err
+				}
+				key, ok := keyTok.(string)
+				if !ok {
+					return fmt.Errorf("object key is %v, not a string", keyTok)
+				}
+				if _, dup := seen[key]; dup {
+					return fmt.Errorf("duplicate key %q", key)
+				}
+				seen[key] = struct{}{}
+				if err := walk(); err != nil {
+					return err
+				}
+			}
+			if _, err := dec.Token(); err != nil {
+				return err
+			}
+		case '[':
+			for dec.More() {
+				if err := walk(); err != nil {
+					return err
+				}
+			}
+			if _, err := dec.Token(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return walk()
 }
