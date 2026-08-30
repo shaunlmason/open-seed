@@ -59,6 +59,7 @@ type VerifyOption func(*verifyConfig)
 
 type verifyConfig struct {
 	supported map[string]bool
+	observe   func(pos int, rec *event.Record)
 }
 
 // WithSupportedVersions declares the protocol versions this verification
@@ -72,6 +73,41 @@ func WithSupportedVersions(versions ...string) VerifyOption {
 			c.supported[v] = true
 		}
 	}
+}
+
+// WithObserver registers a callback invoked with each record after it
+// fully verifies: in order, exactly once each, and never past a failure.
+// Admission context construction (internal/admit) uses it to project
+// chain state (halt) in the same replay that proves the chain, instead
+// of re-scanning the store.
+func WithObserver(fn func(pos int, rec *event.Record)) VerifyOption {
+	return func(c *verifyConfig) { c.observe = fn }
+}
+
+// ValidateUpgradeShape checks the system.protocol.upgraded schema: the
+// verb must ride subject system and its payload must name a non-empty
+// new version in 'to'. The verifier and the admission rule set
+// (internal/admit) share this one definition: a signed but schema-broken
+// upgrade admitted to the chain would wedge every later verification at
+// bad_payload, so admission refuses it up front. Non-upgrade verbs pass
+// through untouched. The verifier applies it only to events it treats as
+// upgrades (subject system): an off-system upgrade-verb event in
+// admitted history is an ordinary event and stays verifiable, while
+// admission refuses new ones at the boundary.
+func ValidateUpgradeShape(e *event.Event) error {
+	if e.Verb != UpgradeVerb {
+		return nil
+	}
+	if e.Subject != "system" {
+		return fmt.Errorf("%s subject %q is not system", UpgradeVerb, e.Subject)
+	}
+	var up struct {
+		To string `json:"to"`
+	}
+	if err := json.Unmarshal(e.Payload, &up); err != nil || up.To == "" {
+		return errors.New("protocol.upgraded payload must name the new version in 'to'")
+	}
+	return nil
 }
 
 // VerifyFromGenesis replays the whole stream: parse every record, enforce
@@ -145,14 +181,17 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 			return &Failure{Position: pos, Reason: ReasonBadPayload, Detail: err.Error()}
 		}
 		if rec.Event.Verb == UpgradeVerb && rec.Event.Subject == "system" {
+			if err := ValidateUpgradeShape(&rec.Event); err != nil {
+				return &Failure{Position: pos, Reason: ReasonBadPayload, Detail: err.Error()}
+			}
 			var up struct {
 				To string `json:"to"`
 			}
-			if err := json.Unmarshal(rec.Event.Payload, &up); err != nil || up.To == "" {
-				return &Failure{Position: pos, Reason: ReasonBadPayload,
-					Detail: "protocol.upgraded payload must name the new version in 'to'"}
-			}
+			_ = json.Unmarshal(rec.Event.Payload, &up)
 			active = up.To
+		}
+		if cfg.observe != nil {
+			cfg.observe(pos, rec)
 		}
 		tip = h
 		count = pos + 1
