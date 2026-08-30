@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "task": "os-d636299d",
+  "merge_base": "631270838d529285d6d1b47dd22efbf08be174c7",
+  "head": "3fa5d366c158f28cbd8aee23f655a58139bac5a5",
+  "plan_path": "plans/os-d636299d.md",
+  "plan_sha256": "237e5661fbc62b15a0db0d238d4f3d9011c0b2b5857abbb4fa92a6534e0cee47",
+  "diff_files": [
+    "next/cmd/seed/init_test.go",
+    "next/cmd/seed/main.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/genesis/genesis.go",
+    "next/internal/genesis/genesis_test.go",
+    "next/internal/ledger/ledger.go",
+    "next/internal/ledger/verify.go",
+    "next/internal/ledger/version_test.go"
+  ],
+  "diff_sha256": "90e3d6d05103617e139de5030f6ad7f5f750c511bbe71342f7543210b0a05f3a",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
