@@ -165,3 +165,8 @@ Fresh sessions read this file instead of rediscovering.
   The same gap still exists for `.claude/agents/`, `.claude/skills/` and
   `.agents/skills/`, whose roots hold hand-written READMEs (follow-up
   card os-fa598c76).
+
+- Seed (next/**) loop mechanics: `backlog→ready` promote and plan-unblock are
+  operator-class with no agent path when dispatch is inert; the Seed workstream
+  runs them under the session principal per decisions/0003-next-loop-delegation.md.
+  Symptom if you hit it: `{"error":"operator_required"}` exit 3 on promote.

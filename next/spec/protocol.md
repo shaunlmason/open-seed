@@ -1,0 +1,143 @@
+# protocol.md — Seed wire protocol, version `seed/0`
+
+> Status: v0, normative for `next/**`. Authority: [`SEED-NEXT.md`](../../SEED-NEXT.md)
+> Part II §1 (the ledger) and Appendix B (wire-level sketch);
+> [`docs/next-build-plan.md`](../../docs/next-build-plan.md) §1 fixed defaults.
+> This file is the versioned canonical-form spec the charter's Appendix B
+> defers to; the genesis event names the protocol version that binds it.
+> Envelope shape and exit codes live in [`envelope.md`](envelope.md).
+
+## Protocol version
+
+- The protocol version is the string `seed/0`.
+- Genesis names it; **every event carries the version active at its
+  position** in its `v` field.
+- **Active version**: the version a chain runs at, starting as the version
+  genesis names and changing only at a `system.protocol.upgraded` event.
+  The upgrade event is the last event of the old version: it carries the
+  old version in `v` and names the new version in its payload; every later
+  event carries the new version.
+- **Verification across history**: an implementation declares the set of
+  versions it supports. Replay accepts a chain when every event's `v`
+  equals the version active at that event's position and every active
+  version is in the supported set. The version-mismatch refusal (exit 10,
+  see `envelope.md`) is reserved for an event whose `v` differs from the
+  active-at-position version, or an active version the implementation does
+  not support; a valid older prefix under a supported older version always
+  verifies. It never guesses.
+- **Admission**: proposals must carry the current active version; anything
+  else refuses with the same distinct code.
+- **Bump discipline**: `seed/N` increments on any change to the canonical
+  form, the hash or signature algorithms, verb semantics, or validation rules
+  that a conformant `seed/N-1` validator would judge differently. A bump
+  lands as a PR editing this file plus the `system.protocol.upgraded` event.
+  Additive verb-catalog growth that older validators safely refuse as
+  unknown does not bump the version.
+
+## Canonical event form
+
+Events are JSON objects canonicalized per **RFC 8785 (JCS)**. The canonical
+bytes of an event are the JCS serialization of exactly these fields:
+
+| field | type | meaning |
+|---|---|---|
+| `v` | string | protocol version (`seed/0`) |
+| `ts` | string | RFC 3339 UTC timestamp; recorded for humans, **never an ordering authority** |
+| `actor` | string | the acting identity's key fingerprint (below) |
+| `verb` | string | `namespace.verb` from the catalog below |
+| `subject` | string | contract id, actor id, or `system` |
+| `payload` | object | verb-specific, schema-validated; coordination facts and references only (data classification, charter §II.1) |
+| `prev` | string | chain hash of the preceding event's canonical form |
+
+- **Signature**: `sig` is the Ed25519 signature (RFC 8032) over the
+  canonical (JCS) bytes of the event **including `prev`**, encoded as
+  **lowercase hex** (64 bytes, 128 hex characters). `sig` is carried
+  alongside the canonical form (it is not part of the signed bytes).
+- **Chain hash**: the SHA-256 of the same canonical bytes, encoded as
+  **lowercase hex** (32 bytes, 64 hex characters). The next event's `prev`
+  cites it.
+- **Ledger record**: what storage and transport carry is the wrapper
+  `{"event": <event object>, "sig": "<hex>"}`. Canonicalization and hashing
+  apply to the inner `event` object alone, never the wrapper, so wrapper
+  field order and whitespace are irrelevant to identity. Verifiers MUST
+  recompute the JCS bytes from the parsed event; they never trust stored
+  byte sequences.
+- **Encodings, uniformly**: every hash, fingerprint, and signature in this
+  protocol is lowercase hex with no prefix. Base64 and multibase forms are
+  not used anywhere on the wire.
+- **Genesis**: the first event's `prev` is the **empty hash**: the SHA-256 of
+  zero bytes, `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+  Genesis (`system.genesis`) names the initial governance root (operator
+  keys) and the protocol version.
+
+## Algorithms
+
+- **Hash**: SHA-256 everywhere (chain, commitments, receipts), lowercase hex
+  encoding.
+- **Signatures**: Ed25519. OpenSSH `ed25519` public/private keys are accepted
+  at key load so operators reuse existing keys; internally a key is the raw
+  32-byte public key.
+- **Actor fingerprint**: the lowercase hex SHA-256 of the raw 32-byte Ed25519
+  public key (64 hex characters). Display surfaces may shorten it; events
+  always carry the full fingerprint. The OpenSSH display form
+  (`SHA256:<base64>`) is **not** used in events or projections: OpenSSH
+  acceptance is a key-loading affordance only (the loader parses the OpenSSH
+  ed25519 key format down to the raw 32-byte public key, and fingerprints
+  that).
+
+## Ordering
+
+Order is **admitted ancestry**: the chain of `prev` hashes on the
+authoritative ledger ref. No writer asserts a global sequence number; where
+an ordinal is useful (projections, citations) it is derived at admission or
+during projection, never proposed. (Charter §II.1; conformance III.A.)
+
+## Storage reference (non-normative)
+
+The reference deployment stores the ledger on the git ref `refs/seed/ledger`
+as JSONL segments, one file per UTC day under `ledger/segments/`, each line
+one ledger record (`{"event": …, "sig": …}`), with a `HEAD` record carrying
+the tip hash; the artifact store rides `refs/seed/artifacts` (git-addressed)
+with a filesystem fallback. These are
+build-plan fixed defaults for the reference implementation, not protocol
+requirements; any storage satisfying the canonical form, ordering, and
+admission rules conforms.
+
+## Verb namespace catalog
+
+Copied from charter Appendix B; payload schemas land with the phases that
+implement them (schema files will sit beside this spec and be linted at
+admission).
+
+- `system.*` — `genesis`, `halt.declared`, `halt.lifted`, `checkpoint`,
+  `protocol.upgraded`.
+- `actor.*` — `enrolled`, `granted`, `suspended`, `revoked`, `qualified`
+  (cites eval results and the runtime tuple).
+- `intent.*` / `contract.*` — `intent.filed`, `contract.specified`
+  (acceptance spec gate passed; sealed commitment), `contract.blocked`,
+  `contract.cancelled` ….
+- `claim.*` — `taken` (carries fence), `released`, `parked`, `reaped`
+  (packet ref), `wedge.declared`.
+- `plan.*` — `proposed`, `approved` (observation of the plan PR merge).
+- `progress.*` — `milestone` (coarse; bounded frequency).
+- `submission.*` — `made` (branch, evidence refs).
+- `verdict.*` — `rendered` (pass/fail, receipt, independence level achieved).
+- `merge.*` / `check.*` — `requested`, `observed` (external-fact
+  observations).
+- `budget.*` — `reserve`, `settle`, `release`.
+- `run.*` — `settled` (aggregate metering).
+- `message.*` — `sent`, `acked`.
+- `request.*` — inbound proposals from projection surfaces (mirror edits,
+  dashboard actions).
+- `curation.*` — `hypothesis.proposed`, `lesson.promoted` (PR observation),
+  `lesson.retired`, `deadend.recorded`.
+
+## Data classification (summary)
+
+Payloads carry **coordination facts and references, not content bodies**:
+hashes and paths for artifacts, receipts, transcripts, and any prose beyond
+short structured fields. Bulk or expirable content lives in the artifact
+store with an erasure path, referenced by hash; erasing a referenced
+artifact never breaks chain verification. The payload lint that enforces
+this at admission lands in Phase 1 with a hostile fixture corpus
+(conformance III.A).
