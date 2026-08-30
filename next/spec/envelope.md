@@ -53,6 +53,8 @@ for tooling continuity. Inherited allocations:
 | 5 | `unavailable` | authoritative remote or backend unreachable |
 | 6 | `fenced_out` | stale or missing fence (claim token) |
 | 7 | `halted` | admission is halted (`system.halt.declared`); only an operator's `system.halt.lifted` may append |
+| 8 | `chain_invalid` | ledger verification failed (parse, linkage, signature, actor, or HEAD trouble); the error message carries `position N: <reason>: <detail>` |
+| 9 | `classification_refused` | payload failed the data-classification lint; the error message joins the violations' pointers and rules |
 | 10 | `version_mismatch` | protocol or envelope version mismatch |
 | 64 | `usage` | CLI usage error (EX_USAGE); never a verb result |
 
@@ -63,6 +65,14 @@ above stay reserved for CLI-usage-class errors. Distinct refusals the
 charter names (halt, out-of-grant, classification refusal, …) get their own
 codes when the refusing rule lands; nothing shares a code with a different
 meaning.
+
+## Deferred: structured error data
+
+Error stays exactly `{code, message}` in `seed-envelope/0`. Rich failure
+data (reason and position fields, per-violation pointer lists) is rendered
+deterministically into `message`; promoting it to structured fields is a
+schema change that lands only with a versioned envelope bump, when a
+machine consumer needs it.
 
 ## Conformance mapping
 

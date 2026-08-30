@@ -75,6 +75,18 @@ func Open(dir string, opts ...Option) (*Store, error) {
 	return s, nil
 }
 
+// OpenReadOnly prepares a store view that never writes: no layout
+// creation, no head healing. Commands that promise not to change the
+// ledger by inspecting it (seed ledger show) use this path, so a missing
+// or behind HEAD is reported as found rather than repaired. The directory
+// must already hold a ledger layout.
+func OpenReadOnly(dir string) (*Store, error) {
+	if _, err := os.Stat(filepath.Join(dir, segmentsDir)); err != nil {
+		return nil, err
+	}
+	return &Store{dir: dir, now: time.Now}, nil
+}
+
 // healHead reconciles the crash window at open: when the segment stream
 // extends past a missing or consistently-behind HEAD (the durable line
 // landed, the rename did not), the cache is rewritten from the stream,
@@ -286,4 +298,17 @@ func (s *Store) ReadHead() (Head, bool, error) {
 		return Head{}, false, fmt.Errorf("HEAD does not parse: %w", err)
 	}
 	return h, true, nil
+}
+
+// Records streams every parsed record in order. It is the read surface the
+// CLI verbs and the genesis bootstrap consume; parse failures surface with
+// their position.
+func (s *Store) Records(fn func(pos int, rec *event.Record) error) error {
+	return s.scan(func(pos int, segment string, line []byte) error {
+		rec, err := event.ParseRecord(line)
+		if err != nil {
+			return fmt.Errorf("position %d (%s): %w", pos, segment, err)
+		}
+		return fn(pos, rec)
+	})
 }

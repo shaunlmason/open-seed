@@ -85,6 +85,13 @@ here. Newest last.
   Reason}; no flag file); malformed halt events are skipped in replay
   (admission refuses them at the boundary; replay must not wedge on
   history it did not admit); exit 7 allocated. (PR #84)
+- 2026-08-30 — Exits 8 (`chain_invalid`) and 9 (`classification_refused`)
+  allocated; error body stays {code, message} with "position N: reason:
+  detail" rendered in, structured error data deferred to a versioned
+  envelope bump (per #82 review). Reading records needed a public
+  iterator: `ledger.Records` added as the smallest read surface (a plan
+  gap, noted for review; genesis Bootstrap and `show` consume it).
+  (PR #85)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under

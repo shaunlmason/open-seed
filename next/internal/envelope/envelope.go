@@ -24,6 +24,8 @@ const (
 	ExitUnavailable       = 5
 	ExitFenced            = 6
 	ExitHalted            = 7
+	ExitChainInvalid      = 8
+	ExitClassificationRef = 9
 	ExitVersionMismatch   = 10
 	ExitUsage             = 64
 )
