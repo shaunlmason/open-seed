@@ -86,21 +86,25 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   events: [{position, verb, actor, payload}]}` with the signer
   fingerprint as `actor` and the payload's JSON content unchanged
   (the view re-indents for readability; canonical bytes live only in
-  the ledger). No
-  `state` field exists yet: state derivation arrives with Phase 5's
-  transition table rather than a field that would always read null.
+  the ledger). Each entry carries the transition table's folded
+  `state` (null for a subject no lifecycle event ever validly
+  created) and an `anomalies` count — lifecycle events the table
+  refused, tolerated in raw-pushed history per the cooperative
+  posture, skipped by the fold, surfaced here, never silent
+  (Version "2"; `lifecycle.md`).
   One file, not per-subject files (subjects are opaque strings; the
   cache is the lookup-throughput surface). An empty chain yields an
   empty array, not a missing file.
-- **`queue`** (`queue.json`): the claimable-work surface, schema fixed
-  now — `{schema_version: "1", derivation, ready: […]}`, entries
-  carrying at least `{subject, since_position}` (the field set is
-  Phase 5's to extend). The v0 `derivation` is `"none"`: the Phase 4
-  vocabulary defines no claimable states, so `ready` is empty **by
-  definition** and the marker says so machine-readably — a consumer
-  MUST NOT treat an underived queue as meaning "nothing to do".
-  Phase 5 item 1 replaces the derivation and its marker; the
-  eligibility filter follows later, per the build plan.
+- **`queue`** (`queue.json`): the claimable-work surface —
+  `{schema_version: "1", derivation, ready: […]}`, entries carrying
+  `{subject, since_position}`. The derivation is
+  `"transitions/1"` (`lifecycle.md`; Version "2"): `ready` lists the
+  subjects whose folded lifecycle state is `ready`, oldest first,
+  `since_position` the chain position that made each ready. The v0
+  `"none"` marker is retired exactly as promised — a consumer MUST
+  NOT treat an underived queue as meaning "nothing to do", and the
+  marker names which derivation decided. The eligibility filter
+  follows later, per the build plan.
 - **`actors`** (`actors.json`): the per-actor drill-down — the roster
   fields plus `standing_history` (each `actor.*` event on the subject:
   position, verb, acting signer) and `signed` (position, verb, subject

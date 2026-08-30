@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 
 	_ "modernc.org/sqlite"
 )
@@ -28,12 +29,17 @@ const CacheFile = "cache.db"
 
 // cacheSchemaVersion is the database's own schema generation, stamped
 // via PRAGMA user_version; it bumps with the table set, not with the
-// chain position.
-const cacheSchemaVersion = 1
+// chain position. Generation 2 added contract_state and the derived
+// queue rows (plans/os-d69a6c91.md).
+const cacheSchemaVersion = 2
+
+// cacheVersion is the projection's derivation version, carried in the
+// stamp table and the build id alike.
+const cacheVersion = "2"
 
 // Cache returns the cache projection.
 func Cache() Projection {
-	return Projection{Name: "cache", Version: "1", Build: buildCache}
+	return Projection{Name: "cache", Version: cacheVersion, Build: buildCache}
 }
 
 // cacheDDL creates the tables in spec order (next/spec/projections.md
@@ -45,6 +51,7 @@ var cacheDDL = []string{
 	`CREATE TABLE contracts (subject TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL)`,
 	`CREATE INDEX contracts_subject ON contracts(subject)`,
 	`CREATE TABLE queue (subject TEXT NOT NULL, since_position INTEGER NOT NULL)`,
+	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL) WITHOUT ROWID`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
 	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
 	`CREATE INDEX actor_history_fp ON actor_history(fingerprint)`,
@@ -125,15 +132,36 @@ func buildCache(records []*event.Record) (files map[string][]byte, err error) {
 		w.exec(`INSERT INTO roster VALUES (?, ?, ?, ?, ?, ?)`,
 			r.Fingerprint, r.Kind, r.Name, r.Standing, root, w.jsonOf(r.Grants))
 	}
+	table, err := transition.Default()
+	if err != nil {
+		return nil, err
+	}
+	fold := table.FoldRecords(records)
 	for _, c := range contractEntries(records) {
 		for _, e := range c.Events {
 			w.exec(`INSERT INTO contracts VALUES (?, ?, ?, ?, ?)`,
 				c.Subject, e.Position, e.Verb, e.Actor, string(e.Payload))
 		}
+		var state any
+		anomalies := 0
+		if s, ok := fold.State(c.Subject); ok {
+			anomalies = s.Anomalies
+			if s.State != "" {
+				state = s.State
+			}
+		}
+		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?)`, c.Subject, state, anomalies)
 	}
-	// The queue mirrors the JSON view's v0 derivation exactly; Phase 5
-	// swaps both serializations at once.
-	w.exec(`INSERT INTO queue_meta VALUES (?, ?)`, QueueSchemaVersion, QueueDerivationNone)
+	// The queue mirrors the JSON view's derivation exactly: the
+	// transition table's ready set, oldest first.
+	ready, err := readyEntries(records)
+	if err != nil {
+		return nil, err
+	}
+	w.exec(`INSERT INTO queue_meta VALUES (?, ?)`, QueueSchemaVersion, QueueDerivationTransitions)
+	for _, q := range ready {
+		w.exec(`INSERT INTO queue VALUES (?, ?)`, q.Subject, q.SincePosition)
+	}
 	for _, fp := range candidateFingerprints(records) {
 		for pos, rec := range records {
 			ev := &rec.Event
@@ -150,7 +178,7 @@ func buildCache(records []*event.Record) (files map[string][]byte, err error) {
 	w.exec(`INSERT INTO report VALUES ('halt', ?)`, w.jsonOf(view.Halt))
 	w.exec(`INSERT INTO report VALUES ('checkpoints', ?)`, w.jsonOf(view.Checkpoints))
 	w.exec(`INSERT INTO report VALUES ('contracts', ?)`, w.jsonOf(view.Contracts))
-	w.exec(`INSERT INTO stamp VALUES (?, ?, ?, ?)`, "cache", position, tip, "1")
+	w.exec(`INSERT INTO stamp VALUES (?, ?, ?, ?)`, "cache", position, tip, cacheVersion)
 	if err = w.err; err != nil {
 		return nil, fmt.Errorf("cache write: %v", err)
 	}

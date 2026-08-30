@@ -387,3 +387,53 @@ func TestRemoteAppendSharedStateSerializes(t *testing.T) {
 		t.Fatalf("both appends must land: %d %+v", code, e)
 	}
 }
+
+// conformance: III.F — the lifecycle happy path admits through the CLI
+// (the cooperative client runs the shared rule set), done is reached
+// only through merge.observed, and illegal jumps refuse exit 3 naming
+// subject, state, and verb (plans/os-d69a6c91.md step 7).
+func TestRemoteAppendLifecycle(t *testing.T) {
+	dir, priv, _ := writeKeys(t)
+	remote := bareRemote(t)
+	resolve := seedRemoteGenesis(t, remote)
+	libAppend(t, remote, resolve, "seed/0", ledger.UpgradeVerb, "system", `{"to": "seed/1"}`)
+	state := filepath.Join(dir, "state")
+
+	steps := []struct{ verb, subject, payload string }{
+		{"intent.filed", "c-1", `{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`},
+		{"contract.specified", "c-1", `{"acceptance": "specs/c1.md @ abc"}`},
+		{"claim.taken", "c-1", `{}`},
+		{"submission.made", "c-1", `{"branch": "seed/c-1"}`},
+		{"merge.observed", "c-1", `{"pr": "9"}`},
+	}
+	for _, s := range steps {
+		e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
+			"--key", priv, "--verb", s.verb, "--subject", s.subject, "--payload", s.payload)
+		if code != 0 || !e.OK {
+			t.Fatalf("%s must land through the CLI: %d %+v", s.verb, code, e)
+		}
+	}
+
+	before := remoteTip(t, remote)
+	e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
+		"--key", priv, "--verb", "claim.taken", "--subject", "c-1", "--payload", `{}`)
+	if code != 3 || e.Error == nil || e.Error.Code != "invalid_transition" ||
+		!strings.Contains(e.Error.Message, "c-1") || !strings.Contains(e.Error.Message, "done") ||
+		!strings.Contains(e.Error.Message, "claim.taken") {
+		t.Fatalf("an illegal transition must refuse exit 3 naming subject, state, and verb: %d %+v", code, e)
+	}
+	if after := remoteTip(t, remote); after != before {
+		t.Fatal("refused draft must push nothing")
+	}
+
+	// Completeness is a shape refusal: an incomplete filing never
+	// leaves the client.
+	e, code = runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
+		"--key", priv, "--verb", "intent.filed", "--subject", "c-2", "--payload", `{"intent": "x"}`)
+	if code != 8 || e.Error == nil || !strings.Contains(e.Error.Message, "incomplete") {
+		t.Fatalf("an incomplete filing must refuse as a shape refusal: %d %+v", code, e)
+	}
+	if after := remoteTip(t, remote); after != before {
+		t.Fatal("refused draft must push nothing")
+	}
+}

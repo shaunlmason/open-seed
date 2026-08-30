@@ -21,6 +21,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -33,6 +34,8 @@ type Context struct {
 	Halt      halt.State
 	Resolve   ledger.Resolver
 	Keyring   *keyring.State
+	Table     *transition.Table
+	Lifecycle *transition.Fold
 	Supported map[string]bool
 }
 
@@ -93,6 +96,12 @@ func ContextAt(store *ledger.Store, opts ...Option) (*Context, error) {
 		// resolver, exactly as the package doc promised).
 		resolve = ring.Resolver()
 	}
+	table, err := transition.Default()
+	if err != nil {
+		// The embedded table failing self-validation is a build
+		// defect, not a chain condition; admission refuses outright.
+		return nil, fmt.Errorf("admission context: %w", err)
+	}
 	return &Context{
 		Count:     rep.Count,
 		Tip:       rep.Tip,
@@ -100,6 +109,8 @@ func ContextAt(store *ledger.Store, opts ...Option) (*Context, error) {
 		Halt:      halt.StateAt(records),
 		Resolve:   resolve,
 		Keyring:   ring,
+		Table:     table,
+		Lifecycle: table.FoldRecords(records),
 		Supported: supported,
 	}, nil
 }
@@ -240,6 +251,29 @@ func Default() []Rule {
 				return c.Keyring.Preview(rec)
 			}
 			return nil
+		}},
+		{Name: "lifecycle", Check: func(c *Context, rec *event.Record) error {
+			// Lifecycle legality is admission policy at seed/1, the
+			// halt/classification/grant precedent (plans/os-d69a6c91.md):
+			// seed/0 records are grandfathered inert, verification
+			// tolerates illegal history, and the projection fold skips
+			// it visibly. The table is the only legality authority.
+			if !keyring.Applies(c.Active) || c.Table == nil || c.Lifecycle == nil {
+				return nil
+			}
+			verb := rec.Event.Verb
+			if !c.Table.IsLifecycleVerb(verb) {
+				return nil
+			}
+			if err := transition.CheckCompleteness(verb, rec.Event.Subject, rec.Event.Payload); err != nil {
+				return err
+			}
+			current := ""
+			if s, ok := c.Lifecycle.State(rec.Event.Subject); ok {
+				current = s.State
+			}
+			_, err := c.Table.Check(rec.Event.Subject, current, verb)
+			return err
 		}},
 	}
 }

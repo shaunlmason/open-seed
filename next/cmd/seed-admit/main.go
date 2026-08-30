@@ -31,6 +31,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
 const (
@@ -139,6 +140,10 @@ func admitUpdate(gitDir, oldID, newID string) error {
 	// deliberately tolerates in history is exactly what the boundary
 	// refuses in new events.
 	rules := admissionRules(admit.Default())
+	table, err := transition.Default()
+	if err != nil {
+		return fmt.Errorf("rule ref: %v", err)
+	}
 	prev := event.EmptyHash
 	if oldCount > 0 {
 		h, err := records[oldCount-1].Event.Hash()
@@ -161,12 +166,14 @@ func admitUpdate(gitDir, oldID, newID string) error {
 			res = ring.Resolver()
 		}
 		ctx := &admit.Context{
-			Count:   i,
-			Tip:     prev,
-			Active:  ringActive,
-			Halt:    halt.StateAt(records[:i]),
-			Resolve: res,
-			Keyring: ring,
+			Count:     i,
+			Tip:       prev,
+			Active:    ringActive,
+			Halt:      halt.StateAt(records[:i]),
+			Resolve:   res,
+			Keyring:   ring,
+			Table:     table,
+			Lifecycle: table.FoldRecords(records[:i]),
 		}
 		if err := admit.Run(ctx, records[i], rules); err != nil {
 			return fmt.Errorf("position %d: %v", i, err)

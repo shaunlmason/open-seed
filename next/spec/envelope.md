@@ -48,7 +48,7 @@ for tooling continuity. Inherited allocations:
 |---|---|---|
 | 0 | `ok` | verb succeeded |
 | 2 | `contention` | claim contention or author lockout: exclusivity not granted |
-| 3 | `invalid_transition` | transition absent from the spec tables, or verb illegal in this state |
+| 3 | `invalid_transition` | transition absent from the spec tables, or verb illegal in this state — the contract-lifecycle refusals included (`lifecycle.md`): an illegal (state, verb) pair, a birth verb on an existing subject, a non-birth verb on an unknown one, each naming subject, current state, and verb |
 | 4 | `not_found` | subject does not resolve |
 | 5 | `unavailable` | authoritative remote or backend unreachable |
 | 6 | `fenced_out` | stale or missing fence (claim token) |

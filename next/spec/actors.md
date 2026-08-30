@@ -84,6 +84,17 @@ ending standing is deferred until the catalog grows a verb for it.
 | `system.protocol.upgraded` | `operator` |
 | `system.checkpoint` | `maintenance`, `operator` (the charter names checkpoints as signed by the maintenance actor or an operator) |
 | `actor.*` (every lifecycle verb) | `operator` |
+| `intent.filed` | `dispatch`, `operator` |
+| `contract.specified` | `dispatch`, `operator` |
+| `contract.blocked` | `dispatch`, `operator` |
+| `contract.unblocked` | `dispatch`, `operator` |
+| `claim.reaped` | `dispatch`, `operator` (reaping is queue management, not worker self-service) |
+| `claim.taken` | `claim`, `operator` |
+| `claim.released` | `claim`, `operator` |
+| `claim.parked` | `claim`, `operator` |
+| `submission.made` | `claim`, `operator` |
+| `contract.cancelled` | `operator` (until a real need appears) |
+| `merge.observed` | `operator` (Phase 6 adds the observer lane) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

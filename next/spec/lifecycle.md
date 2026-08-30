@@ -1,0 +1,145 @@
+# lifecycle.md — the contract lifecycle
+
+> Status: v0, normative for `next/**`. Authority: [`SEED-NEXT.md`](../../SEED-NEXT.md)
+> Part II §6 "Lifecycle" and §8 (done is a verdict and a reconciliation);
+> [`docs/next-build-plan.md`](../../docs/next-build-plan.md) Phase 5 item 1;
+> plan `plans/os-d69a6c91.md`. Implemented by `next/internal/transition`
+> and the `lifecycle` admission rule.
+
+## The table is the contract
+
+The lifecycle vocabulary and transition rules are **self-validating
+data enforced at admission** (conformance III.F). The normative table
+is [`transitions.json`](transitions.json), embedded byte-identically in
+`internal/transition` (the `classify.json` precedent, pinned by test);
+this file quotes it, and a drill pins the quotation to the real table
+(the docs fan-out that generates lifecycle prose from the table is a
+later phase's machinery):
+
+```json
+{
+  "schema_version": "1",
+  "states": [
+    {"name": "backlog", "initial": true},
+    {"name": "ready"},
+    {"name": "in_progress"},
+    {"name": "review"},
+    {"name": "blocked"},
+    {"name": "done", "terminal": true},
+    {"name": "cancelled", "terminal": true}
+  ],
+  "transitions": [
+    {"verb": "intent.filed", "from": null, "to": "backlog"},
+    {"verb": "contract.specified", "from": ["backlog"], "to": "ready"},
+    {"verb": "claim.taken", "from": ["ready"], "to": "in_progress"},
+    {"verb": "submission.made", "from": ["in_progress"], "to": "review"},
+    {"verb": "claim.released", "from": ["in_progress"], "to": "ready"},
+    {"verb": "claim.parked", "from": ["in_progress"], "to": "blocked"},
+    {"verb": "claim.reaped", "from": ["in_progress"], "to": "ready"},
+    {"verb": "merge.observed", "from": ["review"], "to": "done"},
+    {"verb": "contract.blocked", "from": ["ready"], "to": "blocked"},
+    {"verb": "contract.unblocked", "from": ["blocked"], "to": "ready"},
+    {"verb": "contract.cancelled", "from": ["backlog", "ready", "blocked", "review"], "to": "cancelled"}
+  ]
+}
+```
+
+Hand-written conditionals that re-derive what the table says are a
+design violation: legality comes from the parsed table, everywhere.
+
+## Vocabulary
+
+The verbs are the charter's Appendix catalog names, verbatim. There is
+**no "promote" verb**: `contract.specified` ("acceptance spec gate
+passed") *is* the `backlog`→`ready` transition, so claimability and
+specification are one transition by construction. One addition rides
+the catalog's explicit `contract.*` ellipsis: `contract.unblocked`
+(`blocked`→`ready`), the inverse the state machine requires, named
+here as a catalog extension.
+
+**Claim is a transition, not a state**: `claim.taken` moves
+`ready`→`in_progress` and its fence mechanics land with 5.2. Leaving
+`in_progress` happens **only** through the four deliberate exits —
+`submission.made`, `claim.released`, `claim.parked`, `claim.reaped` —
+and the self-validation pins that set, so silent abandonment is
+impossible by construction; `contract.cancelled` deliberately has no
+`in_progress` source. **Done is reached only through
+`merge.observed`**, the final observation of the §8 reconciliation
+chain (`verdict.rendered(pass) → merge.requested → merge.observed`);
+the chain's other events are free stream events until Phase 6 pipes
+them, and a failed verdict's return path out of `review` is Phase 6's
+**named extension point**, not guessed here (`review` reaches a
+terminal state today via `contract.cancelled`).
+
+## Self-validation
+
+The table refuses to load unless: every `from`/`to` names a declared
+state; exactly one initial state and exactly one birth verb
+(`from: null`) landing on it; terminal states have no outgoing rows;
+no duplicate verb; every state is reachable from the initial state;
+every non-terminal state reaches a terminal one (no wedge); and the
+`in_progress` outgoing set is exactly the four deliberate exits. Each
+violation refuses by name, drilled on planted tables.
+
+## Completeness at the claimability transition
+
+The charter's birth rule — a contract becomes claimable only when it
+carries intent prose, an acceptance spec, and tier/budget/routing —
+is enforced as **presence** at the shape level: `intent.filed` must
+carry non-empty `intent`, `tier`, `budget`, and `routing`;
+`contract.specified` must carry a non-empty `acceptance` reference.
+Content schemas, the review gate for executable acceptance, and the
+sealed commitment land with 5.4 and Phase 6 (presence now, gating
+there). Completeness refusals are shape refusals.
+
+## Capabilities
+
+Every lifecycle verb is capability-gated (the rows live in
+[`actors.md`](actors.md) and `keyring.AcceptedCapabilities`, pinned by
+the spec-parsing test): `dispatch` manages the queue (`intent.filed`,
+`contract.specified`, `contract.blocked`, `contract.unblocked`,
+`claim.reaped`), `claim` is the worker set (`claim.taken`,
+`claim.released`, `claim.parked`, `submission.made`), and
+`contract.cancelled` / `merge.observed` are operator-only in v0
+(Phase 6 adds the observer lane for `merge.observed`; cancellation
+stays operator-gated until a real need appears). Reaping is queue
+management, not worker self-service.
+
+## Admission policy, visible anomalies
+
+Lifecycle legality is **admission policy**, exactly like halt,
+classification, and grants: admission refuses illegal transitions at
+`seed/1` (records under `seed/0` are grandfathered inert, the keyring
+precedent) with exit 3 `invalid_transition` naming subject, current
+state, and verb; a birth verb on an existing subject and a non-birth
+verb on an unknown subject refuse the same way. Verification
+tolerates illegal transitions in raw-pushed history — the cooperative
+posture's named consequence — and the projection fold **skips them
+visibly**: every contract entry carries an `anomalies` count, never
+silence. Verbs outside the table (`progress.milestone`, the
+not-yet-piped `verdict.rendered` and `merge.requested`) admit on
+subjects in every state and appear in contract streams untouched.
+
+## Projections
+
+The contracts view carries the folded `state` (null for a subject no
+lifecycle event ever validly created) and `anomalies` per entry
+(contracts `Version: "2"`); the queue's derivation is the table's
+ready set — `derivation: "transitions/1"`, listing subjects whose
+folded state is `ready`, oldest first, `since_position` the position
+that made them ready (queue `Version: "2"`) — retiring the v0
+`"none"` marker exactly as [`projections.md`](projections.md)
+promised. Both republish under new version-bearing build ids at an
+unchanged tip; the cache mirrors both derivations
+(`contract_state`, the derived `queue` rows, schema generation 2).
+
+## Conformance mapping
+
+- III.F "The lifecycle vocabulary and transition rules are
+  self-validating data enforced at admission; claim is a transition,
+  not a state" — this task: the table, its self-validation drills,
+  the `lifecycle` admission rule across the rule set, the seed-admit
+  hook, and the CLI.
+- III.F fences, packets, spec-gate content, plan-gating, verdicts —
+  5.2 through 5.6 and Phase 6, per their plans; the review exits
+  beyond `contract.cancelled` are Phase 6's named extension point.

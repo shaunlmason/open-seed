@@ -103,7 +103,11 @@ func TestContractsClassifierAndGrouping(t *testing.T) {
 	}
 }
 
-func TestQueueEmptyByDefinitionEverywhere(t *testing.T) {
+func TestQueueEmptyWhenNothingIsReady(t *testing.T) {
+	// The derivation is the transition table's (plans/os-d69a6c91.md,
+	// retiring the v0 "none" marker as the 4.2 spec promised): on
+	// fixtures carrying no ready subject, ready is empty because
+	// nothing is ready, and the marker says which derivation decided.
 	dir, resolve, _, _ := lifecycleChain(t)
 	rootOnlyDir, rootOnlyResolve, _ := fixtureChain(t, pKey(t, 7))
 	for _, fx := range []struct {
@@ -113,11 +117,11 @@ func TestQueueEmptyByDefinitionEverywhere(t *testing.T) {
 		out := rebuildAll(t, fx.dir, fx.res)
 		var q project.QueueView
 		readView(t, out, "queue", project.QueueFile, &q)
-		if q.SchemaVersion != project.QueueSchemaVersion || q.Derivation != project.QueueDerivationNone {
-			t.Fatalf("the v0 queue must name its derivation: %+v", q)
+		if q.SchemaVersion != project.QueueSchemaVersion || q.Derivation != project.QueueDerivationTransitions {
+			t.Fatalf("the queue must name the transition derivation: %+v", q)
 		}
 		if q.Ready == nil || len(q.Ready) != 0 {
-			t.Fatalf("no readiness derivation exists at Phase 4; ready must be empty: %+v", q)
+			t.Fatalf("nothing on these fixtures is ready; ready must be empty, not absent: %+v", q)
 		}
 	}
 }
