@@ -9,6 +9,15 @@ import (
 	"testing"
 )
 
+func mustJSON(t *testing.T, v any) []byte {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
 func readCorpus(t *testing.T, kind string) map[string][]byte {
 	t.Helper()
 	entries, err := os.ReadDir(filepath.Join("testdata", kind))
@@ -170,5 +179,37 @@ func TestLoadRulesStable(t *testing.T) {
 	var direct Rules
 	if err := json.Unmarshal(EmbeddedRulesJSON(), &direct); err != nil || !reflect.DeepEqual(direct, r1) {
 		t.Fatalf("EmbeddedRulesJSON must round-trip to LoadRules: %v", err)
+	}
+}
+
+// The commit-anchor exemption must not admit prose wearing an anchor
+// suffix, and pointers must escape / and ~ per RFC 6901 (#80 review).
+func TestAnchorExemptionIsNarrow(t *testing.T) {
+	body := strings.Repeat("word and more prose ", 30) + " @ deadbeef"
+	vs := Lint([]byte(`{"x": ` + string(mustJSON(t, body)) + `}`))
+	if len(vs) == 0 {
+		t.Fatal("prose ending in ' @ <hex>' must not be exempt")
+	}
+	ok := Lint([]byte(`{"ref": "next/internal/classify/classify.go @ deadbeefdeadbeef"}`))
+	if len(ok) != 0 {
+		t.Fatalf("a real commit anchor must stay exempt, got %+v", ok)
+	}
+}
+
+func TestPointerEscaping(t *testing.T) {
+	long := strings.Repeat("x", 600)
+	vs := Lint([]byte(`{"a/b": ` + string(mustJSON(t, long)) + `, "c~d": ` + string(mustJSON(t, long)) + `}`))
+	want := map[string]bool{"/a~1b": false, "/c~0d": false}
+	for _, v := range vs {
+		if v.Rule == RuleStringTooLong {
+			if _, exists := want[v.Pointer]; exists {
+				want[v.Pointer] = true
+			}
+		}
+	}
+	for ptr, seen := range want {
+		if !seen {
+			t.Errorf("expected a string_too_long violation at %s, got %+v", ptr, vs)
+		}
 	}
 }

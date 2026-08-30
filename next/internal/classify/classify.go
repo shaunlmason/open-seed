@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 
 	_ "embed"
 
@@ -57,8 +58,13 @@ type Violation struct {
 }
 
 var (
-	hashRef   = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	anchorRef = regexp.MustCompile(`^\S.* @ [0-9a-f]{7,64}(\.\.[0-9a-f]{7,64})?$`)
+	hashRef = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	// The commit-anchor exemption is deliberately narrow: a path in a
+	// filename alphabet (no whitespace, no prose punctuation, at most 200
+	// bytes) anchored to a commit or range. Arbitrary text ending in
+	// " @ <hex>" is a content body wearing an anchor and stays subject to
+	// every text rule (#80 review finding).
+	anchorRef = regexp.MustCompile(`^[A-Za-z0-9._/-]{1,200} @ [0-9a-f]{7,64}(\.\.[0-9a-f]{7,64})?$`)
 	base64Run = regexp.MustCompile(`[A-Za-z0-9+/=]+`)
 )
 
@@ -142,7 +148,7 @@ func walk(v any, pointer string, depth int, rules Rules, vs *[]Violation, textBu
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			walk(t[k], pointer+"/"+k, depth+1, rules, vs, textBudget)
+			walk(t[k], pointer+"/"+escapeToken(k), depth+1, rules, vs, textBudget)
 		}
 	case []any:
 		if len(t) > rules.MaxArrayLen {
@@ -166,6 +172,13 @@ func walk(v any, pointer string, depth int, rules Rules, vs *[]Violation, textBu
 		}
 		*textBudget += len(t)
 	}
+}
+
+// escapeToken applies RFC 6901 escaping so a key containing / or ~ still
+// yields a pointer that locates exactly one field (#80 review finding).
+func escapeToken(k string) string {
+	k = strings.ReplaceAll(k, "~", "~0")
+	return strings.ReplaceAll(k, "/", "~1")
 }
 
 func longestBase64Run(s string) int {
