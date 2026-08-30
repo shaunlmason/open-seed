@@ -172,7 +172,13 @@ Phase 7, as added rules on the shared set.
   online-only client seam, contracts v3 with the claim object, cache
   generation 3, the claim race storm and offline-boundary drills
 - 5.3 four-part handoff packets — os-b07b0f59 — plan PR #115
-  (merged) — after 5.2
+  (merged, amended: packets on ALL four exits incl. submission; the
+  3072 canonical bound fits the payload cap; the mandatory base
+  range; combined anchors, per review) — **implementing** (stacked
+  on 5.2's branch): internal/packet strict schema, the packet
+  admission rule, the classifier's bare-range exemption, tolerant
+  fold counting packetless/fence-violating exits, the A/B resume
+  drill
 - 5.4 acceptance-spec field + spec gate — os-73c00a50 — plan PR #116
   (merged) — after 5.1
 - 5.5 falsifiable-plan lint + plan-gating — os-16c1d142 — plan PR
@@ -197,9 +203,9 @@ Phase 7, as added rules on the shared set.
 Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
 plan is merged or open-amended: #113–#116 and #120 merged, #121 (5.6)
-open. 5.1 (os-d69a6c91, #122) is in review; **this PR implements 5.2**
-(os-5dc16a7c, fences), stacked on #122's branch. **Next action: 5.3
-(packets) stacks on this; 5.4 after 5.1 merges; 5.5 after 5.2; 5.6
-when #121 merges and 5.2 lands.**
+open. 5.1 (#122) and 5.2 (#123) are in review as a stack; **this PR
+implements 5.3** (os-b07b0f59, packets), stacked on #123's branch.
+**Next action: 5.4 (acceptance gate) stacks next; 5.5 after 5.2
+lands; 5.6 when #121 merges and 5.2 lands.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

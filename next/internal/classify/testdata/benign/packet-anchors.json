@@ -1,0 +1,58 @@
+{
+ "fence": "12",
+ "packet": {
+  "acceptance": [
+   "the refs resolve"
+  ],
+  "decisions": [
+   {
+    "decision": "anchors are data",
+    "basis": "verified"
+   }
+  ],
+  "base": "aaaaaaaaaaaa..bbbbbbbbbbbb",
+  "refs": [
+   "next/internal/pkg0/file0.go @ aaaaaaaaaaa0",
+   "next/internal/pkg1/file1.go @ aaaaaaaaaaa1",
+   "next/internal/pkg2/file2.go @ aaaaaaaaaaa2",
+   "next/internal/pkg3/file3.go @ aaaaaaaaaaa3",
+   "next/internal/pkg4/file4.go @ aaaaaaaaaaa4",
+   "next/internal/pkg5/file5.go @ aaaaaaaaaaa5",
+   "next/internal/pkg6/file6.go @ aaaaaaaaaaa6",
+   "next/internal/pkg7/file7.go @ aaaaaaaaaaa7",
+   "next/internal/pkg8/file8.go @ aaaaaaaaaaa8",
+   "next/internal/pkg9/file9.go @ aaaaaaaaaaa9",
+   "next/internal/pkg10/file10.go @ aaaaaaaaaaaa",
+   "next/internal/pkg11/file11.go @ aaaaaaaaaaab",
+   "next/internal/pkg12/file12.go @ aaaaaaaaaaac",
+   "next/internal/pkg13/file13.go @ aaaaaaaaaaad",
+   "next/internal/pkg14/file14.go @ aaaaaaaaaaae",
+   "next/internal/pkg15/file15.go @ aaaaaaaaaaaf",
+   "next/internal/pkg16/file16.go @ aaaaaaaaaa10",
+   "next/internal/pkg17/file17.go @ aaaaaaaaaa11",
+   "next/internal/pkg18/file18.go @ aaaaaaaaaa12",
+   "next/internal/pkg19/file19.go @ aaaaaaaaaa13",
+   "next/internal/pkg20/file20.go @ aaaaaaaaaa14",
+   "next/internal/pkg21/file21.go @ aaaaaaaaaa15",
+   "next/internal/pkg22/file22.go @ aaaaaaaaaa16",
+   "next/internal/pkg23/file23.go @ aaaaaaaaaa17",
+   "next/internal/pkg24/file24.go @ aaaaaaaaaa18",
+   "next/internal/pkg25/file25.go @ aaaaaaaaaa19",
+   "next/internal/pkg26/file26.go @ aaaaaaaaaa1a",
+   "next/internal/pkg27/file27.go @ aaaaaaaaaa1b",
+   "next/internal/pkg28/file28.go @ aaaaaaaaaa1c",
+   "next/internal/pkg29/file29.go @ aaaaaaaaaa1d",
+   "next/internal/pkg30/file30.go @ aaaaaaaaaa1e",
+   "next/internal/pkg31/file31.go @ aaaaaaaaaa1f",
+   "next/internal/pkg32/file32.go @ aaaaaaaaaa20",
+   "next/internal/pkg33/file33.go @ aaaaaaaaaa21",
+   "next/internal/pkg34/file34.go @ aaaaaaaaaa22",
+   "next/internal/pkg35/file35.go @ aaaaaaaaaa23",
+   "next/internal/pkg36/file36.go @ aaaaaaaaaa24",
+   "next/internal/pkg37/file37.go @ aaaaaaaaaa25",
+   "next/internal/pkg38/file38.go @ aaaaaaaaaa26",
+   "next/internal/pkg39/file39.go @ aaaaaaaaaa27"
+  ],
+  "findings": []
+ }
+}

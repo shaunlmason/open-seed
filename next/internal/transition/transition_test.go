@@ -176,8 +176,14 @@ func TestCheckAndFold(t *testing.T) {
 	}
 	fold := tab.FoldRecords(records)
 	a, ok := fold.State("c-A")
-	if !ok || a.State != "done" || a.Anomalies != 2 || a.Since != 7 {
+	// Four visible anomalies: the two table-illegal events, plus the
+	// raw submission's missing fence citation and missing packet (the
+	// exit still applies — skipping it would wedge the subject).
+	if !ok || a.State != "done" || a.Anomalies != 4 || a.Since != 7 {
 		t.Fatalf("c-A fold wrong: %+v ok=%v", a, ok)
+	}
+	if a.Claim != nil {
+		t.Fatalf("the deliberate exit must clear the claim even when malformed: %+v", a.Claim)
 	}
 	b, ok := fold.State("c-B")
 	if !ok || b.State != "" || b.Anomalies != 1 {

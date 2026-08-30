@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/packet"
 )
 
 //go:embed table.json
@@ -376,6 +377,23 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			f.states[e.Subject] = s
 			f.order = append(f.order, e.Subject)
 		}
+		// Raw-pushed history can carry a legal transition with a
+		// stale or missing fence citation, or a deliberate exit
+		// without its handoff packet. Admission refuses both; the
+		// tolerant fold applies the transition (the exit happened —
+		// skipping it would wedge the subject on a dead holder) and
+		// counts the violation visibly, never silently
+		// (plans/os-5dc16a7c.md, plans/os-b07b0f59.md).
+		if s.Claim != nil && t.Allows(current, e.Verb) {
+			if cited, _ := fenceCited(e.Payload); cited != fmt.Sprintf("%d", s.Claim.Fence) {
+				s.Anomalies++
+			}
+		}
+		if packet.Required(e.Verb) {
+			if _, perr := packet.FromPayload(e.Subject, e.Payload); perr != nil {
+				s.Anomalies++
+			}
+		}
 		s.State, s.Since = to, pos
 		if t.exclusive[e.Verb] {
 			s.Claim = &Claim{Holder: e.Actor, Fence: pos}
@@ -448,4 +466,22 @@ func CheckCompleteness(verb, subject string, payload []byte) error {
 func emptyJSON(raw json.RawMessage) bool {
 	s := strings.TrimSpace(string(raw))
 	return s == "" || s == "null" || s == `""` || s == "{}" || s == "[]"
+}
+
+// fenceCited extracts a payload's fence citation for the tolerant
+// fold; admission's strict twin lives in the fence rule.
+func fenceCited(payload []byte) (string, bool) {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return "", false
+	}
+	raw, ok := m["fence"]
+	if !ok {
+		return "", false
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return strings.TrimSpace(string(raw)), true
+	}
+	return s, true
 }

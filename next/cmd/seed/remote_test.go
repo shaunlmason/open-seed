@@ -404,8 +404,9 @@ func TestRemoteAppendLifecycle(t *testing.T) {
 		{"contract.specified", "c-1", `{"acceptance": "specs/c1.md @ abc"}`},
 		{"claim.taken", "c-1", `{}`},
 		// The claim admitted at position 4 (genesis, upgrade, filed,
-		// specified, taken): the submission cites that fence.
-		{"submission.made", "c-1", `{"branch": "seed/c-1", "fence": "4"}`},
+		// specified, taken): the submission cites that fence and, like
+		// every deliberate exit, carries its handoff packet.
+		{"submission.made", "c-1", `{"branch": "seed/c-1", "fence": "4", "packet": {"acceptance": ["c-1 resumes"], "decisions": [], "base": "1234567..1234567", "refs": [], "findings": []}}`},
 		{"merge.observed", "c-1", `{"pr": "9"}`},
 	}
 	for _, s := range steps {
@@ -480,6 +481,13 @@ func TestRemoteClaimFencingCLI(t *testing.T) {
 	}
 	if _, code := appendCLI("progress.milestone", "c-1", `{"n": 1, "fence": "4"}`); code != 0 {
 		t.Fatal("the holder citing the active fence must admit")
+	}
+
+	// A packetless exit is a shape refusal: the packet obligation
+	// travels with the four deliberate exits (plans/os-b07b0f59.md).
+	e, code = appendCLI("claim.released", "c-1", `{"fence": "4"}`)
+	if code != 8 || e.Error == nil || !strings.Contains(e.Error.Message, "packet") {
+		t.Fatalf("a packetless exit must refuse as a shape refusal naming the packet, got %d %+v", code, e)
 	}
 
 	// Offline: an exclusive verb refuses through the local dev tool
