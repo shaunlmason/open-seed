@@ -150,3 +150,41 @@ func TestActorRemoteRefusalExits(t *testing.T) {
 		t.Fatalf("a granted operator must declare halt over the wire: %d %+v", code, e)
 	}
 }
+
+// conformance: III.E — the rotation's CLI leg (plans/os-d1f35a8c.md):
+// a revoked key refuses over the wire with the established chain
+// refusal, and its replacement works.
+func TestRotationRemoteCLI(t *testing.T) {
+	_, priv, _ := writeKeys(t)
+	akey, apub, afp := writeWorkerKey(t, 11)
+	bkey, bpub, bfp := writeWorkerKey(t, 12)
+	remote := bareRemote(t)
+	resolve := seedRemoteGenesis(t, remote)
+	libAppend(t, remote, resolve, "seed/0", "system.protocol.upgraded", "system", `{"to": "`+version.Seed1+`"}`)
+
+	if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", priv, "--verb", "actor.enrolled", "--subject", afp, "--payload", enrollArg(apub)); code != 0 {
+		t.Fatalf("enrolling A failed: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", akey, "--verb", "progress.milestone", "--subject", "c-3001", "--payload", `{"n": 1}`); code != 0 {
+		t.Fatalf("A must work before the rotation: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", priv, "--verb", "actor.enrolled", "--subject", bfp, "--payload", enrollArg(bpub)); code != 0 {
+		t.Fatalf("enrolling B failed: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", priv, "--verb", "actor.revoked", "--subject", afp, "--payload", `{"reason": "rotation"}`); code != 0 {
+		t.Fatalf("revoking A failed: %d %+v", code, e)
+	}
+	e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", akey, "--verb", "progress.milestone", "--subject", "c-3002", "--payload", `{"n": 2}`)
+	if code != 8 || e.Error == nil || e.Error.Code != "chain_invalid" {
+		t.Fatalf("revoked A must refuse over the wire at exit 8, got %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
+		"--key", bkey, "--verb", "progress.milestone", "--subject", "c-3003", "--payload", `{"n": 3}`); code != 0 {
+		t.Fatalf("B must work after the rotation: %d %+v", code, e)
+	}
+}

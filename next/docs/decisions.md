@@ -179,3 +179,12 @@ here. Newest last.
   at 3.1, argued in the plan's versioning section) is applied: the
   grant rule replaces root-only authorization at `seed/1` with no new
   version. (PR #102)
+- 2026-08-30 — The revocation drill's shape (plans/os-d1f35a8c.md): the
+  working era runs through the legitimate cooperative client against
+  the enforced boundary, hostile eras push raw; standing-before-grants
+  is proven by granting the doomed key a capability before revocation
+  and asserting it confers nothing after; terminality and root liveness
+  are asserted at the boundary, not only in the library. The Phase 3
+  exit record claims only the III.E subset and enumerates every unmet
+  criterion with its landing phase (per #103 review): honest conformance
+  bookkeeping outranks a tidy exit line. (PR #104)
