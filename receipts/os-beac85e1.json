@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task": "os-beac85e1",
+  "merge_base": "cafbc11dd1a6d4da4ac331e2be5fbef7412f0e17",
+  "head": "50c863fbd406fd5f4e0a118648fdb044300c3bb4",
+  "plan_path": "plans/os-beac85e1.md",
+  "plan_sha256": "2df879e9f4a447b04dc4d81a99070721269eca92fdea6b00073656add58412ae",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/progress.md"
+  ],
+  "diff_sha256": "6521ecad139eb286011772dfea244f0d12b52a03b7469e7cdffec305c695b080",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "sh -c 'p=$(tr \"\\n\" \" \" \u003c next/docs/progress.md | tr -s \" \"); for pr in 76 79 80 83 84 85 86; do echo \"$p\" | grep -q \"task PR #$pr — \\*\\*done\\*\\*\" || { echo \"PR $pr row not done\"; exit 1; }; done; for id in os-3898f232 os-895bf828 os-d3591e09 os-3c72f93f os-028dda91; do echo \"$p\" | grep -q \"$id\" || { echo \"$id missing\"; exit 1; }; done; echo \"$p\" | grep -q \"Phase 1 exit (charter III.A)\" || { echo \"exit paragraph missing\"; exit 1; }'",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
