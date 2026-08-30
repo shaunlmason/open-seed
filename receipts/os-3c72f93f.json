@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "task": "os-3c72f93f",
+  "merge_base": "3967871855558e241366f46cda1feffa2a6fca60",
+  "head": "2c480f917a9e7f6c172426b7d231be5564547f9e",
+  "plan_path": "plans/os-3c72f93f.md",
+  "plan_sha256": "5202e2b83ee025882b179bb46daa98efe5c6336ddeda0734d7df6aee9db8f88c",
+  "diff_files": [
+    "next/cmd/seed/doctor.go",
+    "next/cmd/seed/doctor_test.go",
+    "next/cmd/seed/main.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/envelope/envelope.go",
+    "next/internal/envelope/envelope_test.go",
+    "next/internal/posture/posture.go",
+    "next/internal/posture/posture_test.go",
+    "next/spec/envelope.md"
+  ],
+  "diff_sha256": "c0fb70ab3d8e012d56ddd37e2847a339af529ca1a064531c9d4f2aa40d78b12c",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/posture/... ./cmd/seed/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
