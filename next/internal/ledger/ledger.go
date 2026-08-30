@@ -33,6 +33,7 @@ var (
 	ErrUnknownActor = errors.New("actor fingerprint not in the keyring")
 	ErrWrongPrev    = errors.New("prev does not cite the current tip")
 	ErrEmptyRecord  = errors.New("nil record")
+	ErrNotEmpty     = errors.New("ledger is not empty — genesis writes into empty stores only")
 )
 
 const (
