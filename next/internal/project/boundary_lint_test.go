@@ -24,12 +24,17 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/shaunlmason/open-seed/next/internal/project"
 )
 
-// The publication vocabulary (Lint A): matching internal/project's
-// CurrentFile, StampFile, and buildsDir values, pinned against drift
-// below.
-var vocabularyLiterals = []string{"CURRENT", "projection.json", "builds"}
+// The publication vocabulary (Lint A). The file names are the
+// engine's own declarations, so those two cannot drift by
+// construction (review finding on #118); the builds directory is
+// unexported by design — exporting it would hand non-engine code the
+// path piece the lint exists to deny — so it is pinned behaviorally
+// against the published layout in TestVocabularyMatchesPublishedLayout.
+var vocabularyLiterals = []string{project.CurrentFile, project.StampFile, "builds"}
 
 // The os write family (Lint B): the calls that create, replace,
 // remove, relink, or remode filesystem state.
@@ -103,13 +108,31 @@ func lintSeamWrites(fset *token.FileSet, f *ast.File) []string {
 	return findings
 }
 
-func TestWriteBoundaryLints(t *testing.T) {
-	// The values under lint must match the engine's own constants; a
-	// renamed vocabulary must move the lint with it.
-	if vocabularyLiterals[0] != "CURRENT" || vocabularyLiterals[1] != "projection.json" {
-		t.Fatal("vocabulary list drifted")
+// TestVocabularyMatchesPublishedLayout pins the lint's vocabulary to
+// what the engine actually publishes on disk (review finding on
+// #118): every vocabulary entry must name a live piece of a fresh
+// layout, so a layout rename breaks this probe and moves the lint
+// with it. This covers the unexported builds directory without
+// exporting it, and catches even a constant the engine stops using.
+func TestVocabularyMatchesPublishedLayout(t *testing.T) {
+	dir, resolve, _, _ := lifecycleChain(t)
+	out := lockedTempOut(t, "projections")
+	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
+		t.Fatal(err)
 	}
+	root := filepath.Join(out, "roster")
+	b, err := os.ReadFile(filepath.Join(root, vocabularyLiterals[0]))
+	if err != nil {
+		t.Fatalf("vocabulary %q is not the live pointer name: %v", vocabularyLiterals[0], err)
+	}
+	id := strings.TrimSpace(string(b))
+	stamp := filepath.Join(root, vocabularyLiterals[2], id, vocabularyLiterals[1])
+	if _, err := os.Stat(stamp); err != nil {
+		t.Fatalf("vocabulary %q / %q do not name the live layout: %v", vocabularyLiterals[2], vocabularyLiterals[1], err)
+	}
+}
 
+func TestWriteBoundaryLints(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("cannot locate this source file")

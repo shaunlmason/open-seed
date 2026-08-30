@@ -208,20 +208,36 @@ func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.
 // creating them on first publication. Modes are set by explicit chmod
 // in every case: MkdirAll's mode argument is weakened by the process
 // umask, and the lock protocol must not be (review finding on #112).
+// A partial open rolls itself back (review finding on #118): if a
+// later directory refuses — builds/ occupied by a regular file, say —
+// the ones already opened relock before the error surfaces, so a
+// failed open never leaves a projection root writable. The rollback
+// is best-effort: the open's own error is the one to surface.
 func openDirs(dirs ...string) error {
+	var opened []string
+	relock := func() {
+		for i := len(opened) - 1; i >= 0; i-- {
+			_ = os.Chmod(opened[i], 0o555)
+		}
+	}
 	for _, dir := range dirs {
 		if info, err := os.Stat(dir); err == nil && info.IsDir() {
 			if err := os.Chmod(dir, 0o755); err != nil {
+				relock()
 				return err
 			}
+			opened = append(opened, dir)
 			continue
 		}
 		if err := os.MkdirAll(dir, 0o755); err != nil {
+			relock()
 			return err
 		}
 		if err := os.Chmod(dir, 0o755); err != nil {
+			relock()
 			return err
 		}
+		opened = append(opened, dir)
 	}
 	return nil
 }
