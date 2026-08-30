@@ -81,6 +81,10 @@ here. Newest last.
   signers outside the root); init refusal is exit 3 with machine code
   `ledger_not_empty`; smallest-home decision placed genesis in its own
   `internal/genesis`. (PR #83)
+- 2026-08-30 — Halt state is a pure chain projection (State{Halted, By,
+  Reason}; no flag file); malformed halt events are skipped in replay
+  (admission refuses them at the boundary; replay must not wedge on
+  history it did not admit); exit 7 allocated. (PR #84)
 - 2026-08-30 — v1-loop delegation for `next:` cards: operator queue verbs
   (`promote`; `plan-unblock` once the gate PR is genuinely merged) run under
   the session principal (`shaunlmason`), work verbs under

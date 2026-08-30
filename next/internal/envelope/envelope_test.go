@@ -44,6 +44,7 @@ func TestExitCodesMatchSpecTable(t *testing.T) {
 		"not_found":          {ExitNotFound, 4},
 		"unavailable":        {ExitUnavailable, 5},
 		"fenced_out":         {ExitFenced, 6},
+		"halted":             {ExitHalted, 7},
 		"version_mismatch":   {ExitVersionMismatch, 10},
 		"usage":              {ExitUsage, 64},
 	}
