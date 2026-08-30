@@ -16,22 +16,27 @@ merges and registers its views in the engine's registry.
 
 Phase 4 item 2 names four views. At Phase 4 the chain's vocabulary is
 governance (`system.*`, `actor.*`) plus free-form subject-bearing work
-events; **readiness does not exist until Phase 5's transition table**
+events; **readiness is not derivable until Phase 5's transition table**
 (`next/spec/transitions.json`, Phase 5 item 1), and eligibility
 filtering is deferred past Phase 5 by the build plan's own parenthetical.
 So:
 
-- **Ships now**: contract detail (v0), actor view, report (skeleton),
-  and the `seed project current` consumer verb (the min-position
-  demand).
-- **Deferred**: the **ready queue** lands with Phase 5 item 1, where
-  "ready" first means something; its eligibility filter follows when
-  claims and claim-rights land. A queue projected before any readiness
-  derivation exists would be an empty file wearing a load-bearing name.
-  The Phase 4 exit line (byte-identical drill, stamps everywhere, lint
-  in `check-next`) does not require it; the deferral is recorded in
+- **Ships now**: contract detail (v0), the ready queue (registered,
+  schema-fixed, v0 derivation), actor view, report (skeleton), and the
+  `seed project current` consumer verb (the min-position demand).
+- **Deferred**: only the queue's **readiness derivation** (Phase 5
+  item 1, where the transition table first defines claimable states)
+  and, per the parenthetical, its eligibility filter (after Phase 5).
+  The projection itself ships now — registered, stamped, drilled —
+  so Phase 4 exits with the complete standard surface and Phase 5
+  swaps one derivation function rather than adding registration,
+  layout, spec, and drills after the fact (review finding on #106).
+  Under the Phase 4 vocabulary no readiness derivation exists, so the
+  v0 queue is **empty by definition and says so machine-readably**
+  (`derivation: "none"` in the view, mirrored in the spec) instead of
+  pretending a derivation it does not have; the handoff is recorded in
   `next/docs/decisions.md` and `next/docs/progress.md` so Phase 5
-  inherits the queue explicitly.
+  inherits the swap explicitly.
 - **Work-verb classifier (v0)**: events whose verb carries the
   `system.` or `actor.` prefix are governance vocabulary; every other
   event is work vocabulary and contributes to contract detail, keyed by
@@ -51,14 +56,24 @@ So:
    subjects are opaque strings, and mapping them to paths would trade
    the engine's path-safety refusals for an encoding scheme nothing
    consumes yet; the 4.3 cache is the lookup-throughput answer.
-2. **Actor view** (`actors.json`): the per-actor drill-down the roster
+2. **Ready queue** (`queue.json`): the registered claimable-work
+   surface, schema fixed now — `{schema_version: "1", derivation,
+   ready: […]}` where entries carry at least `{subject,
+   since_position}` and the field set is Phase 5's to extend. The v0
+   derivation is `"none"`: the Phase 4 vocabulary defines no claimable
+   states, so `ready` is empty by definition and the `derivation`
+   field says so machine-readably — a consumer can refuse to treat an
+   underived queue as meaning "nothing to do". Phase 5 item 1 replaces
+   the derivation (and its marker) with the transition table's; the
+   eligibility filter follows later, per the build plan.
+3. **Actor view** (`actors.json`): the per-actor drill-down the roster
    summarizes — for every roster candidate (genesis roots + enrollment
    subjects): the roster fields, plus `standing_history` (each
    `actor.*` event on this subject: position, verb, acting signer),
    `grants` accumulated, and `signed` (position, verb, subject of every
    record this fingerprint signed — the attribution surface, which is
    how the view shows a revoked key's history surviving revocation).
-3. **Report skeleton** (`report.json`): the operational summary whose
+4. **Report skeleton** (`report.json`): the operational summary whose
    sections later phases extend — `chain` (position, tip, active
    version), `actors` (counts by standing, root count), `halt` (halted
    flag; declaring position when halted), `checkpoints` (count, last
@@ -66,7 +81,7 @@ So:
    need Phase 5+ facts (claims, offers, budgets, expiry-vs-wedge,
    divergence) are named in the spec as extension points, not emitted
    empty.
-4. **The consumer verb.** `seed project current --out <dir> --name
+5. **The consumer verb.** `seed project current --out <dir> --name
    <projection> [--min-position N]`: resolves `CURRENT`, reads the
    build's stamp, reports `{name, position, tip, path}` with the
    envelope position carrying the stamp's count verbatim (the
@@ -78,17 +93,22 @@ So:
    `next/spec/envelope.md` before the constant, per the allocation
    rule), naming current and demanded positions — the III.D demand
    made scriptable.
-5. **Spec.** Extend `next/spec/projections.md`: the three views'
-   schemas and derivations (work-verb classifier included), the
-   ready-queue deferral with its Phase 5 landing, the consumer verb
-   and staleness semantics, and the conformance-mapping update. Add
-   the exit-15 row to `next/spec/envelope.md`.
-6. **Drills** (library + CLI): the engine's byte-identical
+6. **Spec.** Extend `next/spec/projections.md`: the four views'
+   schemas and derivations (work-verb classifier and the queue's
+   `derivation` marker included), the queue's Phase 5 derivation
+   handoff, the consumer verb and staleness semantics, and the
+   conformance-mapping update. Add the exit-15 row to
+   `next/spec/envelope.md`.
+7. **Drills** (library + CLI): the engine's byte-identical
    rebuild/stamp/immutability drills now run over the full default
-   registry (all four projections). Contract detail: two interleaved
-   work subjects with governance events excluded; payloads carried
-   verbatim; empty ledger yields an empty array, not a missing file.
-   Actor view: across the Phase 3 lifecycle fixtures
+   registry (all five projections: the 4.1 roster plus these four).
+   Contract detail: two interleaved work subjects with governance
+   events excluded; payloads carried verbatim; empty ledger yields an
+   empty array, not a missing file. Ready queue: present, stamped,
+   `derivation: "none"`, `ready` empty across every Phase 4 fixture
+   (populated and root-only alike) — the drill that Phase 5 must
+   replace when it swaps the derivation. Actor view: across the
+   Phase 3 lifecycle fixtures
    (enroll/grant/suspend/re-enroll/revoke/rotation) — standing history
    and signed attribution correct, a revoked actor present with
    history intact. Report: counts across the same fixtures; a halted
@@ -100,7 +120,7 @@ So:
 
 ## File Scope
 
-- `next/internal/project/**` (the three builders + tests)
+- `next/internal/project/**` (the four builders + tests)
 - `next/cmd/seed/**` (the `project current` subverb + tests)
 - `next/spec/projections.md`, `next/spec/envelope.md` (extend)
 - `next/internal/envelope/**` (the exit-15 constant)
@@ -111,12 +131,16 @@ So:
 
 **Boundary set (new, shown working):**
 
-- One rebuild publishes all four registered projections, each stamped
-  with the verification report's position and tip; deletion then
-  rebuild is byte-identical across the whole output tree.
+- One rebuild publishes all five registered projections (the 4.1
+  roster plus the four standard views), each stamped with the
+  verification report's position and tip; deletion then rebuild is
+  byte-identical across the whole output tree.
 - Contract detail carries exactly the work-vocabulary events, grouped
   by subject in first-appearance order, payloads verbatim; governance
   events appear in no contract entry.
+- The ready queue is present and stamped on every fixture with
+  `derivation: "none"` and an empty `ready` array — never absent, and
+  never claiming a derivation the vocabulary cannot support.
 - Actor view preserves a revoked actor's full history and attribution
   while the roster shows the ended standing; histories match the
   fixture chain position-for-position.
