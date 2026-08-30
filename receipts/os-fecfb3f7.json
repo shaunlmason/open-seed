@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "task": "os-fecfb3f7",
+  "merge_base": "c21d19fea50c6d742ef95fdc26e0c996b9a32030",
+  "head": "5ad6758ca3f61a737fae9ddbd1e298cd7f7ac38d",
+  "plan_path": "plans/os-fecfb3f7.md",
+  "plan_sha256": "a2b14bc44fa92b7eedd2b6457b222a793e406ee29d2803c03e05dbea73e446a1",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/project.go",
+    "next/cmd/seed/project_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/envelope/envelope.go",
+    "next/internal/envelope/envelope_test.go",
+    "next/internal/project/actors.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/project.go",
+    "next/internal/project/project_test.go",
+    "next/internal/project/queue.go",
+    "next/internal/project/report.go",
+    "next/internal/project/roster.go",
+    "next/internal/project/views_test.go",
+    "next/spec/envelope.md",
+    "next/spec/projections.md"
+  ],
+  "diff_sha256": "47bb448c705540dc3ced6f29eac87f061c31c1d74900c014141c11c60637e261",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/project/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
