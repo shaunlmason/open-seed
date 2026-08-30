@@ -513,3 +513,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:116","to":"ready"},"task":"os-73c00a50","ts":"2026-08-30T21:21:42Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-30T22:22:49Z"},"task":"os-acc1ac78","ts":"2026-08-30T21:22:49Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-782e2b43","kind":""},"task":"os-acc1ac78","ts":"2026-08-30T21:32:03Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-acc1ac78","ts":"2026-08-30T21:32:06Z","verb":"transition"}
