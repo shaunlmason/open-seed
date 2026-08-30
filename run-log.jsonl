@@ -393,3 +393,6 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-c14e9970","kind":""},"task":"os-3898f232","ts":"2026-08-30T07:21:39Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-3898f232","ts":"2026-08-30T07:21:42Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-beac85e1","ts":"2026-08-30T07:38:08Z","verb":"close"}
+{"actor":"shim","data":{"removed":"dep:os-3898f232"},"task":"os-895bf828","ts":"2026-08-30T07:38:22Z","verb":"blocker_resolved"}
+{"actor":"shim","data":{"removed":"dep:os-3898f232"},"task":"os-d3591e09","ts":"2026-08-30T07:38:22Z","verb":"blocker_resolved"}
+{"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-3898f232","ts":"2026-08-30T07:38:22Z","verb":"close"}
