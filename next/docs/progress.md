@@ -36,25 +36,53 @@ frontier.
   amended), task PR #83 — **done** (merged; genesis-payload version
   bootstrap + position-stamped init refusal per review; card closed)
 - 1.4 push-race append loop — os-62e2aa1d — plan PR #81 (merged,
-  amended: monotonic head + rollback drill), task PR #86 — review
+  amended: monotonic head + rollback drill), task PR #86 — **done**
+  (merged; vanished-ref regression refusal + typed remote-rejection per
+  review; card closed)
 - 1.5 halt semantics in the rule set — os-bce3fb98 — plan PR #78 (merged,
-  amended: exit code 7, reason-carrying state), task PR #84 — review
-  (halted refusal ordering + empty lift payload per review)
+  amended: exit code 7, reason-carrying state), task PR #84 — **done**
+  (merged; halted refusal ordering + empty lift payload per review; card
+  closed)
 - 1.6 payload classification lint + hostile corpus — os-d6f81ec6 — plan
   PR #77 (merged, amended: aggregate free-text budget, embedded rules),
   task PR #80 — **done** (merged; narrowed anchor exemption + RFC 6901
   pointers per review; card closed)
 - 1.7 CLI `seed ledger verify/append/show` — os-89412090 — plan PR #82
   (merged, amended: envelope v0 preserved, exit 9), task PR #85 —
-  review
+  **done** (merged; position-stamped verify refusals, read-only show,
+  active-version append per review; card closed)
+
+**Phase 1 exit (charter III.A): met.** The chain verifies from genesis in
+one command (`seed ledger verify`, #85); corrupted fixtures (reordered,
+rewritten, forged-sig, bad-prev, lying HEAD, lying genesis) are detected
+with positioned reasons (#79/#83/#85); the hostile classification corpus
+passes (#80); the race drill (two concurrent appenders, no lost updates,
+a real retry observed) is green on main (#86). This exit record is card
+os-beac85e1's task PR (an administrative card, not a Phase 2 item).
+
+## Phase 2 — Admission (docs/next-build-plan.md Phase 2; deps: 1 ✓)
+
+- 2.1 admission rule set library (`internal/admit`) — os-3898f232 —
+  plan PR #88 (merged, amended: ledger `WithObserver` + shared upgrade
+  schema in scope), task PR #90 — review
+- 2.2 cooperative posture (client self-validation) — os-895bf828 —
+  backlog (dep 2.1)
+- 2.3 enforced posture, `seed-admit` pre-receive hook — os-d3591e09 —
+  backlog (dep 2.1)
+- 2.4 posture declaration + `seed doctor` — os-3c72f93f — backlog (deps
+  2.2, 2.3)
+- 2.5 admission drills (raw-git adversary; kill-and-replace) —
+  os-028dda91 — backlog (deps 2.3, 2.4)
 
 ## Frontier
 
-Phase 0, 1.1, 1.2, 1.3, and 1.6 are done; 1.5 (task PR #84), 1.7 (task
-PR #85), and 1.4 (task PR #86) are in review. **Next action: as
-#84/#85/#86 merge, close their cards (os-bce3fb98, os-89412090,
-os-62e2aa1d). That completes all seven Phase 1 items: flip this frontier
-to the Phase 1 exit, file the Phase 2 (admission) cards, and start 2.1
-(`internal/admit`, the rule-set library) per docs/next-build-plan.md.**
-If an open task PR is red or carries review feedback, drive it green
-first — nothing merges out of order.
+Phase 0 and all of Phase 1 are done and closed. 2.1 (os-3898f232) is
+implemented against its merged plan (#88) and in review on task PR #90.
+**Next action: as #90 merges, close os-3898f232; closing 2.1 frees 2.2
+and 2.3 (promote from backlog, plan-first: author each
+`plans/<card>.md`, merge it, then implement); 2.4 then 2.5 follow their
+deps. Phase 2 exit needs the III.B
+subset: sole-writer enforced posture, statelessness (kill-and-replace),
+posture declaration with the cooperative consequence printed verbatim,
+and the direct-push refusal drill.** If an open task PR is red or carries
+review feedback, drive it green first — nothing merges out of order.
