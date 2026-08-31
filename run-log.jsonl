@@ -571,3 +571,4 @@
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-6e37b10e","ts":"2026-08-31T04:22:20Z","verb":"unblock"}
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-6e37b10e","ts":"2026-08-31T04:22:30Z","verb":"unblock"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:132","to":"ready"},"task":"os-6e37b10e","ts":"2026-08-31T04:22:52Z","verb":"plan-unblock"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T05:22:55Z"},"task":"os-6e37b10e","ts":"2026-08-31T04:22:55Z","verb":"claim"}
