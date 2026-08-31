@@ -92,9 +92,8 @@ Exhaustion produces a structured refusal the worker can act on. The
 parking mechanics the park invokes — the `claim.parked` exit with
 its packet at a safe point — landed with 7.4, the envelope's
 `{reserved, remaining}` block is Phase 8's, and the worker-lane
-loop that answers exhaustion by taking that exit is Phase 9 item
-1's named obligation, recorded by the Phase 7 exit
-(next/docs/progress.md).
+loop that answers exhaustion by taking that exit is named in
+docs/next-build-plan.md Phase 9 item 1.
 
 ## Surfaces
 

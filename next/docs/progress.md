@@ -460,9 +460,17 @@ run.started fills the spending table, Provision refuses outside the
 gate, and settle/release records actuals (#149, #151, with #152
 authenticating folded starts position-accurately so fold presence
 is never admission); metering flows on the observation channel and
-settles to the ledger at run end with no unmetered execution path
-(#151, #152); the adapter interface is public with the local
-worktree adapter as its first implementation (#151, #152); and
+settles to the ledger at run end via run.settled, drilled through
+the full bracket (#151, #152) — with the row's universal half, "no
+execution path is unmetered", recorded unmet at this exit, not
+claimed: Meter is caller-optional and nothing structurally prevents
+an unmetered caller of the public adapter interface, so what this
+phase landed is the metered path and the drilled bracket, while the
+universal half routes below (budget consumption stays enforced
+upstream at the reservation gate either way, so an unmetered run
+under-reports telemetry, never overspends); the adapter interface
+is public with the local worktree adapter as its first
+implementation (#151, #152); and
 preemption is graceful-first with safe-point semantics specified as
 the worker contract and a force kill still yielding an honest reap
 packet (#154 — landed beyond the exit line's three named drills, so
@@ -470,18 +478,24 @@ the III.H preemption row closes with the phase rather than
 waiting). The local worktree adapter can be stopped synchronously,
 so the risk-limit posture next/spec/budgets.md declares has no
 per-adapter declaration to make yet. The unmet III.H remainder
-routes as named binding obligations of its landing phases: the
-container, cloud-session, and enrolled-remote adapters with their
-per-adapter risk-limit declarations (Phase 13 item 2); the
-remaining-reservation budget block in the worker's envelope
+routes as obligations named in the landing phases' own build-plan
+text: the container, cloud-session, and enrolled-remote adapters
+with their per-adapter risk-limit declarations (Phase 13 item 2);
+the remaining-reservation budget block in the worker's envelope
 (Phase 8 item 1); exhaustion parking — the worker loop that answers
 the budget gate's structured refusal by taking the 7.4 claim.parked
-exit with its packet, consuming Phase 8's budget block — as Phase 9
-item 1's worker-lane obligation; and scheduling inputs completing
-with routing-as-data in the Phase 9 dispatcher and qualification
-tuples in Phase 10 item 1 (cost classes exist today in the filed
-budget class). This exit record is card os-c9e24032's task PR (an
-administrative card, not a Phase 7 item).
+exit with its packet, consuming Phase 8's budget block — named in
+Phase 9 item 1's worker-lane loop; the metering row's unmet
+universal half in two named steps — detection as Phase 9 item 3's
+unsettled-run lint (position-anchored: a started window lacking its
+run.settled is flagged only once the subject takes a subsequent
+claim window or reaches a terminal state), and the
+full-conformance claim on Phase 13's exit line, which already
+requires the named III.H criteria green; and scheduling inputs
+completing with routing-as-data in the Phase 9 dispatcher and
+qualification tuples in Phase 10 item 1 (cost classes exist today
+in the filed budget class). This exit record is card os-c9e24032's
+task PR (an administrative card, not a Phase 7 item).
 
 ## Frontier
 

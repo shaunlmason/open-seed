@@ -209,11 +209,20 @@ versioned.
 
 1. Role definitions (grants + conventions) for the six lanes as fragments; dispatcher
    least-capability posture; injection conformance suite (hostile corpus) against
-   dispatcher input handling.
+   dispatcher input handling. The worker lane's role definition includes its loop
+   (poll, claim, work, meter, sync, deliberate exit), and exhaustion parking is part
+   of that loop: a budget refusal at a spending gate triggers the `claim.parked` exit
+   with packet (the III.H row the Phase 7 exit routes here), consuming Phase 8's
+   envelope budget block.
 2. Escalation (`blocked(needs-you)`) with packet + question + decision; report
    surfaces age.
 3. Maintenance loop: reap expired/wedged, reconcile divergence, rebuild projections,
    checkpoint (signed), lints — runnable unattended; audited as an ordinary actor.
+   Lints include unsettled-run detection: a claim window carrying an admitted
+   `run.started` whose `run.settled` is still missing once the subject has taken a
+   subsequent claim window or reached a terminal state is flagged (the Phase 7 exit's
+   metering-detection obligation; post-close settlement is a valid intermediate
+   state, so the condition is position-anchored, never mid park/reap flow).
 4. Small-team mode and fleet mode end-to-end fixtures.
 
 *Exit:* charter III.J — both modes run the full loop in CI; injection corpus green;
