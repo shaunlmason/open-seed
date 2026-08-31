@@ -126,6 +126,15 @@ func Parse(subject string, raw []byte) (*Packet, error) {
 			return nil, &Error{Subject: subject, Part: k, Reason: "the part is absent — all four parts are present in every packet, empty where honesty allows"}
 		}
 	}
+	// Presence is not shape: a null decodes into the same nil slice an
+	// absent key does, so each array part must literally be an array,
+	// explicitly empty ("[]") where honesty allows, never null.
+	for _, k := range []string{"acceptance", "decisions", "refs", "findings"} {
+		v := bytes.TrimLeft(keys[k], " \t\r\n")
+		if len(v) == 0 || v[0] != '[' {
+			return nil, &Error{Subject: subject, Part: k, Reason: "the part is not an array — an empty part is an explicit [], never null"}
+		}
+	}
 	if len(p.Acceptance) == 0 {
 		return nil, &Error{Subject: subject, Part: "acceptance", Reason: "a packet a successor cannot be judged against resumes nothing"}
 	}

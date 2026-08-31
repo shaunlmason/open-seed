@@ -210,11 +210,17 @@ Phase 7, as added rules on the shared set.
 
 Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
-plan is merged or open-amended: #113–#116 and #120 merged, #121 (5.6)
-open. 5.1 (#122) is merged and closed; 5.2 (#123), 5.3 (#124), and 5.4
-(#125) are in review as a stack on main; **this PR implements 5.5**
-(os-16c1d142), stacked on #125's branch. **Next action: 5.6
-(observations v0) stacks last, completing Phase 5's items; then the
-Phase 5 exit record and Phase 6 (the verdict pipeline).**
+plan is merged: #113–#116, #120, #121. Implementations: 5.1 (#122)
+through 5.5 (#126) are all merged; 5.6 (os-2ff8dbf1) is claimed and
+in progress on a main-based branch. **This PR hardens 5.3 against
+its post-merge review round** (anchor-true artifact resolution with
+the range form exercised, a genuinely unfinished acceptance item
+that B performs and lands, the repository coordinate read from the
+instantiation's durable config, null array parts refused); the
+round's projection-version finding landed with #125's Version 4 /
+generation 4 bump. Sibling follow-ups: #128 (5.2's
+claimless-citation fence fix) and #129 (5.1's fold activation
+boundary). **Next action: land the follow-ups; 5.6 then completes
+the Phase 5 implementations.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
