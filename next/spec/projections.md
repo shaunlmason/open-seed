@@ -95,8 +95,10 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   `{holder, fence}` (the holder's fingerprint and the admitted
   `claim.taken` position, string form), absent outside a claim
   window, so contention answers and stale-fence refusals are
-  independently checkable against the published view (Version "3";
-  `lifecycle.md`).
+  independently checkable against the published view — and, once
+  specified, an `acceptance` object `{ref, executable, gated}` so
+  "may this spec run?" is a projection read (`acceptance.md`)
+  (Version "4"; `lifecycle.md`).
   One file, not per-subject files (subjects are opaque strings; the
   cache is the lookup-throughput surface). An empty chain yields an
   empty array, not a missing file.

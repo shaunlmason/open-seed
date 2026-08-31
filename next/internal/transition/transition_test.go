@@ -176,10 +176,11 @@ func TestCheckAndFold(t *testing.T) {
 	}
 	fold := tab.FoldRecords(records)
 	a, ok := fold.State("c-A")
-	// Four visible anomalies: the two table-illegal events, plus the
-	// raw submission's missing fence citation and missing packet (the
-	// exit still applies — skipping it would wedge the subject).
-	if !ok || a.State != "done" || a.Anomalies != 4 || a.Since != 7 {
+	// Five visible anomalies: the two table-illegal events, the raw
+	// specification's empty acceptance, and the raw submission's
+	// missing fence citation and missing packet (the exits still
+	// apply — skipping them would wedge the subject).
+	if !ok || a.State != "done" || a.Anomalies != 5 || a.Since != 7 {
 		t.Fatalf("c-A fold wrong: %+v ok=%v", a, ok)
 	}
 	if a.Claim != nil {
@@ -221,7 +222,7 @@ func TestCompleteness(t *testing.T) {
 	if err := transition.CheckCompleteness("contract.specified", "c-1", []byte(`{}`)); err == nil {
 		t.Fatal("specification without an acceptance reference must refuse")
 	}
-	if err := transition.CheckCompleteness("contract.specified", "c-1", []byte(`{"acceptance": "specs/a.md @ abc"}`)); err != nil {
+	if err := transition.CheckCompleteness("contract.specified", "c-1", []byte(`{"acceptance": {"ref": "specs/a.md @ abc1234", "executable": false}}`)); err != nil {
 		t.Fatalf("a present acceptance reference passes: %v", err)
 	}
 	if err := transition.CheckCompleteness("claim.taken", "c-1", []byte(`{}`)); err != nil {

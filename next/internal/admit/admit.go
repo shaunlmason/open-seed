@@ -349,6 +349,18 @@ func Default() []Rule {
 			_, err := packet.FromPayload(rec.Event.Subject, rec.Event.Payload)
 			return err
 		}},
+		{Name: "proposal", Check: func(c *Context, rec *event.Record) error {
+			// Outside text can propose, never arm (III.F row 2,
+			// plans/os-73c00a50.md): request.* payloads structurally
+			// cannot carry executable or gate keys at any depth.
+			if !keyring.Applies(c.Active) {
+				return nil
+			}
+			if !strings.HasPrefix(rec.Event.Verb, transition.ProposalVerbPrefix) {
+				return nil
+			}
+			return transition.CheckProposalShape(rec.Event.Subject, rec.Event.Payload)
+		}},
 		{Name: "lifecycle", Check: func(c *Context, rec *event.Record) error {
 			// Lifecycle legality is admission policy at seed/1, the
 			// halt/classification/grant precedent (plans/os-d69a6c91.md):

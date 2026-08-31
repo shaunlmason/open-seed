@@ -401,7 +401,7 @@ func TestRemoteAppendLifecycle(t *testing.T) {
 
 	steps := []struct{ verb, subject, payload string }{
 		{"intent.filed", "c-1", `{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`},
-		{"contract.specified", "c-1", `{"acceptance": "specs/c1.md @ abc"}`},
+		{"contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`},
 		{"claim.taken", "c-1", `{}`},
 		// The claim admitted at position 4 (genesis, upgrade, filed,
 		// specified, taken): the submission cites that fence and, like
@@ -458,7 +458,7 @@ func TestRemoteClaimFencingCLI(t *testing.T) {
 	if _, code := appendCLI("intent.filed", "c-1", `{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`); code != 0 {
 		t.Fatal("filing failed")
 	}
-	if _, code := appendCLI("contract.specified", "c-1", `{"acceptance": "specs/c1.md @ abc"}`); code != 0 {
+	if _, code := appendCLI("contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`); code != 0 {
 		t.Fatal("specification failed")
 	}
 	if _, code := appendCLI("claim.taken", "c-1", `{}`); code != 0 {

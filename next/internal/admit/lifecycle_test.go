@@ -21,7 +21,7 @@ import (
 
 const (
 	filedBody = `{"intent": "fix the thing", "tier": "standard", "budget": "small", "routing": "core"}`
-	specBody  = `{"acceptance": "specs/thing.md @ abc123"}`
+	specBody  = `{"acceptance": {"ref": "specs/thing.md @ abc1234", "executable": false}}`
 	// minPacket is the minimal honest packet: empty decisions, refs,
 	// and findings, a zero-length base range (no work pushed).
 	minPacket = `{"acceptance": ["resume from here"], "decisions": [], "base": "1234567..1234567", "refs": [], "findings": []}`
@@ -133,8 +133,9 @@ func TestLifecycleCompletenessPresence(t *testing.T) {
 	}
 	ctx = step(signer, version.Seed1, "intent.filed", "c-1", filedBody)
 	err = Check(ctx, draftV(t, signer, version.Seed1, "contract.specified", "c-1", `{}`, ctx.Tip))
-	if !errors.As(err, &inc) {
-		t.Fatalf("specification without an acceptance reference must refuse, got %v", err)
+	var ae *transition.AcceptanceError
+	if !errors.As(err, &ae) || ae.Field != "acceptance" {
+		t.Fatalf("specification without an acceptance spec must refuse structurally, got %v", err)
 	}
 	// An unspecified contract is not claimable: the completeness gate
 	// and the transition legality close the same door from two sides.
@@ -142,6 +143,20 @@ func TestLifecycleCompletenessPresence(t *testing.T) {
 	var inv *transition.InvalidTransitionError
 	if !errors.As(err, &inv) || inv.From != "backlog" {
 		t.Fatalf("claiming an unspecified contract must refuse, got %v", err)
+	}
+
+	// Executable content requires the gate at every tier; with gate
+	// evidence bound to the revision the contract specifies and
+	// becomes claimable end-to-end (plans/os-73c00a50.md).
+	err = Check(ctx, draftV(t, signer, version.Seed1, "contract.specified", "c-1",
+		`{"acceptance": {"ref": "specs/one.sh @ abc1234", "executable": true}}`, ctx.Tip))
+	if !errors.As(err, &ae) || ae.Field != "acceptance.gate" {
+		t.Fatalf("ungated executable content must refuse at every tier, got %v", err)
+	}
+	ctx = step(signer, version.Seed1, "contract.specified", "c-1",
+		`{"acceptance": {"ref": "specs/one.sh @ abc1234", "executable": true, "gate": "77 @ abc1234"}}`)
+	if err := Check(ctx, draftV(t, signer, version.Seed1, "claim.taken", "c-1", `{}`, ctx.Tip)); err != nil {
+		t.Fatalf("a gated executable spec is claimable: %v", err)
 	}
 }
 

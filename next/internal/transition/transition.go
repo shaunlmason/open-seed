@@ -312,6 +312,15 @@ func (t *Table) Check(subject, current, verb string) (string, error) {
 	return "", &InvalidTransitionError{Subject: subject, From: current, Verb: verb}
 }
 
+// AcceptanceInfo is the fold's view of a contract's acceptance spec:
+// Gated reports that gate evidence is present or not required, so
+// "may this spec run?" is a projection read (plans/os-73c00a50.md).
+type AcceptanceInfo struct {
+	Ref        string
+	Executable bool
+	Gated      bool
+}
+
 // Claim is the active claim on an in_progress subject: the fence is
 // the chain position of the admitted claim.taken record — derived,
 // never asserted (plans/os-5dc16a7c.md) — and the holder its signer.
@@ -334,6 +343,13 @@ type SubjectState struct {
 	// Claim is the active claim while the subject is in_progress,
 	// cleared by every deliberate exit; nil otherwise.
 	Claim *Claim
+	// Acceptance is the folded acceptance spec from the last admitted
+	// contract.specified: the artifact anchor, the executable flag,
+	// and whether gate evidence bound to the revision is present (or
+	// not required). Nil until specified; a raw-pushed specification
+	// whose acceptance is invalid counts an anomaly and leaves what
+	// is honestly derivable.
+	Acceptance *AcceptanceInfo
 	// PriorClaimants is every fingerprint that has ever held a claim
 	// on this subject: the fence rule's who-must-cite input — a
 	// reaped or released worker cannot demote itself to observer
@@ -394,6 +410,22 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 				s.Anomalies++
 			}
 		}
+		if e.Verb == "contract.specified" {
+			if a, aerr := ParseAcceptance(e.Subject, e.Payload); aerr == nil {
+				s.Acceptance = &AcceptanceInfo{Ref: a.Ref, Executable: a.Executable, Gated: !a.Executable || a.Gate != ""}
+			} else {
+				// Raw-pushed ungated or malformed acceptance:
+				// tolerated in history, visibly counted, with what is
+				// honestly derivable kept for the view.
+				s.Anomalies++
+				var raw struct {
+					Acceptance Acceptance `json:"acceptance"`
+				}
+				if json.Unmarshal(e.Payload, &raw) == nil && raw.Acceptance.Ref != "" {
+					s.Acceptance = &AcceptanceInfo{Ref: raw.Acceptance.Ref, Executable: raw.Acceptance.Executable, Gated: false}
+				}
+			}
+		}
 		s.State, s.Since = to, pos
 		if t.exclusive[e.Verb] {
 			s.Claim = &Claim{Holder: e.Actor, Fence: pos}
@@ -430,16 +462,22 @@ func (t *Table) StateAt(records []*event.Record, subject string) (SubjectState, 
 	return t.FoldRecords(records).State(subject)
 }
 
-// completeness maps the two completeness-gated verbs to the payload
-// fields that must be present and non-empty (plans/os-d69a6c91.md:
-// presence now, content schemas and gates with their own items).
+// completeness maps intent.filed to the payload fields that must be
+// present and non-empty (plans/os-d69a6c91.md); contract.specified
+// deepened from presence to the structured acceptance rule
+// (plans/os-73c00a50.md).
 var completeness = map[string][]string{
-	"intent.filed":       {"intent", "tier", "budget", "routing"},
-	"contract.specified": {"acceptance"},
+	"intent.filed": {"intent", "tier", "budget", "routing"},
 }
 
-// CheckCompleteness enforces the presence rule for the verb's payload.
+// CheckCompleteness enforces the completeness rules for the verb's
+// payload: field presence for filings, the structured acceptance
+// field (gate included) for specifications.
 func CheckCompleteness(verb, subject string, payload []byte) error {
+	if verb == "contract.specified" {
+		_, err := ParseAcceptance(subject, payload)
+		return err
+	}
 	fields := completeness[verb]
 	if len(fields) == 0 {
 		return nil
