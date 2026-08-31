@@ -45,11 +45,12 @@ type QueueView struct {
 }
 
 // Queue returns the ready-queue projection. Version "2" replaced the
-// underived v0 marker with the transition table's ready set,
-// republishing under a new build id via the version-in-identity
-// machinery.
+// underived v0 marker with the transition table's ready set; Version
+// "3" republishes the fold's seed/1 activation boundary, since a
+// pre-activation record can no longer occupy or vacate ready — each
+// via the version-in-identity machinery.
 func Queue() Projection {
-	return Projection{Name: "queue", Version: "2", Build: buildQueue}
+	return Projection{Name: "queue", Version: "3", Build: buildQueue}
 }
 
 // readyEntries derives the claimable set: subjects whose folded state

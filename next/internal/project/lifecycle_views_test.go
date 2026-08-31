@@ -114,7 +114,7 @@ func TestLifecycleViews(t *testing.T) {
 	// version-in-identity machinery on real derivation changes): the
 	// queue is at v2 (5.1), contracts and cache at v4 (5.2's claim
 	// object, 5.4's acceptance field).
-	for name, want := range map[string]string{"queue": "-v2", "contracts": "-v4", "cache": "-v4"} {
+	for name, want := range map[string]string{"queue": "-v3", "contracts": "-v5", "cache": "-v5"} {
 		b, err := os.ReadFile(filepath.Join(out, name, "CURRENT"))
 		if err != nil {
 			t.Fatal(err)

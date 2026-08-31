@@ -20,6 +20,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 //go:embed table.json
@@ -385,6 +386,16 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}}
 	for pos, rec := range records {
 		e := &rec.Event
+		if e.V != version.Seed1 {
+			// Lifecycle semantics activate at seed/1 (the
+			// keyring.Applies posture): grandfathered earlier records
+			// stay inert even where their verb names later became
+			// lifecycle verbs, so an upgraded ledger's history cannot
+			// occupy states or make a real filing look like a second
+			// birth. Version discipline pins e.V to the version
+			// active at the record's position.
+			continue
+		}
 		if e.Verb == PlanApprovedVerb {
 			if ref, _ := planAnchor(e.Payload); ref != "" {
 				f.planned[e.Subject] = ref
