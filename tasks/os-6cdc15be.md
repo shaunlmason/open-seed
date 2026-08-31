@@ -10,7 +10,11 @@ claim:
     claimed_at: "2026-08-31T06:07:58Z"
     lease_expires: "2026-08-31T07:07:58Z"
 created_at: "2026-08-31T03:59:29Z"
-updated_at: "2026-08-31T06:07:58Z"
+updated_at: "2026-08-31T06:26:14Z"
 ---
 
 docs/next-build-plan.md Phase 6 item 2: merge.requested; merge.observed (observer records forge fact); done; divergence detection in maintenance; induced-divergence drills. Plan-first (plans/<id>.md).
+
+## Evidence ev-96d6d2ea (pr, seed-next-implementer, 2026-08-31T06:26:14Z)
+
+https://github.com/shaunlmason/open-seed/pull/137
