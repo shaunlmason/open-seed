@@ -133,3 +133,52 @@ func TestClassify(t *testing.T) {
 		}
 	}
 }
+
+func TestCommandsExtraction(t *testing.T) {
+	doc := []byte("# Spec\n\nProse.\n\n## Validation Commands\n\n" +
+		"- Boundary: `go test ./...`\n" +
+		"- Retention: `make check` and more prose\n" +
+		"- `sh -c 'echo colon: inside'`\n" +
+		"- bare command without backticks\n" +
+		"\n## Expected diff shape\n\n- `never extracted`\n")
+	got := plan.Commands(doc)
+	want := []string{
+		"go test ./...",
+		"make check",
+		"sh -c 'echo colon: inside'",
+		"bare command without backticks",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d commands %v, want %v", len(got), got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("command %d: got %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestCommandsEmptyCases(t *testing.T) {
+	if got := plan.Commands([]byte("# Doc\n\nno commands section\n")); len(got) != 0 {
+		t.Fatalf("a doc without the section yields no commands, got %v", got)
+	}
+	if got := plan.Commands([]byte("## Validation Commands\n\n")); len(got) != 0 {
+		t.Fatalf("an empty section yields no commands, got %v", got)
+	}
+}
+
+func TestCommandsDoesNotBreakLint(t *testing.T) {
+	// The factoring must leave Lint's behavior untouched: a linting
+	// plan still lints, and Commands reads the same section the lint
+	// checked the labels in.
+	doc := []byte("**Boundary set**\n- new thing\n\n**Retention set**\n- old thing\n\n" +
+		"**Validation commands**\n- Boundary: `cmd-b`\n- Retention: `cmd-r`\n\n" +
+		"**Expected diff shape**\n- small\n")
+	if fs := plan.Lint(doc); len(fs) != 0 {
+		t.Fatalf("fixture must lint clean, got %v", fs)
+	}
+	got := plan.Commands(doc)
+	if len(got) != 2 || got[0] != "cmd-b" || got[1] != "cmd-r" {
+		t.Fatalf("Commands reads the linted section: %v", got)
+	}
+}

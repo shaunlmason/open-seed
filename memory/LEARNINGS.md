@@ -315,3 +315,8 @@ Fresh sessions read this file instead of rediscovering.
   administrative card routes through a plan PR. Budget the human
   review round-trip up front instead of discovering it at receipt
   time (os-6e37b10e).
+- Normative spec tables that are parsed by tests treat every
+  backticked token in a data cell as data: keep prose asides in
+  those cells unticked, or the parser reads the aside as vocabulary
+  (the actors.md capability table's parser caught exactly this when
+  the verdict row's aside quoted the capability name).

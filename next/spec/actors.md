@@ -99,6 +99,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `progress.milestone` | `claim`, `operator` (the claim lane's coarse summarization fact; the fence matrix applies) |
 | `wedge.declared` | `operator` (operator judgment in v0; the maintenance lane inherits it later) |
 | `merge.observed` | `operator` (Phase 6 adds the observer lane) |
+| `verdict.rendered` | `verdict` (deliberately no operator fallback: III.G names operator override its own attributable verb, never a disguised verdict — that verb is 6.4's; a governance root that judges holds an explicit verdict grant, and L1 independence applies to every signer, verdicts.md) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

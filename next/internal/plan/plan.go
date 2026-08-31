@@ -9,6 +9,7 @@ package plan
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -108,6 +109,53 @@ func Lint(doc []byte) []Finding {
 	}
 	return findings
 }
+
+// Commands extracts the document's validation commands: the same
+// marked-section walk Lint runs, exported so the verifier executes
+// exactly what the lint reads (plans/os-f6d2c267.md; the acceptance
+// body's command grammar is the plan grammar, next/spec/verdicts.md).
+// Each non-empty line of the "validation commands" section yields one
+// command: the list marker and any short leading label ("Boundary:",
+// "Retention:") are stripped, and a line carrying a backtick span
+// yields the span's content, so prose around the span never executes.
+func Commands(doc []byte) []string {
+	lines := strings.Split(string(doc), "\n")
+	current := ""
+	var cmds []string
+	for _, line := range lines {
+		if m := markerText(line); m != "" {
+			if strings.HasPrefix(m, "validation commands") {
+				current = "validation commands"
+			} else {
+				current = ""
+			}
+			continue
+		}
+		if current == "" {
+			continue
+		}
+		t := strings.TrimLeft(strings.TrimSpace(line), "-*+ \t")
+		if t == "" {
+			continue
+		}
+		t = strings.TrimSpace(commandLabelRE.ReplaceAllString(t, ""))
+		if i := strings.IndexByte(t, '`'); i >= 0 {
+			if j := strings.IndexByte(t[i+1:], '`'); j >= 0 {
+				t = t[i+1 : i+1+j]
+			}
+		}
+		t = strings.TrimSpace(t)
+		if t != "" {
+			cmds = append(cmds, t)
+		}
+	}
+	return cmds
+}
+
+// commandLabelRE matches a short leading label ("Boundary:",
+// "Retention:") ahead of the command text; a real command's own
+// colons sit past its first whitespace and never match.
+var commandLabelRE = regexp.MustCompile(`^[A-Za-z][A-Za-z ]{0,19}:\s`)
 
 // hasLabeledCommand reports whether some line carries the label (after
 // any list marker or emphasis) with a non-empty command behind it:

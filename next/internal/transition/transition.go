@@ -360,6 +360,19 @@ type SubjectState struct {
 	// reaped or released worker cannot demote itself to observer
 	// (plans/os-5dc16a7c.md, review finding on #114).
 	PriorClaimants map[string]bool
+	// Submission is the review-entering submission.made the fold
+	// records: the chain position a verdict must cite and the signer
+	// the L1 independence set includes (plans/os-f6d2c267.md). Set
+	// each time a submission applies; the verdict rule consults it.
+	Submission *SubmissionFact
+}
+
+// SubmissionFact binds a verdict to the submission it judges
+// (next/spec/verdicts.md): Pos is the chain position of the admitted
+// submission.made, Signer its fingerprint.
+type SubmissionFact struct {
+	Pos    int
+	Signer string
 }
 
 // milestoneFact is a subject's milestone high-water mark: the highest
@@ -500,6 +513,9 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 		}
 		s.State, s.Since = to, pos
+		if e.Verb == "submission.made" {
+			s.Submission = &SubmissionFact{Pos: pos, Signer: e.Actor}
+		}
 		if t.exclusive[e.Verb] {
 			s.Claim = &Claim{Holder: e.Actor, Fence: pos}
 			if s.PriorClaimants == nil {
@@ -613,6 +629,12 @@ const (
 // ledger facts at material transitions, and these are the facts. Both
 // are free verbs, never transitions: the pinned four in_progress
 // exits stand.
+// VerdictRenderedVerb is the verdict pipeline's first piped fact
+// (plans/os-f6d2c267.md; next/spec/verdicts.md): admitted only on
+// review subjects under L1 independence, changing no state — done
+// still arrives only through merge.observed.
+const VerdictRenderedVerb = "verdict.rendered"
+
 const (
 	MilestoneVerb     = "progress.milestone"
 	WedgeDeclaredVerb = "wedge.declared"

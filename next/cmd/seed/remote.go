@@ -235,6 +235,10 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	if errors.As(err, &fe) {
 		return envelope.Fail(envelope.ExitFenced, "fenced_out", err.Error())
 	}
+	var nie *admit.NotIndependentError
+	if errors.As(err, &nie) {
+		return envelope.Fail(envelope.ExitNotIndependent, "not_independent", err.Error())
+	}
 	var pre *transition.PlanRequiredError
 	if errors.As(err, &pre) {
 		return envelope.Fail(envelope.ExitPlanRequired, "plan_required", err.Error())

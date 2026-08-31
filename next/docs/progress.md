@@ -268,9 +268,18 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
 ## Phase 6 — Verdict pipeline (docs/next-build-plan.md Phase 6; deps: 5 ✓)
 
 - 6.1 submission binding, verifier workspace, receipt computation,
-  verdict.rendered at L1 — os-f6d2c267 — plan PR #133 (open, amended
-  per review: sandbox runner profile with declared capability,
-  immutable head binding, transcript-derived pass rule)
+  verdict.rendered at L1 — os-f6d2c267 — plan PR #133 (merged,
+  amended per review: sandbox runner profile with declared
+  capability, immutable head binding, transcript-derived pass
+  rule) — **this task PR**: internal/verdict (origin-stripped clone
+  workspaces, the exec runner profile named in every receipt, JCS
+  receipts with full immutable SHAs and plan-at-merge-base),
+  internal/artifact, the verdict admission rule (review-only,
+  submission binding, L1 independence exit 17) with the verdict-only
+  capability row, gate-before-run exits 18/19, seed verdict
+  receipt/render/check with the transcript-derived render rule
+  (exit 20) and recompute-and-mismatch (exit 21), plan.Commands,
+  spec/verdicts.md
 - 6.2 reconciliation chain (merge.requested, merge.observed, done) +
   divergence drills — os-6cdc15be — backlog
 - 6.3 sealed checks (salted commitment, age-encrypted body, rotation
@@ -284,9 +293,11 @@ Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
 #120, #121), every implementation (5.1 #122 through 5.6 #131), the
 three post-merge follow-ups (#127, #128, #129), and the engine
 v0.15.1 receipt-runner pin (#130) are merged, and the Phase 5 exit
-record above is card os-6e37b10e's task PR. **Next action: implement
-6.1** (os-f6d2c267, the verdict pipeline's first half) once its plan
-PR #133 merges — then 6.2's plan. The Phase 6 exit subset is charter
+record above is card os-6e37b10e's task PR (#134, merged; card
+closed). **This task PR implements 6.1** (os-f6d2c267, the verdict
+pipeline's first half, against merged plan #133). **Next action:
+land this PR; then 6.2's plan** (os-6cdc15be, the reconciliation
+chain). The Phase 6 exit subset is charter
 III.G minus L2/L3 levels and rubric calibration (Phase 10/11): the
 reconciliation drills, the receipt recompute-and-mismatch test, and
 the sealed-check audit.

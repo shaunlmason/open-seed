@@ -53,6 +53,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runObs(args[1:], stdout, stderr)
 	case "plan":
 		return runPlan(args[1:], os.Stdin, stdout, stderr)
+	case "verdict":
+		return runVerdict(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
 	default:
