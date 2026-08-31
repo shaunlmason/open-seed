@@ -657,3 +657,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-431301a5","kind":"pr"},"task":"os-1dad487d","ts":"2026-08-31T18:04:55Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-1dad487d","ts":"2026-08-31T18:04:58Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-1dad487d","ts":"2026-08-31T19:08:59Z","verb":"close"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-0f718b4e","ts":"2026-08-31T19:09:24Z","verb":"promote"}
