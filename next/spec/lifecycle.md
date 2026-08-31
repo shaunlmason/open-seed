@@ -66,7 +66,10 @@ and the self-validation pins that set, so silent abandonment is
 impossible by construction; `contract.cancelled` deliberately has no
 `in_progress` source. **Every deliberate exit carries a four-part
 handoff packet** ([`packets.md`](packets.md)), refused at admission
-without one. **Done is reached only through
+without one. Preemption rides these exits: a `run.interrupted` on
+the active fence asks the worker to take the `claim.parked` exit at
+its next safe point, and an ignored interrupt ends in `claim.reaped`
+([`executors.md`](executors.md)'s Preemption section). **Done is reached only through
 `merge.observed`**, the final observation of the §8 reconciliation
 chain (`verdict.rendered(pass) → merge.requested → merge.observed`);
 `verdict.rendered` is piped as of 6.1 — a fact admitted only on

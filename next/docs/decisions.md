@@ -718,3 +718,38 @@ here. Newest last.
   loses nothing admitted. Projections: contracts v11 (run facts,
   omitempty), report v8 (republish only), cache generation 10 (runs
   table).
+
+## 2026-08-31 — 7.4 graceful preemption (os-0f718b4e, plan #153)
+
+- The interrupt request is a ledger fact: run.interrupted, strict
+  {fence}, admitted only in_progress on the ACTIVE claim fence, from
+  {supervise, operator}, once per fence (raw duplicates fold as
+  anomalies, the run-fact posture; a raw invalid interrupt neither
+  blocks the legitimate supervisor's nor is one). The chain is the
+  canonical channel — workers already poll it for liveness, so no
+  marker files or adapter side-channels exist in v0. Deliberately
+  NOT a spending verb: preemption is supervisory control and must
+  not be budget-gated. Validity is position-accurate from birth
+  (InterruptValid at records[:pos]; InterruptRequested the one
+  shared derivation), applying the RunStartValid review lesson
+  proactively and closing the raw-push denial-of-service shape:
+  conforming workers park only for boundary-valid interrupts.
+- Safe-point semantics are the worker contract, specified in
+  executors.md's Preemption section: check at bounded intervals (at
+  least once per metering/poll cycle), finish the current step,
+  write the four-part packet, exit deliberately via claim.parked —
+  park, not release, so blocked hands routing back to the dispatch
+  lane. The next/executor public surface is untouched: the check is
+  the worker's, exactly where the charter locates it.
+- The force path yields an honest reap packet from what is known:
+  SIGKILL the interrupt-ignoring worker, claim.reaped by
+  dispatch/operator (acceptance from the specified criteria, base
+  the zero-length range when no pushed work is known, findings
+  recording the ignored interrupt and the kill), subject back to
+  ready and immediately re-claimable; run.settled records the dead
+  run afterward. B-style automatic timeout reaping stays Phase 9's
+  maintenance loop, which presupposes exactly these semantics. Both
+  paths drilled end-to-end with real subprocess workers completing
+  elsewhere from the surviving ledger alone. Projections: contracts
+  v12 (interrupts, omitempty), report v9 (republish only), cache
+  generation 11 (interrupts table).

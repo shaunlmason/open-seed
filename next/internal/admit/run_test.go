@@ -9,6 +9,7 @@ package admit
 import (
 	"crypto/ed25519"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -171,5 +172,51 @@ func TestRunAdmissionMatrix(t *testing.T) {
 	ctx = step(k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence, "5"))
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence, "5"), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "one run, one aggregate") {
 		t.Fatalf("a second settle on the fence refuses: %v", err)
+	}
+}
+
+// conformance: III.H — preemption is graceful-first: the interrupt is
+// an admitted supervisory fact on the live window, once per fence,
+// and only a boundary-valid one requests anything of a worker (a raw
+// unprivileged interrupt parks no one).
+func TestInterruptAdmissionMatrix(t *testing.T) {
+	ctx, k, step := runFixture(t)
+	fence := fenceOf(t, ctx, "c-1")
+	fenceN, _ := strconv.Atoi(fence)
+	body := `{"fence": "` + fence + `"}`
+
+	// Lanes, shape, and window citations.
+	if err := Check(ctx, draftV(t, k.holder, version.Seed1, "run.interrupted", "c-1", body, ctx.Tip)); err == nil || !strings.Contains(err.Error(), "not granted any of") {
+		t.Fatalf("the claim lane cannot interrupt its own run: %v", err)
+	}
+	for name, b := range map[string]string{
+		"extra key":            `{"fence": "` + fence + `", "note": "x"}`,
+		"not the active fence": `{"fence": "1"}`,
+		"non-position fence":   `{"fence": "soon"}`,
+	} {
+		if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.interrupted", "c-1", b, ctx.Tip)); err == nil {
+			t.Fatalf("%s must refuse", name)
+		}
+	}
+
+	// The DoS shape (plans/os-0f718b4e.md D3): a raw holder-signed
+	// interrupt folds, requests nothing of a polling worker, and
+	// blocks nothing at admission.
+	ctx = step(k.holder, version.Seed1, "run.interrupted", "c-1", body)
+	if s, _ := ctx.Lifecycle.State("c-1"); InterruptRequested(ctx.Records, ctx.Table, "c-1", s, fenceN) {
+		t.Fatal("a raw unprivileged interrupt requests nothing — no worker parks for it")
+	}
+	ctx = step(k.supervisor, version.Seed1, "run.interrupted", "c-1", body)
+	if s, _ := ctx.Lifecycle.State("c-1"); !InterruptRequested(ctx.Records, ctx.Table, "c-1", s, fenceN) {
+		t.Fatal("the admitted interrupt requests the park")
+	}
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.interrupted", "c-1", body, ctx.Tip)); err == nil || !strings.Contains(err.Error(), "one interrupt per claim window") {
+		t.Fatalf("a second interrupt on the fence refuses: %v", err)
+	}
+
+	// Outside a live window nothing is left to preempt.
+	ctx = step(k.holder, version.Seed1, "claim.released", "c-1", fmt.Sprintf(`{"fence": %q, "packet": %s}`, fence, minPacket))
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.interrupted", "c-1", body, ctx.Tip)); err == nil {
+		t.Fatal("an interrupt outside a live window refuses")
 	}
 }

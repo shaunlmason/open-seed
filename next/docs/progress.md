@@ -422,10 +422,15 @@ Phase 6 item).
   contracts v11 / report v8 / cache generation 10; the merge raced
   the final review-round push, so two findings — Provision
   authenticating folded starts via the shared admit.RunStartValid,
-  and worktree rollback on provisioning failure — land in a
-  follow-up task PR on the restarted branch)
+  and worktree rollback on provisioning failure — landed in
+  follow-up task PR #152, merged)
 - 7.4 graceful preemption (safe-point park with packet; force reap
-  packet) — os-0f718b4e — backlog
+  packet) — os-0f718b4e — **review** (task PR against plan #153:
+  run.interrupted as a once-per-fence supervisory ledger fact with
+  position-accurate validity shared by admission and polling
+  workers, safe-point semantics specified as the worker contract,
+  the graceful park drill and the force reap drill both completing
+  elsewhere, contracts v12 / report v9 / cache generation 11)
 
 ## Frontier
 
@@ -440,12 +445,10 @@ closed). Phase 6 is done and closed: every plan (#133, #136, #138,
 merged with every card closed. 7.1 (offers: plans #144/#146, task
 PR #145) and 7.2 (budgets: plans #147/#148, task PR #149) are done,
 merged with their cards closed. 7.3 (os-1dad487d, executor adapter +
-local worktree — plan #150, task PR #151) is merged. **Next action:
-land the 7.3 follow-up** (the two review findings #151's merge
-raced, on the restarted seed/os-1dad487d branch), then 7.4's plan
-(os-0f718b4e, graceful preemption: safe-point park with packet,
-force reap packet; plan-first on seed/os-0f718b4e-plan), and after
-7.4 the Phase 7 exit record. The
+local worktree — plan #150, task PRs #151 and follow-up #152) is
+done, merged with its card closed. **Next action: land 7.4**
+(os-0f718b4e, graceful preemption — plan #153, task PR in review),
+then the Phase 7 exit record. The
 Phase 7 exit subset is charter III.H for the implemented adapter:
 the poll-only run, the reservation race drill, and the
 disposability drill (randomized kill after sync; complete

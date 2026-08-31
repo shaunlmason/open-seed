@@ -110,6 +110,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `budget.release` | `claim`, `operator` (same boundary as settle, with zero actuals, budgets.md) |
 | `run.started` | `supervise`, `operator` (the gated spend initiation that fences a run to its reservation before any executor provisions; the spending-verb table's first entry, executors.md) |
 | `run.settled` | `supervise`, `operator` (the once-per-fence metering aggregate at run end; telemetry, never authority — budget.settle carries the actuals, executors.md) |
+| `run.interrupted` | `supervise`, `operator` (the safe-point preemption request, once per active fence; conforming workers poll it and park deliberately with their packet — executors.md's Preemption section) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

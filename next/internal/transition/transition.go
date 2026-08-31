@@ -426,6 +426,22 @@ type SubjectState struct {
 	// position counts an anomaly, never a fact.
 	RunStarts []RunStartFact
 	Runs      []RunFact
+	// Interrupts is every folded run.interrupted, the same
+	// independent-list posture (plans/os-0f718b4e.md): the
+	// supervisor's safe-point preemption requests, which conforming
+	// workers observe by polling and answer by parking.
+	Interrupts []InterruptFact
+}
+
+// InterruptFact is one folded run.interrupted: the chain position,
+// the signer, and the claim fence whose run it preempts. Admission
+// requires the ACTIVE fence; the fold records what stands, and
+// consumers judge validity at the fact's own position
+// (admit.InterruptValid).
+type InterruptFact struct {
+	Pos    int
+	Signer string
+	Fence  int
 }
 
 // RunStartFact is one folded run.started: the chain position, the
@@ -898,9 +914,10 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 			continue
 		}
-		if e.Verb == RunStartedVerb || e.Verb == RunSettledVerb {
+		if e.Verb == RunStartedVerb || e.Verb == RunSettledVerb || e.Verb == RunInterruptedVerb {
 			// Run facts fold tolerantly as independent lists
-			// (plans/os-1dad487d.md): raw pushes included, nothing
+			// (plans/os-1dad487d.md; interrupts per
+			// plans/os-0f718b4e.md): raw pushes included, nothing
 			// mutated. A fact citing a fence that is no applied claim
 			// position retroactively invents a run window the ordering
 			// disproves, so it counts an anomaly, never a fact.
@@ -920,6 +937,16 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 				}
 				if !s.ClaimFences[fence] {
 					s.Anomalies++
+					continue
+				}
+				if e.Verb == RunInterruptedVerb {
+					for _, it := range s.Interrupts {
+						if it.Fence == fence {
+							s.Anomalies++
+							break
+						}
+					}
+					s.Interrupts = append(s.Interrupts, InterruptFact{Pos: pos, Signer: e.Actor, Fence: fence})
 					continue
 				}
 				if e.Verb == RunStartedVerb {
@@ -1255,6 +1282,15 @@ const (
 	RunStartedVerb = "run.started"
 	RunSettledVerb = "run.settled"
 )
+
+// RunInterruptedVerb is the supervisor's safe-point preemption
+// request (plans/os-0f718b4e.md; SEED-NEXT.md §II.9 "graceful-first"):
+// an attributable ledger fact the running worker observes by polling
+// (the canonical channel the wakeless drill proved sufficient) and
+// answers by parking deliberately with its packet. It is NOT a
+// spending verb: preemption is supervisory control and must not be
+// budget-gated.
+const RunInterruptedVerb = "run.interrupted"
 
 // spendingVerbs is the data table of verbs that require an open,
 // valid reservation on their subject (charter §II.9 "spending verbs

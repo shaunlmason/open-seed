@@ -55,6 +55,7 @@ type ContractEntry struct {
 	Reservations  []ContractReservation `json:"reservations,omitempty"`
 	RunStarts     []ContractRunStart    `json:"run_starts,omitempty"`
 	Runs          []ContractRun         `json:"runs,omitempty"`
+	Interrupts    []ContractInterrupt   `json:"interrupts,omitempty"`
 	FirstPosition int                   `json:"first_position"`
 	LastPosition  int                   `json:"last_position"`
 	Events        []ContractEvent       `json:"events"`
@@ -100,6 +101,16 @@ type ContractRunStart struct {
 	Signer      string `json:"signer"`
 	Fence       string `json:"fence"`
 	Reservation string `json:"reservation"`
+}
+
+// ContractInterrupt is one folded run.interrupted
+// (plans/os-0f718b4e.md): the supervisor's safe-point preemption
+// request on the fence. Omitted when a subject has none, so
+// interrupt-free chains keep byte-identical views.
+type ContractInterrupt struct {
+	Position string `json:"position"`
+	Signer   string `json:"signer"`
+	Fence    string `json:"fence"`
 }
 
 // ContractRun is one folded run.settled: the once-per-fence metering
@@ -199,10 +210,12 @@ type ContractClaim struct {
 // derived budget view and reservations (plans/os-cecac5de.md),
 // omitted on budget-inactive subjects; Version "11" the
 // execution-run facts (plans/os-1dad487d.md), omitted on run-free
-// subjects — each republishing under a new build id via the
-// version-in-identity machinery.
+// subjects; Version "12" the safe-point interrupts
+// (plans/os-0f718b4e.md), omitted on interrupt-free subjects — each
+// republishing under a new build id via the version-in-identity
+// machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "11", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "12", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -325,6 +338,13 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 					Fence:    fmt.Sprintf("%d", r.Fence),
 					Units:    r.Units,
 					Lines:    r.Lines,
+				})
+			}
+			for _, it := range s.Interrupts {
+				e.Interrupts = append(e.Interrupts, ContractInterrupt{
+					Position: fmt.Sprintf("%d", it.Pos),
+					Signer:   it.Signer,
+					Fence:    fmt.Sprintf("%d", it.Fence),
 				})
 			}
 		}

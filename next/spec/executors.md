@@ -68,3 +68,48 @@ the loss is **exactly the observation lines after the last admitted
 synchronization** — the declared loss window, stated honestly. The
 observation stream is lossy by design ([`observations.md`](observations.md));
 anything that must survive rides the ledger.
+
+## Preemption: graceful-first, force as the drilled fallback
+
+> Authority: SEED-NEXT.md §II.9 preemption prose; charter III.H's
+> preemption row; plan `plans/os-0f718b4e.md`.
+
+**The interrupt request is a ledger fact.** `run.interrupted` —
+strict payload `{"fence": "<position>"}` — admits only while the
+subject is `in_progress`, only citing the ACTIVE claim fence, from
+{`supervise`, `operator`}, once per fence (a second refuses; raw
+duplicates fold as anomalies, the run-fact posture). The chain is
+the canonical channel: workers already poll it for liveness (the
+wakeless drill), so no marker files or adapter side-channels exist
+in v0 — an adapter MAY later accelerate delivery the way wake
+accelerates scheduling, advisorily. `run.interrupted` is **not** a
+spending verb: preemption is supervisory control and is never
+budget-gated.
+
+**Safe-point semantics are the worker contract.** A conforming
+worker checks for a boundary-valid interrupt on its active fence at
+bounded intervals — at least once per metering/poll cycle, the
+interval its own declared sync cadence — via the one shared
+derivation (`admit.InterruptRequested`, which counts only
+interrupts that passed the admission boundary at their own chain
+position: a raw unprivileged interrupt parks no one). On observing
+one, the worker finishes its current step (the safe point), writes
+its four-part packet, and exits deliberately via `claim.parked`
+([`packets.md`](packets.md); [`lifecycle.md`](lifecycle.md)) — park,
+not release: preemption is the supervisor's "stop now", and
+`blocked` hands routing back to the dispatch lane
+(`contract.unblocked` → ready → the next claim resumes from the
+packet).
+
+**The force path still yields a packet.** A worker that ignores its
+interrupt is killed (the disposability posture: nothing admitted is
+lost), and the dispatch or operator lane reaps it — `claim.reaped`
+with an honest four-part packet composed **from what is known**:
+acceptance from the contract's specified criteria, `base` as the
+zero-length range when no pushed work is known, `findings`
+recording the ignored interrupt and the kill. The subject returns
+to ready, immediately re-claimable, and the contract completes
+elsewhere from the surviving ledger alone; `run.settled` records
+the dead run's actuals afterward (a run settles after its window
+closes). B-style automatic timeout reaping is the Phase 9
+maintenance loop's job; it presupposes exactly these semantics.

@@ -58,4 +58,24 @@ func TestRunFactFold(t *testing.T) {
 	if s.Anomalies != before+2 {
 		t.Fatalf("each raw duplicate counts an anomaly: %d then %d", before, s.Anomalies)
 	}
+
+	// Interrupts fold in the same posture (plans/os-0f718b4e.md): the
+	// well-shaped fact as an independent list entry, a dangling fence
+	// as an anomaly, a same-fence duplicate as an anomaly that stays
+	// visible.
+	before = s.Anomalies
+	records = append(records,
+		payloadEvent("seed/1", "run.interrupted", "c-1", `{"fence": "2"}`),  // 10
+		payloadEvent("seed/1", "run.interrupted", "c-1", `{"fence": "9"}`),  // 11: dangling fence, anomaly
+		payloadEvent("seed/1", "run.interrupted", "c-1", `{"fence": "2"}`),  // 12: duplicate, anomaly + visible
+		payloadEvent("seed/1", "run.interrupted", "c-1", `{"fence": "no"}`), // 13: malformed, no fact
+	)
+	fold = tab.FoldRecords(records)
+	s, _ = fold.State("c-1")
+	if len(s.Interrupts) != 2 || s.Interrupts[0].Pos != 10 || s.Interrupts[0].Fence != 2 || s.Interrupts[1].Pos != 12 {
+		t.Fatalf("interrupts fold as an independent list, duplicates visible: %+v", s.Interrupts)
+	}
+	if s.Anomalies != before+2 {
+		t.Fatalf("the dangling fence and the duplicate each count an anomaly: %d then %d", before, s.Anomalies)
+	}
 }
