@@ -8,9 +8,9 @@ claim:
     actor: seed-next-implementer
     token: c-287653b4e42c0dc9
     claimed_at: "2026-08-31T16:31:27Z"
-    lease_expires: "2026-08-31T17:31:27Z"
+    lease_expires: "2026-08-31T17:42:50Z"
 created_at: "2026-08-31T13:26:28Z"
-updated_at: "2026-08-31T16:31:27Z"
+updated_at: "2026-08-31T16:42:50Z"
 ---
 
 docs/next-build-plan.md Phase 7 item 2: budget.reserve / settle / release; admission decrements reservations; reservation race drill (concurrent over-spend impossible); risk-limit declaration per adapter. Plan-first (plans/<id>.md).
