@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-148d3ba1",
   "merge_base": "96e0ca72f52ff5fcad590106300d25071ef261f0",
-  "head": "53e16d60469fd182c20533be7ab0a8f12cab97b5",
+  "head": "902f798ecd94ea71b935dbd7100d98fec395c51a",
   "plan_path": "plans/os-148d3ba1.md",
   "plan_sha256": "c0ded7cf8ee0b320e8be5bd502d7713696b571918efa22189d32d0c42e9333ab",
   "diff_files": [
@@ -12,7 +12,7 @@
     "next/internal/admit/affordances_test.go",
     "next/internal/admit/soundness_test.go"
   ],
-  "diff_sha256": "d5657bc1074856368733afcd3eb89abfe5b2cc5392bee2eaaf6e2c4e3e764954",
+  "diff_sha256": "652ae9d3840e23b8bb2089938a612b71b956c208e9f3fe9ff8e50e2a02fcf4db",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
