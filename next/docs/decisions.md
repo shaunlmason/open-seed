@@ -385,3 +385,11 @@ here. Newest last.
   build id and be discarded as a duplicate; Version 4 / generation 4
   re-key every such rebuild (#124 review). Gate-before-specified
   enforced here; gate-before-run named as Phase 6's half. (PR #125)
+- 2026-08-31 — Coverage collection in check-next serializes package
+  test binaries (-p 1), both Makefiles in lockstep: under the
+  subprocess-heavy drills, concurrent test binaries can collide
+  coverage counter files (same pid and second after heavy pid
+  recycling), silently dropping one package from the merged profile
+  and misreading totals far below truth (79-89% readings against a
+  stable 91.1%). The meter now measures the same number every run;
+  the gate itself is unchanged. (PR #125)
