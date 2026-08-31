@@ -349,11 +349,11 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
 	if err := admit.Check(ctx, rec); err != nil {
-		return render(stampTip(remoteFailureEnvelope(err), ctx.Count), stdout, stderr)
+		return render(stampTip(stampAffordances(remoteFailureEnvelope(err), *dir, signer, *subject), ctx.Count), stdout, stderr)
 	}
 	pos, err := store.Append(rec, ctx.Resolve)
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		return render(stampAffordances(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), *dir, signer, *subject), stdout, stderr)
 	}
 	hash, err := rec.Event.Hash()
 	if err != nil {
@@ -363,7 +363,7 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	result["appended"] = hash
 	result["verdict"] = *verdictFlag
 	result["submission"] = strconv.Itoa(s.Submission.Pos)
-	return render(stampTip(envelope.OK(result), pos+1), stdout, stderr)
+	return render(stampTip(stampAffordances(envelope.OK(result), *dir, signer, *subject), pos+1), stdout, stderr)
 }
 
 func runVerdictCheck(args []string, stdout, stderr io.Writer) int {

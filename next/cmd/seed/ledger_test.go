@@ -16,8 +16,13 @@ type ledgerEnv struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
-	Position *string `json:"position"`
-	Exit     int     `json:"exit"`
+	Position    *string  `json:"position"`
+	Affordances []string `json:"affordances"`
+	Budget      *struct {
+		Reserved  string `json:"reserved"`
+		Remaining string `json:"remaining"`
+	} `json:"budget"`
+	Exit int `json:"exit"`
 }
 
 func runEnv(t *testing.T, args ...string) (ledgerEnv, int) {

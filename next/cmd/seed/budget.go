@@ -9,8 +9,11 @@
 package main
 
 import (
+	"os"
+
 	"flag"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"io"
 	"sort"
 
@@ -26,8 +29,9 @@ func runBudget(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(io.Discard)
 	dir := fs.String("ledger", "", "ledger directory")
 	subject := fs.String("subject", "", "contract to report")
+	keyPath := fs.String("key", "", "OpenSSH ed25519 private key; with it the response stamps affordances")
 	if err := fs.Parse(args[1:]); err != nil || *dir == "" || *subject == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "budget status requires --ledger <dir> --subject <id>"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "budget status requires --ledger <dir> --subject <id> [--key <path>]"), stdout, stderr)
 	}
 	st, failEnv := loadVerdictState(*dir)
 	if failEnv != nil {
@@ -74,5 +78,16 @@ func runBudget(args []string, stdout, stderr io.Writer) int {
 		result["capacity"] = fmt.Sprintf("%d", view.Capacity)
 		result["remaining"] = fmt.Sprintf("%d", view.Remaining)
 	}
-	return render(stampTip(envelope.OK(result), st.count), stdout, stderr)
+	env := envelope.OK(result)
+	if *keyPath != "" {
+		// A fingerprint alone cannot sign probes, so the read surface
+		// stamps affordances only when handed the key itself; without
+		// one it guesses no identity and keeps the empty list.
+		if keyBytes, err := os.ReadFile(*keyPath); err == nil {
+			if signer, err := event.ParsePrivateKey(keyBytes); err == nil {
+				env = stampAffordances(env, *dir, signer, *subject)
+			}
+		}
+	}
+	return render(stampTip(env, st.count), stdout, stderr)
 }
