@@ -676,3 +676,4 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-c9e24032","ts":"2026-08-31T20:22:39Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-c9e24032","ts":"2026-08-31T21:19:56Z","verb":"close"}
 {"actor":"shaunlmason","data":{"title":"engine: receipt verify surfaces the failing validation command's output"},"task":"os-edc79ab7","ts":"2026-08-31T21:20:27Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"next: force-preemption drill polls for growth instead of a fixed window"},"task":"os-a95db3f5","ts":"2026-08-31T21:20:30Z","verb":"create"}
