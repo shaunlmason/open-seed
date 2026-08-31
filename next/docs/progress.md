@@ -180,7 +180,12 @@ Phase 7, as added rules on the shared set.
   fold counting packetless/fence-violating exits, the A/B resume
   drill
 - 5.4 acceptance-spec field + spec gate — os-73c00a50 — plan PR #116
-  (merged) — after 5.1
+  (merged, amended: no trivial-tier gate exemption; gate evidence
+  bound to the acceptance revision, per review) — **implementing**
+  (stacked on 5.3's branch): the structured acceptance field with
+  the universal gate rule and ref/gate commit equality, the
+  propose-vs-arm proposal shape rule, contracts v4 with the
+  {ref, executable, gated} object, cache generation 4
 - 5.5 falsifiable-plan lint + plan-gating — os-16c1d142 — plan PR
   #120 (merged, amended: two-layer plan binding with the Phase 6
   receipt closing the ancestry hole; classify ships as an invocable
@@ -203,9 +208,9 @@ Phase 7, as added rules on the shared set.
 Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
 plan is merged or open-amended: #113–#116 and #120 merged, #121 (5.6)
-open. 5.1 (#122) and 5.2 (#123) are in review as a stack; **this PR
-implements 5.3** (os-b07b0f59, packets), stacked on #123's branch.
-**Next action: 5.4 (acceptance gate) stacks next; 5.5 after 5.2
-lands; 5.6 when #121 merges and 5.2 lands.**
+open. 5.1 (#122), 5.2 (#123), and 5.3 (#124) are in review as a stack;
+**this PR implements 5.4** (os-73c00a50, the acceptance gate),
+stacked on #124's branch. **Next action: 5.5 (falsifiable-plan lint)
+and 5.6 (observations v0) stack next, completing Phase 5's items.**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

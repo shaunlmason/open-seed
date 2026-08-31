@@ -31,12 +31,13 @@ const CacheFile = "cache.db"
 // via PRAGMA user_version; it bumps with the table set, not with the
 // chain position. Generation 2 added contract_state and the derived
 // queue rows (plans/os-d69a6c91.md); generation 3 the claim columns
-// (plans/os-5dc16a7c.md).
-const cacheSchemaVersion = 3
+// (plans/os-5dc16a7c.md); generation 4 the acceptance columns
+// (plans/os-73c00a50.md).
+const cacheSchemaVersion = 4
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-const cacheVersion = "3"
+const cacheVersion = "4"
 
 // Cache returns the cache projection.
 func Cache() Projection {
@@ -52,7 +53,7 @@ var cacheDDL = []string{
 	`CREATE TABLE contracts (subject TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL)`,
 	`CREATE INDEX contracts_subject ON contracts(subject)`,
 	`CREATE TABLE queue (subject TEXT NOT NULL, since_position INTEGER NOT NULL)`,
-	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT) WITHOUT ROWID`,
+	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT, acc_ref TEXT, acc_executable INTEGER, acc_gated INTEGER) WITHOUT ROWID`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
 	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
 	`CREATE INDEX actor_history_fp ON actor_history(fingerprint)`,
@@ -143,7 +144,7 @@ func buildCache(records []*event.Record) (files map[string][]byte, err error) {
 			w.exec(`INSERT INTO contracts VALUES (?, ?, ?, ?, ?)`,
 				c.Subject, e.Position, e.Verb, e.Actor, string(e.Payload))
 		}
-		var state, holder, fence any
+		var state, holder, fence, accRef, accExec, accGated any
 		anomalies := 0
 		if s, ok := fold.State(c.Subject); ok {
 			anomalies = s.Anomalies
@@ -153,8 +154,12 @@ func buildCache(records []*event.Record) (files map[string][]byte, err error) {
 			if s.Claim != nil {
 				holder, fence = s.Claim.Holder, fmt.Sprintf("%d", s.Claim.Fence)
 			}
+			if s.Acceptance != nil {
+				accRef = s.Acceptance.Ref
+				accExec, accGated = boolInt(s.Acceptance.Executable), boolInt(s.Acceptance.Gated)
+			}
 		}
-		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence)
+		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence, accRef, accExec, accGated)
 	}
 	// The queue mirrors the JSON view's derivation exactly: the
 	// transition table's ready set, oldest first.
@@ -225,6 +230,14 @@ func (w *txWriter) jsonOf(v any) string {
 		return ""
 	}
 	return string(b)
+}
+
+// boolInt renders a flag as a SQLite integer.
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // isActorVerbOn reports an actor.* event applied to the fingerprint,

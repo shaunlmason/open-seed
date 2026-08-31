@@ -27,17 +27,21 @@ func TestLifecycleViews(t *testing.T) {
 	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
 	// c-A runs filed → specified → taken and leaves the queue.
 	add(root, version.Seed1, "intent.filed", "c-A", `{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`)
-	add(root, version.Seed1, "contract.specified", "c-A", `{"acceptance": "specs/a.md @ abc"}`)
+	add(root, version.Seed1, "contract.specified", "c-A", `{"acceptance": {"ref": "specs/a.md @ abc1234", "executable": false}}`)
 	add(worker, version.Seed1, "claim.taken", "c-A", `{}`)
 	// c-B stops at specified and is the one ready subject.
 	add(root, version.Seed1, "intent.filed", "c-B", `{"intent": "add", "tier": "standard", "budget": "s", "routing": "core"}`)
-	add(root, version.Seed1, "contract.specified", "c-B", `{"acceptance": "specs/b.md @ def"}`)
+	add(root, version.Seed1, "contract.specified", "c-B", `{"acceptance": {"ref": "specs/b.md @ def1234", "executable": false}}`)
 	// c-C carries a raw-pushed illegal claim (backlog is unclaimable):
 	// tolerated in history, skipped by the fold, counted visibly.
 	add(root, version.Seed1, "intent.filed", "c-C", `{"intent": "try", "tier": "standard", "budget": "s", "routing": "core"}`)
 	add(worker, version.Seed1, "claim.taken", "c-C", `{}`)
 	// c-D never enters the lifecycle: a free work verb only.
 	add(worker, version.Seed1, "task.note", "c-D", `{"n": 1}`)
+	// c-E carries a raw-pushed ungated executable spec: tolerated in
+	// history, visibly anomalous, and never marked gated.
+	add(root, version.Seed1, "intent.filed", "c-E", `{"intent": "arm", "tier": "standard", "budget": "s", "routing": "core"}`)
+	add(root, version.Seed1, "contract.specified", "c-E", `{"acceptance": {"ref": "specs/e.sh @ abc1234", "executable": true}}`)
 	out := rebuildAll(t, dir, resolve)
 
 	// The queue: exactly c-B, since the position of its specification.
@@ -46,8 +50,9 @@ func TestLifecycleViews(t *testing.T) {
 	if q.Derivation != project.QueueDerivationTransitions {
 		t.Fatalf("queue derivation: %+v", q)
 	}
-	if len(q.Ready) != 1 || q.Ready[0].Subject != "c-B" || q.Ready[0].SincePosition != 7 {
-		t.Fatalf("the queue must list exactly the ready subject with its since position: %+v", q.Ready)
+	if len(q.Ready) != 2 || q.Ready[0].Subject != "c-B" || q.Ready[0].SincePosition != 7 ||
+		q.Ready[1].Subject != "c-E" || q.Ready[1].SincePosition != 12 {
+		t.Fatalf("the queue must list exactly the ready subjects oldest first: %+v", q.Ready)
 	}
 
 	// The contracts view: folded states and the visible anomaly count.
@@ -78,6 +83,10 @@ func TestLifecycleViews(t *testing.T) {
 	wantState("c-B", "ready", 0)
 	wantState("c-C", "backlog", 1)
 	wantState("c-D", "", 0)
+	wantState("c-E", "ready", 1)
+	if a := bys["c-E"].Acceptance; a == nil || !a.Executable || a.Gated {
+		t.Fatalf("raw ungated executable content must surface ungated: %+v", a)
+	}
 
 	// The claim object rides exactly the in_progress entry: holder and
 	// fence (the admitted claim.taken position, string form), absent
@@ -91,11 +100,21 @@ func TestLifecycleViews(t *testing.T) {
 		}
 	}
 
+	// The acceptance field rides every specified subject: prose-only
+	// specs read gated (no gate required); unspecified subjects carry
+	// none (plans/os-73c00a50.md).
+	if a := bys["c-A"].Acceptance; a == nil || a.Ref != "specs/a.md @ abc1234" || a.Executable || !a.Gated {
+		t.Fatalf("c-A acceptance wrong: %+v", a)
+	}
+	if a := bys["c-C"].Acceptance; a != nil {
+		t.Fatalf("an unspecified subject carries no acceptance: %+v", a)
+	}
+
 	// The derivation bumps are in the identity (Phase 4's
 	// version-in-identity machinery on real derivation changes): the
-	// queue is at v2 (5.1), contracts and cache at v3 (5.2's claim
-	// object and columns).
-	for name, want := range map[string]string{"queue": "-v2", "contracts": "-v3", "cache": "-v3"} {
+	// queue is at v2 (5.1), contracts and cache at v4 (5.2's claim
+	// object, 5.4's acceptance field).
+	for name, want := range map[string]string{"queue": "-v2", "contracts": "-v4", "cache": "-v4"} {
 		b, err := os.ReadFile(filepath.Join(out, name, "CURRENT"))
 		if err != nil {
 			t.Fatal(err)
@@ -108,7 +127,7 @@ func TestLifecycleViews(t *testing.T) {
 	// The cache mirrors both derivations.
 	db, _ := openCacheRO(t, out)
 	defer db.Close()
-	if n := one[int](t, db, `SELECT COUNT(*) FROM queue`); n != 1 {
+	if n := one[int](t, db, `SELECT COUNT(*) FROM queue`); n != 2 {
 		t.Fatalf("cache queue rows: %d", n)
 	}
 	if since := one[int](t, db, `SELECT since_position FROM queue WHERE subject = 'c-B'`); since != 7 {
@@ -139,5 +158,11 @@ func TestLifecycleViews(t *testing.T) {
 	}
 	if null.Valid {
 		t.Fatalf("a subject the lifecycle never created must mirror a NULL state, got %q", null.String)
+	}
+	if r := one[string](t, db, `SELECT acc_ref FROM contract_state WHERE subject = 'c-A'`); r != "specs/a.md @ abc1234" {
+		t.Fatalf("cache c-A acceptance ref: %s", r)
+	}
+	if g := one[int](t, db, `SELECT acc_gated FROM contract_state WHERE subject = 'c-A'`); g != 1 {
+		t.Fatalf("cache c-A gated: %d", g)
 	}
 }

@@ -207,7 +207,7 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 			appendRaw(t, store, resolve, signedV(t, "seed/1", "intent.filed", "c-0009",
 				`{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`, tipOf(t, store)))
 			appendRaw(t, store, resolve, signedV(t, "seed/1", "contract.specified", "c-0009",
-				`{"acceptance": "specs/c9.md @ abc"}`, tipOf(t, store)))
+				`{"acceptance": {"ref": "specs/c9.md @ abc1234", "executable": false}}`, tipOf(t, store)))
 			appendRaw(t, store, resolve, signedV(t, "seed/1", "claim.taken", "c-0009", `{}`, tipOf(t, store)))
 			appendRaw(t, store, resolve, signedV(t, "seed/1", "claim.taken", "c-0009", `{}`, tipOf(t, store)))
 		}},
@@ -268,7 +268,7 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 		appendRaw(t, store, resolve, signedV(t, "seed/1", "intent.filed", "c-0005",
 			`{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`, tipOf(t, store)))
 		appendRaw(t, store, resolve, signedV(t, "seed/1", "contract.specified", "c-0005",
-			`{"acceptance": "specs/c5.md @ abc"}`, tipOf(t, store)))
+			`{"acceptance": {"ref": "specs/c5.md @ abc1234", "executable": false}}`, tipOf(t, store)))
 	}); err != nil {
 		t.Fatalf("the lifecycle happy path must land through the hook: %v", err)
 	}

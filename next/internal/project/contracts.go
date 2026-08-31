@@ -38,13 +38,24 @@ type ContractEvent struct {
 // per the cooperative posture, skipped by the fold, surfaced here,
 // never silent (plans/os-d69a6c91.md).
 type ContractEntry struct {
-	Subject       string          `json:"subject"`
-	State         *string         `json:"state"`
-	Anomalies     int             `json:"anomalies"`
-	Claim         *ContractClaim  `json:"claim,omitempty"`
-	FirstPosition int             `json:"first_position"`
-	LastPosition  int             `json:"last_position"`
-	Events        []ContractEvent `json:"events"`
+	Subject       string              `json:"subject"`
+	State         *string             `json:"state"`
+	Anomalies     int                 `json:"anomalies"`
+	Claim         *ContractClaim      `json:"claim,omitempty"`
+	Acceptance    *ContractAcceptance `json:"acceptance,omitempty"`
+	FirstPosition int                 `json:"first_position"`
+	LastPosition  int                 `json:"last_position"`
+	Events        []ContractEvent     `json:"events"`
+}
+
+// ContractAcceptance is the folded acceptance spec: the artifact
+// anchor, the executable flag, and whether gate evidence bound to the
+// revision is present (or not required) — "may this spec run?" is a
+// projection read Phase 6's verifier consumes (plans/os-73c00a50.md).
+type ContractAcceptance struct {
+	Ref        string `json:"ref"`
+	Executable bool   `json:"executable"`
+	Gated      bool   `json:"gated"`
 }
 
 // ContractClaim is the active claim while a subject is in_progress:
@@ -59,11 +70,11 @@ type ContractClaim struct {
 }
 
 // Contracts returns the contract-detail projection. Version "2" added
-// the folded state and anomaly count; Version "3" the claim object,
-// each republishing under a new build id via the version-in-identity
-// machinery.
+// the folded state and anomaly count; Version "3" the claim object;
+// Version "4" the acceptance field — each republishing under a new
+// build id via the version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "3", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "4", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -114,6 +125,9 @@ func buildContracts(records []*event.Record) (map[string][]byte, error) {
 			}
 			if s.Claim != nil {
 				e.Claim = &ContractClaim{Holder: s.Claim.Holder, Fence: fmt.Sprintf("%d", s.Claim.Fence)}
+			}
+			if s.Acceptance != nil {
+				e.Acceptance = &ContractAcceptance{Ref: s.Acceptance.Ref, Executable: s.Acceptance.Executable, Gated: s.Acceptance.Gated}
 			}
 		}
 		out = append(out, *e)

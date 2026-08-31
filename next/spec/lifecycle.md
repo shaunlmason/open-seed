@@ -135,12 +135,13 @@ by name, drilled on planted tables.
 
 The charter's birth rule — a contract becomes claimable only when it
 carries intent prose, an acceptance spec, and tier/budget/routing —
-is enforced as **presence** at the shape level: `intent.filed` must
-carry non-empty `intent`, `tier`, `budget`, and `routing`;
-`contract.specified` must carry a non-empty `acceptance` reference.
-Content schemas, the review gate for executable acceptance, and the
-sealed commitment land with 5.4 and Phase 6 (presence now, gating
-there). Completeness refusals are shape refusals.
+is enforced at the shape level: `intent.filed` must carry non-empty
+`intent`, `tier`, `budget`, and `routing`; `contract.specified` must
+carry the **structured acceptance field** — commit-anchored `ref`,
+the `executable` flag, and gate evidence bound to the ref's revision
+for ALL executable content ([`acceptance.md`](acceptance.md)). The
+sealed commitment lands with Phase 6. Completeness refusals are shape
+refusals.
 
 ## Capabilities
 

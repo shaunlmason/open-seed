@@ -364,3 +364,24 @@ here. Newest last.
   packet alone in a fresh clone, completes the acceptance list,
   reproduces the artifacts from the anchors, and never re-tries the
   recorded dead end. (PR #124)
+- 2026-08-31 — The spec gate is structural and universal
+  (plans/os-73c00a50.md): contract.specified carries the structured
+  acceptance object — commit-anchored ref naming one commit, the
+  executable flag, gate evidence present iff executable and bound to
+  the ref's exact revision by string equality (an unrelated merged
+  PR vouches for nothing) — with no tier exemption: the
+  provenance-gated trivial-tier relaxation waits for the tier
+  system. request.* payloads structurally cannot carry executable or
+  gate keys at any depth (outside text proposes, never arms), the
+  fold records {ref, executable, gated} per subject with raw-pushed
+  ungated content visibly anomalous and never marked gated, and the
+  contracts view (Version 4) plus cache (generation 4) publish it so
+  Phase 6's verifier reads "may this spec run?" from a projection.
+  The same bump is the republish trigger for 5.3's fold change
+  (raw-pushed fence violations and packetless exits now counted as
+  anomalies): that change shipped in #124 without a derivation-version
+  bump, so a prefix published under Version 3 from a ledger holding
+  such raw records would rebuild to different bytes under the same
+  build id and be discarded as a duplicate; Version 4 / generation 4
+  re-key every such rebuild (#124 review). Gate-before-specified
+  enforced here; gate-before-run named as Phase 6's half. (PR #125)
