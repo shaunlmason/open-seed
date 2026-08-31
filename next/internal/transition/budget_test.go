@@ -7,6 +7,8 @@ package transition_test
 // wins — under caller-supplied validity.
 
 import (
+	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"testing"
@@ -130,5 +132,37 @@ func TestBudgetFoldAndDerivation(t *testing.T) {
 	v = s.DeriveBudget(onlyFirst, own)
 	if len(v.Open) != 0 || v.Remaining != 100-70 {
 		t.Fatalf("an invalid reservation consumes nothing: %+v", v)
+	}
+}
+
+// Remaining can never INCREASE through integer wraparound (review
+// finding on the task PR): two enormous settled actuals saturate the
+// spend sum instead of wrapping it negative, so remaining stays far
+// below zero and every further reserve refuses.
+func TestBudgetSpendSaturates(t *testing.T) {
+	tab, err := transition.Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	huge := fmt.Sprintf("%d", math.MaxInt)
+	records := []*event.Record{
+		payloadEvent("seed/1", "intent.filed", "c-1", `{"tier": "trivial", "budget": "small"}`), // 0
+		lifecycleEvent("contract.specified", "c-1"),                                             // 1
+		lifecycleEvent("claim.taken", "c-1"),                                                    // 2
+		budgetEvent("budget.reserve", "c-1", `{"amount": "1"}`),                                 // 3
+		budgetEvent("budget.reserve", "c-1", `{"amount": "1"}`),                                 // 4
+		budgetEvent("budget.settle", "c-1", `{"reservation": "3", "actuals": "`+huge+`"}`),      // 5
+		budgetEvent("budget.settle", "c-1", `{"reservation": "4", "actuals": "`+huge+`"}`),      // 6
+	}
+	fold := tab.FoldRecords(records)
+	s, _ := fold.State("c-1")
+	all := func(transition.ReservationFact) bool { return true }
+	own := func(c transition.CloseFact, r transition.ReservationFact) bool { return true }
+	v := s.DeriveBudget(all, own)
+	if v.Settled != math.MaxInt {
+		t.Fatalf("the settled sum saturates instead of wrapping: %d", v.Settled)
+	}
+	if v.Remaining >= 0 {
+		t.Fatalf("remaining never increases through wraparound: %d", v.Remaining)
 	}
 }

@@ -14,6 +14,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -580,18 +581,31 @@ func (s *SubjectState) DeriveBudget(valid func(ReservationFact) bool, closeValid
 		}
 		if c, closed := v.ClosedBy[r.Pos]; closed {
 			if c.Kind == "settle" {
-				v.Settled += c.Actuals
-				spent += c.Actuals
+				v.Settled = satAdd(v.Settled, c.Actuals)
+				spent = satAdd(spent, c.Actuals)
 			}
 		} else {
 			v.Open = append(v.Open, r)
-			spent += r.Amount
+			spent = satAdd(spent, r.Amount)
 		}
 	}
 	if v.Known {
 		v.Remaining = v.Capacity - spent
 	}
 	return v
+}
+
+// satAdd sums non-negative unit counts with saturation at MaxInt:
+// raw-pushed facts can carry any machine-sized value, and a wrapped
+// sum would make remaining capacity INCREASE through overflow
+// (review finding on the task PR). Saturated spend keeps remaining
+// pinned far below zero instead, and capacity − spent cannot itself
+// wrap because capacity is a small table value.
+func satAdd(a, b int) int {
+	if a > math.MaxInt-b {
+		return math.MaxInt
+	}
+	return a + b
 }
 
 // SubmissionFact binds a verdict to the submission it judges
