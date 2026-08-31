@@ -21,7 +21,10 @@ rule to the structured field:
 
 Strict keys; `ref` uses the established combined anchor form
 (classifier-exempt) naming exactly one commit; `executable` declares
-whether the spec body contains runnable content.
+whether the spec body contains runnable content, and the declaration
+is explicit: only the literal booleans admit. An absent or null
+marker refuses — it decodes indistinguishably from a declared
+`false`, and silence must never decide whether content is armed.
 
 ## The gate rule: no tier exemption
 
