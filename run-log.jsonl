@@ -595,3 +595,4 @@
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-6cdc15be","ts":"2026-08-31T08:59:22Z","verb":"close"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-3128535a","ts":"2026-08-31T08:59:31Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T09:59:35Z"},"task":"os-3128535a","ts":"2026-08-31T08:59:35Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-3128535a","ts":"2026-08-31T09:05:56Z","verb":"transition"}
