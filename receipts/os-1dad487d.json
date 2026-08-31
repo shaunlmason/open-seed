@@ -2,16 +2,17 @@
   "schema_version": "1.0",
   "task": "os-1dad487d",
   "merge_base": "c61e36f56454442c3e004c994735da8701b89241",
-  "head": "31b3ac0a8bec4f4c7c8a8fd2df68675ed9f03f67",
+  "head": "eca5c169d5f2e0ad75a946d6434769adaf61528a",
   "plan_path": "plans/os-1dad487d.md",
   "plan_sha256": "cc9af7b002714d106629a2e3a8b32c308ae94db30834cd5d6ba1653c2388eac4",
   "diff_files": [
     "next/cmd/seed/run_cli_test.go",
     "next/docs/progress.md",
     "next/executor/executor.go",
-    "next/internal/admit/admit.go"
+    "next/internal/admit/admit.go",
+    "next/internal/admit/run_test.go"
   ],
-  "diff_sha256": "4b4a82ba25ba4a0ceeb97ff27cd5caa1d423f46b2953406166a400a62a13d7e0",
+  "diff_sha256": "4ef4eff21044f0a462cf024c58294d078d9de2af960d95c19c428dce7b6d9fa3",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./executor/... ./... -run 'Run|Executor|Disposab|Worktree' -count=1",
