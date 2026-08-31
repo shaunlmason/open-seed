@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "task": "os-16c1d142",
+  "merge_base": "cd19dfdf1256dc588f0feb10e374b35980140cee",
+  "head": "bd5645c7f45ce03ca90e6acdf18b8f43ac742750",
+  "plan_path": "plans/os-16c1d142.md",
+  "plan_sha256": "843cb1d601e650dee0350f9e4231c7370db1ed01e02a6407571f0ad44522286c",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/plan.go",
+    "next/cmd/seed/plan_cli_test.go",
+    "next/cmd/seed/remote.go",
+    "next/cmd/seed/remote_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/lifecycle_test.go",
+    "next/internal/admit/plan_test.go",
+    "next/internal/envelope/envelope.go",
+    "next/internal/envelope/envelope_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/plan/plan.go",
+    "next/internal/plan/plan_test.go",
+    "next/internal/transition/transition.go",
+    "next/spec/actors.md",
+    "next/spec/envelope.md",
+    "next/spec/plans.md"
+  ],
+  "diff_sha256": "212772f14ba3b7463d8569a6c3719950d4464bf7533f77c3a7372c4295724862",
+  "validation": [
+    {
+      "cmd": "Boundary: `cd next \u0026\u0026 go test ./internal/plan/... ./internal/admit/... ./cmd/seed/... -count=1",
+      "exit": 2
+    },
+    {
+      "cmd": "Retention: `cd next \u0026\u0026 go test ./... -count=1` and `make check",
+      "exit": 2
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
