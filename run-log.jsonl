@@ -665,3 +665,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T20:29:20Z"},"task":"os-0f718b4e","ts":"2026-08-31T19:29:20Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-4d005fc5","kind":"pr"},"task":"os-0f718b4e","ts":"2026-08-31T19:30:48Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-0f718b4e","ts":"2026-08-31T19:30:52Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-0f718b4e","ts":"2026-08-31T19:58:03Z","verb":"close"}
