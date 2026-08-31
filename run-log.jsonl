@@ -682,3 +682,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T22:20:58Z"},"task":"os-f5551001","ts":"2026-08-31T21:20:58Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-f5551001","ts":"2026-08-31T21:23:31Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: ledger writeHead race — unique temp file per writer"},"task":"os-c6fb95ee","ts":"2026-08-31T21:34:49Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-c6fb95ee","ts":"2026-08-31T21:35:18Z","verb":"promote"}
