@@ -8,6 +8,7 @@ package admit
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -55,6 +56,13 @@ func TestPlanGateAboveTrivialTier(t *testing.T) {
 	err = Check(ctx, draftV(t, worker, version.Seed1, "submission.made", "c-1", made, ctx.Tip))
 	if !errors.As(err, &pre) {
 		t.Fatalf("an approved plan must still be cited by the submission, got %v", err)
+	}
+	// Citing any anchor but THE approved one refuses: an approval
+	// admits one exact revision, and the refusal names both.
+	mismatched := `{"branch": "seed/c-1", "plan": "plans/c-1.md @ def5678", "fence": "` + fence + `", "packet": ` + minPacket + `}`
+	err = Check(ctx, draftV(t, worker, version.Seed1, "submission.made", "c-1", mismatched, ctx.Tip))
+	if !errors.As(err, &pre) || !strings.Contains(pre.Missing, "def5678") || !strings.Contains(pre.Missing, "abc1234") {
+		t.Fatalf("a mismatched plan citation must refuse naming both anchors, got %v", err)
 	}
 	cited := `{"branch": "seed/c-1", "plan": "plans/c-1.md @ abc1234", "fence": "` + fence + `", "packet": ` + minPacket + `}`
 	if err := Check(ctx, draftV(t, worker, version.Seed1, "submission.made", "c-1", cited, ctx.Tip)); err != nil {

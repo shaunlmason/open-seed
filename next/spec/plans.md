@@ -46,7 +46,10 @@ is the submission. Above the trivial tier (`tier` ≠ `"trivial"`, the
 one distinguished value; content semantics wait for the tier system),
 a submission refuses **exit 16 `plan_required`** unless the subject
 carries an admitted `plan.approved` AND the submission cites the plan
-anchor it implements (`{"plan": "<path @ commit>"}`). Two layers:
+anchor it implements (`{"plan": "<path @ commit>"}`), anchor for
+anchor: the citation must equal the approved anchor exactly, because
+an approval admits one revision and any other anchor leaves the
+receipt verifier holding a value nothing vouched for. Two layers:
 this ordering-plus-citation check at admission, and the **ancestry
 binding** — the implementation actually built on the approved plan —
 by Phase 6's receipt computation ("plan hash at merge-base"), the

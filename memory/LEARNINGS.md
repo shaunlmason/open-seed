@@ -271,3 +271,8 @@ Fresh sessions read this file instead of rediscovering.
   is fine. Fix: `-p 1` on the coverage invocation (three cold runs
   agree to the decimal); receipts embed their own run, so READ the
   recorded exits before claiming a receipt green.
+- The mis-merge poisons the testcache too: a cached "ok" replays the
+  coverage data recorded when it ran, so one bad parallel run keeps
+  resurfacing in every warm run after it (87-89% readings with -p 1
+  already in place). After adopting -p 1, flush once
+  (go clean -testcache); fresh entries then stay consistent.
