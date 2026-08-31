@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "task": "os-0f718b4e",
+  "merge_base": "8edba264ac9130ef595c35c9b9915719a9ba70f1",
+  "head": "6f91194a87e7bc35918ce314d888a3e450a63d0f",
+  "plan_path": "plans/os-0f718b4e.md",
+  "plan_sha256": "7c5d265af92c601e5b8f15903936d900d746d5c8bf38ed7b74505a154b2c817b",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/preempt_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/run_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/cache_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/project/report.go",
+    "next/internal/transition/run_test.go",
+    "next/internal/transition/transition.go",
+    "next/spec/actors.md",
+    "next/spec/executors.md",
+    "next/spec/lifecycle.md"
+  ],
+  "diff_sha256": "0dcbcbae2a18be9861c34809b3c13ed1f6325f969389d1dcf6511dea9e0fe75f",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/transition/ ./internal/keyring/ ./internal/admit/ ./internal/project/ ./cmd/seed/ -run 'Interrupt|Preempt|Park|Reap|Run|Contracts|Cache|Report' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
