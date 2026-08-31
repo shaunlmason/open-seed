@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-2ff8dbf1",
   "merge_base": "a5105bec602c78aace121d2bfc3f70976ba4452d",
-  "head": "1a841a80cba6fb661858e03a7ad7776d07b02236",
+  "head": "143a6ae56ab250f2c3d8deab1b1623871e935540",
   "plan_path": "plans/os-2ff8dbf1.md",
   "plan_sha256": "dc066530c06c64376dcab5b57d6fe30f54098aad6316ddefd7eabe1818de58c5",
   "diff_files": [
@@ -49,12 +49,13 @@
     "next/internal/project/roster.go",
     "next/internal/project/views_test.go",
     "next/internal/transition/transition.go",
+    "next/internal/transition/transition_test.go",
     "next/spec/actors.md",
     "next/spec/lifecycle.md",
     "next/spec/observations.md",
     "next/spec/projections.md"
   ],
-  "diff_sha256": "9dfda8492666a5d96c2b4d1bf1704f39c0bb39a25272b354d48e178dce673cd1",
+  "diff_sha256": "a6beefb9e65d7ca32fdffac32e69133feaee2886b6d812f87cfad352a62cc3b6",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/obs/... ./internal/project/... ./internal/admit/... ./cmd/seed/... -count=1",
