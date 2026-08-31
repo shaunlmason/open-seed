@@ -212,12 +212,15 @@ Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
 plan is merged: #113–#116, #120, #121. Implementations: 5.1 (#122)
 through 5.5 (#126) are all merged; 5.6 (os-2ff8dbf1) is claimed and
-in progress on a main-based branch. **This follow-up PR fixes 5.1's
-post-merge review round**: the lifecycle fold honors the seed/1
-activation boundary, so grandfathered seed/0 history stays inert.
-Sibling follow-ups: #127 (5.3's resume-drill and packet-shape
-hardening) and #128 (5.2's claimless-citation fence fix). **Next
-action: land the follow-ups; 5.6 then completes the Phase 5
-implementations.**
+plan is merged: #113–#116, #120, #121. Implementations 5.1 (#122)
+through 5.5 (#126) are merged, 5.3's post-merge hardening (#127) is
+merged, and 5.6 (#131) is in review, completing the Phase 5
+implementation set. **This follow-up PR fixes 5.1's post-merge review
+round**: the lifecycle fold honors the seed/1 activation boundary,
+with every fold-consuming derivation bumped (contracts 5, queue 3,
+cache 5) so corrected semantics republish at an unchanged tip.
+Sibling open PRs: #128 (5.2's claimless-citation fence fix) and #131
+(5.6). **Next action: land the open PRs; then the Phase 5 exit
+record and Phase 6 (the verdict pipeline).**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

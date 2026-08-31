@@ -276,3 +276,24 @@ Fresh sessions read this file instead of rediscovering.
   resurfacing in every warm run after it (87-89% readings with -p 1
   already in place). After adopting -p 1, flush once
   (go clean -testcache); fresh entries then stay consistent.
+- Never chain `git rebase` with `reset --hard`, receipt generation,
+  or push in one command line. A conflicted rebase parks HEAD on the
+  new base; the chained reset then amputates whatever the base's
+  last commit is, and receipt+push will happily validate and publish
+  the crippled branch, because a receipt proves the tree it saw runs
+  green, not that the tree holds the content you meant. This
+  destroyed two branch tips in one night (one was pushed: a
+  receipt-only PR branch with its implementation commit gone). Run
+  the rebase ALONE, read its exit and log, and only then reset,
+  receipt, and push.
+- Sweep a PR's review threads immediately before and after merge: a
+  round posted between the last sweep and the owner's merge click
+  otherwise lands on merged history silently. Findings on merged
+  content are still owed fixes, restarted from main as a follow-up
+  change, with replies carrying real shas and threads resolved.
+- The coverage mis-merge has a per-function fingerprint: the merged
+  `./...` profile nondeterministically drops one test binary's
+  counters, so exactly one function craters (Parse 89.7% isolated vs
+  46.4% merged) while the rest hold. Diff `go tool cover -func`
+  between runs to spot it, disprove with the isolated package run,
+  and only trust two agreeing cold uniform-flag runs.
