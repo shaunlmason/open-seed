@@ -598,11 +598,19 @@ func (f *Fold) CheckPlanGate(subject, tier string, payload []byte) error {
 	if tier == TrivialTier {
 		return nil
 	}
-	if _, ok := f.PlanApproved(subject); !ok {
+	approved, ok := f.PlanApproved(subject)
+	if !ok {
 		return &PlanRequiredError{Subject: subject, Tier: tier, Missing: "no plan.approved on the subject"}
 	}
-	if _, ok := planAnchor(payload); !ok {
+	cited, ok := planAnchor(payload)
+	if !ok {
 		return &PlanRequiredError{Subject: subject, Tier: tier, Missing: "the submission must cite the plan anchor it implements ({\"plan\": \"<path @ commit>\"})"}
+	}
+	// Citation means THE approved plan, anchor for anchor: an approval
+	// admits one exact revision, and citing any other leaves the
+	// receipt verifier holding an anchor nothing vouched for.
+	if cited != approved {
+		return &PlanRequiredError{Subject: subject, Tier: tier, Missing: fmt.Sprintf("the cited plan %q is not the approved plan %q", cited, approved)}
 	}
 	return nil
 }

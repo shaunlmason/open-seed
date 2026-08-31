@@ -81,6 +81,21 @@ func TestLint(t *testing.T) {
 		t.Fatalf("commands missing the retention side must fail: %v", fs)
 	}
 
+	// Prose mentioning the words is not a command line: the labeled
+	// form is the contract, and a bare label carries no command.
+	prose := strings.Replace(goodPlan,
+		"- Boundary: go test ./internal/thing/...\n- Retention: go test ./... and make check\n",
+		"This discusses boundary and retention at length.\n", 1)
+	fs = plan.Lint([]byte(prose))
+	if kinds(fs) != plan.KindCommandsMissingBoundary+","+plan.KindCommandsMissingRetention {
+		t.Fatalf("prose without labeled command lines must fail both sides: %v", fs)
+	}
+	bare := strings.Replace(goodPlan, "- Boundary: go test ./internal/thing/...\n", "- Boundary:\n", 1)
+	fs = plan.Lint([]byte(bare))
+	if kinds(fs) != plan.KindCommandsMissingBoundary {
+		t.Fatalf("a bare label is not a command: %v", fs)
+	}
+
 	// An empty section is present but resumes nothing.
 	empty := strings.Replace(goodPlan, "- the new verb refuses bad input\n", "", 1)
 	fs = plan.Lint([]byte(empty))

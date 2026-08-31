@@ -99,15 +99,28 @@ func Lint(doc []byte) []Finding {
 		}
 	}
 	if cmds, ok := sections["validation commands"]; ok {
-		joined := strings.ToLower(strings.Join(cmds, "\n"))
-		if !strings.Contains(joined, "boundary") {
-			findings = append(findings, Finding{Kind: KindCommandsMissingBoundary, Detail: "the validation commands do not visibly cover the boundary set"})
+		if !hasLabeledCommand(cmds, "boundary:") {
+			findings = append(findings, Finding{Kind: KindCommandsMissingBoundary, Detail: "the validation commands need a non-empty \"Boundary:\" command line covering the boundary set"})
 		}
-		if !strings.Contains(joined, "retention") {
-			findings = append(findings, Finding{Kind: KindCommandsMissingRetention, Detail: "the validation commands do not visibly cover the retention set"})
+		if !hasLabeledCommand(cmds, "retention:") {
+			findings = append(findings, Finding{Kind: KindCommandsMissingRetention, Detail: "the validation commands need a non-empty \"Retention:\" command line covering the retention set"})
 		}
 	}
 	return findings
+}
+
+// hasLabeledCommand reports whether some line carries the label (after
+// any list marker or emphasis) with a non-empty command behind it:
+// prose that merely mentions the word cannot satisfy the
+// falsifiability contract (next/spec/plans.md).
+func hasLabeledCommand(lines []string, label string) bool {
+	for _, l := range lines {
+		t := strings.TrimLeft(strings.TrimSpace(l), "-*+ \t")
+		if len(t) >= len(label) && strings.EqualFold(t[:len(label)], label) && strings.TrimSpace(t[len(label):]) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // Class is a changed-path set's classification.
