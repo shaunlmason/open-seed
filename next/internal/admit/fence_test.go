@@ -60,6 +60,14 @@ func TestFenceLifecycle(t *testing.T) {
 		t.Fatalf("a fence dies with its claim window, got %v", err)
 	}
 
+	// The claiming verb itself asserts no fence: on an unheld subject
+	// a claim.taken smuggling a citation refuses rather than admitting
+	// an asserted or retired fence into a fresh window.
+	err = Check(ctx, draftV(t, worker, version.Seed1, "claim.taken", "c-1", `{"fence": "`+fence+`"}`, ctx.Tip))
+	if !errors.As(err, &fe) || fe.Active != -1 || fe.Cited != fence {
+		t.Fatalf("a claimless claim.taken citation must refuse, got %v", err)
+	}
+
 	// A re-claim mints a NEW fence; the old one is stale for the new
 	// holder's events.
 	ctx = step(worker, version.Seed1, "claim.taken", "c-1", `{}`)
