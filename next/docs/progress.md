@@ -211,12 +211,14 @@ Phase 7, as added rules on the shared set.
 Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
 plan is merged: #113–#116, #120, #121. Implementations: 5.1 (#122)
-through 5.4 (#125) are merged; 5.5 (#126) is open on main; 5.6
-(os-2ff8dbf1) is claimed and in progress. **This follow-up PR fixes
-5.2's post-merge review round**: claim.taken can no longer smuggle an
-asserted or retired fence citation onto an unheld subject. Sibling
-follow-ups: #127 (5.3's resume-drill and packet-shape hardening) and
-#129 (5.1's fold activation boundary). **Next action: land #126 and
-the follow-ups; 5.6 then completes the Phase 5 implementations.**
+plan is merged: #113–#116, #120, #121. Implementations 5.1 (#122)
+through 5.5 (#126) are merged, 5.3's post-merge hardening (#127) is
+merged, and 5.6 (#131) is in review, completing the Phase 5
+implementation set. **This follow-up PR fixes 5.2's post-merge review
+round**: claim.taken can no longer smuggle an asserted or retired
+fence citation onto an unheld subject. Sibling open PRs: #129 (5.1's
+fold activation boundary) and #131 (5.6). **Next action: land the
+open PRs; then the Phase 5 exit record and Phase 6 (the verdict
+pipeline).**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

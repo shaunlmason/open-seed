@@ -408,6 +408,19 @@ here. Newest last.
   and misreading totals far below truth (79-89% readings against a
   stable 91.1%). The meter now measures the same number every run;
   the gate itself is unchanged. (PR #125)
+- 2026-08-31 — 5.3's post-merge review round hardened in place
+  (os-b07b0f59 follow-up): packet array parts must be literal arrays
+  (a null decodes into the same nil slice an absent key does and
+  admitted past presence checks); the resume drill now drills what it
+  claims — every ref resolves from its OWN anchor (the fixture makes
+  the base and head disagree about the bytes, and the range form is
+  exercised at the range head), A dies between acceptance items so B
+  performs and durably lands genuinely unfinished work, and B's
+  repository coordinate comes from the instantiation's durable
+  config, never A's environment: the packet carries anchors into the
+  instantiation, not the instantiation's address. The round's
+  projection-version finding rides #125 (Version 4 / generation 4,
+  noted there).
 - 2026-08-31 — 5.2's post-merge review round (os-5dc16a7c follow-up):
   the fence rule's exclusive-verb bypass returned before citation
   validation, so a claim.taken on an unheld subject could smuggle an
