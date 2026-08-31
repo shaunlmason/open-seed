@@ -117,11 +117,12 @@ type ReportReconciliation struct {
 // fold (plans/os-cecac5de.md) the same way — the per-adapter
 // risk-limit surface arrives with 7.3's adapters; Version "8"
 // republishes over the run-fact fold (plans/os-1dad487d.md), the
-// same posture. Inputs marks it as
+// same posture; Version "9" over the interrupt fold
+// (plans/os-0f718b4e.md) likewise. Inputs marks it as
 // the one input-consuming projection, everything else staying
 // byte-identical with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "8", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "9", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the

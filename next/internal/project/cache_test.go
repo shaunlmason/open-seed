@@ -74,7 +74,7 @@ func TestCacheEqualsTheViews(t *testing.T) {
 	if name != stamp.Name || position != stamp.Position || tip != stamp.Tip || version != stamp.Version {
 		t.Fatalf("stamp table %v/%v/%v/%v must equal projection.json %+v", name, position, tip, version, stamp)
 	}
-	if uv := one[int](t, db, `PRAGMA user_version`); uv != 10 {
+	if uv := one[int](t, db, `PRAGMA user_version`); uv != 11 {
 		t.Fatalf("user_version must carry the cache schema generation, got %d", uv)
 	}
 

@@ -380,3 +380,7 @@ Fresh sessions read this file instead of rediscovering.
   the library (ContextAt, Check, Append with the context resolver) —
   which is also exactly the shape that lets a race drill assert the
   loser's structured contention refusal instead of a process exit.
+
+- `seed task plan-unblock` takes the PR as `--pr N` (it builds the
+  `plan:N` entry itself); passing the entry via `--blocked-on` or a
+  URL yields `invalid_transition`, the same error as a wrong state.
