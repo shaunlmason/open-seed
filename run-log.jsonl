@@ -617,3 +617,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T14:25:24Z"},"task":"os-600be59e","ts":"2026-08-31T13:25:24Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 7.1 — offers (offer.published, eligibility-scoped, expiring; wakeless poll-only drill)"},"task":"os-c61c3392","ts":"2026-08-31T13:26:26Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 7.2 — budgets (reserve/settle/release, reservation race drill, per-adapter risk limits)"},"task":"os-cecac5de","ts":"2026-08-31T13:26:29Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"next: Phase 7.3 — executor adapter interface + local worktree adapter (metering, run.settled)"},"task":"os-1dad487d","ts":"2026-08-31T13:26:32Z","verb":"create"}
