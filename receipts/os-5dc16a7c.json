@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "task": "os-5dc16a7c",
+  "merge_base": "a02ca636c3b4df518bb5a70136854b620458c52e",
+  "head": "54aa0ff8d75e20a07ec3d3d2455d669f009465c6",
+  "plan_path": "plans/os-5dc16a7c.md",
+  "plan_sha256": "91af97ceb52be84c8f1d9ac050ef2308cc0af92c82550c501f17c1b3f26caa75",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed-admit/main_test.go",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/remote.go",
+    "next/cmd/seed/remote_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/fence_test.go",
+    "next/internal/admit/lifecycle_test.go",
+    "next/internal/gitref/gitref_test.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/cache_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/transition/table.json",
+    "next/internal/transition/transition.go",
+    "next/spec/envelope.md",
+    "next/spec/lifecycle.md",
+    "next/spec/projections.md",
+    "next/spec/transitions.json"
+  ],
+  "diff_sha256": "142f622621ae6627c6c9ee9ef0df8e90345106bead1f938d48b816b1b4ed5ce4",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/transition/... ./internal/admit/... ./internal/gitref/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
