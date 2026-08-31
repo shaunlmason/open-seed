@@ -305,8 +305,19 @@ func Default() []Rule {
 			}
 			verb := rec.Event.Verb
 			if c.Table.Exclusive(verb) {
-				// A rival claim is contention, the lifecycle rule's
-				// structured refusal, never a fence complaint.
+				if s, ok := c.Lifecycle.State(rec.Event.Subject); ok && s.Claim != nil {
+					// A rival claim is contention, the lifecycle
+					// rule's structured refusal, never a fence
+					// complaint.
+					return nil
+				}
+				// With no active claim no fence exists, and the
+				// claiming verb asserts none: fences are derived from
+				// the admitted position, so a citation here refuses
+				// like any other claimless citation.
+				if cited, hasCited := fenceCitation(rec.Event.Payload); hasCited {
+					return &FenceError{Subject: rec.Event.Subject, Cited: cited, Active: -1}
+				}
 				return nil
 			}
 			cited, hasCited := fenceCitation(rec.Event.Payload)

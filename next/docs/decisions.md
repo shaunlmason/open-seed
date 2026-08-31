@@ -421,6 +421,17 @@ here. Newest last.
   instantiation, not the instantiation's address. The round's
   projection-version finding rides #125 (Version 4 / generation 4,
   noted there).
+- 2026-08-31 — 5.2's post-merge review round (os-5dc16a7c follow-up):
+  the fence rule's exclusive-verb bypass returned before citation
+  validation, so a claim.taken on an unheld subject could smuggle an
+  asserted or retired fence citation past the "outside in_progress,
+  citing one refuses" rule the spec already states. The bypass now
+  applies only on a held subject (where a rival claim is contention,
+  the lifecycle rule's refusal); claimless citations on the claiming
+  verb refuse exit 6 like any other. The round's fold finding was
+  already closed by #124's anomaly counting, with apply-and-count
+  over skip the recorded decision (a skipped exit wedges the subject
+  on a dead holder).
 - 2026-08-31 — 5.1's post-merge review round (os-d69a6c91 follow-up):
   the lifecycle fold now honors the seed/1 activation boundary the
   spec and admission already stated (records under seed/0 are
