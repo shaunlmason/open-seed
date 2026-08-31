@@ -12,6 +12,8 @@ package ledger
 // hit reliably on fast disks, the store-level one is not.
 
 import (
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -59,7 +61,52 @@ func TestConcurrentAppendAndOpenRepair(t *testing.T) {
 	}
 	close(stop)
 	wg.Wait()
+	// A reader descheduled between its behind-HEAD decision and its
+	// rename can legally land a stale but stream-consistent HEAD as
+	// the last write; the fix's guarantee is that the next Open
+	// heals it, not that the last write wins (review finding on the
+	// task PR). Exercise exactly that guarantee: heal, then verify.
+	if _, err := Open(dir); err != nil {
+		t.Fatal(err)
+	}
 	if rep, err := s.VerifyFromGenesis(resolve); err != nil || rep.Count != n || rep.Tip != tip {
 		t.Fatalf("the chain verifies after the contention: %+v %v", rep, err)
+	}
+}
+
+// The mode drill (review finding on the task PR): CreateTemp opens
+// at 0600, and renaming that over HEAD would strip read access from
+// poll-only readers running under another UID. writeHead restores
+// the established mode: 0644 on first write, the operator's own
+// mode thereafter.
+func TestWriteHeadPreservesMode(t *testing.T) {
+	priv := fixtureKey(t, 1)
+	resolve := fixtureResolver(t, priv)
+	dir := t.TempDir()
+	s, err := Open(dir, WithClock(clockAt("2026-09-01T10:00:00Z")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := signedRecord(t, priv, 0, "2026-09-01T10:00:00Z", event.EmptyHash)
+	if _, err := s.Append(rec, resolve); err != nil {
+		t.Fatal(err)
+	}
+	head := filepath.Join(dir, "HEAD")
+	if info, err := os.Stat(head); err != nil || info.Mode().Perm() != 0o644 {
+		t.Fatalf("a fresh HEAD carries 0644: %v %v", info.Mode().Perm(), err)
+	}
+	if err := os.Chmod(head, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	tip, err := rec.Event.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec = signedRecord(t, priv, 1, "2026-09-01T10:00:00Z", tip)
+	if _, err := s.Append(rec, resolve); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(head); err != nil || info.Mode().Perm() != 0o640 {
+		t.Fatalf("an established HEAD mode survives the rewrite: %v %v", info.Mode().Perm(), err)
 	}
 }

@@ -290,6 +290,21 @@ func (s *Store) writeHead(h Head) error {
 		return err
 	}
 	tmp := f.Name()
+	// CreateTemp opens its file at 0600; restore the established
+	// HEAD mode before the rename (review finding on the task PR),
+	// so a shared directory's poll-only readers keep read access:
+	// an existing HEAD keeps whatever mode the operator set, and a
+	// first write gets 0644, the mode the segment writes use and
+	// the pre-fix WriteFile used here.
+	mode := os.FileMode(0o644)
+	if info, statErr := os.Stat(filepath.Join(s.dir, headFile)); statErr == nil {
+		mode = info.Mode().Perm()
+	}
+	if err := f.Chmod(mode); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return err
+	}
 	if _, err := f.Write(append(b, '\n')); err != nil {
 		f.Close()
 		os.Remove(tmp)
