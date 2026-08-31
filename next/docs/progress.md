@@ -407,19 +407,23 @@ Phase 6 item).
   report v6 / cache generation 8)
 - 7.2 budgets (budget.reserve / settle / release; admission
   decrements reservations; the reservation race drill; per-adapter
-  risk limits) — os-cecac5de — **review** (task PR #149 against
-  plan #147 as amended by #148; class-table capacity, holder-only
-  reserves, derived closes with foreign facts inert on every
-  surface, the two-drafts-one-view race drill, the empty spending
-  gate, contracts v10 / report v7 / cache generation 9)
+  risk limits) — os-cecac5de — **done** (task PR #149 merged,
+  against plan #147 as amended by #148; class-table capacity,
+  holder-only reserves, derived closes with foreign facts inert on
+  every surface, the two-drafts-one-view race drill, the empty
+  spending gate, contracts v10 / report v7 / cache generation 9)
 - 7.3 executor adapter interface + the local worktree adapter
   (provision / wake / meter / report-tuple; metering to the
   observation stream; run.settled aggregate) — os-1dad487d —
-  **review** (task PR #151 against plan #150; the public
-  next/executor package, the reserve/start/provision/meter/settle
-  bracket with run.started filling the spending table, the SIGKILL
-  disposability drill, contracts v11 / report v8 / cache
-  generation 10)
+  **done, follow-up in review** (task PR #151 merged against plan
+  #150: the public next/executor package, the
+  reserve/start/provision/meter/settle bracket with run.started
+  filling the spending table, the SIGKILL disposability drill,
+  contracts v11 / report v8 / cache generation 10; the merge raced
+  the final review-round push, so two findings — Provision
+  authenticating folded starts via the shared admit.RunStartValid,
+  and worktree rollback on provisioning failure — land in a
+  follow-up task PR on the restarted branch)
 - 7.4 graceful preemption (safe-point park with packet; force reap
   packet) — os-0f718b4e — backlog
 
@@ -435,12 +439,13 @@ closed). Phase 6 is done and closed: every plan (#133, #136, #138,
 #141), and the exit record above (card os-600be59e's task PR) are
 merged with every card closed. 7.1 (offers: plans #144/#146, task
 PR #145) and 7.2 (budgets: plans #147/#148, task PR #149) are done,
-merged with their cards closed. **Next action: land 7.3**
-(os-1dad487d, executor adapter + local worktree — plan #150, task
-PR #151 in review), then 7.4's plan (os-0f718b4e, graceful
-preemption: safe-point park with packet, force reap packet;
-plan-first on seed/os-0f718b4e-plan), and after 7.4 the Phase 7
-exit record. The
+merged with their cards closed. 7.3 (os-1dad487d, executor adapter +
+local worktree — plan #150, task PR #151) is merged. **Next action:
+land the 7.3 follow-up** (the two review findings #151's merge
+raced, on the restarted seed/os-1dad487d branch), then 7.4's plan
+(os-0f718b4e, graceful preemption: safe-point park with packet,
+force reap packet; plan-first on seed/os-0f718b4e-plan), and after
+7.4 the Phase 7 exit record. The
 Phase 7 exit subset is charter III.H for the implemented adapter:
 the poll-only run, the reservation race drill, and the
 disposability drill (randomized kill after sync; complete
