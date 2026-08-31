@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-b07b0f59",
-  "merge_base": "71a0ee9f53e1633a33a9ee9ba8bb01c97d66765a",
-  "head": "eb61346d2dcae9e2a73717dc167b57d5a21143cd",
+  "merge_base": "a5105bec602c78aace121d2bfc3f70976ba4452d",
+  "head": "96b02283bdeee32b4221bf2b3fb47d4fe04be28d",
   "plan_path": "plans/os-b07b0f59.md",
   "plan_sha256": "d25e7377ae531549c5a4d537a8d483fecf908cebf192d641524141e75294bc4a",
   "diff_files": [
@@ -14,7 +14,7 @@
     "next/internal/packet/resume_test.go",
     "next/spec/packets.md"
   ],
-  "diff_sha256": "164cb57455f148ff404bfdb02554b40f7c66813f745a41e57db541f755ce8d40",
+  "diff_sha256": "89207fc1100d2abf48c264c8374b1eb6b5c996c82f06836e8ab68d129ccce4c4",
   "validation": [
     {
       "cmd": "make check-next",
