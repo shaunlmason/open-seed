@@ -219,8 +219,15 @@ Phase 7, as added rules on the shared set.
   (monotonic counts, 25-position spacing, operator wedge facts),
   seed obs emit + rebuild declared inputs, spec/observations.md
 
-**Phase 5 exit (the III.F subset docs/next-build-plan.md scopes,
-"items except sealed checks"): met.** The lifecycle vocabulary and
+**Phase 5 exit (the III.F subset docs/next-build-plan.md scopes): met.**
+Met means the subset the plan's own Phase 5 item list and exit drills
+assign to this phase, the scoped-exit posture of the Phase 2 and 3
+records: the plan itself defers gate-before-run to Phase 6 (item 4's
+named deferral), racing to the fixed-defaults backlog and Phase 13
+(item 1 there names it as the III.F remainder), sealed checks to 6.3,
+and the dependency-cascade row to the Phase 13 catch-all, so those
+III.F rows are later phases' bound work, not this exit's.
+The lifecycle vocabulary and
 transition rules are self-validating data enforced at admission, and
 claim is a transition, not a state (#122, with the fold honoring the
 seed/1 activation boundary via #129). Claims are exclusive with
