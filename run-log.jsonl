@@ -568,3 +568,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-6e37b10e","ts":"2026-08-31T04:01:59Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T05:02:07Z"},"task":"os-f6d2c267","ts":"2026-08-31T04:02:07Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-f6d2c267","ts":"2026-08-31T04:08:45Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-6e37b10e","ts":"2026-08-31T04:22:20Z","verb":"unblock"}
