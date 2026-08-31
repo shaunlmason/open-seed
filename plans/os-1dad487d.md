@@ -32,10 +32,15 @@ is 7.4's; real runtime tuples are Phase 10's.
   advisory only, its total failure costs latency; Tuple() Tuple —
   the provisioned runtime tuple) and `Run` (Workspace() string;
   Meter(units int, step string) error — usage onto the obs stream;
-  Dispose() error). Dispose's contract is documented, not enforced
-  in code: the CALLER disposes only after the last confirmed,
-  admitted synchronization, and the drill proves that discipline
-  loses nothing admitted. `Tuple` is the honest v0 stub
+  Dispose() error). `ProvisionSpec` carries the ledger directory and
+  the admitted `run.started` position beside repo, base, subject,
+  actor, fence, packet bytes, and obs dir, and **Provision refuses
+  unless the ledger's fold shows that admitted `run.started` for
+  this fence** — no execution run provisions outside the reservation
+  gate (review finding on this PR; D3). Dispose's contract is
+  documented, not enforced in code: the CALLER disposes only after
+  the last confirmed, admitted synchronization, and the drill
+  proves that discipline loses nothing admitted. `Tuple` is the honest v0 stub
   (`{"runtime": "local-worktree/v0"}`): Phase 10 gives tuples
   meaning; nothing here pretends qualification exists yet.
 - **D2 — the local worktree adapter.** Provision creates a detached
@@ -58,22 +63,33 @@ is 7.4's; real runtime tuples are Phase 10's.
   fence rule's citation — one field, no duplication. Admitted only
   on subjects where the cited fence is a real applied claim.taken
   position (current or prior — a run can settle after its claim
-  window closed), from {supervise, operator}
-  (adapter-side summarization is the supervisor lane's act, like
-  offers). One run.settled per fence: a second refuses — one run,
-  one aggregate. Units sum with the 7.2 saturating arithmetic.
-  Budget linkage stays honest and separate: `budget.settle` remains
-  the authoritative actuals record on the reservation;
-  `run.settled` is telemetry aggregate, grants nothing, gates
-  nothing, and the spending-verb table stays empty (execution spend
-  is not a ledger verb; the table's first fill waits for a verb
-  that actually initiates spend).
+  window closed) AND that fence carries an admitted `run.started`,
+  from {supervise, operator} (adapter-side summarization is the
+  supervisor lane's act, like offers). One run.settled per fence: a
+  second refuses — one run, one aggregate. Units sum with the 7.2
+  saturating arithmetic. **`run.started` is the spending-verb
+  table's first fill** (review finding on this PR: leaving the
+  table empty while runs execute would reduce budgets to
+  after-the-fact telemetry, the exact failure §II.9 forbids, and
+  would break the promise `next/spec/budgets.md` already makes that
+  7.3 fills the table): strict payload `{"fence": "<position>",
+  "reservation": "<position>"}`, admitted only in_progress citing
+  the ACTIVE claim fence and an open, valid reservation on the
+  subject (the budget rule's spending gate applies through the
+  table, and the run rule additionally revalidates the specific
+  citation — the laundering shape), once per fence, from
+  {supervise, operator}. The bracket is reserve (serialized
+  decrement) → run.started (gated spend initiation) → Provision
+  (refuses without it) → meter → run.settled (aggregate) →
+  budget.settle (authoritative actuals close). `budgets.md`'s
+  spending-verb section is updated to name the fill.
 - **D4 — the laundering shape.** The tolerant fold records
-  well-shaped `run.settled` facts as
-  `RunFact{Pos, Signer, Fence, Units, Lines}` on the subject (raw
-  pushes included; a settle citing a fence that is no claim
-  position on the subject folds as an anomaly, the dangling-close
-  posture). The consuming surface — the contracts view's runs list
+  well-shaped `run.started` facts as
+  `RunStartFact{Pos, Signer, Fence, Reservation}` and `run.settled`
+  facts as `RunFact{Pos, Signer, Fence, Units, Lines}` on the
+  subject (raw pushes included; either citing a fence that is no
+  claim position on the subject folds as an anomaly, the
+  dangling-close posture). The consuming surface — the contracts view's runs list
   — marks nothing as authority: run facts carry telemetry, and
   every surface that would trust one (none in v0; Phase 10
   qualification will) must apply the position-accurate boundary
@@ -82,19 +98,25 @@ is 7.4's; real runtime tuples are Phase 10's.
   aggregate; later raw duplicates visible as facts, counted
   anomalies).
 - **D5 — the disposability drill** (the Phase 7 exit's remaining
-  named drill; conformance III.H). End-to-end test: file, specify,
-  claim; provision a local worktree run; the worker emits metering
-  and lands an admitted synchronization (submission.made); the
-  adapter is killed at a randomized point AFTER the sync (seeded
-  `math/rand`, seed logged, choosing among kill sites: before
-  run.settled, after run.settled, mid-meter) by disposing the
-  workspace without any graceful path; then the drill proves:
-  every admitted fact is intact (the chain verifies), the
-  contract completes elsewhere (the review flows on — verdict,
-  request, observed — driven from the surviving ledger alone), and
-  the only loss is observation lines after the last admitted sync
-  (asserted by comparing the stream against the admitted facts,
-  and stated as the loss window in the spec). Workspace removal
+  named drill; conformance III.H). The kill is a real kill (review
+  finding on this PR: Dispose is the adapter's graceful cleanup,
+  and a drill that only cleans up gracefully proves nothing about
+  executor death): the test launches a killable WORKER PROCESS via
+  the test-binary re-exec pattern (exec.Command(os.Args[0]) with an
+  env-flagged helper main), which runs inside the provisioned
+  workspace, emits metering lines, lands an admitted
+  synchronization (submission.made through the library admission
+  path), and keeps working; the test SIGKILLs it at a randomized
+  site (seeded `math/rand`, seed logged: mid-meter before the sync
+  is the excluded baseline; the drill sites are after the sync,
+  before run.settled, and after run.settled) — no graceful path, no
+  flushing, no cleanup. Then the drill proves: every admitted fact
+  is intact (the chain verifies), the contract completes elsewhere
+  (the review flows on — verdict, request, observed — driven from
+  the surviving ledger alone), the loss is exactly the observation
+  lines after the last admitted sync (asserted by comparing the
+  stream against the admitted facts, and stated as the loss window
+  in the spec), and disposing the dead run's workspace afterwards
   loses nothing admitted, whatever the kill site.
 - **D6 — surfaces and versions.** No new CLI subcommand: adapters
   are library machinery for the supervisor loop (the charter's
@@ -112,30 +134,45 @@ is 7.4's; real runtime tuples are Phase 10's.
 ## Steps
 
 1. **Spec.** `next/spec/executors.md` per D1/D2/D5 (interface,
-   worktree semantics, disposal-after-sync, the honest loss window,
-   wake advisory posture, v0 tuple stub); `observations.md` units
-   field; `actors.md` row; `lifecycle.md` sentence.
+   worktree semantics, the reserve→start→provision→meter→settle
+   bracket, disposal-after-sync, the honest loss window, wake
+   advisory posture, v0 tuple stub); `observations.md` units field;
+   `budgets.md` spending-verb section names run.started as the
+   fill; `actors.md` rows (run.started, run.settled);
+   `lifecycle.md` sentence.
 2. **Obs.** `Units int` omitempty on `obs.Line`; digest stability
    pinned by existing tests.
-3. **Fold.** `RunFact` list on SubjectState; capture with the
-   dangling-fence anomaly; saturating unit sums where summed.
+3. **Fold.** `RunStartFact` and `RunFact` lists on SubjectState;
+   capture with the dangling-fence anomaly; saturating unit sums
+   where summed.
 4. **Admission.** A `run` rule (after budget): verb-gated on
-   `run.settled`; strict payload; the cited fence must be an
-   applied claim position on the subject; one per fence; units and
-   lines non-negative integers. Capability rides the grant rule.
+   `run.started` and `run.settled`; strict payloads; started cites
+   the active fence and an open valid reservation (revalidated
+   position-accurately) with the spending gate riding the table;
+   settled cites an applied claim fence that carries an admitted
+   start; one of each per fence; units and lines non-negative
+   integers. Capability rides the grant rule; run.started joins the
+   spending-verb table as its first entry.
 5. **The public package.** `next/executor`: `Adapter`, `Run`,
-   `Tuple`, `ProvisionSpec` (repo, base, subject, actor, fence,
-   packet bytes, obs dir), and the local worktree implementation
-   (git worktree add/remove with fixed argv, packet file, obs
-   wiring via `internal/obs`).
-6. **Drills**: the **disposability drill** per D5 with its
-   `// conformance: III.H` comment; adapter unit drills (provision
-   writes packet + workspace, meter lines land with units and sum
-   in run.settled, dispose removes, wake no-op, tuple stub);
-   admission drills (lanes, shape, dangling fence, one-per-fence,
-   prior-fence settles admit); fold drills (tolerant capture,
-   anomaly, raw duplicate); projection coverage (runs in the view
-   and cache, run-free byte-identity via the untouched goldens).
+   `Tuple`, `ProvisionSpec` (ledger dir, admitted run.started
+   position, repo, base, subject, actor, fence, packet bytes, obs
+   dir), the Provision-side refusal without the admitted start, and
+   the local worktree implementation (git worktree add/remove with
+   fixed argv, packet file, obs wiring via `internal/obs`).
+6. **Drills**: the **disposability drill** per D5 (a SIGKILLed
+   worker subprocess) with its `// conformance: III.H` comment; the
+   **spend bracket** — run.started refuses with no open valid
+   reservation and admits against one (the spending gate's first
+   real customer, III.H row 3's "execution is fenced to the
+   reservation"), Provision refuses without the admitted start and
+   provisions with it, run.settled refuses on a start-less fence;
+   adapter unit drills (provision writes packet + workspace, meter
+   lines land with units and sum in run.settled, dispose removes,
+   wake no-op, tuple stub); admission drills (lanes, shape,
+   dangling fence, one-of-each-per-fence, prior-fence settles
+   admit); fold drills (tolerant capture, anomaly, raw duplicate);
+   projection coverage (runs in the view and cache, run-free
+   byte-identity via the untouched goldens).
 7. **Projections.** Contracts "11", report "8", cache generation 10
    with version-pin test updates.
 8. **Docs.** `next/docs/progress.md` 7.3 row and frontier;
@@ -146,7 +183,8 @@ is 7.4's; real runtime tuples are Phase 10's.
 ## File Scope
 
 - `next/spec/executors.md` (new), `next/spec/observations.md`,
-  `next/spec/actors.md`, `next/spec/lifecycle.md`
+  `next/spec/budgets.md`, `next/spec/actors.md`,
+  `next/spec/lifecycle.md`
 - `next/executor/` (new public package + tests)
 - `next/internal/obs/obs.go` (+ tests)
 - `next/internal/keyring/keyring.go` (+ tests)
@@ -161,19 +199,24 @@ is 7.4's; real runtime tuples are Phase 10's.
 
 **Boundary set (new, shown working):**
 
-- The disposability drill: after an admitted sync, a randomized
-  kill (logged seed) at any site loses no admitted fact, the
-  contract completes elsewhere from the surviving ledger alone, and
-  the loss is exactly the observation lines after the last sync.
+- The disposability drill: after an admitted sync, a SIGKILLed
+  worker process (logged seed, randomized site, no graceful path)
+  loses no admitted fact, the contract completes elsewhere from the
+  surviving ledger alone, and the loss is exactly the observation
+  lines after the last sync.
 - The local worktree adapter provisions a workspace with the packet
   at `.seed-run/packet.json`, meters units onto the per-fence
   observation stream, reports the v0 tuple stub, and disposes
   cleanly; wake is a nil no-op.
-- `run.settled` admits from {supervise, operator} citing a real
-  claim fence (current or prior), once per fence, with non-negative
-  integer units and lines; refuses dangling fences, duplicates, and
-  malformed payloads by name; raw-pushed facts fold tolerantly with
-  dangling citations counted as anomalies.
+- `run.started` refuses with no open valid reservation, admits
+  citing one on the active fence, and gates Provision: no execution
+  run provisions outside the reservation bracket. `run.settled`
+  admits from {supervise, operator} citing a real claim fence
+  (current or prior) that carries an admitted start, once per
+  fence, with non-negative integer units and lines; both refuse
+  dangling fences, duplicates, and malformed payloads by name;
+  raw-pushed facts fold tolerantly with dangling citations counted
+  as anomalies.
 - Contracts "11" serializes the runs list omitempty; run-free
   chains keep byte-identical "10" bodies (the untouched goldens);
   the cache's `runs` table agrees.
