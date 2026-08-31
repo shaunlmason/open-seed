@@ -398,14 +398,20 @@ Phase 6 item).
 
 - 7.1 offers (offer.published eligibility-scoped and expiring;
   workers pull and claim; the wakeless poll-only drill proving wake
-  is advisory) — os-c61c3392 — **review** (task PR #145 against
-  plan #144; the supervise lane, claimed-or-expire liveness with the
-  claim as consumption boundary, foreign offers inert at the list
-  surface, the poll-only and race drills, contracts v9 / report v6 /
-  cache generation 8)
+  is advisory) — os-c61c3392 — **done** (merged #145; card closed;
+  plan #144 with the #146 validation-command amendment; the
+  supervise lane, claimed-or-expire liveness with the claim as
+  consumption boundary, foreign offers inert at the list surface,
+  the poll-only and race drills, and the review round's operator
+  discoverability and last_claim byte-identity fixes; contracts v9 /
+  report v6 / cache generation 8)
 - 7.2 budgets (budget.reserve / settle / release; admission
   decrements reservations; the reservation race drill; per-adapter
-  risk limits) — os-cecac5de — backlog
+  risk limits) — os-cecac5de — **review** (task PR #149 against
+  plan #147 as amended by #148; class-table capacity, holder-only
+  reserves, derived closes with foreign facts inert on every
+  surface, the two-drafts-one-view race drill, the empty spending
+  gate, contracts v10 / report v7 / cache generation 9)
 - 7.3 executor adapter interface + the local worktree adapter
   (provision / wake / meter / report-tuple; metering to the
   observation stream; run.settled aggregate) — os-1dad487d — backlog
@@ -422,11 +428,13 @@ record above is card os-6e37b10e's task PR (#134, merged; card
 closed). Phase 6 is done and closed: every plan (#133, #136, #138,
 #140), every implementation (6.1 #135, 6.2 #137, 6.3 #139, 6.4
 #141), and the exit record above (card os-600be59e's task PR) are
-merged with every card closed. **Next action: land 7.1**
-(os-c61c3392, offers — plan #144 merged, task PR #145 in review),
-then 7.2's plan (os-cecac5de, budgets: budget.reserve / settle /
-release with admission decrementing reservations and the
-reservation race drill; plan-first on seed/os-cecac5de-plan). The
+merged with every card closed. 7.1 (offers) is done: plan #144, the
+#146 validation-command amendment, and task PR #145 are merged with
+the card closed. **Next action: land 7.2** (os-cecac5de, budgets —
+plan #147 amended by #148, task PR #149 in review), then 7.3's plan
+(os-1dad487d, executor adapter interface + the local worktree
+adapter, with metering to the observation stream and run.settled;
+plan-first on seed/os-1dad487d-plan). The
 Phase 7 exit subset is charter III.H for the implemented adapter:
 the poll-only run, the reservation race drill, and the
 disposability drill (randomized kill after sync; complete

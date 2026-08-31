@@ -147,7 +147,8 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
 
 - **`cache`** (`cache.db`): the single-machine read-throughput
   surface — one SQLite database mirroring the views (`roster`,
-  `contracts` and `offers` indexed by subject, `queue` + `queue_meta`,
+  `contracts`, `offers`, and `reservations` indexed by subject,
+  `queue` + `queue_meta`,
   `actor_history`/`actor_signed` indexed by fingerprint, `report`
   key-values) plus a one-row `stamp` table carrying **exactly** the
   tree stamp's fields (name, position, tip, version), so a pure-SQL

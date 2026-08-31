@@ -655,3 +655,34 @@ here. Newest last.
   only beside offer facts, so ever-claimed offer-free subjects keep
   byte-identical v8 bodies; the cache column stays full-fidelity
   under its new generation.
+- 2026-08-31 — Budgets are per-contract reservations checked and
+  decremented at admission, with every derived surface applying the
+  laundering shape (os-cecac5de, plans/os-cecac5de.md as amended by
+  #148; charter II §9 "Budgets are reservations, not observations",
+  III.H rows 3–5). Capacity comes from the filed budget class
+  through the spec-pinned table (small 100, medium 1000, large
+  10000; unknown class = zero capacity, never fudged); org/actor
+  granularity and the per-adapter risk-limit surface stay named
+  extension points for 7.3+. budget.reserve/settle/release are
+  {claim, operator} facts admitted only in_progress; a reserve
+  additionally requires the drafting signer to be the ACTIVE claim
+  holder or operator (review finding on #147: prior claimants can
+  cite the active fence, and treating them as boundary-valid would
+  let a released worker consume the next holder's budget). The
+  fold records reserves and close attempts as independent lists and
+  NEVER mutates a reservation (second #147 finding: a fold-level
+  close on any well-shaped raw fact would let a foreign release
+  free capacity for over-spend and a foreign settle lock the owner
+  out); effective closure is derived at every consuming surface as
+  the first close by the reservation's own signer or operator,
+  position-accurately. Remaining = capacity − open valid
+  reservations − settled actuals; settle records TRUE actuals,
+  overruns included. The race drill passes two 8-unit drafts
+  through one pre-admission view of a 10-unit class and admits
+  exactly one — the §II.9 argument executed. The spending-verb gate
+  ships as an empty data table with an injection drill; the
+  envelope budget block is Phase 8's and park-on-exhaustion 7.4's.
+  Projections: contracts v10 (budget + reservations, omitempty so
+  budget-inactive chains keep byte-identical views), report v7
+  (republish only), cache generation 9 (reservations table + budget
+  columns).

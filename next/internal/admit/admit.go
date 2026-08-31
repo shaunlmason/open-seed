@@ -43,6 +43,10 @@ type Context struct {
 	Table     *transition.Table
 	Lifecycle *transition.Fold
 	Supported map[string]bool
+	// Records is the verified prefix the context was computed from:
+	// the budget rule's position-accurate validity replays need it
+	// (plans/os-cecac5de.md D4).
+	Records []*event.Record
 }
 
 // Option configures context construction.
@@ -118,6 +122,7 @@ func ContextAt(store *ledger.Store, opts ...Option) (*Context, error) {
 		Table:     table,
 		Lifecycle: table.FoldRecords(records),
 		Supported: supported,
+		Records:   records,
 	}, nil
 }
 
@@ -240,6 +245,20 @@ type OfferError struct {
 
 func (e *OfferError) Error() string {
 	return fmt.Sprintf("offer.published on %s refused: %s (next/spec/offers.md)", e.Subject, e.Reason)
+}
+
+// BudgetError is the budget rule's refusal: a malformed payload, a
+// reserve outside the holder/operator boundary or beyond remaining,
+// a close of a missing, invalid, or already-closed reservation, or a
+// spending verb with no open reservation. It rides the established
+// shape-refusal exit mapping.
+type BudgetError struct {
+	Subject string
+	Reason  string
+}
+
+func (e *BudgetError) Error() string {
+	return fmt.Sprintf("budget on %s refused: %s (next/spec/budgets.md)", e.Subject, e.Reason)
 }
 
 // VerbInactiveError refuses a verb whose semantics are not active under
@@ -590,6 +609,114 @@ func Default() []Rule {
 				return &OfferError{Subject: subject, Reason: fmt.Sprintf("expires %s is not after the event's own ts %s — a born-dead offer invites nothing (claimed or expire, SEED-NEXT.md §II.9)", exp.Format(time.RFC3339), ts.Format(time.RFC3339))}
 			}
 			return nil
+		}},
+		{Name: "budget", Check: func(c *Context, rec *event.Record) error {
+			// The reservation machinery (plans/os-cecac5de.md;
+			// next/spec/budgets.md; SEED-NEXT.md §II.9): admission is
+			// the one place with a serialized view, so the reserve is
+			// checked and decremented HERE — the second of two racing
+			// drafts admits against the tip that already carries the
+			// first. Capability rides the grant rule; the fence rule
+			// forces the holder's citation; validity and effective
+			// closure are position-accurate derivations, never stored
+			// state.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			verb := rec.Event.Verb
+			isBudget := verb == transition.BudgetReserveVerb || verb == transition.BudgetSettleVerb || verb == transition.BudgetReleaseVerb
+			if !isBudget && !transition.IsSpendingVerb(verb) {
+				return nil
+			}
+			subject := rec.Event.Subject
+			s, ok := c.Lifecycle.State(subject)
+			if !ok {
+				return &transition.InvalidTransitionError{Subject: subject, Verb: verb}
+			}
+			view := BudgetViewAt(c.Records, c.Table, subject, s)
+			if !isBudget {
+				// The spending gate (D5): a listed verb needs an open
+				// valid reservation; the table ships empty and 7.3's
+				// metering fills it.
+				if len(view.Open) == 0 {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("%s spends, and no open valid reservation stands — spending verbs require an admitted budget.reserve (SEED-NEXT.md §II.9)", verb)}
+				}
+				return nil
+			}
+			if s.State != "in_progress" {
+				return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
+			}
+			operatorNow := c.Keyring != nil && c.Keyring.HasAnyCapability(rec.Event.Actor, []string{keyring.CapOperator})
+			switch verb {
+			case transition.BudgetReserveVerb:
+				var p struct {
+					Amount string `json:"amount"`
+					Fence  string `json:"fence"`
+				}
+				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+				dec.DisallowUnknownFields()
+				if err := dec.Decode(&p); err != nil {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("the reserve payload is the strict object {amount, fence}: %v", err)}
+				}
+				amount, err := strconv.Atoi(strings.TrimSpace(p.Amount))
+				if err != nil || amount <= 0 {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("amount %q is not a positive integer of class units", p.Amount)}
+				}
+				if !operatorNow && (s.Claim == nil || s.Claim.Holder != rec.Event.Actor) {
+					return &BudgetError{Subject: subject, Reason: "only the active claim holder or the operator lane reserves — a prior claimant's reserve would consume a budget it no longer works under"}
+				}
+				if !view.Known {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("budget class %q has no capacity in the class table — absent knowledge is never fudged into spendable units", s.Budget)}
+				}
+				if amount > view.Remaining {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("amount %d exceeds remaining %d of capacity %d — reservations are checked and decremented at admission, the serialized view", amount, view.Remaining, view.Capacity)}
+				}
+				return nil
+			default:
+				var p struct {
+					Reservation string `json:"reservation"`
+					Actuals     string `json:"actuals"`
+					Fence       string `json:"fence"`
+				}
+				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+				dec.DisallowUnknownFields()
+				if err := dec.Decode(&p); err != nil {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("the close payload is the strict object {reservation%s, fence}: %v", map[bool]string{true: ", actuals"}[verb == transition.BudgetSettleVerb], err)}
+				}
+				if verb == transition.BudgetReleaseVerb && p.Actuals != "" {
+					return &BudgetError{Subject: subject, Reason: "release frees a reservation with zero actuals — settle is the verb that records spend"}
+				}
+				cited, err := strconv.Atoi(strings.TrimSpace(p.Reservation))
+				if err != nil {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("reservation %q is not a chain position", p.Reservation)}
+				}
+				var res *transition.ReservationFact
+				for i := range s.Reservations {
+					if s.Reservations[i].Pos == cited {
+						res = &s.Reservations[i]
+						break
+					}
+				}
+				if res == nil {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("position %d is no reservation on this subject", cited)}
+				}
+				if !ReservationValid(c.Records, c.Table, subject, *res) {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("the reservation at position %d never passed the authoring boundary — closing it would launder it into spend history", cited)}
+				}
+				if closed, ok := view.ClosedBy[cited]; ok {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("the reservation at position %d is already effectively closed at position %d", cited, closed.Pos)}
+				}
+				if verb == transition.BudgetSettleVerb {
+					n, err := strconv.Atoi(strings.TrimSpace(p.Actuals))
+					if err != nil || n < 0 {
+						return &BudgetError{Subject: subject, Reason: fmt.Sprintf("actuals %q is not a non-negative integer of class units", p.Actuals)}
+					}
+				}
+				if rec.Event.Actor != res.Signer && !operatorNow {
+					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("only the reservation's own reserving signer or the operator lane closes it — the reservation at %d belongs to %s", cited, res.Signer)}
+				}
+				return nil
+			}
 		}},
 		{Name: "chain", Check: func(c *Context, rec *event.Record) error {
 			// The reconciliation chain (plans/os-6cdc15be.md;
@@ -1021,6 +1148,61 @@ func overrideBacking(c *Context, subject, verb string, s transition.SubjectState
 
 // fenceCitation extracts the payload's fence field: the string form
 // of the cited claim position, absent when the payload carries none.
+// ReservationValid replays the keyring and the fold to the
+// reservation's own position (plans/os-cecac5de.md D4, the
+// VerifySeals pattern): valid iff the signer was the operator lane
+// there, or held the claim capability AND was the subject's ACTIVE
+// claim holder there. Prior claimants are excluded — a released
+// worker reserving under the next holder's window would consume a
+// budget it no longer works under (review finding on plan #147).
+func ReservationValid(records []*event.Record, table *transition.Table, subject string, r transition.ReservationFact) bool {
+	if r.Pos < 0 || r.Pos >= len(records) {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:r.Pos])
+	if err != nil || ring == nil {
+		return false
+	}
+	if ring.HasAnyCapability(r.Signer, []string{keyring.CapOperator}) {
+		return true
+	}
+	if !ring.HasAnyCapability(r.Signer, []string{keyring.CapClaim}) {
+		return false
+	}
+	s, ok := table.StateAt(records[:r.Pos], subject)
+	return ok && s.Claim != nil && s.Claim.Holder == r.Signer
+}
+
+// BudgetCloseValid reports whether a close attempt may close the
+// cited reservation: its signer is the reservation's own reserving
+// signer (identity, not escalation), or the operator lane at the
+// attempt's position — so a raw foreign settle or release never
+// closes anyone's reservation (review finding on plan #147).
+func BudgetCloseValid(records []*event.Record, c transition.CloseFact, r transition.ReservationFact) bool {
+	if c.Signer == r.Signer {
+		return true
+	}
+	if c.Pos < 0 || c.Pos >= len(records) {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:c.Pos])
+	return err == nil && ring != nil && ring.HasAnyCapability(c.Signer, []string{keyring.CapOperator})
+}
+
+// BudgetViewAt derives the subject's budget view over the verified
+// prefix with the position-accurate callbacks: the one computation
+// admission, seed budget status, and the projections share.
+func BudgetViewAt(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState) transition.BudgetView {
+	return s.DeriveBudget(
+		func(r transition.ReservationFact) bool {
+			return ReservationValid(records, table, subject, r)
+		},
+		func(c transition.CloseFact, r transition.ReservationFact) bool {
+			return BudgetCloseValid(records, c, r)
+		},
+	)
+}
+
 func fenceCitation(payload []byte) (string, bool) {
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(payload, &m); err != nil {

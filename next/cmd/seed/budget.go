@@ -1,0 +1,78 @@
+// The budget status surface (plans/os-cecac5de.md;
+// next/spec/budgets.md; SEED-NEXT.md §II.9): the read-only view of a
+// contract's derived budget — class, capacity, open reservations,
+// settled actuals, remaining — agreeing with the admission
+// computation by construction, since both call the same derivation.
+// Reserve, settle, and release append through seed ledger append and
+// the library admission path like every claim-lane fact.
+
+package main
+
+import (
+	"flag"
+	"fmt"
+	"io"
+	"sort"
+
+	"github.com/shaunlmason/open-seed/next/internal/admit"
+	"github.com/shaunlmason/open-seed/next/internal/envelope"
+)
+
+func runBudget(args []string, stdout, stderr io.Writer) int {
+	if len(args) == 0 || args[0] != "status" {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "budget requires the subverb: status"), stdout, stderr)
+	}
+	fs := flag.NewFlagSet("budget status", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	dir := fs.String("ledger", "", "ledger directory")
+	subject := fs.String("subject", "", "contract to report")
+	if err := fs.Parse(args[1:]); err != nil || *dir == "" || *subject == "" || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "budget status requires --ledger <dir> --subject <id>"), stdout, stderr)
+	}
+	st, failEnv := loadVerdictState(*dir)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	s, ok := st.fold.State(*subject)
+	if !ok {
+		return render(stampTip(envelope.Fail(envelope.ExitNotFound, "not_found",
+			fmt.Sprintf("no contract %s in the fold", *subject)), st.count), stdout, stderr)
+	}
+	view := admit.BudgetViewAt(st.records, st.table, *subject, s)
+	open := []map[string]any{}
+	for _, r := range view.Open {
+		open = append(open, map[string]any{
+			"position": fmt.Sprintf("%d", r.Pos),
+			"signer":   r.Signer,
+			"amount":   fmt.Sprintf("%d", r.Amount),
+		})
+	}
+	var closedPositions []int
+	for pos := range view.ClosedBy {
+		closedPositions = append(closedPositions, pos)
+	}
+	sort.Ints(closedPositions)
+	closes := []map[string]any{}
+	for _, pos := range closedPositions {
+		c := view.ClosedBy[pos]
+		closes = append(closes, map[string]any{
+			"reservation": fmt.Sprintf("%d", pos),
+			"position":    fmt.Sprintf("%d", c.Pos),
+			"kind":        c.Kind,
+			"actuals":     fmt.Sprintf("%d", c.Actuals),
+		})
+	}
+	result := map[string]any{
+		"subject": *subject,
+		"class":   view.Class,
+		"known":   view.Known,
+		"open":    open,
+		"settled": fmt.Sprintf("%d", view.Settled),
+		"closes":  closes,
+	}
+	if view.Known {
+		result["capacity"] = fmt.Sprintf("%d", view.Capacity)
+		result["remaining"] = fmt.Sprintf("%d", view.Remaining)
+	}
+	return render(stampTip(envelope.OK(result), st.count), stdout, stderr)
+}

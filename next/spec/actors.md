@@ -105,6 +105,9 @@ ending standing is deferred until the catalog grows a verb for it.
 | `contract.returned` | `dispatch`, `operator` (returning a fail-verdicted contract to the queue is queue management; the payload cites the authenticated red verdict, lifecycle.md) |
 | `merge.overridden` | `operator` (the third no-fallback row: the charter names the override its own attributable verb, never a disguised verdict — it admits only over a standing, boundary-validated fail on the current submission, reconciliation.md) |
 | `offer.published` | `supervise`, `operator` (the supervisor lane: an offer invites claims and grants nothing — the claim it invites settles at admission like any claim — so the standard operator fallback stands, offers.md) |
+| `budget.reserve` | `claim`, `operator` (the claim lane reserves inside its window; the budget rule further pins reserves to the ACTIVE holder, budgets.md) |
+| `budget.settle` | `claim`, `operator` (closes are the reservation owner's or the operator's; the budget rule pins the owner, budgets.md) |
+| `budget.release` | `claim`, `operator` (same boundary as settle, with zero actuals, budgets.md) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

@@ -14,6 +14,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -402,6 +403,18 @@ type SubjectState struct {
 	// or before it ("claimed or expire", SEED-NEXT.md §II.9).
 	// Meaningful only when PriorClaimants is non-empty.
 	LastClaim int
+	// Budget is the contract's filed budget class, captured at birth
+	// beside Tier (plans/os-cecac5de.md): presence-only data whose
+	// capacity meaning comes from the spec class table.
+	Budget string
+	// Reservations and BudgetCloses are the budget facts, independent
+	// lists in chain order: a close attempt NEVER mutates the
+	// reservation it cites — validity and effective closure are
+	// derived at every consuming surface (DeriveBudget), the
+	// laundering-countermeasure shape. Facts persist; nothing is
+	// erased.
+	Reservations []ReservationFact
+	BudgetCloses []CloseFact
 }
 
 // VerdictFact is the fold's record of the latest rendered verdict.
@@ -492,6 +505,107 @@ func (s *SubjectState) LiveOffers(now time.Time) []OfferFact {
 		live = append(live, o)
 	}
 	return live
+}
+
+// ReservationFact is one folded budget.reserve
+// (plans/os-cecac5de.md): its chain position, the reserving signer
+// (whose active-holder-or-operator standing consuming surfaces
+// validate at exactly that position), and the amount in class units.
+type ReservationFact struct {
+	Pos    int
+	Signer string
+	Amount int
+}
+
+// CloseFact is one folded close attempt (budget.settle or
+// budget.release) citing a reservation by position. Attempts are
+// recorded independently and never mutate the reservation: the
+// effective closure is the first attempt whose signer is the
+// reservation's own reserving signer or the operator lane at the
+// attempt's position, derived per DeriveBudget.
+type CloseFact struct {
+	Pos         int
+	Signer      string
+	Reservation int
+	Kind        string
+	Actuals     int
+}
+
+// BudgetView is a subject's derived budget state at one instant of
+// judgment (plans/os-cecac5de.md D4): capacity from the class table,
+// the open valid reservations, the settled actuals, and remaining =
+// capacity − open reserved − settled actuals. Overrun settles shrink
+// remaining below what was reserved, recorded never clamped.
+type BudgetView struct {
+	Class     string
+	Capacity  int
+	Known     bool
+	Open      []ReservationFact
+	Settled   int
+	Remaining int
+	// ClosedBy maps a reservation's position to its effective close.
+	ClosedBy map[int]CloseFact
+}
+
+// DeriveBudget computes the view. valid reports whether a reservation
+// passed the authoring boundary at its own position (the active claim
+// holder or the operator lane there); closeValid whether an attempt
+// may close the cited reservation (its reserving signer or the
+// operator lane at the attempt's position). Invalid reservations
+// consume nothing and their closes decide nothing; the first valid
+// close wins and later attempts on the same reservation are inert.
+func (s *SubjectState) DeriveBudget(valid func(ReservationFact) bool, closeValid func(CloseFact, ReservationFact) bool) BudgetView {
+	v := BudgetView{Class: s.Budget, ClosedBy: map[int]CloseFact{}}
+	v.Capacity, v.Known = BudgetCapacity(s.Budget)
+	byPos := map[int]ReservationFact{}
+	for _, r := range s.Reservations {
+		byPos[r.Pos] = r
+	}
+	for _, c := range s.BudgetCloses {
+		r, ok := byPos[c.Reservation]
+		if !ok {
+			continue
+		}
+		if _, closed := v.ClosedBy[c.Reservation]; closed {
+			continue
+		}
+		if !valid(r) || !closeValid(c, r) {
+			continue
+		}
+		v.ClosedBy[c.Reservation] = c
+	}
+	spent := 0
+	for _, r := range s.Reservations {
+		if !valid(r) {
+			continue
+		}
+		if c, closed := v.ClosedBy[r.Pos]; closed {
+			if c.Kind == "settle" {
+				v.Settled = satAdd(v.Settled, c.Actuals)
+				spent = satAdd(spent, c.Actuals)
+			}
+		} else {
+			v.Open = append(v.Open, r)
+			spent = satAdd(spent, r.Amount)
+		}
+	}
+	if v.Known {
+		v.Remaining = v.Capacity - spent
+	}
+	return v
+}
+
+// satAdd sums non-negative unit counts with saturation at MaxInt:
+// raw-pushed facts can carry any machine-sized value, and a wrapped
+// sum would make remaining capacity INCREASE through overflow
+// (review finding on the task PR). Saturated spend keeps remaining
+// pinned far below zero instead, and capacity − spent cannot itself
+// wrap because capacity is a small table value.
+func satAdd(a, b int) int {
+	if a > math.MaxInt-b {
+		return math.MaxInt
+	}
+	return a + b
 }
 
 // SubmissionFact binds a verdict to the submission it judges
@@ -693,6 +807,63 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 			continue
 		}
+		if e.Verb == BudgetReserveVerb || e.Verb == BudgetSettleVerb || e.Verb == BudgetReleaseVerb {
+			// Budget facts fold tolerantly as independent lists
+			// (plans/os-cecac5de.md): raw pushes included, nothing
+			// mutated — validity and effective closure are derived at
+			// the consuming surfaces. A close citing a position that
+			// is no reservation on the subject retroactively claims
+			// spend history that never existed, so it stays an
+			// anomaly, never a fact; malformed payloads fold to
+			// nothing; facts on a subject nothing created bind
+			// nothing.
+			if s, ok := f.states[e.Subject]; ok {
+				switch e.Verb {
+				case BudgetReserveVerb:
+					var p struct {
+						Amount string `json:"amount"`
+					}
+					if json.Unmarshal(e.Payload, &p) == nil {
+						if n, err := strconv.Atoi(strings.TrimSpace(p.Amount)); err == nil && n > 0 {
+							s.Reservations = append(s.Reservations, ReservationFact{Pos: pos, Signer: e.Actor, Amount: n})
+						}
+					}
+				case BudgetSettleVerb, BudgetReleaseVerb:
+					var p struct {
+						Reservation string `json:"reservation"`
+						Actuals     string `json:"actuals"`
+					}
+					if json.Unmarshal(e.Payload, &p) == nil {
+						cited, err := strconv.Atoi(strings.TrimSpace(p.Reservation))
+						if err != nil {
+							break
+						}
+						exists := false
+						for _, r := range s.Reservations {
+							if r.Pos == cited {
+								exists = true
+								break
+							}
+						}
+						if !exists {
+							s.Anomalies++
+							break
+						}
+						kind, actuals := "release", 0
+						if e.Verb == BudgetSettleVerb {
+							kind = "settle"
+							n, err := strconv.Atoi(strings.TrimSpace(p.Actuals))
+							if err != nil || n < 0 {
+								break
+							}
+							actuals = n
+						}
+						s.BudgetCloses = append(s.BudgetCloses, CloseFact{Pos: pos, Signer: e.Actor, Reservation: cited, Kind: kind, Actuals: actuals})
+					}
+				}
+			}
+			continue
+		}
 		if !t.IsLifecycleVerb(e.Verb) {
 			continue
 		}
@@ -735,10 +906,12 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		}
 		if e.Verb == t.birth {
 			var filed struct {
-				Tier string `json:"tier"`
+				Tier   string `json:"tier"`
+				Budget string `json:"budget"`
 			}
 			if json.Unmarshal(e.Payload, &filed) == nil {
 				s.Tier = filed.Tier
+				s.Budget = filed.Budget
 			}
 		}
 		if e.Verb == "contract.specified" {
@@ -946,6 +1119,66 @@ const (
 // and granting nothing — the claim it invites settles at admission
 // like any claim.
 const OfferPublishedVerb = "offer.published"
+
+// The budget-reservation facts (plans/os-cecac5de.md;
+// next/spec/budgets.md; SEED-NEXT.md §II.9 "Budgets are reservations,
+// not observations"): reserve is checked and decremented at
+// admission, the one place with a serialized view; settle and release
+// record close attempts whose effective closure is derived, never
+// stored. All three are facts on in_progress subjects, changing no
+// state.
+const (
+	BudgetReserveVerb = "budget.reserve"
+	BudgetSettleVerb  = "budget.settle"
+	BudgetReleaseVerb = "budget.release"
+)
+
+// budgetClasses maps the filed budget class to integer capacity
+// units, mirroring the normative table in next/spec/budgets.md
+// (pinned by test). The units are abstract in v0; Phase 7.3's adapter
+// metering gives them meaning.
+var budgetClasses = map[string]int{
+	"small":  100,
+	"medium": 1000,
+	"large":  10000,
+}
+
+// BudgetCapacity resolves a filed budget class to its capacity.
+// Unknown classes have no capacity, so reserves against them refuse:
+// absent knowledge is never fudged into spendable units.
+func BudgetCapacity(class string) (int, bool) {
+	c, ok := budgetClasses[class]
+	return c, ok
+}
+
+// spendingVerbs is the data table of verbs that require an open,
+// valid reservation on their subject (charter §II.9 "spending verbs
+// require an admitted budget.reserve"). Empty in v0: Phase 7.3's
+// metering fills it. Tests inject entries to drill the gate before
+// its first customer.
+var spendingVerbs = map[string]bool{}
+
+// IsSpendingVerb reports whether the verb spends and therefore needs
+// an open reservation at admission.
+func IsSpendingVerb(verb string) bool { return spendingVerbs[verb] }
+
+// InjectSpendingVerb adds a verb to the spending table and returns a
+// restore func: the drill hook for a gate that ships without
+// customers (plans/os-cecac5de.md D5). Production code never calls
+// it.
+func InjectSpendingVerb(verb string) func() {
+	spendingVerbs[verb] = true
+	return func() { delete(spendingVerbs, verb) }
+}
+
+// InjectBudgetClass adds a class to the capacity table and returns a
+// restore func: the race drill's hook for the exact numbers the plan
+// pins (two 8-unit reserves against a 10-unit class). Production code
+// never calls it.
+func InjectBudgetClass(class string, capacity int) func() {
+	budgetClasses[class] = capacity
+	return func() { delete(budgetClasses, class) }
+}
 
 // ChainError refuses a reconciliation-chain event whose links are
 // missing or mismatched (next/spec/reconciliation.md): done is
