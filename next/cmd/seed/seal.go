@@ -48,9 +48,12 @@ func runSeal(args []string, stdout, stderr io.Writer) int {
 // unsealChecks loads and opens a subject's sealed checks with one
 // identity, verifying the plaintext against the ledger's commitment.
 // Nil input for an unsealed subject returns (nil, nil).
-func unsealChecks(s transition.SubjectState, identity ed25519.PrivateKey, store *artifact.Store) (*verdict.SealedInput, *envelope.Envelope) {
+func unsealChecks(records []*event.Record, s transition.SubjectState, identity ed25519.PrivateKey, store *artifact.Store) (*verdict.SealedInput, *envelope.Envelope) {
 	if s.Sealed == nil {
 		return nil, nil
+	}
+	if failEnv := sealAuthorized(records, s.Sealed); failEnv != nil {
+		return nil, failEnv
 	}
 	ct, err := store.GetSealed(s.Sealed.Commitment)
 	if err != nil {
@@ -77,14 +80,64 @@ func unsealChecks(s transition.SubjectState, identity ed25519.PrivateKey, store 
 	return &verdict.SealedInput{Commitment: commitment, Checks: env.Checks}, nil
 }
 
-// verifierRecipients derives the sealed-check recipient set: every
-// active verdict-granted key, as the plan's fixed default binds.
-func verifierRecipients(ks *keyring.State) []ed25519.PublicKey {
-	var pubs []ed25519.PublicKey
+// eligibleRecipients derives the sealed-check recipient set: every
+// active verdict-granted key that holds no implementation authority.
+// The keyring deliberately allows one key to hold verdict and claim
+// (L1 independence is per-contract, 6.1's design), but such a key must
+// never be a seal recipient: it could decrypt every open contract's
+// checks and then claim one, and the capability audit's invariant is
+// that no implementer path can decrypt (review finding on the task
+// PR). A dual-role key still renders verdicts under L1; it is simply
+// not encrypted to.
+func eligibleRecipients(ks *keyring.State) []keyring.Entry {
+	var out []keyring.Entry
 	for _, e := range ks.Granted(keyring.CapVerdict) {
+		if e.Root || holdsAny(e.Grants, keyring.CapClaim, keyring.CapOperator) {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+func holdsAny(grants []string, caps ...string) bool {
+	for _, g := range grants {
+		for _, c := range caps {
+			if g == c {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func recipientKeys(entries []keyring.Entry) []ed25519.PublicKey {
+	var pubs []ed25519.PublicKey
+	for _, e := range entries {
 		pubs = append(pubs, e.Key)
 	}
 	return pubs
+}
+
+// sealAuthorized replays the keyring to the seal's own position and
+// checks the authoring boundary retroactively: the fold's window rule
+// cannot see grants, so a raw seal planted by a sealer-less key inside
+// the window folds as the fact and must be refused at use — the
+// verdict-laundering pattern, replayed against seals (review finding
+// on the task PR). seed reconcile surfaces the same condition as
+// seal_unverified.
+func sealAuthorized(records []*event.Record, sealed *transition.SealedFact) *envelope.Envelope {
+	if sealed.Pos < 0 || sealed.Pos >= len(records) {
+		return envelope.Fail(envelope.ExitSealBroken, "seal_unauthorized",
+			fmt.Sprintf("the seal cites position %d outside the verified chain", sealed.Pos))
+	}
+	ring, _, err := keyring.StateAt(records[:sealed.Pos])
+	if err != nil || ring == nil ||
+		!ring.HasAnyCapability(sealed.Signer, keyring.AcceptedCapabilities(transition.CheckSealedVerb)) {
+		return envelope.Fail(envelope.ExitSealBroken, "seal_unauthorized",
+			fmt.Sprintf("the seal at position %d was signed by %s, which held no sealer grant there — it never passed the authoring boundary and will not be unsealed", sealed.Pos, sealed.Signer))
+	}
+	return nil
 }
 
 func readChecksFile(path string) ([]string, error) {
@@ -147,10 +200,10 @@ func runSealCreate(args []string, stdout, stderr io.Writer) int {
 	if ctx.Keyring == nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", "the keyring is not active — sealed checks need the seed/1 capability boundary"), stdout, stderr)
 	}
-	recipients := verifierRecipients(ctx.Keyring)
+	recipients := recipientKeys(eligibleRecipients(ctx.Keyring))
 	if len(recipients) == 0 {
 		return render(stampTip(envelope.Fail(envelope.ExitUnavailable, "unavailable",
-			"the verifier keyring holds no verdict-granted key — sealed checks encrypt to the current verifier keyring, and an empty recipient set can never be unsealed"), ctx.Count), stdout, stderr)
+			"the verifier keyring holds no eligible recipient — sealed checks encrypt to verdict-granted keys disjoint from claim and operator, and an empty recipient set can never be unsealed"), ctx.Count), stdout, stderr)
 	}
 	env, err := seal.NewEnvelope(checks)
 	if err != nil {
@@ -234,10 +287,10 @@ func runSealRotate(args []string, stdout, stderr io.Writer) int {
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
-	recipients := verifierRecipients(ks)
+	recipients := recipientKeys(eligibleRecipients(ks))
 	if len(recipients) == 0 {
 		return render(stampTip(envelope.Fail(envelope.ExitUnavailable, "unavailable",
-			"the verifier keyring holds no verdict-granted key — rotating to an empty recipient set would orphan every seal"), st.count), stdout, stderr)
+			"the verifier keyring holds no eligible recipient — rotating to an empty recipient set would orphan every seal"), st.count), stdout, stderr)
 	}
 	store := artifact.Open(artifactsDir(*artifacts, *repo))
 	rotated, skipped := []string{}, []string{}
@@ -302,7 +355,7 @@ func runSealAudit(args []string, stdout, stderr io.Writer) int {
 		return render(failEnv, stdout, stderr)
 	}
 	expected := map[string]bool{}
-	for _, e := range ks.Granted(keyring.CapVerdict) {
+	for _, e := range eligibleRecipients(ks) {
 		tag, err := seal.Tag(e.Key)
 		if err != nil {
 			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)

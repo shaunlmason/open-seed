@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -80,6 +81,13 @@ func (e *Envelope) Commitment() (string, error) {
 	return artifact.Digest(b), nil
 }
 
+// saltRE pins the salt's wire form: exactly the 32 random bytes
+// NewEnvelope mints, hex-encoded. A raw-crafted envelope with a
+// degenerate salt would quietly surrender the commitment's dictionary
+// resistance (review finding on the task PR), so every unseal
+// validates the shape, not just presence.
+var saltRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
 // ParseEnvelope reads decrypted plaintext back into an envelope and
 // re-derives its commitment for verification. A zero-check envelope is
 // refused here too: creation never writes one, so one that decrypts is
@@ -91,8 +99,8 @@ func ParseEnvelope(plaintext []byte) (*Envelope, string, error) {
 	if err := dec.Decode(&e); err != nil {
 		return nil, "", fmt.Errorf("sealed plaintext is not the envelope {salt, checks}: %v", err)
 	}
-	if e.Salt == "" {
-		return nil, "", errors.New("sealed envelope carries no salt")
+	if !saltRE.MatchString(e.Salt) {
+		return nil, "", errors.New("sealed envelope's salt is not 32 bytes of lowercase hex — a degenerate salt surrenders the commitment's dictionary resistance")
 	}
 	if len(e.Checks) == 0 {
 		return nil, "", errors.New("sealed envelope carries zero checks — an empty seal must not pass vacuously")

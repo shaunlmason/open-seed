@@ -239,4 +239,56 @@ func TestSealEndToEndCLI(t *testing.T) {
 	if by := classesOf(t, e); by["seal_evidence_missing"] != 1 {
 		t.Fatalf("the audit surfaces the erased ciphertext: %+v", e.Result)
 	}
+
+	// The laundered seal: a raw check.sealed planted in the legal
+	// window by the implementation-capable root, then a full drive to
+	// review. The fold records the fact, and the authoring boundary
+	// refuses it at use while reconcile surfaces it record-side
+	// (review finding on this PR).
+	rawCommit := strings.Repeat("cd", 32)
+	verdictLibAppend(t, ld, rootKey, "intent.filed", "c-4", `{"intent": "laundered seal", "tier": "standard", "budget": "s", "routing": "core"}`)
+	verdictLibAppend(t, ld, rootKey, "contract.specified", "c-4", `{"acceptance": {"ref": "accept.md @ `+specCommit+`", "executable": false}}`)
+	verdictLibAppend(t, ld, rootKey, "check.sealed", "c-4", `{"commitment": "`+rawCommit+`"}`)
+	fencePos := verdictLibAppend(t, ld, rootKey, "claim.taken", "c-4", `{}`)
+	verdictLibAppend(t, ld, rootKey, "submission.made", "c-4", fmt.Sprintf(
+		`{"fence": "%d", "packet": {"acceptance": ["x"], "decisions": [], "base": %q, "refs": [], "findings": []}}`, fencePos, rng))
+	if e, code = runEnv(t, "verdict", "render", "--ledger", ld, "--subject", "c-4", "--repo", src,
+		"--key", v2Key, "--verdict", "pass"); code != 22 {
+		t.Fatalf("a seal that never passed the authoring boundary refuses at use: %d %+v", code, e)
+	}
+	e, _ = runEnv(t, "reconcile", "--ledger", ld, "--repo", src, "--subject", "c-4")
+	if classesOf(t, e)["seal_unverified"] != 1 {
+		t.Fatalf("the laundered seal surfaces seal_unverified: %+v", e.Result)
+	}
+
+	// A dual-role key (verdict + claim) renders verdicts under L1 but
+	// is never a seal recipient (review finding on this PR): granting
+	// verdict to the implementer creates no stale-recipient findings
+	// (it is not expected), a fresh seal still excludes it, and its
+	// identity still cannot decrypt a live seal.
+	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+		"--verb", "actor.granted", "--subject", implFP, "--payload", `{"capability": "verdict"}`); code != 0 {
+		t.Fatalf("dual verdict grant: %d %+v", code, e)
+	}
+	e, _ = runEnv(t, "seal", "audit", "--ledger", ld, "--repo", src)
+	if by := classesOf(t, e); by["seal_evidence_missing"] != 2 || by["recipients_stale"] != 0 || by["recipient_foreign"] != 0 {
+		t.Fatalf("the dual-role key joins no recipient set: %+v", e.Result)
+	}
+	fresh := writeChecks(t, "true")
+	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+		"--verb", "intent.filed", "--subject", "c-5", "--payload", `{"intent": "fresh", "tier": "standard", "budget": "s", "routing": "core"}`); code != 0 {
+		t.Fatalf("c-5 file: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+		"--verb", "contract.specified", "--subject", "c-5", "--payload", `{"acceptance": {"ref": "accept.md @ `+specCommit+`", "executable": false}}`); code != 0 {
+		t.Fatalf("c-5 spec: %d %+v", code, e)
+	}
+	e, code = runEnv(t, "seal", "create", "--ledger", ld, "--subject", "c-5", "--repo", src,
+		"--checks", fresh, "--key", sealKey)
+	if code != 0 || e.Result["recipients"] != "1" {
+		t.Fatalf("the fresh seal encrypts to the eligible verifier only: %d %+v", code, e)
+	}
+	if e, code = runEnv(t, "verdict", "check", "--ledger", ld, "--subject", "c-2", "--repo", src, "--key", implKey); code != 23 {
+		t.Fatalf("the dual-role identity still cannot decrypt a live seal: %d %+v", code, e)
+	}
 }

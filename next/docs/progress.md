@@ -305,7 +305,11 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   (merged, amended per review: the pre-claim window closes the
   release-path laundering hole, verdict check recomputes sealed
   transcripts, the sealer lane drops the operator fallback, empty
-  seals refuse at both ends) — **this task PR**: check.sealed
+  seals refuse at both ends; the task-PR review round then pinned
+  age to the plan's v1.2.1, filtered implementation-capable keys out
+  of the recipient set, added the position-accurate authoring check
+  at unseal plus the seal_unverified reconcile class, and validated
+  the decrypted salt's shape) — **this task PR**: check.sealed
   admitted only in ready with no prior claim (one commitment per
   subject; raw seals outside the window fold as anomalies, never
   facts), the salted JCS envelope with the salt inside the

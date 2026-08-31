@@ -3,7 +3,7 @@ module github.com/shaunlmason/open-seed/next
 go 1.25.0
 
 require (
-	filippo.io/age v1.3.2
+	filippo.io/age v1.2.1
 	github.com/gowebpki/jcs v1.0.1
 	golang.org/x/crypto v0.55.0
 	modernc.org/sqlite v1.57.0
@@ -11,7 +11,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
-	filippo.io/hpke v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect

@@ -277,7 +277,7 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 		return render(stampTip(envelope.Fail(envelope.ExitUnsealed, "unsealed",
 			fmt.Sprintf("contract %s (tier %q) carries no sealed-checks commitment — above the trivial tier contracts carry sealed checks, sealed before the first claim (next/spec/sealed-checks.md)", *subject, s.Tier)), st.count), stdout, stderr)
 	}
-	sealedIn, sealFail := unsealChecks(s, signer, artifact.Open(artifactsDir(*artifacts, *repo)))
+	sealedIn, sealFail := unsealChecks(st.records, s, signer, artifact.Open(artifactsDir(*artifacts, *repo)))
 	if sealFail != nil {
 		return render(stampTip(sealFail, st.count), stdout, stderr)
 	}
@@ -422,7 +422,7 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 		if err != nil {
 			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--key: %v", err)), stdout, stderr)
 		}
-		sealedIn, sealFail := unsealChecks(s, identity, artifact.Open(artifactsDir(*artifacts, *repo)))
+		sealedIn, sealFail := unsealChecks(st.records, s, identity, artifact.Open(artifactsDir(*artifacts, *repo)))
 		if sealFail != nil {
 			return render(stampTip(sealFail, st.count), stdout, stderr)
 		}

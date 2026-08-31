@@ -62,11 +62,20 @@ func TestEmptySealRefusedAtBothEnds(t *testing.T) {
 	}
 	// The raw-crafted half: an envelope with zero checks that decrypts
 	// cleanly still refuses at parse.
-	if _, _, err := ParseEnvelope([]byte(`{"salt": "ab", "checks": []}`)); err == nil {
+	salt := strings.Repeat("ab", 32)
+	if _, _, err := ParseEnvelope([]byte(`{"salt": "` + salt + `", "checks": []}`)); err == nil {
 		t.Fatal("a zero-check envelope must refuse at parse")
 	}
 	if _, _, err := ParseEnvelope([]byte(`{"checks": ["x"]}`)); err == nil {
 		t.Fatal("a saltless envelope must refuse at parse")
+	}
+	// A degenerate salt surrenders the commitment's dictionary
+	// resistance, so shape, not presence, is what parse validates
+	// (review finding on the task PR).
+	for _, bad := range []string{`"x"`, `"AB` + salt[2:] + `"`, `"` + salt[:62] + `"`} {
+		if _, _, err := ParseEnvelope([]byte(`{"salt": ` + bad + `, "checks": ["x"]}`)); err == nil {
+			t.Fatalf("salt %s must refuse at parse", bad)
+		}
 	}
 }
 

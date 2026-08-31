@@ -41,7 +41,14 @@ sealed checks by cancel and re-file; rotation re-encrypts, never
 re-commits). Raw-pushed seals verify tolerated, but the fold records
 the fact **only from its legal window** (ready, no prior claim, first
 seal); outside it they are anomalies, never facts — a raw seal must
-not retroactively claim a pre-existence the ordering disproves.
+not retroactively claim a pre-existence the ordering disproves. The
+window rule cannot see grants, so a raw seal planted *inside* the
+window by a sealer-less key still folds — and is refused at use: the
+unseal path replays the keyring to the seal's own position and
+refuses a signer that held no sealer grant there
+(`seal_unauthorized`, exit 22), and `seed reconcile` surfaces the
+same condition as the record-derivable `seal_unverified` class — the
+verdict-laundering countermeasure, replayed against seals.
 
 The commitment is the SHA-256 of the JCS canonical bytes of the
 sealed envelope
@@ -53,7 +60,10 @@ sealed envelope
 The 32-byte random salt lives **only inside the ciphertext**:
 publishing it would invite dictionary attacks on low-entropy check
 bodies, so the commitment is verifiable exactly by the parties who
-can decrypt, and is verified at every unseal. An envelope with zero
+can decrypt, and is verified at every unseal — shape included: a
+decrypted salt that is not exactly 64 lowercase hex refuses, since a
+degenerate raw-crafted salt would quietly surrender the dictionary
+resistance the commitment promises. An envelope with zero
 checks never exists cooperatively (`seal create` refuses a checks
 file that parses to no commands) and never passes raw-crafted (an
 unsealed zero-check envelope is a broken seal at the verifier): an
@@ -62,11 +72,17 @@ checks, a vacuous pass.
 
 ## Confidentiality and custody
 
-The body is encrypted with `filippo.io/age` to **the current verifier
-keyring**: every active key holding the `verdict` capability, wrapped
-as ssh-ed25519 age recipients derived from the enrolled ed25519
-public keys (`agessh`), so "recipients = verifier keyring" holds with
-no new key material enrolled; the same keys decrypt as identities.
+The body is encrypted with `filippo.io/age` to **the eligible
+verifier keyring**: every active key holding the `verdict` capability
+**and no implementation authority** — a key also holding claim or
+operator (a root's implicit operator standing included) still renders
+verdicts under L1 but is never a recipient, because it could decrypt
+every open contract's checks and then claim one, and the capability
+audit's invariant is that no implementer path can decrypt. Eligible
+keys are wrapped as ssh-ed25519 age recipients derived from the
+enrolled ed25519 public keys (`agessh`), so "recipients = verifier
+keyring" holds with no new key material enrolled; the same keys
+decrypt as identities.
 The cross-protocol use (one ed25519 key signs verdicts and unwraps
 seals) is the documented v0 trade; dedicated X25519 enrollment is the
 named successor if the boundary ever needs it.
@@ -118,7 +134,7 @@ The refusals, by name:
 
 | exit | code | when |
 |---|---|---|
-| 22 | `seal_broken` | ciphertext missing or unreadable, commitment mismatch, or a zero-check envelope |
+| 22 | `seal_broken` / `seal_unauthorized` | ciphertext missing or unreadable, commitment or salt-shape mismatch, a zero-check envelope, or a seal whose signer held no sealer grant at its position |
 | 23 | `not_recipient` | the identity cannot unwrap the ciphertext (rotation lag; the refusal names `seal rotate`) |
 | 24 | `unsealed` | render on an above-trivial subject with no commitment — the "contracts carry sealed checks" gate at the verifier boundary; the trivial tier is exempt |
 
@@ -141,10 +157,12 @@ lines; payloads stay opaque. Tags are agessh's four-byte key
 fingerprints — an identification hint, not a proof of exclusivity;
 the capability audit's decrypt drills carry the cryptographic claim.
 
-Record-side, `internal/reconcile` surfaces the neutral `unsealed`
-class (an above-trivial subject at or past `in_progress` with no
-commitment) in `seed reconcile` and the report; the hard gate stays
-render's exit 24.
+Record-side, `internal/reconcile` surfaces two classes in `seed
+reconcile` and the report: the neutral `unsealed` (an above-trivial
+subject at or past `in_progress` with no commitment; the hard gate
+stays render's exit 24) and `seal_unverified` (a folded seal whose
+signer, replayed position-accurately, held no sealer grant — the seal
+render refuses to unseal).
 
 ## Visibility
 
