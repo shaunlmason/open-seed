@@ -785,3 +785,22 @@ here. Newest last.
   actual rules (halt.lifted is admissible with no halt standing;
   contract.blocked's one source state is ready): the affordance
   computation reports the rules, so the drills assert the rules.
+
+## 2026-08-31 — ledger writeHead race fix (os-c6fb95ee, plan #159)
+
+- The store's HEAD rewrite used one shared HEAD.tmp path from two
+  processes by design: the appender, and any poll-only reader whose
+  Open landed mid-append and ran healHead's repair — the reader's
+  rename consumed the appender's temp and the append failed with
+  ENOENT (the TestGracefulPreemptionDrill CI flake, and in
+  hindsight the #156 verify make-check red). writeHead now
+  allocates per-writer unique temps via os.CreateTemp with
+  best-effort removal on every failure path; renames stay atomic
+  over their own files, both racers write forward-consistent heads,
+  and a momentarily stale HEAD self-heals on the next Open, which
+  is the repair path's job. No lockfile, no layout change.
+- The regression test attacks the store directly (one goroutine
+  appending 400 records, one Opening in a loop): the drill-level
+  window is too narrow on fast disks, the store-level one is not —
+  pre-fix it reproduces the exact ENOENT at the first contended
+  append, post-fix every append succeeds and the chain verifies.

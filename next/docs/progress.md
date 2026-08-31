@@ -501,7 +501,8 @@ task PR (an administrative card, not a Phase 7 item).
 
 - 8.1 affordance envelope (affordances from the same internal/admit
   rule set; position; budget block; structured errors, exit codes)
-  — os-f5551001 — **review** (task PR against plan #158 as amended:
+  — os-f5551001 — **done** (#160 merged, card closed; plan #158 as
+  amended:
   admit.Affordances probing every catalog verb with signed drafts
   through the enforcing Check, the completeness-pinned synthesizer
   table with the actor.enrolled carve-out, the budget block from
@@ -509,10 +510,11 @@ task PR (an administrative card, not a Phase 7 item).
   plus budget status --key, the lifecycle-walk and CLI stamp
   drills)
 - 8.2 regression class: affordance-listed verb refused for legality
-  at the same position = bug — backlog (next card)
+  at the same position = bug — os-148d3ba1 — **planning**
 - 8.3 refusal-rate metric in the report — backlog
-- (out of item) ledger writeHead race fix — os-c6fb95ee — plan #159
-  in review (per-writer unique temps; the flake tripping
+- (out of item) ledger writeHead race fix — os-c6fb95ee — **review**
+  (plan #159 merged; task PR #161: per-writer unique temps, with the
+  store-level contention regression test; the flake tripped
   TestGracefulPreemptionDrill on main)
 
 ## Frontier
@@ -529,12 +531,16 @@ merged with every card closed. Phase 7 is done and closed: every
 plan (#144/#146, #147/#148, #150, #153), every implementation (7.1
 #145, 7.2 #149, 7.3 #151 with follow-up #152, 7.4 #154), and the
 exit record above (card os-c9e24032's task PR) are merged with
-every card closed. **Next action: land 8.1**
-(os-f5551001, affordance envelope — plan #158, task PR in review)
-and the ledger writeHead race fix (os-c6fb95ee, plan #159), then
-8.2 (the affordance-listed-verb-refused-equals-bug regression
-class) and 8.3 (the refusal-rate report metric), each a new card,
-plan-first. Phase 9's worker-lane loop carries the
+every card closed. 8.1 (os-f5551001,
+affordance envelope) is merged (#160) and its card closed.
+**Next action: land the ledger writeHead race fix** (os-c6fb95ee,
+plan #159, task PR #161 in review — a shared temp path between the
+append path and Open's HEAD repair flaked
+TestGracefulPreemptionDrill in CI; fixed with per-writer unique
+temps and a store-level contention regression test), then 8.2 (the
+affordance-listed-verb-refused-equals-bug regression class,
+os-148d3ba1, in planning) and 8.3 (the refusal-rate report metric,
+a new card, plan-first). Phase 9's worker-lane loop carries the
 exhaustion-park obligation the Phase 7 exit routes to it.
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
