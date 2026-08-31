@@ -634,3 +634,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T15:46:42Z"},"task":"os-c61c3392","ts":"2026-08-31T14:46:42Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T16:51:43Z"},"task":"os-c61c3392","ts":"2026-08-31T15:51:43Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-6ea16af0","kind":"pr"},"task":"os-c61c3392","ts":"2026-08-31T16:08:11Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-c61c3392","ts":"2026-08-31T16:08:14Z","verb":"transition"}
