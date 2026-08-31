@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
@@ -105,7 +106,11 @@ func TestObsEmitAndDeclaredInputRebuildCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	digest, err := snap.Digest()
+	asOf, err := time.Parse(time.RFC3339, "2026-09-01T01:00:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := (project.Inputs{Obs: snap, AsOf: asOf, Thresholds: obs.DefaultThresholds()}).Digest()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -193,14 +193,17 @@ type Classification struct {
 
 // Classify is a pure function of the active claim's stream, a declared
 // as_of instant, and the thresholds: expiry and wedging are distinct,
-// visible conditions, and no wall clock is consulted.
+// visible conditions, and no wall clock is consulted. Lines stamped
+// after as_of are invisible: they did not exist at the declared
+// instant, so a clock-ahead executor cannot classify itself live and
+// a historical as_of sees only what was there.
 func Classify(stream Stream, asOf time.Time, th Thresholds) Classification {
 	c := Classification{State: NoData}
 	var lastObs, lastAdvance time.Time
 	count := -1
 	for _, l := range stream.Lines {
 		ts, err := time.Parse(time.RFC3339, l.TS)
-		if err != nil {
+		if err != nil || ts.After(asOf) {
 			continue
 		}
 		if ts.After(lastObs) {

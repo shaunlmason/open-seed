@@ -85,7 +85,7 @@ func TestReportDeclaredInputs(t *testing.T) {
 	if rep.Observation == nil {
 		t.Fatal("declared inputs must produce the observation section")
 	}
-	digest, err := snap.Digest()
+	digest, err := in.Digest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestReportDeclaredInputs(t *testing.T) {
 	if _, err := project.RebuildWith(dir, out2, project.Default(), resolve, in); err != nil {
 		t.Fatal(err)
 	}
-	digest2, err := snap2.Digest()
+	digest2, err := in.Digest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,6 +142,22 @@ func TestReportDeclaredInputs(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(out2, "report", "builds", cur2)); err != nil {
 		t.Fatalf("the earlier input-bearing build must survive: %v", err)
+	}
+
+	// The identity covers EVERY declared input: the same snapshot at a
+	// later as_of republishes too, or a silent worker would stay
+	// permanently live under the stale id.
+	in.AsOf = in.AsOf.Add(30 * time.Minute)
+	if _, err := project.RebuildWith(dir, out2, project.Default(), resolve, in); err != nil {
+		t.Fatal(err)
+	}
+	digest3, err := in.Digest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur4 := readCurrent(t, out2, "report")
+	if cur4 == cur3 || !strings.HasSuffix(cur4, "-i"+digest3[:12]) {
+		t.Fatalf("a changed as_of alone must republish under a new id: %s vs %s", cur3, cur4)
 	}
 
 	// Lossy by declaration: delete the whole channel; the loader

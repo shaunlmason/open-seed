@@ -182,7 +182,7 @@ func observationSection(records []*event.Record, in Inputs) (*ReportObservation,
 	if err != nil {
 		return nil, err
 	}
-	digest, err := in.Obs.Digest()
+	digest, err := in.Digest()
 	if err != nil {
 		return nil, err
 	}

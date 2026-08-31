@@ -99,4 +99,16 @@ func TestClassifyTruthTable(t *testing.T) {
 	if live.State != obs.Live {
 		t.Fatalf("14 minutes of silence is live: %+v", live)
 	}
+
+	// Lines after the declared as_of are invisible: a clock-ahead
+	// executor cannot classify itself live, and with nothing before
+	// as_of the stream holds no data at the declared instant.
+	future := obs.Classify(obs.Stream{Lines: []obs.Line{line(30, 1), line(75, 9)}}, asOf, th)
+	if future.State != obs.Expired || future.Count != 1 || future.LastAdvance != line(30, 1).TS {
+		t.Fatalf("a future line must be invisible at as_of: %+v", future)
+	}
+	onlyFuture := obs.Classify(obs.Stream{Lines: []obs.Line{line(75, 9)}}, asOf, th)
+	if onlyFuture.State != obs.NoData {
+		t.Fatalf("a stream that is all future at as_of holds no data: %+v", onlyFuture)
+	}
 }

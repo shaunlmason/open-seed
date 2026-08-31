@@ -13,6 +13,8 @@
 package project
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,6 +24,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/gowebpki/jcs"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
@@ -38,6 +42,34 @@ type Inputs struct {
 	Obs        *obs.Snapshot
 	AsOf       time.Time
 	Thresholds obs.Thresholds
+}
+
+// Digest is the declared-inputs identity: the RFC 8785 digest over
+// EVERY declared input (the snapshot, as_of, and both thresholds),
+// because any of them changes the classification bytes, and an
+// identity covering only the snapshot would let a rebuild at a later
+// as_of be discarded as a same-id duplicate, leaving a silent worker
+// permanently live in the published view.
+func (in Inputs) Digest() (string, error) {
+	snapDigest, err := in.Obs.Digest()
+	if err != nil {
+		return "", err
+	}
+	b, err := json.Marshal(map[string]any{
+		"obs":                  snapDigest,
+		"as_of":                in.AsOf.UTC().Format(time.RFC3339),
+		"expiry_after_seconds": int(in.Thresholds.ExpiryAfter / time.Second),
+		"wedge_after_seconds":  int(in.Thresholds.WedgeAfter / time.Second),
+	})
+	if err != nil {
+		return "", err
+	}
+	canonical, err := jcs.Transform(b)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(canonical)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 // Builder is one projection: a pure function from the verified record
@@ -162,9 +194,10 @@ func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.
 // from the stamp, so identical prefixes reproduce identical trees,
 // CURRENT included: deleting the output loses nothing. A projection
 // that declares Inputs and receives an observation snapshot keys its
-// build id and stamp with the snapshot's digest, so changed inputs at
-// an unchanged tip republish under a new id; input-free projections
-// ignore the inputs entirely.
+// build id and stamp with the declared-inputs digest (snapshot,
+// as_of, thresholds together), so any changed input at an unchanged
+// tip republishes under a new id; input-free projections ignore the
+// inputs entirely.
 func RebuildWith(ledgerDir, outDir string, projections []Projection, resolve ledger.Resolver, in Inputs, vopts ...ledger.VerifyOption) (results []Result, err error) {
 	if err := CheckOverlap(ledgerDir, outDir); err != nil {
 		return nil, err
@@ -214,7 +247,7 @@ func RebuildWith(ledgerDir, outDir string, projections []Projection, resolve led
 		digest := ""
 		if p.Inputs && in.Obs != nil {
 			bin = in
-			digest, err = in.Obs.Digest()
+			digest, err = in.Digest()
 			if err != nil {
 				return nil, fmt.Errorf("projection %s: inputs digest: %v", p.Name, err)
 			}

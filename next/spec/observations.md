@@ -56,6 +56,11 @@ claim's holder and fence.
 - **no_data**: the active claim's stream holds nothing; absence of
   data is stated, never fabricated.
 
+Lines stamped after `as_of` are invisible to classification: they did
+not exist at the declared instant, so a clock-ahead executor cannot
+classify itself live and a historical `as_of` sees only what was
+there.
+
 v0 operational defaults: `expiry_after` 900s, `wedge_after` 1800s,
 overridable at the rebuild call. Executing reaps is the maintenance
 lane's later item; v0 makes the conditions visible in the report.
@@ -65,10 +70,13 @@ lane's later item; v0 makes the conditions visible in the report.
 The observation snapshot is a **declared input** to `seed project
 rebuild` (`--obs <dir> --as-of <rfc3339>` with threshold overrides):
 the report's observation section echoes `as_of`, the thresholds, and
-the snapshot's RFC 8785 digest, and the same digest keys the
+the **declared-inputs digest** — the RFC 8785 digest over the
+snapshot's digest, `as_of`, and both thresholds together, because any
+of them changes the classification — and the same digest keys the
 report's stamp (`inputs`) and build id (fourth segment,
-`-i<digest12>`), so changed inputs at an unchanged tip republish
-under a new id (`projections.md`). An input-free rebuild publishes
+`-i<digest12>`), so ANY changed input at an unchanged tip republishes
+under a new id (`projections.md`); an identity covering only the
+snapshot would let a silent worker stay permanently live. An input-free rebuild publishes
 `"observation": null`; every input-free projection is byte-identical
 with and without inputs.
 

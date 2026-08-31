@@ -20,6 +20,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 //go:embed table.json
@@ -405,10 +406,16 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			continue
 		}
 		if e.Verb == MilestoneVerb {
+			// Milestone semantics activate at seed/1 like the rest of
+			// the summarization boundary: a grandfathered pre-upgrade
+			// record whose payload happens to carry a count must not
+			// become the high-water mark and wedge legitimate
+			// post-upgrade progress. Version discipline pins e.V to
+			// the version active at the record's position.
 			var m struct {
 				Count *int `json:"count"`
 			}
-			if json.Unmarshal(e.Payload, &m) == nil && m.Count != nil {
+			if e.V == version.Seed1 && json.Unmarshal(e.Payload, &m) == nil && m.Count != nil {
 				fact, seen := f.milestones[e.Subject]
 				if !seen || *m.Count > fact.Count {
 					fact.Count = *m.Count

@@ -69,11 +69,12 @@ minimum position, and never treat the view as authoritative. The
 
 **Declared inputs** (`observations.md`): a projection that declares
 input consumption and receives an observation snapshot carries the
-snapshot's RFC 8785 digest in the stamp (`"inputs": "<digest>"`,
+declared-inputs digest — computed over the snapshot, `as_of`, and
+the thresholds together — in the stamp (`"inputs": "<digest>"`,
 omitted otherwise) and appends it to the build id as a fourth
-segment, `<position>-<tip12>-v<version>-i<digest12>`, so changed
-inputs at an unchanged tip republish under a new id instead of being
-discarded as a same-id duplicate. Input-free projections never carry
+segment, `<position>-<tip12>-v<version>-i<digest12>`, so ANY changed
+input at an unchanged tip republishes under a new id instead of
+being discarded as a same-id duplicate. Input-free projections never carry
 the field or the segment and are byte-identical with and without
 inputs by construction.
 

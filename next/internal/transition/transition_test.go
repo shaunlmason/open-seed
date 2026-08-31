@@ -125,6 +125,30 @@ func lifecycleEvent(verb, subject string) *event.Record {
 	return &event.Record{Event: event.Event{V: "seed/1", TS: "2026-09-01T00:00:00Z", Actor: "aa", Verb: verb, Subject: subject, Payload: json.RawMessage(`{}`)}}
 }
 
+func payloadEvent(v, verb, subject, payload string) *event.Record {
+	return &event.Record{Event: event.Event{V: v, TS: "2026-09-01T00:00:00Z", Actor: "aa", Verb: verb, Subject: subject, Payload: json.RawMessage(payload)}}
+}
+
+// A grandfathered seed/0 record whose payload happens to carry a
+// count must not become the milestone high-water mark: the
+// summarization boundary activates at seed/1 with the rest of the
+// lifecycle semantics.
+func TestMilestoneFoldHonorsActivationBoundary(t *testing.T) {
+	tab, err := transition.Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pre := payloadEvent("seed/0", "progress.milestone", "c-1", `{"count": 999, "step": "old"}`)
+	fold := tab.FoldRecords([]*event.Record{pre})
+	if err := fold.CheckMilestone("c-1", 40, []byte(`{"count": 1, "step": "fresh"}`)); err != nil {
+		t.Fatalf("a post-upgrade milestone must not be wedged by grandfathered history: %v", err)
+	}
+	live := tab.FoldRecords([]*event.Record{payloadEvent("seed/1", "progress.milestone", "c-1", `{"count": 999, "step": "new"}`)})
+	if err := live.CheckMilestone("c-1", 40, []byte(`{"count": 1, "step": "fresh"}`)); err == nil {
+		t.Fatal("a seed/1 milestone must set the high-water mark")
+	}
+}
+
 func TestCheckAndFold(t *testing.T) {
 	tab, err := transition.Default()
 	if err != nil {
