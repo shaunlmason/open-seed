@@ -519,5 +519,10 @@ first, per the loop; then Phase 8 items 2 and 3 (the
 affordance-listed-verb-refused-equals-bug regression class, the
 refusal-rate report metric). Phase 9's worker-lane loop carries the
 exhaustion-park obligation the Phase 7 exit routes to it.
+The ledger writeHead race (a shared temp path between the append
+path and Open's HEAD repair, flaking TestGracefulPreemptionDrill in
+CI) is fixed out-of-item under card os-c6fb95ee (plan #159):
+per-writer unique temps, with a store-level contention regression
+test.
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

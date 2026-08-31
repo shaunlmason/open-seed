@@ -271,17 +271,39 @@ func (s *Store) Append(rec *event.Record, resolve Resolver) (int, error) {
 	return count, nil
 }
 
-// writeHead rewrites HEAD atomically (temp + rename).
+// writeHead rewrites HEAD atomically (temp + rename). The temp name
+// is unique per writer (plans/os-c6fb95ee.md): writeHead runs from
+// two processes at once by design — the appender, and any poll-only
+// reader whose Open lands in the mid-append window and fires the
+// HEAD repair — and a shared temp path let the reader's rename
+// consume the appender's temp, failing its rename with ENOENT.
+// Interleaving stays safe under unique names: both racers write
+// forward-consistent heads, each rename is atomic over its own
+// file, and a momentarily stale HEAD self-heals on the next Open.
 func (s *Store) writeHead(h Head) error {
 	b, err := json.Marshal(h)
 	if err != nil {
 		return err
 	}
-	tmp := filepath.Join(s.dir, headFile+".tmp")
-	if err := os.WriteFile(tmp, append(b, '\n'), 0o644); err != nil {
+	f, err := os.CreateTemp(s.dir, headFile+".*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, filepath.Join(s.dir, headFile))
+	tmp := f.Name()
+	if _, err := f.Write(append(b, '\n')); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return err
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, filepath.Join(s.dir, headFile)); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 // ReadHead returns the cached HEAD record; ok is false when none exists.
