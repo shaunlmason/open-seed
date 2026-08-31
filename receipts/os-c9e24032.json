@@ -1,15 +1,16 @@
 {
   "schema_version": "1.0",
   "task": "os-c9e24032",
-  "merge_base": "1161961416252806d5dfb3f958756a5d9bff2179",
-  "head": "d5f0a53006b41a1ffb73fe351c4cf1c60440a9f4",
+  "merge_base": "38eb21e42f4ecde61b6fe790a096e88ce6211f1d",
+  "head": "24b893f2ed94b95f22a1e96c7527b858cfef7734",
   "plan_path": "plans/os-c9e24032.md",
-  "plan_sha256": "38e7563157bf26cb0c59656d0f79da32b0877350a89a9908378f45403b97eb23",
+  "plan_sha256": "0565ab2cb7c3ba8e239c9119def30bbf6716447809a15e46fe447cb04ec2b5d6",
   "diff_files": [
+    "docs/next-build-plan.md",
     "next/docs/progress.md",
     "next/spec/budgets.md"
   ],
-  "diff_sha256": "a7591735eafcd73c778921a8984b5ac27da885189b7e90d0129dd9f5f49331af",
+  "diff_sha256": "c77fd788f1cb13bff7ccc4803034388b5641f2e547441c3f1109566e13a5d405",
   "validation": [
     {
       "cmd": "make check",
