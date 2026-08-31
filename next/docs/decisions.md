@@ -648,4 +648,10 @@ here. Newest last.
   additive (no protocol bump). Projections: contracts v9 (offers +
   last_claim, omitempty so offer-free chains keep byte-identical
   views), report v6 (republish only), cache generation 8 (offers
-  table + last_claim column).
+  table + last_claim column). Review round on #145: operator
+  standing satisfies every eligibility scope at the list surface
+  (admission already lets the operator take any offered work, so it
+  must be able to discover it), and the view serializes last_claim
+  only beside offer facts, so ever-claimed offer-free subjects keep
+  byte-identical v8 bodies; the cache column stays full-fidelity
+  under its new generation.

@@ -220,7 +220,11 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 					Expires:      o.Expires,
 				})
 			}
-			if len(s.PriorClaimants) > 0 {
+			// The consumption boundary is exposed only beside offer
+			// facts: an ever-claimed, offer-free subject keeps its v8
+			// body byte-identical (the plan's compatibility promise);
+			// the fold keeps the boundary internally either way.
+			if len(s.Offers) > 0 && len(s.PriorClaimants) > 0 {
 				lc := fmt.Sprintf("%d", s.LastClaim)
 				e.LastClaim = &lc
 			}

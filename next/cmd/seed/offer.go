@@ -192,12 +192,16 @@ func runOfferList(args []string, stdout, stderr io.Writer) int {
 }
 
 // eligibleFor applies the offer's scopes to the polling worker: every
-// scoped capability must be held (the root's implicit operator
-// counts, as everywhere), and the subject's filed tier must be in the
-// scoped tier set. Empty scopes match any active worker, any tier.
+// scoped capability must be held, with operator standing satisfying
+// every scope (a root's implicit operator included) — scopes describe
+// the taking lane, and admission already lets the operator act
+// everywhere in it, so hiding offers from operators would let them
+// claim work they cannot discover. The subject's filed tier must be
+// in the scoped tier set. Empty scopes match any active worker, any
+// tier.
 func eligibleFor(ring *keyring.State, fp, tier string, o transition.OfferFact) bool {
 	for _, c := range o.Capabilities {
-		if !ring.HasAnyCapability(fp, []string{c}) {
+		if !ring.HasAnyCapability(fp, []string{c, keyring.CapOperator}) {
 			return false
 		}
 	}

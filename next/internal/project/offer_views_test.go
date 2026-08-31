@@ -80,8 +80,33 @@ func TestOfferFactsInContractsAndCache(t *testing.T) {
 	}
 	var never sql.NullInt64
 	add(root, "seed/1", "intent.filed", "c-2", `{"tier": "trivial"}`)
+	// c-3 is ever-claimed but offer-free: its view entry must keep
+	// the v8 body — no offers array and no last_claim — while the
+	// cache column stays full-fidelity under its new generation.
+	add(root, "seed/1", "intent.filed", "c-3", `{"tier": "trivial"}`)
+	add(root, "seed/1", "contract.specified", "c-3", `{}`)
+	add(root, "seed/1", "claim.taken", "c-3", `{}`)
 	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
 		t.Fatal(err)
+	}
+	build2, err := project.Current(out, "contracts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b2, err := os.ReadFile(filepath.Join(build2, project.ContractsFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var entries2 []project.ContractEntry
+	if err := json.Unmarshal(b2, &entries2); err != nil {
+		t.Fatal(err)
+	}
+	for i := range entries2 {
+		if entries2[i].Subject == "c-3" {
+			if entries2[i].LastClaim != nil || len(entries2[i].Offers) != 0 {
+				t.Fatalf("an ever-claimed, offer-free subject keeps the v8 body: %+v", entries2[i])
+			}
+		}
 	}
 	db2, _ := openCacheRO(t, out)
 	defer db2.Close()

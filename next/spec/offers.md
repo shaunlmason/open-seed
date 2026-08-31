@@ -32,8 +32,11 @@ contention refusal), not at offer time.
 
 - `eligibility` is required; its arrays are optional. Empty scopes
   mean unscoped: any active worker, any tier. `capabilities` names
-  grants the taking worker must hold (all of them; a governance
-  root's implicit `operator` counts as everywhere); `tiers` names the
+  grants the taking worker must hold (all of them; `operator`
+  standing satisfies every scope, a governance root's implicit
+  operator included — scopes describe the taking lane, and admission
+  already lets the operator act everywhere in it, so an operator can
+  never claim work it cannot discover); `tiers` names the
   contract tiers the offer covers, matched against the subject's
   filed tier.
 - `expires` is required RFC3339 and must lie **strictly after the

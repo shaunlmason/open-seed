@@ -208,7 +208,7 @@ func offerLedgerAndSubject(t *testing.T, subject string) (ld, src, base, specCom
 // orphan, and duplicate scheduling is impossible because exclusivity
 // settles at admission.
 func TestOfferRaceExpiryAndFilters(t *testing.T) {
-	ld, _, base, specCommit, head, priv, _, keys, fps := offerLedgerAndSubject(t, "c-1")
+	ld, _, base, specCommit, head, priv, rootKey, keys, fps := offerLedgerAndSubject(t, "c-1")
 	rng := base + ".." + head
 
 	// The race: both workers see one offer, both claim, exactly one
@@ -273,6 +273,16 @@ func TestOfferRaceExpiryAndFilters(t *testing.T) {
 	}
 	if offers := listOffers(t, ld, fps["verifier"], ""); len(offers) != 1 {
 		t.Fatalf("the verdict-granted key sees it: %+v", offers)
+	}
+	// Operator standing satisfies every scope (a root's implicit
+	// operator included): admission lets the operator take any
+	// offered work, so the polling surface must let it discover it.
+	rootFP, err := event.Fingerprint(rootKey.Public().(ed25519.PublicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offers := listOffers(t, ld, rootFP, ""); len(offers) != 1 {
+		t.Fatalf("the root's implicit operator sees every scope: %+v", offers)
 	}
 	if e, code := runEnv(t, "offer", "publish", "--ledger", ld, "--subject", "c-2",
 		"--key", keys["supervisor"], "--expires", "2027-01-01T00:00:00Z", "--tier", "weighty"); code != 0 {
