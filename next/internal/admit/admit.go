@@ -867,7 +867,10 @@ func Default() []Rule {
 				return &RunError{Subject: subject, Reason: fmt.Sprintf("fence %d carries no admitted run.started — a run settles only after its gated initiation", fence)}
 			}
 			for _, r := range s.Runs {
-				if r.Fence == fence {
+				// Boundary-valid prior settles only (the RunStartValid
+				// posture): a raw invalid settle must not permanently
+				// block the legitimate aggregate.
+				if r.Fence == fence && RunSettleValid(c.Records, c.Table, subject, r) {
 					return &RunError{Subject: subject, Reason: fmt.Sprintf("fence %d already carries a run.settled at position %d — one run, one aggregate", fence, r.Pos)}
 				}
 			}
@@ -1364,23 +1367,63 @@ func BudgetViewAt(records []*event.Record, table *transition.Table, subject stri
 	)
 }
 
+// runFactRecord returns the record a folded run fact points at, when
+// it is the expected verb on the expected subject: fold positions
+// index the verified record sequence directly, and the record, not
+// the fact, is the authority the boundary re-judges.
+func runFactRecord(records []*event.Record, pos int, verb, subject string) (*event.Record, bool) {
+	if pos < 0 || pos >= len(records) {
+		return nil, false
+	}
+	rec := records[pos]
+	if rec.Event.Verb != verb || rec.Event.Subject != subject {
+		return nil, false
+	}
+	return rec, true
+}
+
+// strictRunPayload re-runs the verb's strict payload decode on the
+// record itself (review finding on this PR: the tolerant fold accepts
+// shapes admission refuses, so a validity helper that skips the shape
+// check launders a would-be-refused raw push into effect). The
+// decoded fields must round-trip to the folded fact exactly.
+func strictRunPayload(rec *event.Record, into any) bool {
+	dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+	dec.DisallowUnknownFields()
+	return dec.Decode(into) == nil
+}
+
 // RunStartValid reports whether a folded run.started passed the
 // admission boundary at its own position (review findings on the
 // task PR and its follow-up: fold presence is never proof of
-// admission): the signer held the run lanes there, the cited fence
-// was the subject's ACTIVE claim fence there, and the cited
-// reservation already existed there, passed the authoring boundary,
-// and was still effectively open there — every check against the
-// prefix the start actually appended onto, so a start citing a
-// later-appended or already-closed reservation validates nothing,
-// while a close landing after an admitted start never retroactively
-// invalidates it. The run rule's one-per-fence and carries-a-start
-// checks and the executor's Provision gate all share this one
-// derivation, so a raw start neither blocks the legitimate
-// supervisor, nor launders a settle through, nor provisions an
-// unbudgeted workspace.
+// admission): the record carries the strict {fence, reservation}
+// shape, the signer held the run lanes there, the cited fence was
+// the subject's ACTIVE claim fence there, and the cited reservation
+// already existed there, passed the authoring boundary, and was
+// still effectively open there — every check against the prefix the
+// start actually appended onto, so a start citing a later-appended
+// or already-closed reservation validates nothing, while a close
+// landing after an admitted start never retroactively invalidates
+// it. The run rule's one-per-fence and carries-a-start checks and
+// the executor's Provision gate all share this one derivation, so a
+// raw start neither blocks the legitimate supervisor, nor launders a
+// settle through, nor provisions an unbudgeted workspace.
 func RunStartValid(records []*event.Record, table *transition.Table, subject string, st transition.RunStartFact) bool {
-	if st.Pos < 0 || st.Pos >= len(records) {
+	rec, ok := runFactRecord(records, st.Pos, transition.RunStartedVerb, subject)
+	if !ok {
+		return false
+	}
+	var p struct {
+		Fence       string `json:"fence"`
+		Reservation string `json:"reservation"`
+	}
+	if !strictRunPayload(rec, &p) {
+		return false
+	}
+	if f, err := strconv.Atoi(strings.TrimSpace(p.Fence)); err != nil || f != st.Fence {
+		return false
+	}
+	if r, err := strconv.Atoi(strings.TrimSpace(p.Reservation)); err != nil || r != st.Reservation {
 		return false
 	}
 	prefix := records[:st.Pos]
@@ -1408,11 +1451,23 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 // InterruptValid reports whether a folded run.interrupted passed the
 // admission boundary at its own position (plans/os-0f718b4e.md; the
 // RunStartValid posture: fold presence is never proof of admission):
-// the signer held an accepted lane there and the cited fence was the
-// subject's ACTIVE claim fence there, judged against the prefix the
-// fact appended onto.
+// the record carries the strict {fence} shape, the signer held an
+// accepted lane there, and the cited fence was the subject's ACTIVE
+// claim fence there, judged against the prefix the fact appended
+// onto — so a shape a strict admission would refuse parks no one and
+// blocks nothing.
 func InterruptValid(records []*event.Record, table *transition.Table, subject string, it transition.InterruptFact) bool {
-	if it.Pos < 0 || it.Pos >= len(records) {
+	rec, ok := runFactRecord(records, it.Pos, transition.RunInterruptedVerb, subject)
+	if !ok {
+		return false
+	}
+	var p struct {
+		Fence string `json:"fence"`
+	}
+	if !strictRunPayload(rec, &p) {
+		return false
+	}
+	if f, err := strconv.Atoi(strings.TrimSpace(p.Fence)); err != nil || f != it.Fence {
 		return false
 	}
 	prefix := records[:it.Pos]
@@ -1423,6 +1478,52 @@ func InterruptValid(records []*event.Record, table *transition.Table, subject st
 	}
 	prior, ok := table.StateAt(prefix, subject)
 	return ok && prior.Claim != nil && prior.Claim.Fence == it.Fence
+}
+
+// RunSettleValid reports whether a folded run.settled passed the
+// admission boundary at its own position: the strict {fence, units,
+// lines} shape with non-negative counts, the signer's lane there,
+// and an applied claim fence carrying a boundary-valid start there.
+// The settle rule's once-per-fence check consumes it, so a raw
+// invalid settle never permanently blocks the legitimate aggregate.
+func RunSettleValid(records []*event.Record, table *transition.Table, subject string, r transition.RunFact) bool {
+	rec, ok := runFactRecord(records, r.Pos, transition.RunSettledVerb, subject)
+	if !ok {
+		return false
+	}
+	var p struct {
+		Fence string `json:"fence"`
+		Units string `json:"units"`
+		Lines string `json:"lines"`
+	}
+	if !strictRunPayload(rec, &p) {
+		return false
+	}
+	if f, err := strconv.Atoi(strings.TrimSpace(p.Fence)); err != nil || f != r.Fence {
+		return false
+	}
+	if u, err := strconv.Atoi(strings.TrimSpace(p.Units)); err != nil || u < 0 || u != r.Units {
+		return false
+	}
+	if l, err := strconv.Atoi(strings.TrimSpace(p.Lines)); err != nil || l < 0 || l != r.Lines {
+		return false
+	}
+	prefix := records[:r.Pos]
+	ring, _, err := keyring.StateAt(prefix)
+	if err != nil || ring == nil ||
+		!ring.HasAnyCapability(r.Signer, keyring.AcceptedCapabilities(transition.RunSettledVerb)) {
+		return false
+	}
+	prior, ok := table.StateAt(prefix, subject)
+	if !ok || !prior.ClaimFences[r.Fence] {
+		return false
+	}
+	for _, st := range prior.RunStarts {
+		if st.Fence == r.Fence && RunStartValid(prefix, table, subject, st) {
+			return true
+		}
+	}
+	return false
 }
 
 // InterruptRequested reports whether a boundary-valid interrupt

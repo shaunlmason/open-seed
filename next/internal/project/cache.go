@@ -69,6 +69,7 @@ var cacheDDL = []string{
 	`CREATE INDEX reservations_subject ON reservations(subject)`,
 	`CREATE TABLE runs (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, fence INTEGER NOT NULL, kind TEXT NOT NULL, reservation INTEGER, units INTEGER, lines INTEGER)`,
 	`CREATE TABLE interrupts (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, fence INTEGER NOT NULL)`,
+	`CREATE INDEX interrupts_subject ON interrupts(subject)`,
 	`CREATE INDEX runs_subject ON runs(subject)`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
 	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,

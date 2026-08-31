@@ -158,16 +158,30 @@ func TestRunAdmissionMatrix(t *testing.T) {
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence2, "5"), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "no admitted run.started") {
 		t.Fatalf("a start citing an already-closed reservation satisfies no settle: %v", err)
 	}
-	// Neither temporal raw start blocks the legitimate one.
+	// The shape half of the same laundering (review finding on the
+	// 7.4 PR): a raw supervisor start whose payload a strict admission
+	// would refuse — an extra key beside a live reservation — folds
+	// but validates nothing.
 	ctx = step(k.holder, version.Seed1, "budget.reserve", "c-1", reserveBody("10", fence2))
-	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.started", "c-1", start2(fmt.Sprintf("%d", ctx.Count-1)), ctx.Tip)); err != nil {
-		t.Fatalf("the legitimate start admits past the temporal raw ones: %v", err)
+	liveRes := fmt.Sprintf("%d", ctx.Count-1)
+	ctx = step(k.supervisor, version.Seed1, "run.started", "c-1",
+		`{"fence": "`+fence2+`", "reservation": "`+liveRes+`", "note": "x"}`)
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence2, "5"), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "no admitted run.started") {
+		t.Fatalf("a shape-invalid raw start satisfies no settle: %v", err)
+	}
+	// None of the raw starts block the legitimate one.
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.started", "c-1", start2(liveRes), ctx.Tip)); err != nil {
+		t.Fatalf("the legitimate start admits past the raw ones: %v", err)
 	}
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence, "-3"), ctx.Tip)); err == nil {
 		t.Fatal("negative units refuse")
 	}
+	// A raw lane-invalid settle on the started fence blocks nothing
+	// (review finding on the 7.4 PR: once-per-fence counts only
+	// boundary-valid prior settles).
+	ctx = step(k.holder, version.Seed1, "run.settled", "c-1", settle(fence, "9"))
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence, "5"), ctx.Tip)); err != nil {
-		t.Fatalf("the prior started fence settles after its window closed: %v", err)
+		t.Fatalf("the prior started fence settles after its window closed, past the raw settle: %v", err)
 	}
 	ctx = step(k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence, "5"))
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence, "5"), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "one run, one aggregate") {
@@ -205,6 +219,14 @@ func TestInterruptAdmissionMatrix(t *testing.T) {
 	ctx = step(k.holder, version.Seed1, "run.interrupted", "c-1", body)
 	if s, _ := ctx.Lifecycle.State("c-1"); InterruptRequested(ctx.Records, ctx.Table, "c-1", s, fenceN) {
 		t.Fatal("a raw unprivileged interrupt requests nothing — no worker parks for it")
+	}
+	// The shape half of the same laundering (review finding on this
+	// PR): a raw supervisor-signed interrupt whose payload a strict
+	// admission would refuse folds, but requests nothing and blocks
+	// nothing.
+	ctx = step(k.supervisor, version.Seed1, "run.interrupted", "c-1", `{"fence": "`+fence+`", "note": "x"}`)
+	if s, _ := ctx.Lifecycle.State("c-1"); InterruptRequested(ctx.Records, ctx.Table, "c-1", s, fenceN) {
+		t.Fatal("a shape-invalid raw interrupt requests nothing")
 	}
 	ctx = step(k.supervisor, version.Seed1, "run.interrupted", "c-1", body)
 	if s, _ := ctx.Lifecycle.State("c-1"); !InterruptRequested(ctx.Records, ctx.Table, "c-1", s, fenceN) {
