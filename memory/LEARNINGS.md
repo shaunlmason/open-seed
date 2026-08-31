@@ -308,3 +308,8 @@ Fresh sessions read this file instead of rediscovering.
   immediately. Keep reading recorded receipt exits with a checker
   that sys.exit(1)s on any nonzero, and never let a retry loop's
   echo swallow that status into a chained push.
+- Normative spec tables that are parsed by tests treat every
+  backticked token in a data cell as data: keep prose asides in
+  those cells unticked, or the parser reads the aside as vocabulary
+  (the actors.md capability table's parser caught exactly this when
+  the verdict row's aside quoted the capability name).

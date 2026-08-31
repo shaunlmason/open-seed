@@ -464,3 +464,44 @@ here. Newest last.
   never transitions. The ungoverned-verb test specimen moved from
   progress.milestone to message.sent, since milestones now carry a
   capability row.
+- 2026-08-31 — The verdict pipeline's first half binds at admission
+  and runs in declared isolation (plans/os-f6d2c267.md, task PR for
+  os-f6d2c267). verdict.rendered is piped: a fact admitted only on
+  review subjects, strict payload {verdict, receipt, submission,
+  independence: "L1"}, bound to the fold-recorded submission
+  {position, signer}, and refused exit 17 not_independent when the
+  signer is any claimant or the bound submission's signer — the one
+  capability row without an operator fallback (III.G: override is
+  6.4's own verb; roots that judge hold explicit verdict grants).
+  The verifier workspace is an origin-stripped local clone, never a
+  git worktree (a worktree's .git link shares the parent's refs and
+  objects, handing hostile spec commands update-ref reach back into
+  the host; review finding on the plan), and the charter's "sandbox
+  with declared, minimal capability" lands as a runner profile named
+  in every receipt: v0 exec scrubs the environment, bounds each
+  command with a process-group-killing timeout, and declares
+  network: unrestricted honestly rather than pretending a boundary
+  portable no-root Go cannot enforce; namespaced profiles slot in at
+  the Phase 7 adapter seam. Receipts are JCS-canonical
+  {contract, merge_base, head (full immutable SHAs, head must
+  descend from merge-base), plan-at-merge-base | null, diff_sha256,
+  files, transcripts (output digests, never inline bytes),
+  environment}, stored content-addressed under next/var/artifacts
+  (the git-addressed refs/seed/artifacts push stays deferred, the
+  observation-channel precedent). Render derives the permissible
+  verdict from the transcripts it just executed — pass over any
+  nonzero exit refuses the new exit 20 checks_red naming the
+  command, fail stays renderable, prose-only pass stays explicit
+  judgment — because the verifier is the only party holding what it
+  just ran; a raw-pushed pass-over-red goes red under seed verdict
+  check, whose recompute-and-mismatch refusal took the new exit 21
+  receipt_mismatch (both allocated per envelope.md's lowest-unused
+  rule alongside the plan's 17/18/19; the transcript-gate and
+  mismatch conditions surfaced in review and at implementation).
+  Gate-before-run consumes the projection's gated flag: ungated
+  executable content refuses 18 with nothing executed, and
+  declared-executable content yielding no parseable commands
+  refuses 19 — the command grammar is the plan grammar via the
+  exported plan.Commands, so the verifier executes exactly what the
+  lint reads. The contracts view is unchanged; surfacing verdicts in
+  projections rides 6.2's divergence work.

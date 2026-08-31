@@ -53,6 +53,13 @@ const (
 	// CapDispatch is queue management: filing, specifying, blocking,
 	// unblocking, and reaping contracts (plans/os-d69a6c91.md).
 	CapDispatch = "dispatch"
+	// CapVerdict is the verifier lane: rendering verdicts
+	// (plans/os-f6d2c267.md). Deliberately the one row without the
+	// operator fallback: III.G names operator override its own
+	// attributable verb, never a disguised verdict — that verb lands
+	// with 6.4, and a governance root that judges holds an explicit
+	// verdict grant, with L1 independence applying to every signer.
+	CapVerdict = "verdict"
 	// CapClaim is the worker set: taking, releasing, and parking
 	// claims, and submitting work.
 	CapClaim = "claim"
@@ -106,6 +113,10 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapClaim, CapOperator}
 	case "wedge.declared":
 		return []string{CapOperator}
+	// The verdict lane (plans/os-f6d2c267.md): verdict-granted keys
+	// only, no operator fallback — the one such row, see CapVerdict.
+	case "verdict.rendered":
+		return []string{CapVerdict}
 	}
 	return nil
 }

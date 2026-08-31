@@ -12,8 +12,10 @@
 package admit
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/classify"
@@ -194,6 +196,35 @@ type ContentionError struct {
 
 func (e *ContentionError) Error() string {
 	return fmt.Sprintf("contract %s is already claimed by %s (fence %d, held since position %d) — exclusivity is granted at admission, one claim at a time", e.Subject, e.Holder, e.Fence, e.Fence)
+}
+
+// NotIndependentError is the L1 independence refusal (exit 17
+// not_independent, next/spec/verdicts.md): the verdict signer is an
+// implementing key on this contract — a claimant, past or present, or
+// the bound submission's signer. Distinct from OutOfGrantError:
+// capability is global, independence is per-contract, and a perfectly
+// good verdict grant does not cure being disqualified here.
+type NotIndependentError struct {
+	Subject string
+	Actor   string
+	Role    string
+}
+
+func (e *NotIndependentError) Error() string {
+	return fmt.Sprintf("verdict on %s refused: signer %s is an implementing key on this contract (%s) — L1 independence separates failure domains, and a verdict grant does not cure disqualification on the contract being judged (next/spec/verdicts.md)", e.Subject, e.Actor, e.Role)
+}
+
+// VerdictError is the verdict.rendered shape-and-binding refusal: a
+// malformed payload, an illegal literal, or a citation of anything but
+// the bound submission. It rides the established shape-refusal exit
+// mapping, like the milestone rule's.
+type VerdictError struct {
+	Subject string
+	Reason  string
+}
+
+func (e *VerdictError) Error() string {
+	return fmt.Sprintf("verdict.rendered on %s refused: %s (next/spec/verdicts.md)", e.Subject, e.Reason)
 }
 
 // VerbInactiveError refuses a verb whose semantics are not active under
@@ -411,6 +442,71 @@ func Default() []Rule {
 			}
 			return transition.CheckProposalShape(rec.Event.Subject, rec.Event.Payload)
 		}},
+		{Name: "verdict", Check: func(c *Context, rec *event.Record) error {
+			// The verdict pipeline's admission half
+			// (plans/os-f6d2c267.md; next/spec/verdicts.md): a fact
+			// admitted only on review subjects, bound to the
+			// submission it judges, signed by a key disjoint from
+			// every implementing key (L1). Capability rides the grant
+			// rule; the fence rule already refuses citations outside
+			// a claim window.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			if rec.Event.Verb != transition.VerdictRenderedVerb {
+				return nil
+			}
+			subject := rec.Event.Subject
+			s, ok := c.Lifecycle.State(subject)
+			if !ok {
+				return &transition.InvalidTransitionError{Subject: subject, Verb: rec.Event.Verb}
+			}
+			if s.State != "review" {
+				return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: rec.Event.Verb}
+			}
+			var p struct {
+				Verdict      string `json:"verdict"`
+				Receipt      string `json:"receipt"`
+				Submission   string `json:"submission"`
+				Independence string `json:"independence"`
+			}
+			dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+			dec.DisallowUnknownFields()
+			if err := dec.Decode(&p); err != nil {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {verdict, receipt, submission, independence}: %v", err)}
+			}
+			var missing []string
+			for _, f := range []struct{ name, v string }{{"verdict", p.Verdict}, {"receipt", p.Receipt}, {"submission", p.Submission}, {"independence", p.Independence}} {
+				if strings.TrimSpace(f.v) == "" {
+					missing = append(missing, f.name)
+				}
+			}
+			if len(missing) > 0 {
+				return &transition.IncompleteError{Verb: rec.Event.Verb, Subject: subject, Missing: missing}
+			}
+			if p.Verdict != "pass" && p.Verdict != "fail" {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("verdict %q is neither literal pass nor fail", p.Verdict)}
+			}
+			if !receiptDigestRE.MatchString(p.Receipt) {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("receipt %q is not a lowercase-hex sha256 digest of the receipt's JCS bytes", p.Receipt)}
+			}
+			if p.Independence != "L1" {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("independence %q is not the v0 literal \"L1\" — the level vocabulary widens when Phase 10 declares levels per tier", p.Independence)}
+			}
+			if s.Submission == nil {
+				return &VerdictError{Subject: subject, Reason: "the fold records no submission on this review subject, so there is nothing to bind a verdict to"}
+			}
+			if p.Submission != fmt.Sprintf("%d", s.Submission.Pos) {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("submission %q is not the bound submission at position %d — a verdict judges exactly the submission that produced the review state", p.Submission, s.Submission.Pos)}
+			}
+			if s.PriorClaimants[rec.Event.Actor] {
+				return &NotIndependentError{Subject: subject, Actor: rec.Event.Actor, Role: "a claimant, past or present"}
+			}
+			if rec.Event.Actor == s.Submission.Signer {
+				return &NotIndependentError{Subject: subject, Actor: rec.Event.Actor, Role: "the bound submission's signer"}
+			}
+			return nil
+		}},
 		{Name: "lifecycle", Check: func(c *Context, rec *event.Record) error {
 			// Lifecycle legality is admission policy at seed/1, the
 			// halt/classification/grant precedent (plans/os-d69a6c91.md):
@@ -473,6 +569,9 @@ func Validate(opts ...Option) func(*ledger.Store, *event.Record) error {
 		return Check(ctx, rec)
 	}
 }
+
+// receiptDigestRE is the verdict payload's receipt-digest wire form.
+var receiptDigestRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 // fenceCitation extracts the payload's fence field: the string form
 // of the cited claim position, absent when the payload carries none.

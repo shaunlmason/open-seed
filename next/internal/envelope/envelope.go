@@ -33,6 +33,11 @@ const (
 	ExitOutOfGrant        = 14
 	ExitStale             = 15
 	ExitPlanRequired      = 16
+	ExitNotIndependent    = 17
+	ExitUngated           = 18
+	ExitSpecUnrunnable    = 19
+	ExitChecksRed         = 20
+	ExitReceiptMismatch   = 21
 	ExitUsage             = 64
 	ExitUnreadable        = 66
 )
