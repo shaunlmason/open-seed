@@ -18,6 +18,7 @@ package packet_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,13 +44,18 @@ func git(t *testing.T, dir string, args ...string) string {
 }
 
 // gitShow reads a path's bytes at a revision, untrimmed: artifact bytes
-// are the assertion, so content never rides the trimming helper.
+// are the assertion, so content never rides the trimming helper, and a
+// failure surfaces git's own stderr so the diagnosis is actionable.
 func gitShow(t *testing.T, dir, spec string) []byte {
 	t.Helper()
 	cmd := exec.Command("git", "show", spec)
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			t.Fatalf("git show %s: %v\n%s", spec, err, ee.Stderr)
+		}
 		t.Fatalf("git show %s: %v", spec, err)
 	}
 	return out
@@ -173,7 +179,11 @@ func executorB(t *testing.T, configPath string, p *packet.Packet) ([]resumeActio
 					continue
 				}
 				wt, err := os.ReadFile(filepath.Join(clone, path))
-				if err == nil && len(artifacts[r]) > 0 && bytes.Equal(wt, artifacts[r]) {
+				if err == nil && bytes.Equal(wt, artifacts[r]) {
+					// Equality against the anchor-resolved bytes is
+					// the whole check: a legitimately empty artifact
+					// verifies too, and a missing file already failed
+					// the read above.
 					verified = true
 				}
 			}
