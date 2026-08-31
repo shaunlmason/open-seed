@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "task": "os-f5551001",
+  "merge_base": "ff89f7ec1f29082513b4e6aec053e03ac4167181",
+  "head": "a2993a417e5d66213a35d624d2f9cfdbec7ec2ee",
+  "plan_path": "plans/os-f5551001.md",
+  "plan_sha256": "4f96862257fed4fe71a5478a84f3dc7c5276eee19e954fbe3cf244797f93bc77",
+  "diff_files": [
+    "next/cmd/seed/affordances.go",
+    "next/cmd/seed/affordances_cli_test.go",
+    "next/cmd/seed/budget.go",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/ledger_test.go",
+    "next/cmd/seed/offer.go",
+    "next/cmd/seed/seal.go",
+    "next/cmd/seed/verdict.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/affordances_test.go",
+    "next/spec/envelope.md"
+  ],
+  "diff_sha256": "07c819f0020168d497a088db751cae4133b92e07e2a0b2f445cf617c53b01d57",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/envelope/ ./cmd/seed/ -run 'Affordance|Envelope|Budget|Append' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
