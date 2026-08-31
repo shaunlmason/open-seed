@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "task": "os-c61c3392",
+  "merge_base": "77912ed23dc984821c3c569998912b1baf37187f",
+  "head": "95c615890c49d0d65884bb09ff5dcbc2c0a55812",
+  "plan_path": "plans/os-c61c3392.md",
+  "plan_sha256": "2790c17b345639374af212492164620752257c4fc4828c8b154d3b436ded85f2",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/offer.go",
+    "next/cmd/seed/offer_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/offer_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/cache_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/project/offer_views_test.go",
+    "next/internal/project/report.go",
+    "next/internal/transition/offer_test.go",
+    "next/internal/transition/transition.go",
+    "next/spec/actors.md",
+    "next/spec/lifecycle.md",
+    "next/spec/offers.md",
+    "next/spec/projections.md",
+    "next/spec/protocol.md"
+  ],
+  "diff_sha256": "17546a53605784c14e98563c33334c5251b7e05ed3f71007e88965f56598a5f4",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -run 'Offer|Wakeless|AcceptedCapabilities|Contracts|Cache' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

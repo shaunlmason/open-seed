@@ -110,11 +110,14 @@ type ReportReconciliation struct {
 // republishes existing prefixes); Version "3" the reconciliation
 // section (plans/os-6cdc15be.md); Version "4" the unsealed class in
 // it (plans/os-3128535a.md); Version "5" the override classes
-// (plans/os-d2497eb7.md). Inputs marks it as the one
+// (plans/os-d2497eb7.md); Version "6" republishes over the offer-fact
+// fold (plans/os-c61c3392.md) — offers add no report section, so
+// content is unchanged and version, not content, is what republishes
+// existing prefixes. Inputs marks it as the one
 // input-consuming projection, everything else staying byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "5", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "6", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the

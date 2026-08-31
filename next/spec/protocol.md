@@ -144,6 +144,11 @@ admission).
 - `verdict.*` — `rendered` (pass/fail, receipt, independence level achieved).
 - `merge.*` / `check.*` — `requested`, `observed` (external-fact
   observations).
+- `offer.*` — `published` (the supervisor's eligibility-scoped,
+  expiring invitation to claim; a fact, never a transition —
+  [`offers.md`](offers.md), active from `seed/1`. Catalog growth here
+  is additive: older validators refuse the unknown verb safely, so
+  the protocol version does not bump).
 - `budget.*` — `reserve`, `settle`, `release`.
 - `run.*` — `settled` (aggregate metering).
 - `message.*` — `sent`, `acked`.

@@ -138,13 +138,16 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   the declared inputs echoed (`as_of`, digest, thresholds) plus one
   expiry-vs-wedge classification per active claim, read only from the
   claim's own fence-keyed stream. The report is the one
-  input-consuming projection; remaining sections needing later facts
-  (offers, budgets, divergence) stay named extension points, not
-  emitted empty.
+  input-consuming projection; a remaining section needing later facts
+  (budgets) stays a named extension point, not emitted empty. Offer
+  facts land in the contracts view and the cache's `offers` table
+  ([`offers.md`](offers.md)); the report carries no offer section —
+  liveness is an instant-relative read, and the report is
+  position-identified.
 
 - **`cache`** (`cache.db`): the single-machine read-throughput
   surface — one SQLite database mirroring the views (`roster`,
-  `contracts` indexed by subject, `queue` + `queue_meta`,
+  `contracts` and `offers` indexed by subject, `queue` + `queue_meta`,
   `actor_history`/`actor_signed` indexed by fingerprint, `report`
   key-values) plus a one-row `stamp` table carrying **exactly** the
   tree stamp's fields (name, position, tip, version), so a pure-SQL

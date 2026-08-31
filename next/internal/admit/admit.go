@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/classify"
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -226,6 +227,19 @@ type VerdictError struct {
 
 func (e *VerdictError) Error() string {
 	return fmt.Sprintf("verdict.rendered on %s refused: %s (next/spec/verdicts.md)", e.Subject, e.Reason)
+}
+
+// OfferError is the offer.published shape refusal: a malformed
+// payload, a malformed expiry, or a born-dead expiry at or before the
+// event's own ts. It rides the established shape-refusal exit
+// mapping, like the verdict rule's.
+type OfferError struct {
+	Subject string
+	Reason  string
+}
+
+func (e *OfferError) Error() string {
+	return fmt.Sprintf("offer.published on %s refused: %s (next/spec/offers.md)", e.Subject, e.Reason)
 }
 
 // VerbInactiveError refuses a verb whose semantics are not active under
@@ -516,6 +530,64 @@ func Default() []Rule {
 			}
 			if rec.Event.Actor == s.Submission.Signer {
 				return &NotIndependentError{Subject: subject, Actor: rec.Event.Actor, Role: "the bound submission's signer"}
+			}
+			return nil
+		}},
+		{Name: "offer", Check: func(c *Context, rec *event.Record) error {
+			// The supervisor's invitation (plans/os-c61c3392.md;
+			// next/spec/offers.md; SEED-NEXT.md §II.9): a fact admitted
+			// only while the subject folds to ready, strictly shaped,
+			// whose expiry lies strictly after the event's own ts —
+			// admission never reads a wall clock, so a born-dead offer
+			// refuses deterministically. Capability rides the grant
+			// rule; liveness (claimed-or-expire) is derived at the
+			// consuming surface, never stored.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			if rec.Event.Verb != transition.OfferPublishedVerb {
+				return nil
+			}
+			subject := rec.Event.Subject
+			s, ok := c.Lifecycle.State(subject)
+			if !ok {
+				return &transition.InvalidTransitionError{Subject: subject, Verb: rec.Event.Verb}
+			}
+			if s.State != "ready" {
+				return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: rec.Event.Verb}
+			}
+			var p struct {
+				Eligibility *struct {
+					Capabilities []string `json:"capabilities"`
+					Tiers        []string `json:"tiers"`
+				} `json:"eligibility"`
+				Expires string `json:"expires"`
+			}
+			dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+			dec.DisallowUnknownFields()
+			if err := dec.Decode(&p); err != nil {
+				return &OfferError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {eligibility{capabilities, tiers}, expires}: %v", err)}
+			}
+			var missing []string
+			if p.Eligibility == nil {
+				missing = append(missing, "eligibility")
+			}
+			if strings.TrimSpace(p.Expires) == "" {
+				missing = append(missing, "expires")
+			}
+			if len(missing) > 0 {
+				return &transition.IncompleteError{Verb: rec.Event.Verb, Subject: subject, Missing: missing}
+			}
+			exp, err := time.Parse(time.RFC3339, strings.TrimSpace(p.Expires))
+			if err != nil {
+				return &OfferError{Subject: subject, Reason: fmt.Sprintf("expires %q is not an RFC3339 timestamp", p.Expires)}
+			}
+			ts, err := time.Parse(time.RFC3339, rec.Event.TS)
+			if err != nil {
+				return &OfferError{Subject: subject, Reason: fmt.Sprintf("the event ts %q is not an RFC3339 timestamp to anchor expiry against", rec.Event.TS)}
+			}
+			if !exp.After(ts) {
+				return &OfferError{Subject: subject, Reason: fmt.Sprintf("expires %s is not after the event's own ts %s — a born-dead offer invites nothing (claimed or expire, SEED-NEXT.md §II.9)", exp.Format(time.RFC3339), ts.Format(time.RFC3339))}
 			}
 			return nil
 		}},

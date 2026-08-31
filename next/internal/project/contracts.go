@@ -48,6 +48,8 @@ type ContractEntry struct {
 	Merged        *ContractMerge      `json:"merged"`
 	Sealed        *ContractSealed     `json:"sealed"`
 	Override      *ContractOverride   `json:"override"`
+	Offers        []ContractOffer     `json:"offers,omitempty"`
+	LastClaim     *string             `json:"last_claim,omitempty"`
 	FirstPosition int                 `json:"first_position"`
 	LastPosition  int                 `json:"last_position"`
 	Events        []ContractEvent     `json:"events"`
@@ -99,6 +101,22 @@ type ContractOverride struct {
 	Reason   string `json:"reason"`
 }
 
+// ContractOffer is one folded offer.published (plans/os-c61c3392.md;
+// next/spec/offers.md): the chain position (string per the envelope
+// position convention), the publishing signer, the eligibility scopes
+// (empty means unscoped), and the RFC3339 expiry. Facts, not
+// liveness: the offer list surface derives claimed-or-expire liveness
+// and validates the signer's supervise boundary at this position.
+// Omitted when a subject has no offers, so offer-free chains keep
+// byte-identical views.
+type ContractOffer struct {
+	Position     string   `json:"position"`
+	Signer       string   `json:"signer"`
+	Capabilities []string `json:"capabilities,omitempty"`
+	Tiers        []string `json:"tiers,omitempty"`
+	Expires      string   `json:"expires"`
+}
+
 // ContractClaim is the active claim while a subject is in_progress:
 // the holder's fingerprint and the fence (the admitted claim.taken
 // position, string per the envelope position convention), so
@@ -117,10 +135,12 @@ type ContractClaim struct {
 // reconciliation-chain facts (verdict, requested, merged;
 // plans/os-6cdc15be.md); Version "7" the sealed-checks commitment
 // (plans/os-3128535a.md); Version "8" the operator override
-// (plans/os-d2497eb7.md) — each republishing under a new build id via
-// the version-in-identity machinery.
+// (plans/os-d2497eb7.md); Version "9" the offer facts and the
+// last-claim consumption boundary (plans/os-c61c3392.md), both
+// omitted on offer-free, never-claimed subjects — each republishing
+// under a new build id via the version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "8", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "9", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -190,6 +210,23 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 			}
 			if s.Merged != nil {
 				e.Merged = &ContractMerge{Position: fmt.Sprintf("%d", s.Merged.Pos), SHA: s.Merged.SHA}
+			}
+			for _, o := range s.Offers {
+				e.Offers = append(e.Offers, ContractOffer{
+					Position:     fmt.Sprintf("%d", o.Pos),
+					Signer:       o.Signer,
+					Capabilities: o.Capabilities,
+					Tiers:        o.Tiers,
+					Expires:      o.Expires,
+				})
+			}
+			// The consumption boundary is exposed only beside offer
+			// facts: an ever-claimed, offer-free subject keeps its v8
+			// body byte-identical (the plan's compatibility promise);
+			// the fold keeps the boundary internally either way.
+			if len(s.Offers) > 0 && len(s.PriorClaimants) > 0 {
+				lc := fmt.Sprintf("%d", s.LastClaim)
+				e.LastClaim = &lc
 			}
 		}
 		out = append(out, *e)
