@@ -363,3 +363,13 @@ Fresh sessions read this file instead of rediscovering.
   short-circuits that key's fingerprint (rawAppend in the lockout
   drills). Symptom otherwise: "actor fingerprint not in the keyring"
   on a key that is genuinely enrolled.
+
+- The laundering countermeasure now has a fixed shape worth applying
+  on sight: any admitted step that trusts a folded fact must both
+  (a) validate the fact's signer against its authoring boundary and
+  (b) revalidate the fact's own citations, because the tolerant fold
+  records any well-shaped raw push. 6.2 learned it for verdicts, 6.3
+  for seals, 6.4 for fails and overrides (each time as a review
+  finding or a preemption of one); Phase 7's offers and budget
+  reservations will meet the same pattern, so design it in from the
+  plan, not the review round.

@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task": "os-600be59e",
+  "merge_base": "03e4af952199817732e1be0132e03acdba3973ef",
+  "head": "841afcbddc7510d5a586f1873ee1fa07ddbf348a",
+  "plan_path": "plans/os-600be59e.md",
+  "plan_sha256": "363cd5aed93b200907dac732435ce3ca39449947785019e43ac47c7a448db1bc",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/progress.md"
+  ],
+  "diff_sha256": "66e7063e1b58f450277b3968f36b0e555be6f8f7410c91c32558529f219dbbbc",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "sh -c 'p=$(tr \"\\n\" \" \" \u003c next/docs/progress.md | tr -s \" \"); for pr in 135 137 139 141; do echo \"$p\" | grep -qF \"done** (merged #$pr; card closed\" || { echo \"PR $pr row not done with card closed\"; exit 1; }; done; for id in os-c61c3392 os-cecac5de os-1dad487d os-0f718b4e; do echo \"$p\" | grep -q \"$id\" || { echo \"$id missing\"; exit 1; }; done; echo \"$p\" | grep -q \"Phase 6 exit (the III.G subset\" || { echo \"exit paragraph missing\"; exit 1; }; for bad in \"(in progress)\" \"this PR\" \"pending\"; do if echo \"$p\" | grep -qi \"$bad\"; then echo \"stale marker: $bad\"; exit 1; fi; done; exit 0'",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
