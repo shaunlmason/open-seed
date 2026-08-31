@@ -52,6 +52,14 @@ func TestAcceptanceShape(t *testing.T) {
 		"acceptance.ref", "range")
 	refuse(`{"acceptance": {"ref": "specs/a.md @ abc1234", "executable": true, "gate": "the reviewers agreed"}}`,
 		"acceptance.gate", "pr @ merged-commit")
+	// The executable marker is an explicit declaration: an absent or
+	// null marker decodes into the same false a declared one does, and
+	// silence must never decide whether content is armed.
+	refuse(`{"acceptance": {"ref": "specs/a.sh @ abc1234"}}`,
+		"acceptance.executable", "declared explicitly")
+	refuse(`{"acceptance": {"ref": "specs/a.sh @ abc1234", "executable": null}}`,
+		"acceptance.executable", "declared explicitly")
+
 	// The old inline string form and unknown keys refuse: the spec
 	// body is an artifact, and the shape is strict.
 	refuse(`{"acceptance": "specs/a.md @ abc1234"}`, "acceptance", "structured")

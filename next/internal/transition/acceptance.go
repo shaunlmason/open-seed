@@ -72,6 +72,18 @@ func ParseAcceptance(subject string, payload []byte) (*Acceptance, error) {
 	if err := dec.Decode(&a); err != nil {
 		return nil, &AcceptanceError{Subject: subject, Field: "acceptance", Reason: fmt.Sprintf("the acceptance field is the structured object {ref, executable, gate?}: %v", err)}
 	}
+	// The executable marker is an explicit declaration: an absent or
+	// null key decodes into the same false a declared one does, and
+	// silence must never decide whether content is armed. Only the
+	// literal booleans admit.
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return nil, &AcceptanceError{Subject: subject, Field: "acceptance", Reason: "the acceptance field is not an object"}
+	}
+	ex := string(bytes.TrimSpace(fields["executable"]))
+	if ex != "true" && ex != "false" {
+		return nil, &AcceptanceError{Subject: subject, Field: "acceptance.executable", Reason: "the executable marker is declared explicitly, true or false — an absent or null marker is not a declaration, and Phase 6 reads \"may this run?\" from what was declared"}
+	}
 	if !classify.IsAnchoredRef(a.Ref) {
 		return nil, &AcceptanceError{Subject: subject, Field: "acceptance.ref", Reason: fmt.Sprintf("%q is not a commit-anchored artifact reference (\"path @ commit\") — the spec body is a repo artifact, never inline prose that executes", a.Ref)}
 	}
