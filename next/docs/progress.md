@@ -153,8 +153,17 @@ Phase 7, as added rules on the shared set.
   the cache is a registered projection, byte-identical like every
   view; the stamp table carries exactly the tree stamp's fields),
   task PR #119 — **done** (merged; card closed; Phase 4 complete)
+- 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
+  PR #107 (merged, amended: seam/write-separation lint + locked trees
+  `0444`/`0555` with the engine unlock window, deletion via rebuild,
+  per review), task PR #112 (stack-collapsed; its diff never reached
+  main), re-landed as task PR #118 (merged, amended per review:
+  openDirs partial-open rollback, lint vocabulary derived from the
+  engine's declarations with a behavioral layout probe,
+  unprivileged-cleanup lesson recorded) — **done** (merged; card
+  closed)
 
-## Phase 5 — Lifecycle, claims, packets  *(in progress)*
+## Phase 5 — Lifecycle, claims, packets (docs/next-build-plan.md Phase 5; deps: 3 ✓, 4 ✓)
 
 - 5.1 transition table as data + lifecycle verbs — os-d69a6c91 —
   plan PR #113 (merged, amended: charter Appendix catalog vocabulary,
@@ -178,8 +187,8 @@ Phase 7, as added rules on the shared set.
   (merged, amended: packets on ALL four exits incl. submission; the
   3072 canonical bound fits the payload cap; the mandatory base
   range; combined anchors, per review) — **done** (merged #124;
-  card in review pending follow-up #127, the resume-drill and
-  packet-shape hardening from the post-merge round): internal/packet strict schema, the packet
+  card closed; the resume-drill and packet-shape hardening landed
+  via follow-up #127, per the post-merge round): internal/packet strict schema, the packet
   admission rule, the classifier's bare-range exemption, tolerant
   fold counting packetless/fence-violating exits, the A/B resume
   drill
@@ -202,31 +211,84 @@ Phase 7, as added rules on the shared set.
   tier and plan.approved facts, plan.* capability rows
 - 5.6 observation streams v0 + expiry vs. wedge — os-2ff8dbf1 — plan
   PR #121 (merged, amended per review: input-bearing build identity,
-  fence-keyed streams, position throttle) — **this PR**:
+  fence-keyed streams, position throttle) — **done** (merged #131;
+  card closed):
   internal/obs (fence-keyed JSONL streams, snapshot digest, pure
   classification), the engine Inputs seam with report Version "2"
   and the -i<digest12> build identity, milestone/wedge admission
   (monotonic counts, 25-position spacing, operator wedge facts),
   seed obs emit + rebuild declared inputs, spec/observations.md
-- 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
-  PR #107 (merged, amended: seam/write-separation lint + locked trees
-  `0444`/`0555` with the engine unlock window, deletion via rebuild,
-  per review), task PR #112 (stack-collapsed; its diff never reached
-  main), re-landed as task PR #118 (merged, amended per review:
-  openDirs partial-open rollback, lint vocabulary derived from the
-  engine's declarations with a behavioral layout probe,
-  unprivileged-cleanup lesson recorded) — **done** (merged; card
-  closed)
+
+**Phase 5 exit (the III.F subset docs/next-build-plan.md scopes): met.**
+Met means the subset the plan's own Phase 5 item list and exit drills
+assign to this phase, the scoped-exit posture of the Phase 2 and 3
+records: the plan itself defers gate-before-run to Phase 6 (item 4's
+named deferral), racing to the fixed-defaults backlog and Phase 13
+(item 1 there names it as the III.F remainder), sealed checks to 6.3,
+and the dependency-cascade row to the Phase 13 catch-all, so those
+III.F rows are later phases' bound work, not this exit's.
+The lifecycle vocabulary and
+transition rules are self-validating data enforced at admission, and
+claim is a transition, not a state (#122, with the fold honoring the
+seed/1 activation boundary via #129). Claims are exclusive with
+fencing granted only at admission: stale or missing citations refuse
+exit 6 naming the cited fence, the active fence, and the holder;
+contention returns the structured exit-2 envelope; prior claimants
+stay fenced; and a claiming verb cannot smuggle a citation onto an
+unheld subject (#123, #128). The claim race storm drill is green on
+main, and offline claiming is impossible by construction — exclusive
+verbs refuse the local append, drilled at the offline boundary
+(#123). Every exit from `in_progress` is one of the four deliberate
+exits and each carries a four-part, shape-linted, size-bounded
+packet, so silent abandonment is impossible (#122, #124; null parts
+refused via #127). Packet sufficiency is drilled end-to-end: a fresh
+executor resumes from the packet alone, performs the recorded
+unfinished work, lands it, and never re-tries recorded dead ends
+(#124, hardened by #127). A contract cannot become claimable without
+the structured acceptance field; executable content requires gate
+evidence bound to the ref's revision at every tier, and outside text
+can propose but never directly become acceptance content (#125).
+Plans are falsifiable — boundary set, retention set, validation
+commands, expected diff shape, missing retention fails lint — and
+submission is plan-gated above the trivial tier with plan and task
+PRs structurally disjoint (#126; the receipt's plan-line commands
+execute under engine v0.15.1, pinned by #130). Observations v0 close
+the phase: fence-keyed lossy streams, monotonic position-throttled
+milestones, and expiry vs. wedge rendered as distinct states in the
+report (#131). Still-unmet III.F criteria, by landing phase: sealed
+checks and their honest-scope documentation (Phase 6, the exit
+line's named carve-out); gate-before-run enforcement — the verifier
+refusing ungated content (with verdicts, Phase 6); racing mode as
+the per-squad opt-in (Phase 13 item 1); and the dependency-cascade
+row (advisory wakes land with Phase 7's supervisor; holds,
+initiative rollups, and goal-ancestry warnings have no named phase
+item and fall to Phase 13's catch-all). This exit record is card
+os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
+
+## Phase 6 — Verdict pipeline (docs/next-build-plan.md Phase 6; deps: 5 ✓)
+
+- 6.1 submission binding, verifier workspace, receipt computation,
+  verdict.rendered at L1 — os-f6d2c267 — plan PR #133 (open, amended
+  per review: sandbox runner profile with declared capability,
+  immutable head binding, transcript-derived pass rule)
+- 6.2 reconciliation chain (merge.requested, merge.observed, done) +
+  divergence drills — os-6cdc15be — backlog
+- 6.3 sealed checks (salted commitment, age-encrypted body, rotation
+  re-encryption, capability audit) — os-3128535a — backlog
+- 6.4 red-verdict lockout + operator override verb — os-d2497eb7 —
+  backlog
 
 ## Frontier
 
-Phases 0 through 4 are done and closed (the #111/#112 stack collapse
-re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
-plan is merged (#113–#116, #120, #121); implementations 5.1 (#122)
-through 5.5 (#126) and all three post-merge review follow-ups (#127,
-#128, #129) are merged. **This PR implements 5.6** (os-2ff8dbf1,
-observations v0), the last open Phase 5 PR: landing it completes the
-Phase 5 implementation set. **Next action: land this PR; then the
-Phase 5 exit record and Phase 6 (the verdict pipeline).**
+Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
+#120, #121), every implementation (5.1 #122 through 5.6 #131), the
+three post-merge follow-ups (#127, #128, #129), and the engine
+v0.15.1 receipt-runner pin (#130) are merged, and the Phase 5 exit
+record above is card os-6e37b10e's task PR. **Next action: implement
+6.1** (os-f6d2c267, the verdict pipeline's first half) once its plan
+PR #133 merges — then 6.2's plan. The Phase 6 exit subset is charter
+III.G minus L2/L3 levels and rubric calibration (Phase 10/11): the
+reconciliation drills, the receipt recompute-and-mismatch test, and
+the sealed-check audit.
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

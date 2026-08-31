@@ -308,6 +308,13 @@ Fresh sessions read this file instead of rediscovering.
   immediately. Keep reading recorded receipt exits with a checker
   that sys.exit(1)s on any nonzero, and never let a retry loop's
   echo swallow that status into a chained push.
+- The receipt gate makes every task PR plan-first in practice,
+  whatever the card's tier: `seed receipt generate`/`verify` refuse
+  without a merged plan at the merge-base (D3), and CI's verify job
+  demands the receipt on every `seed/<id>` branch — so even an L1
+  administrative card routes through a plan PR. Budget the human
+  review round-trip up front instead of discovering it at receipt
+  time (os-6e37b10e).
 - Normative spec tables that are parsed by tests treat every
   backticked token in a data cell as data: keep prose asides in
   those cells unticked, or the parser reads the aside as vocabulary
