@@ -398,7 +398,11 @@ Phase 6 item).
 
 - 7.1 offers (offer.published eligibility-scoped and expiring;
   workers pull and claim; the wakeless poll-only drill proving wake
-  is advisory) — os-c61c3392 — backlog
+  is advisory) — os-c61c3392 — **review** (task PR #145 against
+  plan #144; the supervise lane, claimed-or-expire liveness with the
+  claim as consumption boundary, foreign offers inert at the list
+  surface, the poll-only and race drills, contracts v9 / report v6 /
+  cache generation 8)
 - 7.2 budgets (budget.reserve / settle / release; admission
   decrements reservations; the reservation race drill; per-adapter
   risk limits) — os-cecac5de — backlog
@@ -418,10 +422,11 @@ record above is card os-6e37b10e's task PR (#134, merged; card
 closed). Phase 6 is done and closed: every plan (#133, #136, #138,
 #140), every implementation (6.1 #135, 6.2 #137, 6.3 #139, 6.4
 #141), and the exit record above (card os-600be59e's task PR) are
-merged with every card closed. **Next action: 7.1's plan**
-(os-c61c3392, offers: offer.published eligibility-scoped and
-expiring, workers pull and claim, and the wakeless poll-only drill
-proving wake is advisory; plan-first on seed/os-c61c3392-plan). The
+merged with every card closed. **Next action: land 7.1**
+(os-c61c3392, offers — plan #144 merged, task PR #145 in review),
+then 7.2's plan (os-cecac5de, budgets: budget.reserve / settle /
+release with admission decrementing reservations and the
+reservation race drill; plan-first on seed/os-cecac5de-plan). The
 Phase 7 exit subset is charter III.H for the implemented adapter:
 the poll-only run, the reservation race drill, and the
 disposability drill (randomized kill after sync; complete
