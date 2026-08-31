@@ -415,7 +415,7 @@ Phase 6 item).
 - 7.3 executor adapter interface + the local worktree adapter
   (provision / wake / meter / report-tuple; metering to the
   observation stream; run.settled aggregate) — os-1dad487d —
-  **done, follow-up in review** (task PR #151 merged against plan
+  **done** (task PR #151 merged against plan
   #150: the public next/executor package, the
   reserve/start/provision/meter/settle bracket with run.started
   filling the spending table, the SIGKILL disposability drill,
@@ -425,12 +425,77 @@ Phase 6 item).
   and worktree rollback on provisioning failure — landed in
   follow-up task PR #152, merged)
 - 7.4 graceful preemption (safe-point park with packet; force reap
-  packet) — os-0f718b4e — **review** (task PR against plan #153:
-  run.interrupted as a once-per-fence supervisory ledger fact with
-  position-accurate validity shared by admission and polling
-  workers, safe-point semantics specified as the worker contract,
-  the graceful park drill and the force reap drill both completing
-  elsewhere, contracts v12 / report v9 / cache generation 11)
+  packet) — os-0f718b4e — **done** (task PR #154 merged against
+  plan #153; card closed: run.interrupted as a once-per-fence
+  supervisory ledger fact with position-accurate validity shared by
+  admission and polling workers, safe-point semantics specified as
+  the worker contract, the graceful park drill and the force reap
+  drill both completing elsewhere, contracts v12 / report v9 /
+  cache generation 11; the review round hardened the validity
+  helpers to re-run each verb's strict payload decode at the fact's
+  own position, gated once-per-fence settles on boundary validity,
+  and indexed the interrupts cache table)
+
+**Phase 7 exit (the III.H subset docs/next-build-plan.md scopes): met.**
+Met means the subset the plan's own Phase 7 item list and exit line
+assign to this phase for the implemented adapter, the scoped-exit
+posture of the Phase 2, 3, 5, and 6 records. The exit line's three
+named drills are green on main: the wakeless poll-only run through
+the whole loop (#145: wake is advisory transport whose total
+failure costs only latency); the reservation race drill (#149: two
+drafts admission-checked against one view, the second refusing at
+append, so concurrent over-spend against one budget is structurally
+impossible); and the disposability drill (#151: a real worker
+subprocess SIGKILLed at a seeded randomized site after an admitted
+synchronization, the chain verifying, the contract completing
+elsewhere from the surviving ledger alone, and the loss window
+exactly the post-sync observation lines, stated honestly). The
+III.H rows the merged PRs evidence for the implemented adapter:
+scheduling is offers-and-claims with eligibility-scoped, expiring
+offers, workers pulling and claiming, and exclusivity settling at
+admission so duplicate scheduling is impossible and no assignment
+can orphan (#145); spending verbs require an admitted
+budget.reserve with execution fenced to the reservation —
+run.started fills the spending table, Provision refuses outside the
+gate, and settle/release records actuals (#149, #151, with #152
+authenticating folded starts position-accurately so fold presence
+is never admission); metering flows on the observation channel and
+settles to the ledger at run end via run.settled, drilled through
+the full bracket (#151, #152) — with the row's universal half, "no
+execution path is unmetered", recorded unmet at this exit, not
+claimed: Meter is caller-optional and nothing structurally prevents
+an unmetered caller of the public adapter interface, so what this
+phase landed is the metered path and the drilled bracket, while the
+universal half routes below (budget consumption stays enforced
+upstream at the reservation gate either way, so an unmetered run
+under-reports telemetry, never overspends); the adapter interface
+is public with the local worktree adapter as its first
+implementation (#151, #152); and
+preemption is graceful-first with safe-point semantics specified as
+the worker contract and a force kill still yielding an honest reap
+packet (#154 — landed beyond the exit line's three named drills, so
+the III.H preemption row closes with the phase rather than
+waiting). The local worktree adapter can be stopped synchronously,
+so the risk-limit posture next/spec/budgets.md declares has no
+per-adapter declaration to make yet. The unmet III.H remainder
+routes as obligations named in the landing phases' own build-plan
+text: the container, cloud-session, and enrolled-remote adapters
+with their per-adapter risk-limit declarations (Phase 13 item 2);
+the remaining-reservation budget block in the worker's envelope
+(Phase 8 item 1); exhaustion parking — the worker loop that answers
+the budget gate's structured refusal by taking the 7.4 claim.parked
+exit with its packet, consuming Phase 8's budget block — named in
+Phase 9 item 1's worker-lane loop; the metering row's unmet
+universal half in two named steps — detection as Phase 9 item 3's
+unsettled-run lint (position-anchored: a started window lacking its
+run.settled is flagged only once the subject takes a subsequent
+claim window or reaches a terminal state), and the
+full-conformance claim on Phase 13's exit line, which already
+requires the named III.H criteria green; and scheduling inputs
+completing with routing-as-data in the Phase 9 dispatcher and
+qualification tuples in Phase 10 item 1 (cost classes exist today
+in the filed budget class). This exit record is card os-c9e24032's
+task PR (an administrative card, not a Phase 7 item).
 
 ## Frontier
 
@@ -442,16 +507,17 @@ record above is card os-6e37b10e's task PR (#134, merged; card
 closed). Phase 6 is done and closed: every plan (#133, #136, #138,
 #140), every implementation (6.1 #135, 6.2 #137, 6.3 #139, 6.4
 #141), and the exit record above (card os-600be59e's task PR) are
-merged with every card closed. 7.1 (offers: plans #144/#146, task
-PR #145) and 7.2 (budgets: plans #147/#148, task PR #149) are done,
-merged with their cards closed. 7.3 (os-1dad487d, executor adapter +
-local worktree — plan #150, task PRs #151 and follow-up #152) is
-done, merged with its card closed. **Next action: land 7.4**
-(os-0f718b4e, graceful preemption — plan #153, task PR in review),
-then the Phase 7 exit record. The
-Phase 7 exit subset is charter III.H for the implemented adapter:
-the poll-only run, the reservation race drill, and the
-disposability drill (randomized kill after sync; complete
-elsewhere).
+merged with every card closed. Phase 7 is done and closed: every
+plan (#144/#146, #147/#148, #150, #153), every implementation (7.1
+#145, 7.2 #149, 7.3 #151 with follow-up #152, 7.4 #154), and the
+exit record above (card os-c9e24032's task PR) are merged with
+every card closed. **Next action: Phase 8 item 1** — the affordance
+envelope computed from the same internal/admit rule set, carrying
+affordances, position, the budget block, structured errors, and
+exit codes per spec (charter §II.10, III.I): file its card and plan
+first, per the loop; then Phase 8 items 2 and 3 (the
+affordance-listed-verb-refused-equals-bug regression class, the
+refusal-rate report metric). Phase 9's worker-lane loop carries the
+exhaustion-park obligation the Phase 7 exit routes to it.
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

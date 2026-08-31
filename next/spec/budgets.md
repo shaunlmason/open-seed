@@ -88,10 +88,12 @@ initiates through it, so no run provisions outside the reservation
 gate. The budget rule refuses any listed verb on
 a subject with no open valid reservation; the gate is additionally
 drilled through test injection in isolation.
-Exhaustion produces a structured refusal the worker can act on; the
-deliberate park-with-packet on exhaustion is Phase 7.4's worker
-behavior, and the envelope's `{reserved, remaining}` block is Phase
-8's.
+Exhaustion produces a structured refusal the worker can act on. The
+parking mechanics the park invokes — the `claim.parked` exit with
+its packet at a safe point — landed with 7.4, the envelope's
+`{reserved, remaining}` block is Phase 8's, and the worker-lane
+loop that answers exhaustion by taking that exit is named in
+docs/next-build-plan.md Phase 9 item 1.
 
 ## Surfaces
 
