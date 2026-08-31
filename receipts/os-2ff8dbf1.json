@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "task": "os-2ff8dbf1",
+  "merge_base": "a5105bec602c78aace121d2bfc3f70976ba4452d",
+  "head": "1a841a80cba6fb661858e03a7ad7776d07b02236",
+  "plan_path": "plans/os-2ff8dbf1.md",
+  "plan_sha256": "dc066530c06c64376dcab5b57d6fe30f54098aad6316ddefd7eabe1818de58c5",
+  "diff_files": [
+    "next/cmd/seed-admit/actors_test.go",
+    "next/cmd/seed-admit/drill_test.go",
+    "next/cmd/seed-admit/main_test.go",
+    "next/cmd/seed-admit/rotation_test.go",
+    "next/cmd/seed/actors_cli_test.go",
+    "next/cmd/seed/ledger_test.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/obs.go",
+    "next/cmd/seed/obs_cli_test.go",
+    "next/cmd/seed/project.go",
+    "next/cmd/seed/remote_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/admit_test.go",
+    "next/internal/admit/fence_test.go",
+    "next/internal/admit/grant_test.go",
+    "next/internal/admit/observation_test.go",
+    "next/internal/admit/standing_test.go",
+    "next/internal/gitref/gitref_test.go",
+    "next/internal/halt/halt_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/ledger/actors_verify_test.go",
+    "next/internal/ledger/gen_fixture.go",
+    "next/internal/ledger/ledger_test.go",
+    "next/internal/ledger/version_test.go",
+    "next/internal/obs/obs.go",
+    "next/internal/obs/obs_test.go",
+    "next/internal/packet/packet_test.go",
+    "next/internal/project/actors.go",
+    "next/internal/project/boundary_test.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/errors_internal_test.go",
+    "next/internal/project/observation_test.go",
+    "next/internal/project/project.go",
+    "next/internal/project/project_test.go",
+    "next/internal/project/queue.go",
+    "next/internal/project/report.go",
+    "next/internal/project/roster.go",
+    "next/internal/project/views_test.go",
+    "next/internal/transition/transition.go",
+    "next/spec/actors.md",
+    "next/spec/lifecycle.md",
+    "next/spec/observations.md",
+    "next/spec/projections.md"
+  ],
+  "diff_sha256": "9dfda8492666a5d96c2b4d1bf1704f39c0bb39a25272b354d48e178dce673cd1",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/obs/... ./internal/project/... ./internal/admit/... ./cmd/seed/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
