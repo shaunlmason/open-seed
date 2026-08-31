@@ -694,3 +694,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-7efa88af","kind":"pr"},"task":"os-c6fb95ee","ts":"2026-08-31T22:02:00Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-c6fb95ee","ts":"2026-08-31T22:02:03Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 8.2 — affordance regression class (listed verb refused at same position = bug)"},"task":"os-148d3ba1","ts":"2026-08-31T22:04:37Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-148d3ba1","ts":"2026-08-31T22:04:45Z","verb":"promote"}
