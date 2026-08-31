@@ -670,3 +670,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-c9e24032","ts":"2026-08-31T19:59:43Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T20:59:46Z"},"task":"os-c9e24032","ts":"2026-08-31T19:59:46Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-c9e24032","ts":"2026-08-31T20:01:30Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:155","to":"ready"},"task":"os-c9e24032","ts":"2026-08-31T20:18:24Z","verb":"plan-unblock"}
