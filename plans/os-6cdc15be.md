@@ -45,29 +45,49 @@ later drives.
 3. **The fold records the chain facts** per subject: the latest
    verdict `{Pos, Verdict, Receipt, Signer}` (any verdict, pass or
    fail — 6.4's lockout will consult it), the latest
-   `merge.requested` position and its cited verdict, and every
-   admitted `merge.observed` `{Pos, SHA}` (a list: a second
-   observation with a differing sha is the target-rewritten signal,
-   never silently last-wins).
+   `merge.requested` position and its cited verdict, and **the**
+   admitted `merge.observed` `{Pos, SHA}` — singular by construction:
+   the first valid observation moves the subject to terminal `done`,
+   so a second can never admit, and a raw-pushed second stays an
+   anomaly like any other illegal transition (review finding on this
+   plan: a two-observation list is unreachable and must not be the
+   rewrite signal).
 4. **Divergence detection is a pure derivation split across two
    surfaces by what each may read.** `internal/reconcile` (new)
    classifies per subject from the fold alone:
    `merge_without_verdict` (done or an observed merge with no admitted
    pass verdict), `chain_skipped` (an observed merge with no admitted
-   request citing the verdict), `target_rewritten` (two observed
-   merges with differing shas), and `unreconciled` (a pass verdict
+   request citing the verdict), and `unreconciled` (a pass verdict
    with no observed merge yet — reported neutrally, never an
    accusation: with no wall clock in any build, "failed" versus
    "pending" is an age judgment that belongs to Phase 9's maintenance
-   thresholds). The **evidence-grade** check — `attested_head_mismatch`,
-   the observed sha versus the receipt's attested head — needs the
-   receipt body, so it lives only in the CLI (`seed reconcile`), which
-   loads the cited receipt from the artifact store exactly as
-   `verdict check` does, and reports `evidence_missing` when the store
-   cannot produce it intact. Projection builds never read the artifact
-   store: builds stay deterministic over records (plus 5.6's declared
-   obs inputs), so the report carries the record-derivable divergence
-   classes and names `seed reconcile` for the evidence-grade rest.
+   thresholds). The **evidence-grade** checks live only in the CLI
+   (`seed reconcile`), which may read the artifact store and the
+   repository — the two things builds never touch:
+   - **Attested-head reconciliation.** Load the cited receipt exactly
+     as `verdict check` does (`evidence_missing` when the store
+     cannot produce it intact); the clean cases are observed sha ==
+     attested head (fast-forward) or attested head an ancestor of the
+     observed sha (a true merge commit). Anything else surfaces
+     `attested_divergence` naming both shas and the receipt digest —
+     deliberately a *surfaced state, not a fabrication verdict*:
+     rebase and squash flows land here by design in v0 because the
+     forge mints a new sha, and patch-equivalence reconciliation
+     (comparing the merged change against the receipt's diff hash) is
+     the named successor, recorded in the decision log.
+   - **Target-rewrite detection** (the charter's force-push case,
+     review finding on this plan: a forge force-push produces no
+     ledger event, so detection must observe the target ref).
+     Reconcile resolves the target as the repository's checked-out
+     default branch tip (v0; a declared target ref can ride a later
+     phase) and reports `target_rewritten` when the observed merged
+     sha no longer resolves or is no longer an ancestor of that tip —
+     drilled by landing the full chain, then force-moving the target
+     past a rewritten history.
+   Projection builds never read the artifact store or the repository:
+   builds stay deterministic over records (plus 5.6's declared obs
+   inputs), so the report carries the three record-derivable classes
+   and names `seed reconcile` for the evidence-grade rest.
 5. **Projections finally surface the pipeline** (6.1's named
    deferral). Contracts `Version: "6"`: each entry gains
    `verdict: {position, verdict, receipt} | null`,
@@ -119,8 +139,7 @@ later drives.
 4. **Reconcile core.** `internal/reconcile`: the per-subject
    classifier over fold facts; unit drills induce each
    record-derivable class from library-built histories, including
-   the two-observations/differing-sha target-rewrite and the pinned
-   neutrality of `unreconciled`.
+   the pinned neutrality of `unreconciled`.
 5. **Projections.** Contracts v6, report v3 with the reconciliation
    section, cache generation 5 / version 6; the established
    republish-at-unchanged-tip and byte-identity drills extended to
@@ -130,11 +149,15 @@ later drives.
    drills: the full-chain path (submission → pass verdict →
    request → observation → done; reconcile clean); the
    submit-old-head/merge-new-tip induced drill (verdict attests head
-   H1, observation records H2 — reconcile names
-   `attested_head_mismatch` with both shas); a deleted artifact
-   yields `evidence_missing`, never silence; a raw-pushed
-   merge-without-verdict history surfaces `merge_without_verdict` in
-   both reconcile and the report.
+   H1, observation records H2 outside the clean ancestry cases —
+   reconcile surfaces `attested_divergence` with both shas); the
+   target-rewrite drill (full chain to done, then the target ref
+   force-moved past a rewritten history — reconcile names
+   `target_rewritten`); a fast-forward and a true merge commit both
+   reconcile clean; a deleted artifact yields `evidence_missing`,
+   never silence; a raw-pushed merge-without-verdict history
+   surfaces `merge_without_verdict` in both reconcile and the
+   report.
 7. **Docs.** progress.md ledger row and frontier; decisions.md
    entries (observer lane, payload shapes, the record/evidence
    split, neutrality of unreconciled); LEARNINGS/DEADENDS as earned.
@@ -163,12 +186,14 @@ later drives.
   standing refuses 14).
 - Every record-derivable divergence class is induced and detected in
   both `internal/reconcile` and the report's reconciliation section:
-  `merge_without_verdict`, `chain_skipped`, `target_rewritten`,
-  `unreconciled` (reported neutrally).
-- The evidence-grade drill goes end to end: a verdict attesting head
-  H1 reconciled against an observation of H2 names
-  `attested_head_mismatch` with both shas; a lost or corrupted stored
-  receipt yields `evidence_missing`, never a silent pass.
+  `merge_without_verdict`, `chain_skipped`, `unreconciled` (reported
+  neutrally).
+- The evidence-grade drills go end to end: the clean ancestry cases
+  (fast-forward, true merge commit) reconcile clean; an observation
+  outside them surfaces `attested_divergence` with both shas; a
+  force-moved target ref yields `target_rewritten`; a lost or
+  corrupted stored receipt yields `evidence_missing`, never a silent
+  pass.
 - Contracts v6 carries the verdict/requested/merged fields, report v3
   the reconciliation section, cache generation 5 the matching
   columns; derivation changes republish under new build ids at an
