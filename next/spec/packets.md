@@ -87,14 +87,20 @@ while counting the violation in the contract's visible `anomalies`.
 
 ## Sufficiency is drilled, not asserted
 
-The resume drill (conformance III.F): executor A works in a real
-repository, records one verified decision, one asserted decision,
-and one dead end, pushes, and is force-reaped leaving only the
-packet; executor B is a deterministic function whose ONLY input is
-the packet — a fresh clone at the packet's anchors, no transcript,
-no workspace reuse. The drill asserts B completes the acceptance
-list, reproduces A's artifacts from the commit anchors, and never
-re-tries the recorded dead end.
+The resume drill (conformance III.F): executor A completes the first
+acceptance item in a real repository, records one verified decision,
+one asserted decision, and one dead end, pushes, and is force-reaped
+with the second item unfinished; executor B is a deterministic
+function of the packet plus the instantiation's durable configuration
+— the repository coordinate lives in the instantiation, never in the
+packet, because anchors only mean something inside the instantiation
+that recorded them — a fresh clone at the packet's anchors, no
+transcript, no workspace reuse. The drill asserts B resolves every
+ref from its OWN declared anchor (a commit anchor at that commit even
+where the head disagrees, a range anchor at the range's head),
+verifies A's finished item against its anchor, performs the
+unfinished item and lands it on the remote, and never re-tries the
+recorded dead end.
 
 Escalation packets (`blocked(needs-you)` carrying packet + question
 + minimal decision) reuse this schema when the routing/escalation
