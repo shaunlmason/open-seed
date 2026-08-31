@@ -142,6 +142,12 @@ func AcceptedCapabilities(verb string) []string {
 	// stands.
 	case "offer.published":
 		return []string{CapSupervise, CapOperator}
+	// The budget-reservation facts (plans/os-cecac5de.md): the claim
+	// lane reserves and settles inside its window; the budget rule
+	// further pins reserves to the ACTIVE holder and closes to the
+	// reservation's owner, which capability rows alone cannot say.
+	case "budget.reserve", "budget.settle", "budget.release":
+		return []string{CapClaim, CapOperator}
 	// The plan verbs (plans/os-16c1d142.md): the claim holder plans
 	// (the fence matrix applies on a claimed subject); approval is an
 	// external-fact observation, operator-attested in v0 like

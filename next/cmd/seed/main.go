@@ -59,6 +59,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runSeal(args[1:], stdout, stderr)
 	case "offer":
 		return runOffer(args[1:], stdout, stderr)
+	case "budget":
+		return runBudget(args[1:], stdout, stderr)
 	case "reconcile":
 		return runReconcile(args[1:], stdout, stderr)
 	case "doctor":

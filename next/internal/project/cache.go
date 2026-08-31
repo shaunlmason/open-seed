@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 
@@ -36,12 +37,14 @@ const CacheFile = "cache.db"
 // columns (plans/os-6cdc15be.md); generation 6 the sealed-commitment
 // columns (plans/os-3128535a.md); generation 7 the override columns
 // (plans/os-d2497eb7.md); generation 8 the offers table and the
-// last_claim consumption-boundary column (plans/os-c61c3392.md).
-const cacheSchemaVersion = 8
+// last_claim consumption-boundary column (plans/os-c61c3392.md);
+// generation 9 the reservations table and the budget columns
+// (plans/os-cecac5de.md).
+const cacheSchemaVersion = 9
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-const cacheVersion = "9"
+const cacheVersion = "10"
 
 // Cache returns the cache projection.
 func Cache() Projection {
@@ -57,9 +60,11 @@ var cacheDDL = []string{
 	`CREATE TABLE contracts (subject TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL)`,
 	`CREATE INDEX contracts_subject ON contracts(subject)`,
 	`CREATE TABLE queue (subject TEXT NOT NULL, since_position INTEGER NOT NULL)`,
-	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT, acc_ref TEXT, acc_executable INTEGER, acc_gated INTEGER, verdict_position INTEGER, verdict TEXT, verdict_receipt TEXT, requested_position INTEGER, merged_position INTEGER, merged_sha TEXT, sealed_position INTEGER, sealed_commitment TEXT, override_position INTEGER, override_reason TEXT, last_claim INTEGER) WITHOUT ROWID`,
+	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT, acc_ref TEXT, acc_executable INTEGER, acc_gated INTEGER, verdict_position INTEGER, verdict TEXT, verdict_receipt TEXT, requested_position INTEGER, merged_position INTEGER, merged_sha TEXT, sealed_position INTEGER, sealed_commitment TEXT, override_position INTEGER, override_reason TEXT, last_claim INTEGER, budget_class TEXT, budget_capacity INTEGER, budget_remaining INTEGER) WITHOUT ROWID`,
 	`CREATE TABLE offers (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, capabilities TEXT NOT NULL, tiers TEXT NOT NULL, expires TEXT NOT NULL)`,
 	`CREATE INDEX offers_subject ON offers(subject)`,
+	`CREATE TABLE reservations (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, amount INTEGER NOT NULL, closed_position INTEGER, closed_kind TEXT, closed_actuals INTEGER)`,
+	`CREATE INDEX reservations_subject ON reservations(subject)`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
 	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
 	`CREATE INDEX actor_history_fp ON actor_history(fingerprint)`,
@@ -152,6 +157,7 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 		}
 		var state, holder, fence, accRef, accExec, accGated any
 		var verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment, overridePos, overrideReason, lastClaim any
+		var budgetClass, budgetCapacity, budgetRemaining any
 		anomalies := 0
 		if s, ok := fold.State(c.Subject); ok {
 			anomalies = s.Anomalies
@@ -187,8 +193,28 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 				w.exec(`INSERT INTO offers VALUES (?, ?, ?, ?, ?, ?)`,
 					c.Subject, o.Pos, o.Signer, w.jsonOf(o.Capabilities), w.jsonOf(o.Tiers), o.Expires)
 			}
+			if s.Budget != "" {
+				budgetClass = s.Budget
+			}
+			if len(s.Reservations) > 0 || len(s.BudgetCloses) > 0 {
+				// The view posture (plans/os-cecac5de.md D6): the
+				// derived numbers appear only beside budget facts; an
+				// unknown class stays NULL, stated never fudged.
+				view := admit.BudgetViewAt(records, table, c.Subject, s)
+				if view.Known {
+					budgetCapacity, budgetRemaining = view.Capacity, view.Remaining
+				}
+				for _, r := range s.Reservations {
+					var cp, ck, ca any
+					if cl, ok := view.ClosedBy[r.Pos]; ok {
+						cp, ck, ca = cl.Pos, cl.Kind, cl.Actuals
+					}
+					w.exec(`INSERT INTO reservations VALUES (?, ?, ?, ?, ?, ?, ?)`,
+						c.Subject, r.Pos, r.Signer, r.Amount, cp, ck, ca)
+				}
+			}
 		}
-		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence, accRef, accExec, accGated, verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment, overridePos, overrideReason, lastClaim)
+		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence, accRef, accExec, accGated, verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment, overridePos, overrideReason, lastClaim, budgetClass, budgetCapacity, budgetRemaining)
 	}
 	// The queue mirrors the JSON view's derivation exactly: the
 	// transition table's ready set, oldest first.

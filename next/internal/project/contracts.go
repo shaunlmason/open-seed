@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
@@ -38,21 +39,54 @@ type ContractEvent struct {
 // per the cooperative posture, skipped by the fold, surfaced here,
 // never silent (plans/os-d69a6c91.md).
 type ContractEntry struct {
-	Subject       string              `json:"subject"`
-	State         *string             `json:"state"`
-	Anomalies     int                 `json:"anomalies"`
-	Claim         *ContractClaim      `json:"claim,omitempty"`
-	Acceptance    *ContractAcceptance `json:"acceptance,omitempty"`
-	Verdict       *ContractVerdict    `json:"verdict"`
-	Requested     *string             `json:"requested"`
-	Merged        *ContractMerge      `json:"merged"`
-	Sealed        *ContractSealed     `json:"sealed"`
-	Override      *ContractOverride   `json:"override"`
-	Offers        []ContractOffer     `json:"offers,omitempty"`
-	LastClaim     *string             `json:"last_claim,omitempty"`
-	FirstPosition int                 `json:"first_position"`
-	LastPosition  int                 `json:"last_position"`
-	Events        []ContractEvent     `json:"events"`
+	Subject       string                `json:"subject"`
+	State         *string               `json:"state"`
+	Anomalies     int                   `json:"anomalies"`
+	Claim         *ContractClaim        `json:"claim,omitempty"`
+	Acceptance    *ContractAcceptance   `json:"acceptance,omitempty"`
+	Verdict       *ContractVerdict      `json:"verdict"`
+	Requested     *string               `json:"requested"`
+	Merged        *ContractMerge        `json:"merged"`
+	Sealed        *ContractSealed       `json:"sealed"`
+	Override      *ContractOverride     `json:"override"`
+	Offers        []ContractOffer       `json:"offers,omitempty"`
+	LastClaim     *string               `json:"last_claim,omitempty"`
+	Budget        *ContractBudget       `json:"budget,omitempty"`
+	Reservations  []ContractReservation `json:"reservations,omitempty"`
+	FirstPosition int                   `json:"first_position"`
+	LastPosition  int                   `json:"last_position"`
+	Events        []ContractEvent       `json:"events"`
+}
+
+// ContractBudget is the derived budget view (plans/os-cecac5de.md;
+// next/spec/budgets.md): the filed class, its table capacity, and
+// remaining = capacity − open valid reservations − settled actuals.
+// Serialized only when the subject carries budget facts, so
+// budget-inactive chains keep byte-identical v9 bodies; a class
+// missing from the table serializes capacity and remaining as -1,
+// stated never fudged.
+type ContractBudget struct {
+	Class     string `json:"class"`
+	Capacity  int    `json:"capacity"`
+	Remaining int    `json:"remaining"`
+}
+
+// ContractReservation is one folded budget.reserve with its effective
+// close, if any: attempts by anyone else are recorded in the chain
+// but never shown as closure (the derivation, not mutation, posture).
+type ContractReservation struct {
+	Position string         `json:"position"`
+	Signer   string         `json:"signer"`
+	Amount   int            `json:"amount"`
+	Closed   *ContractClose `json:"closed,omitempty"`
+}
+
+// ContractClose is a reservation's effective close: the position, the
+// kind (settle or release), and settled actuals.
+type ContractClose struct {
+	Position string `json:"position"`
+	Kind     string `json:"kind"`
+	Actuals  int    `json:"actuals"`
 }
 
 // ContractAcceptance is the folded acceptance spec: the artifact
@@ -137,10 +171,12 @@ type ContractClaim struct {
 // (plans/os-3128535a.md); Version "8" the operator override
 // (plans/os-d2497eb7.md); Version "9" the offer facts and the
 // last-claim consumption boundary (plans/os-c61c3392.md), both
-// omitted on offer-free, never-claimed subjects — each republishing
-// under a new build id via the version-in-identity machinery.
+// omitted on offer-free, never-claimed subjects; Version "10" the
+// derived budget view and reservations (plans/os-cecac5de.md),
+// omitted on budget-inactive subjects — each republishing under a
+// new build id via the version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "9", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "10", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -180,6 +216,25 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 		return nil, err
 	}
 	fold := table.FoldRecords(records)
+	budgetOf := func(subject string, s transition.SubjectState) (*ContractBudget, []ContractReservation) {
+		if len(s.Reservations) == 0 && len(s.BudgetCloses) == 0 {
+			return nil, nil
+		}
+		view := admit.BudgetViewAt(records, table, subject, s)
+		b := &ContractBudget{Class: view.Class, Capacity: -1, Remaining: -1}
+		if view.Known {
+			b.Capacity, b.Remaining = view.Capacity, view.Remaining
+		}
+		var out []ContractReservation
+		for _, r := range s.Reservations {
+			row := ContractReservation{Position: fmt.Sprintf("%d", r.Pos), Signer: r.Signer, Amount: r.Amount}
+			if c, ok := view.ClosedBy[r.Pos]; ok {
+				row.Closed = &ContractClose{Position: fmt.Sprintf("%d", c.Pos), Kind: c.Kind, Actuals: c.Actuals}
+			}
+			out = append(out, row)
+		}
+		return b, out
+	}
 	entries := contractEntries(records)
 	out := make([]ContractEntry, 0, len(entries))
 	for _, e := range entries {
@@ -228,6 +283,7 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 				lc := fmt.Sprintf("%d", s.LastClaim)
 				e.LastClaim = &lc
 			}
+			e.Budget, e.Reservations = budgetOf(e.Subject, s)
 		}
 		out = append(out, *e)
 	}

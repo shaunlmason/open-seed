@@ -113,11 +113,13 @@ type ReportReconciliation struct {
 // (plans/os-d2497eb7.md); Version "6" republishes over the offer-fact
 // fold (plans/os-c61c3392.md) — offers add no report section, so
 // content is unchanged and version, not content, is what republishes
-// existing prefixes. Inputs marks it as the one
-// input-consuming projection, everything else staying byte-identical
-// with and without inputs by construction.
+// existing prefixes; Version "7" republishes over the budget-fact
+// fold (plans/os-cecac5de.md) the same way — the per-adapter
+// risk-limit surface arrives with 7.3's adapters. Inputs marks it as
+// the one input-consuming projection, everything else staying
+// byte-identical with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "6", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "7", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
