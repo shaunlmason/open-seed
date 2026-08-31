@@ -123,6 +123,14 @@ func AcceptedCapabilities(verb string) []string {
 	// posture — authoring isolation is the row's whole point.
 	case "check.sealed":
 		return []string{CapSealer}
+	// The red-verdict companions (plans/os-d2497eb7.md): returning a
+	// fail-verdicted contract to the queue is queue management; the
+	// override is the third no-fallback row — its own attributable
+	// verb, operator judgment and nothing else.
+	case "contract.returned":
+		return []string{CapDispatch, CapOperator}
+	case "merge.overridden":
+		return []string{CapOperator}
 	// The plan verbs (plans/os-16c1d142.md): the claim holder plans
 	// (the fence matrix applies on a claimed subject); approval is an
 	// external-fact observation, operator-attested in v0 like

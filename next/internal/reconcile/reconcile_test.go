@@ -54,6 +54,13 @@ func TestSubjectClassifiesInducedDivergences(t *testing.T) {
 				Sealed: &transition.SealedFact{Pos: 3, Commitment: "c"}}, nil},
 		"above-trivial still ready is not yet flagged": {
 			transition.SubjectState{State: "ready", Tier: "standard"}, nil},
+		"override-backed chain is sanctioned, by name": {
+			transition.SubjectState{State: "done", Tier: triv, Verdict: fail, Merged: merged,
+				Override:  &transition.OverrideFact{Pos: 12, Reason: "r", CitedVerdict: 9},
+				Requested: &transition.RequestFact{Pos: 13, CitedVerdict: -1, CitedOverride: 12}}, []string{ClassOverridden}},
+		"override without a citing request is divergence": {
+			transition.SubjectState{State: "done", Tier: triv, Verdict: fail, Merged: merged,
+				Override: &transition.OverrideFact{Pos: 12, Reason: "r", CitedVerdict: 9}}, []string{ClassMergeWithoutVerdict}},
 	}
 	for name, c := range cases {
 		got := Subject("c-x", c.state)

@@ -47,6 +47,7 @@ type ContractEntry struct {
 	Requested     *string             `json:"requested"`
 	Merged        *ContractMerge      `json:"merged"`
 	Sealed        *ContractSealed     `json:"sealed"`
+	Override      *ContractOverride   `json:"override"`
 	FirstPosition int                 `json:"first_position"`
 	LastPosition  int                 `json:"last_position"`
 	Events        []ContractEvent     `json:"events"`
@@ -89,6 +90,15 @@ type ContractSealed struct {
 	Commitment string `json:"commitment"`
 }
 
+// ContractOverride is the current window's operator override
+// (plans/os-d2497eb7.md): its chain position and required reason,
+// shown under its own name, never as a verdict. Explicit null when
+// absent, the chain-field convention.
+type ContractOverride struct {
+	Position string `json:"position"`
+	Reason   string `json:"reason"`
+}
+
 // ContractClaim is the active claim while a subject is in_progress:
 // the holder's fingerprint and the fence (the admitted claim.taken
 // position, string per the envelope position convention), so
@@ -106,10 +116,11 @@ type ContractClaim struct {
 // activation boundary (pre-activation records inert); Version "6" the
 // reconciliation-chain facts (verdict, requested, merged;
 // plans/os-6cdc15be.md); Version "7" the sealed-checks commitment
-// (plans/os-3128535a.md) — each republishing under a new build id via
+// (plans/os-3128535a.md); Version "8" the operator override
+// (plans/os-d2497eb7.md) — each republishing under a new build id via
 // the version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "7", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "8", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -173,6 +184,9 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 			}
 			if s.Sealed != nil {
 				e.Sealed = &ContractSealed{Position: fmt.Sprintf("%d", s.Sealed.Pos), Commitment: s.Sealed.Commitment}
+			}
+			if s.Override != nil {
+				e.Override = &ContractOverride{Position: fmt.Sprintf("%d", s.Override.Pos), Reason: s.Override.Reason}
 			}
 			if s.Merged != nil {
 				e.Merged = &ContractMerge{Position: fmt.Sprintf("%d", s.Merged.Pos), SHA: s.Merged.SHA}

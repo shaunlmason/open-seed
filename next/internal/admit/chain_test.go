@@ -52,12 +52,12 @@ func TestMergeRequestedCitesThePassVerdict(t *testing.T) {
 		t.Fatalf("citing a stale position refuses naming the admitted verdict, got %v", err)
 	}
 
-	// Shape: a missing citation is incomplete; a non-position refuses;
-	// an unknown key refuses strict.
-	var inc *transition.IncompleteError
+	// Shape: a missing citation refuses under the citation-choice rule
+	// (exactly one of verdict or override, plans/os-d2497eb7.md); a
+	// non-position refuses; an unknown key refuses strict.
 	err = Check(ctx, draftV(t, k.worker, version.Seed1, "merge.requested", "c-1", `{}`, ctx.Tip))
-	if !errors.As(err, &inc) {
-		t.Fatalf("a citation-less request refuses incomplete, got %v", err)
+	if !errors.As(err, &ce) || !strings.Contains(ce.Reason, "exactly one") {
+		t.Fatalf("a citation-less request refuses under the citation choice, got %v", err)
 	}
 	err = Check(ctx, draftV(t, k.worker, version.Seed1, "merge.requested", "c-1", `{"verdict": "vast"}`, ctx.Tip))
 	if !errors.As(err, &ce) || !strings.Contains(ce.Reason, "position") {

@@ -500,6 +500,17 @@ func Default() []Rule {
 			if p.Submission != fmt.Sprintf("%d", s.Submission.Pos) {
 				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("submission %q is not the bound submission at position %d — a verdict judges exactly the submission that produced the review state", p.Submission, s.Submission.Pos)}
 			}
+			// The red-verdict lockout (plans/os-d2497eb7.md): pass
+			// over a submission an authenticated fail already judged
+			// refuses until a NEW submission; fail restatements stay
+			// admissible. Only boundary-validated fails lock, and the
+			// whole window is scanned, so a raw-pushed later verdict
+			// can never bury an authentic fail.
+			if p.Verdict == "pass" {
+				if locked := authenticFail(c, subject, s); locked != nil {
+					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("a fail verdict at position %d already judged the bound submission — a red verdict locks pass out until a new submission (contract.returned, re-claim, resubmit)", locked.Pos)}
+				}
+			}
 			if s.PriorClaimants[rec.Event.Actor] {
 				return &NotIndependentError{Subject: subject, Actor: rec.Event.Actor, Role: "a claimant, past or present"}
 			}
@@ -532,15 +543,33 @@ func Default() []Rule {
 					return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
 				}
 				var p struct {
-					Verdict string `json:"verdict"`
+					Verdict  string `json:"verdict"`
+					Override string `json:"override"`
 				}
 				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
 				dec.DisallowUnknownFields()
 				if err := dec.Decode(&p); err != nil {
-					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {verdict}: %v", err)}
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {verdict} or {override}: %v", err)}
 				}
-				if strings.TrimSpace(p.Verdict) == "" {
-					return &transition.IncompleteError{Verb: verb, Subject: subject, Missing: []string{"verdict"}}
+				hasV, hasO := strings.TrimSpace(p.Verdict) != "", strings.TrimSpace(p.Override) != ""
+				if hasV == hasO {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "the request cites exactly one of verdict or override — the two chain paths never blur (plans/os-d2497eb7.md)"}
+				}
+				if hasO {
+					cited, err := strconv.Atoi(strings.TrimSpace(p.Override))
+					if err != nil {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("override %q is not a chain position", p.Override)}
+					}
+					if s.Override == nil {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: "no override stands on this subject — merge.overridden is the operator's attributable act, and citing one that does not exist substitutes for nothing"}
+					}
+					if cited != s.Override.Pos {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("cites position %d; the admitted override on this subject is at position %d", cited, s.Override.Pos)}
+					}
+					if ce := overrideBacking(c, subject, verb, s); ce != nil {
+						return ce
+					}
+					return nil
 				}
 				cited, err := strconv.Atoi(strings.TrimSpace(p.Verdict))
 				if err != nil {
@@ -589,6 +618,16 @@ func Default() []Rule {
 				if !mergedSHARE.MatchString(strings.TrimSpace(p.Merged)) {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("merged %q is not a full lowercase-hex commit — the observer records which commit the forge merged", p.Merged)}
 				}
+				// The override-backed path (plans/os-d2497eb7.md): an
+				// admitted override plus a request citing it stands in
+				// for the pass verdict plus its citation — each step
+				// still its own event.
+				if s.Override != nil && s.Requested != nil && s.Requested.CitedOverride == s.Override.Pos {
+					if ce := overrideBacking(c, subject, verb, s); ce != nil {
+						return ce
+					}
+					return nil
+				}
 				if s.Verdict == nil || s.Verdict.Verdict != "pass" {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "no pass verdict on this subject — done is reachable only through the full chain"}
 				}
@@ -596,6 +635,86 @@ func Default() []Rule {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("no merge.requested cites the pass verdict at position %d — each chain step is its own event", s.Verdict.Pos)}
 				}
 				if ce := launderedVerdict(c, subject, verb, s); ce != nil {
+					return ce
+				}
+				return nil
+			case transition.MergeOverriddenVerb:
+				// The operator's attributable substitute for a pass
+				// verdict (plans/os-d2497eb7.md): admitted only over a
+				// standing, boundary-validated fail on the current
+				// submission — an escape hatch, never a bypass.
+				subject := rec.Event.Subject
+				s, ok := c.Lifecycle.State(subject)
+				if !ok {
+					return &transition.InvalidTransitionError{Subject: subject, Verb: verb}
+				}
+				if s.State != "review" {
+					return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
+				}
+				var p struct {
+					Reason  string `json:"reason"`
+					Verdict string `json:"verdict"`
+				}
+				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+				dec.DisallowUnknownFields()
+				if err := dec.Decode(&p); err != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {reason, verdict}: %v", err)}
+				}
+				var missing []string
+				if strings.TrimSpace(p.Reason) == "" {
+					missing = append(missing, "reason")
+				}
+				if strings.TrimSpace(p.Verdict) == "" {
+					missing = append(missing, "verdict")
+				}
+				if len(missing) > 0 {
+					return &transition.IncompleteError{Verb: verb, Subject: subject, Missing: missing}
+				}
+				if s.Override != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("an override already stands at position %d — one override per submission window; a return and a new submission open the next", s.Override.Pos)}
+				}
+				cited, err := strconv.Atoi(strings.TrimSpace(p.Verdict))
+				if err != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("verdict %q is not a chain position", p.Verdict)}
+				}
+				fail := windowFail(s, cited)
+				if fail == nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("position %d is not a fail verdict on the current submission — the override overrules a standing red verdict, it never routes around independent verification", cited)}
+				}
+				if ce := verdictBoundary(c, subject, verb, s, *fail); ce != nil {
+					return ce
+				}
+				return nil
+			case transition.ContractReturnedVerb:
+				// State legality is the table's (the lifecycle rule);
+				// this case holds the citation: the return is
+				// authorized by a standing, boundary-validated fail
+				// (plans/os-d2497eb7.md).
+				subject := rec.Event.Subject
+				s, ok := c.Lifecycle.State(subject)
+				if !ok || s.State != "review" {
+					return nil
+				}
+				var p struct {
+					Verdict string `json:"verdict"`
+				}
+				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+				dec.DisallowUnknownFields()
+				if err := dec.Decode(&p); err != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {verdict}: %v", err)}
+				}
+				if strings.TrimSpace(p.Verdict) == "" {
+					return &transition.IncompleteError{Verb: verb, Subject: subject, Missing: []string{"verdict"}}
+				}
+				cited, err := strconv.Atoi(strings.TrimSpace(p.Verdict))
+				if err != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("verdict %q is not a chain position", p.Verdict)}
+				}
+				fail := windowFail(s, cited)
+				if fail == nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("position %d is not a fail verdict on the current submission — nobody yanks an in-review contract whose verdict is pass or pending", cited)}
+				}
+				if ce := verdictBoundary(c, subject, verb, s, *fail); ce != nil {
 					return ce
 				}
 				return nil
@@ -741,14 +860,89 @@ func launderedVerdict(c *Context, subject, verb string, s transition.SubjectStat
 	if c.Keyring == nil || s.Verdict == nil {
 		return nil
 	}
-	signer := s.Verdict.Signer
+	return verdictBoundary(c, subject, verb, s, *s.Verdict)
+}
+
+// verdictBoundary checks one folded verdict fact against the verifier
+// boundary: the signer holds the verdict grant (tip keyring, the v0
+// approximation) and is no implementing key on the contract.
+func verdictBoundary(c *Context, subject, verb string, s transition.SubjectState, fact transition.VerdictFact) *transition.ChainError {
+	if c.Keyring == nil {
+		return nil
+	}
+	signer := fact.Signer
 	if !c.Keyring.HasAnyCapability(signer, keyring.AcceptedCapabilities(transition.VerdictRenderedVerb)) {
 		return &transition.ChainError{Subject: subject, Verb: verb,
-			Reason: fmt.Sprintf("the cited verdict at position %d was signed by %s, which holds no verdict grant — a raw-pushed verdict cannot be laundered through the admitted chain", s.Verdict.Pos, signer)}
+			Reason: fmt.Sprintf("the cited verdict at position %d was signed by %s, which holds no verdict grant — a raw-pushed verdict cannot be laundered through the admitted chain", fact.Pos, signer)}
 	}
 	if s.PriorClaimants[signer] || (s.Submission != nil && signer == s.Submission.Signer) {
 		return &transition.ChainError{Subject: subject, Verb: verb,
-			Reason: fmt.Sprintf("the cited verdict at position %d was signed by implementing key %s — L1 independence is not launderable through the admitted chain", s.Verdict.Pos, signer)}
+			Reason: fmt.Sprintf("the cited verdict at position %d was signed by implementing key %s — L1 independence is not launderable through the admitted chain", fact.Pos, signer)}
+	}
+	return nil
+}
+
+// authenticFail returns the first fail verdict in the current
+// submission window whose signer passes the verifier boundary: the
+// red-verdict lockout consults only authenticated fails, and scanning
+// the window means a later raw verdict can never bury one
+// (plans/os-d2497eb7.md).
+func authenticFail(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {
+	for i := range s.SubmissionFails {
+		if verdictBoundary(c, subject, "", s, s.SubmissionFails[i]) == nil {
+			return &s.SubmissionFails[i]
+		}
+	}
+	return nil
+}
+
+// windowFail finds the fail verdict at the cited position in the
+// current submission window, nil when no such fail exists there.
+func windowFail(s transition.SubjectState, pos int) *transition.VerdictFact {
+	for i := range s.SubmissionFails {
+		if s.SubmissionFails[i].Pos == pos {
+			return &s.SubmissionFails[i]
+		}
+	}
+	return nil
+}
+
+// launderedOverride checks the folded override's signer against the
+// operator boundary (tip keyring): a raw-pushed override by an
+// ungranted key substitutes for nothing (plans/os-d2497eb7.md).
+func launderedOverride(c *Context, subject, verb string, o *transition.OverrideFact) *transition.ChainError {
+	if c.Keyring == nil || o == nil {
+		return nil
+	}
+	if !c.Keyring.HasAnyCapability(o.Signer, keyring.AcceptedCapabilities(transition.MergeOverriddenVerb)) {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the cited override at position %d was signed by %s, which holds no operator standing — a raw-pushed override substitutes for nothing", o.Pos, o.Signer)}
+	}
+	return nil
+}
+
+// overrideBacking validates everything a chain step must re-check
+// before trusting the folded override: the signer's operator standing
+// AND the override's own citation — a standing, boundary-validated
+// fail on the current submission. The override admission rule checks
+// the citation for cooperative appends, but a raw-pushed well-shaped
+// override by an operator-capable key folds without it, and trusting
+// it here would turn the escape hatch into a wholesale bypass (review
+// finding on the task PR).
+func overrideBacking(c *Context, subject, verb string, s transition.SubjectState) *transition.ChainError {
+	if ce := launderedOverride(c, subject, verb, s.Override); ce != nil {
+		return ce
+	}
+	if s.Override == nil {
+		return nil
+	}
+	fail := windowFail(s, s.Override.CitedVerdict)
+	if fail == nil {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the override at position %d cites position %d, which is not a fail verdict on the current submission — an override overrules a standing red verdict, it never routes around independent verification", s.Override.Pos, s.Override.CitedVerdict)}
+	}
+	if ce := verdictBoundary(c, subject, verb, s, *fail); ce != nil {
+		return ce
 	}
 	return nil
 }

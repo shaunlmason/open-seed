@@ -46,8 +46,12 @@ const (
 	ExitSealBroken   = 22
 	ExitNotRecipient = 23
 	ExitUnsealed     = 24
-	ExitUsage        = 64
-	ExitUnreadable   = 66
+	// The red-verdict lockout (plans/os-d2497eb7.md): rendering pass
+	// over a submission an authenticated fail already judged refuses
+	// until a new submission.
+	ExitRedLocked  = 25
+	ExitUsage      = 64
+	ExitUnreadable = 66
 )
 
 // Error is the machine-branchable half of a refusal: a stable code to

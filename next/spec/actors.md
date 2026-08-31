@@ -102,6 +102,8 @@ ending standing is deferred until the catalog grows a verb for it.
 | `merge.observed` | `observer`, `operator` (the observer lane records forge fact behind the full chain rule, reconciliation.md) |
 | `verdict.rendered` | `verdict` (deliberately no operator fallback: III.G names operator override its own attributable verb, never a disguised verdict — that verb is 6.4's; a governance root that judges holds an explicit verdict grant, and L1 independence applies to every signer, verdicts.md) |
 | `check.sealed` | `sealer` (the second no-fallback row: operator already stands in the claim and submission lanes, so an operator fallback here would put authoring and implementation authority on one capability and the capability audit could prove nothing, sealed-checks.md) |
+| `contract.returned` | `dispatch`, `operator` (returning a fail-verdicted contract to the queue is queue management; the payload cites the authenticated red verdict, lifecycle.md) |
+| `merge.overridden` | `operator` (the third no-fallback row: the charter names the override its own attributable verb, never a disguised verdict — it admits only over a standing, boundary-validated fail on the current submission, reconciliation.md) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

@@ -309,7 +309,8 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   age to the plan's v1.2.1, filtered implementation-capable keys out
   of the recipient set, added the position-accurate authoring check
   at unseal plus the seal_unverified reconcile class, and validated
-  the decrypted salt's shape) — **this task PR**: check.sealed
+  the decrypted salt's shape) — **done** (merged #139; card
+  closed): check.sealed
   admitted only in ready with no prior claim (one commitment per
   subject; raw seals outside the window fold as anomalies, never
   facts), the salted JCS envelope with the salt inside the
@@ -326,7 +327,25 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   reconcile unsealed class, contracts v7 / report v4 / cache
   generation 6, spec/sealed-checks.md
 - 6.4 red-verdict lockout + operator override verb — os-d2497eb7 —
-  backlog
+  plan PR #140 (merged, amended per review: only boundary-validated
+  fails lock or authorize, and the override requires a standing
+  validated fail on the current submission — an escape hatch, never
+  a bypass) — **this task PR**: contract.returned resolves
+  lifecycle.md's named extension point (review to ready, citing the
+  authenticated fail, dispatch/operator lanes; prior facts and the
+  seal survive); the lockout scans the whole submission window
+  (SubmissionFails) so a raw later verdict never buries an authentic
+  fail, refusing pass at admission and at render exit 25 red_locked
+  until a new submission; merge.overridden as the operator-only
+  attributable fact (strict reason + fail citation, one per window,
+  folds as OverrideFact never a verdict) with the citation choice in
+  merge.requested ({verdict} xor {override}) and the override-backed
+  observed path, both steps validating the override signer;
+  reconcile VerifyOverrides with the overridden (neutral, by name;
+  override-backed done is never merge_without_verdict) and
+  override_unverified classes; contracts v8 (override explicit-null),
+  report v5, cache generation 7; lifecycle/verdicts/reconciliation/
+  actors spec updates
 
 ## Frontier
 
@@ -336,11 +355,14 @@ three post-merge follow-ups (#127, #128, #129), and the engine
 v0.15.1 receipt-runner pin (#130) are merged, and the Phase 5 exit
 record above is card os-6e37b10e's task PR (#134, merged; card
 closed). 6.1 is merged (#135; card closed); 6.2 is merged (#137;
-card closed). **This task PR implements 6.3** (os-3128535a, sealed
-checks, against merged plan #138). **Next action: land this PR; then
-6.4** (os-d2497eb7, red-verdict lockout and the operator override
-verb — the last Phase 6 item; the fold's verdict fact, fail
-included, is already recorded for it). The Phase 6
+card closed); 6.3 is merged (#139; card closed). **This task PR
+implements 6.4** (os-d2497eb7, the last Phase 6 item, against merged
+plan #140). **Next action: land this PR; then the Phase 6 exit
+record** (a card mirroring the Phase 5 exit precedent: the III.G
+subset the build plan scopes — reconciliation drills, receipt
+recompute-and-mismatch, sealed-check audit, lockout and override —
+met; L2/L3 levels and rubric calibration deferred to Phase 10/11).
+Phase 7 (supervisor, offers, budgets) follows. The Phase 6
 exit subset is charter
 III.G minus L2/L3 levels and rubric calibration (Phase 10/11): the
 reconciliation drills, the receipt recompute-and-mismatch test, and

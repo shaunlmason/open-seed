@@ -57,6 +57,17 @@ const ClassUnsealed = "unsealed"
 // unseal it; this class surfaces it record-side.
 const ClassSealUnverified = "seal_unverified"
 
+// ClassOverridden is a subject whose merge chain ran through an
+// operator override (plans/os-d2497eb7.md): reported neutrally and
+// always by name — "never a disguised verdict" means the report says
+// so wherever it happened.
+const ClassOverridden = "overridden"
+
+// ClassOverrideUnverified is a folded override whose signer, replayed
+// to the override's own position, held no operator standing — a
+// raw-pushed override that substitutes for nothing.
+const ClassOverrideUnverified = "override_unverified"
+
 // Finding is one surfaced divergence on one subject.
 type Finding struct {
 	Subject string `json:"subject"`
@@ -70,7 +81,13 @@ func Subject(id string, s transition.SubjectState) []Finding {
 	var out []Finding
 	merged := s.Merged != nil || s.State == "done"
 	passVerdict := s.Verdict != nil && s.Verdict.Verdict == "pass"
-	if merged && !passVerdict {
+	// An override is the sanctioned cover only when the chain actually
+	// ran through it: the request must cite it (review finding on the
+	// task PR — a raw override beside a skipped chain is divergence,
+	// not the sanctioned path). Authenticity stays VerifyOverrides'
+	// separate finding.
+	overrideBacked := s.Override != nil && s.Requested != nil && s.Requested.CitedOverride == s.Override.Pos
+	if merged && !passVerdict && !overrideBacked {
 		detail := "the subject reached done with no admitted pass verdict"
 		if s.Verdict != nil {
 			detail = fmt.Sprintf("the subject reached done and the admitted verdict at position %d is %q", s.Verdict.Pos, s.Verdict.Verdict)
@@ -84,6 +101,10 @@ func Subject(id string, s transition.SubjectState) []Finding {
 	if !merged && passVerdict {
 		out = append(out, Finding{Subject: id, Class: ClassUnreconciled,
 			Detail: fmt.Sprintf("the pass verdict at position %d has no observed merge yet — pending or diverged is an age judgment for maintenance, not this classifier", s.Verdict.Pos)})
+	}
+	if overrideBacked && merged {
+		out = append(out, Finding{Subject: id, Class: ClassOverridden,
+			Detail: fmt.Sprintf("the merge chain ran through the operator override at position %d (reason: %s) — an attributable substitute for a pass verdict, surfaced by name, never a disguised verdict", s.Override.Pos, s.Override.Reason)})
 	}
 	pastClaim := s.State == "in_progress" || s.State == "review" || s.State == "done"
 	if pastClaim && s.Tier != transition.TrivialTier && s.Sealed == nil {
@@ -157,8 +178,35 @@ func VerifySeals(records []*event.Record, f *transition.Fold) []Finding {
 	return out
 }
 
+// VerifyOverrides replays the keyring to each folded override's own
+// position and checks the operator boundary retroactively — the
+// laundering countermeasure, applied to overrides from the start
+// (plans/os-d2497eb7.md).
+func VerifyOverrides(records []*event.Record, f *transition.Fold) []Finding {
+	var out []Finding
+	for _, id := range f.Subjects() {
+		s, ok := f.State(id)
+		if !ok || s.Override == nil {
+			continue
+		}
+		pos, signer := s.Override.Pos, s.Override.Signer
+		if pos < 0 || pos >= len(records) {
+			continue
+		}
+		ring, _, err := keyring.StateAt(records[:pos])
+		if err != nil {
+			continue
+		}
+		if !ring.HasAnyCapability(signer, keyring.AcceptedCapabilities(transition.MergeOverriddenVerb)) {
+			out = append(out, Finding{Subject: id, Class: ClassOverrideUnverified,
+				Detail: fmt.Sprintf("the override at position %d was signed by %s, which held no operator standing there — it substitutes for nothing", pos, signer)})
+		}
+	}
+	return out
+}
+
 // Classify walks every folded subject in first-appearance order and
-// appends the retroactive verdict and seal verification.
+// appends the retroactive verdict, seal, and override verification.
 func Classify(records []*event.Record, f *transition.Fold) []Finding {
 	var out []Finding
 	for _, id := range f.Subjects() {
@@ -167,5 +215,6 @@ func Classify(records []*event.Record, f *transition.Fold) []Finding {
 		}
 	}
 	out = append(out, VerifyVerdicts(records, f)...)
-	return append(out, VerifySeals(records, f)...)
+	out = append(out, VerifySeals(records, f)...)
+	return append(out, VerifyOverrides(records, f)...)
 }

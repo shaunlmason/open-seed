@@ -588,3 +588,37 @@ here. Newest last.
   claim) and reports stale/foreign/missing at exit 0; reconcile
   gains the neutral unsealed class. Projections: contracts v7
   (sealed explicit-null), report v4, cache generation 6.
+- 2026-08-31 — The red-verdict lockout binds authenticated fails to
+  submissions, the return path resolves the review exit, and the
+  override is a gated escape hatch (os-d2497eb7,
+  plans/os-d2497eb7.md; charter II §8, III.G lockout and override
+  rows). contract.returned (review to ready, a new table row) admits
+  only citing a standing fail verdict on the current submission that
+  passes the 6.2 verifier boundary; prior facts and the 6.3 seal
+  survive the return (the commitment predates the FIRST claim, which
+  is the proof that matters). The lockout refuses
+  verdict.rendered(pass) at admission and seed verdict render (exit
+  25 red_locked) while any authenticated fail cites the bound
+  submission; the fold keeps the whole window's fails
+  (SubmissionFails, cleared on each submission.made) precisely so a
+  raw-pushed later verdict can never bury an authentic fail and
+  unlock pass (review finding on plan #140: unauthenticated fails
+  lock nothing and authorize nothing — a raw fail would otherwise be
+  a denial-of-service lever). Fail restatements stay renderable.
+  merge.overridden is the third no-fallback capability row (operator
+  only): strict {reason, verdict} citing an admitted,
+  boundary-validated fail on the current submission (review finding:
+  without the citation gate the hatch was a general bypass of
+  independent verification), one per submission window, folded as
+  OverrideFact never a verdict. merge.requested cites exactly one of
+  verdict or override; merge.observed accepts the override-backed
+  path with both chain steps validating the override signer against
+  the operator boundary; reconcile adds VerifyOverrides with
+  override_unverified (position-accurate) and the neutral overridden
+  class, and an override-backed done is never merge_without_verdict
+  (the override is its sanctioned cover; a raw override still
+  surfaces override_unverified beside it). The
+  no-verifier-available emergency (overriding with no verdict at
+  all) is deferred to the halt and governance paths. Projections:
+  contracts v8 (override explicit-null), report v5, cache
+  generation 7.
