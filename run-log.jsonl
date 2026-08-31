@@ -620,3 +620,4 @@
 {"actor":"shaunlmason","data":{"title":"next: Phase 7.3 — executor adapter interface + local worktree adapter (metering, run.settled)"},"task":"os-1dad487d","ts":"2026-08-31T13:26:32Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 7.4 — graceful preemption (safe-point park with packet; force reap packet)"},"task":"os-0f718b4e","ts":"2026-08-31T13:26:36Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-600be59e","ts":"2026-08-31T13:27:50Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:142","to":"ready"},"task":"os-600be59e","ts":"2026-08-31T13:37:20Z","verb":"plan-unblock"}
