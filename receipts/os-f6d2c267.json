@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-f6d2c267",
   "merge_base": "4d3d1502b0107241742ae5671dd068ba32ffc486",
-  "head": "08412c9b1397c1c474c3126671deba7140bbcd25",
+  "head": "5aa0e6e3dd6cbbe46f20ea3f422c0235c87435ad",
   "plan_path": "plans/os-f6d2c267.md",
   "plan_sha256": "e0a99776b4cf3a7a37918b04cafe5a96b06cc27f54d106b95657a50311eb9ef1",
   "diff_files": [
@@ -31,7 +31,7 @@
     "next/spec/lifecycle.md",
     "next/spec/verdicts.md"
   ],
-  "diff_sha256": "91d1c0eb12819328be69f88adeb41bff4f860282a15cae8370af6a51ba515f4b",
+  "diff_sha256": "a6c2c182ab532b73fe56b0008bd9829db452e72d02edaa55068c73e018c18e55",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/verdict/... ./internal/artifact/... ./internal/plan/... ./internal/admit/... ./internal/keyring/... ./internal/transition/... ./cmd/seed/... -count=1",
