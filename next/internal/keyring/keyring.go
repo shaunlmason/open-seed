@@ -148,6 +148,11 @@ func AcceptedCapabilities(verb string) []string {
 	// reservation's owner, which capability rows alone cannot say.
 	case "budget.reserve", "budget.settle", "budget.release":
 		return []string{CapClaim, CapOperator}
+	// The execution-run facts (plans/os-1dad487d.md): adapter-side
+	// initiation and summarization are the supervisor lane's acts,
+	// like offers.
+	case "run.started", "run.settled":
+		return []string{CapSupervise, CapOperator}
 	// The plan verbs (plans/os-16c1d142.md): the claim holder plans
 	// (the fence matrix applies on a claimed subject); approval is an
 	// external-fact observation, operator-attested in v0 like

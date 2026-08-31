@@ -415,6 +415,40 @@ type SubjectState struct {
 	// erased.
 	Reservations []ReservationFact
 	BudgetCloses []CloseFact
+	// ClaimFences is every applied claim.taken position on the
+	// subject: the run facts' citation domain
+	// (plans/os-1dad487d.md).
+	ClaimFences map[int]bool
+	// RunStarts and Runs are the execution-run facts, independent
+	// lists in chain order (plans/os-1dad487d.md): the gated spend
+	// initiation and the once-per-fence metering aggregate. Raw
+	// pushes fold tolerantly; a fact citing a fence that is no claim
+	// position counts an anomaly, never a fact.
+	RunStarts []RunStartFact
+	Runs      []RunFact
+}
+
+// RunStartFact is one folded run.started: the chain position, the
+// signer, the claim fence it fences the run to, and the reservation
+// it cites. Admission validates the citation against an open valid
+// reservation; the fold records what stands.
+type RunStartFact struct {
+	Pos         int
+	Signer      string
+	Fence       int
+	Reservation int
+}
+
+// RunFact is one folded run.settled: the chain position, the signer,
+// the claim fence, and the aggregate metered units and line count
+// from the run's observation stream. Telemetry, never authority:
+// budget.settle carries the authoritative actuals.
+type RunFact struct {
+	Pos    int
+	Signer string
+	Fence  int
+	Units  int
+	Lines  int
 }
 
 // VerdictFact is the fold's record of the latest rendered verdict.
@@ -864,6 +898,47 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 			continue
 		}
+		if e.Verb == RunStartedVerb || e.Verb == RunSettledVerb {
+			// Run facts fold tolerantly as independent lists
+			// (plans/os-1dad487d.md): raw pushes included, nothing
+			// mutated. A fact citing a fence that is no applied claim
+			// position retroactively invents a run window the ordering
+			// disproves, so it counts an anomaly, never a fact.
+			if s, ok := f.states[e.Subject]; ok {
+				var p struct {
+					Fence       string `json:"fence"`
+					Reservation string `json:"reservation"`
+					Units       string `json:"units"`
+					Lines       string `json:"lines"`
+				}
+				if json.Unmarshal(e.Payload, &p) != nil {
+					continue
+				}
+				fence, err := strconv.Atoi(strings.TrimSpace(p.Fence))
+				if err != nil {
+					continue
+				}
+				if !s.ClaimFences[fence] {
+					s.Anomalies++
+					continue
+				}
+				if e.Verb == RunStartedVerb {
+					res, err := strconv.Atoi(strings.TrimSpace(p.Reservation))
+					if err != nil {
+						continue
+					}
+					s.RunStarts = append(s.RunStarts, RunStartFact{Pos: pos, Signer: e.Actor, Fence: fence, Reservation: res})
+				} else {
+					units, uerr := strconv.Atoi(strings.TrimSpace(p.Units))
+					lines, lerr := strconv.Atoi(strings.TrimSpace(p.Lines))
+					if uerr != nil || lerr != nil || units < 0 || lines < 0 {
+						continue
+					}
+					s.Runs = append(s.Runs, RunFact{Pos: pos, Signer: e.Actor, Fence: fence, Units: units, Lines: lines})
+				}
+			}
+			continue
+		}
 		if !t.IsLifecycleVerb(e.Verb) {
 			continue
 		}
@@ -971,6 +1046,10 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			// so a taken offer never resurrects when the subject
 			// re-readies inside its expiry window.
 			s.LastClaim = pos
+			if s.ClaimFences == nil {
+				s.ClaimFences = map[int]bool{}
+			}
+			s.ClaimFences[pos] = true
 		} else if s.Claim != nil && s.State != "in_progress" {
 			// Every deliberate exit ends the claim window; the fence
 			// dies with it.
@@ -1151,12 +1230,23 @@ func BudgetCapacity(class string) (int, bool) {
 	return c, ok
 }
 
+// The execution-run facts (plans/os-1dad487d.md;
+// next/spec/executors.md): run.started is the spending-verb table's
+// first entry, the gated initiation that fences a run to its
+// reservation before any executor provisions; run.settled is the
+// once-per-fence aggregate of the run's metered observation lines.
+const (
+	RunStartedVerb = "run.started"
+	RunSettledVerb = "run.settled"
+)
+
 // spendingVerbs is the data table of verbs that require an open,
 // valid reservation on their subject (charter §II.9 "spending verbs
-// require an admitted budget.reserve"). Empty in v0: Phase 7.3's
-// metering fills it. Tests inject entries to drill the gate before
-// its first customer.
-var spendingVerbs = map[string]bool{}
+// require an admitted budget.reserve"). run.started is its first
+// entry (plans/os-1dad487d.md): execution spend initiates through
+// it, so no run provisions outside the reservation gate. Tests
+// inject further entries to drill the gate in isolation.
+var spendingVerbs = map[string]bool{RunStartedVerb: true}
 
 // IsSpendingVerb reports whether the verb spends and therefore needs
 // an open reservation at admission.

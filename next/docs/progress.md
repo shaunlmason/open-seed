@@ -414,7 +414,12 @@ Phase 6 item).
   gate, contracts v10 / report v7 / cache generation 9)
 - 7.3 executor adapter interface + the local worktree adapter
   (provision / wake / meter / report-tuple; metering to the
-  observation stream; run.settled aggregate) — os-1dad487d — backlog
+  observation stream; run.settled aggregate) — os-1dad487d —
+  **review** (task PR #151 against plan #150; the public
+  next/executor package, the reserve/start/provision/meter/settle
+  bracket with run.started filling the spending table, the SIGKILL
+  disposability drill, contracts v11 / report v8 / cache
+  generation 10)
 - 7.4 graceful preemption (safe-point park with packet; force reap
   packet) — os-0f718b4e — backlog
 
@@ -428,13 +433,14 @@ record above is card os-6e37b10e's task PR (#134, merged; card
 closed). Phase 6 is done and closed: every plan (#133, #136, #138,
 #140), every implementation (6.1 #135, 6.2 #137, 6.3 #139, 6.4
 #141), and the exit record above (card os-600be59e's task PR) are
-merged with every card closed. 7.1 (offers) is done: plan #144, the
-#146 validation-command amendment, and task PR #145 are merged with
-the card closed. **Next action: land 7.2** (os-cecac5de, budgets —
-plan #147 amended by #148, task PR #149 in review), then 7.3's plan
-(os-1dad487d, executor adapter interface + the local worktree
-adapter, with metering to the observation stream and run.settled;
-plan-first on seed/os-1dad487d-plan). The
+merged with every card closed. 7.1 (offers: plans #144/#146, task
+PR #145) and 7.2 (budgets: plans #147/#148, task PR #149) are done,
+merged with their cards closed. **Next action: land 7.3**
+(os-1dad487d, executor adapter + local worktree — plan #150, task
+PR #151 in review), then 7.4's plan (os-0f718b4e, graceful
+preemption: safe-point park with packet, force reap packet;
+plan-first on seed/os-0f718b4e-plan), and after 7.4 the Phase 7
+exit record. The
 Phase 7 exit subset is charter III.H for the implemented adapter:
 the poll-only run, the reservation race drill, and the
 disposability drill (randomized kill after sync; complete

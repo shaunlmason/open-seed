@@ -108,6 +108,8 @@ ending standing is deferred until the catalog grows a verb for it.
 | `budget.reserve` | `claim`, `operator` (the claim lane reserves inside its window; the budget rule further pins reserves to the ACTIVE holder, budgets.md) |
 | `budget.settle` | `claim`, `operator` (closes are the reservation owner's or the operator's; the budget rule pins the owner, budgets.md) |
 | `budget.release` | `claim`, `operator` (same boundary as settle, with zero actuals, budgets.md) |
+| `run.started` | `supervise`, `operator` (the gated spend initiation that fences a run to its reservation before any executor provisions; the spending-verb table's first entry, executors.md) |
+| `run.settled` | `supervise`, `operator` (the once-per-fence metering aggregate at run end; telemetry, never authority — budget.settle carries the actuals, executors.md) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

@@ -39,12 +39,13 @@ const CacheFile = "cache.db"
 // (plans/os-d2497eb7.md); generation 8 the offers table and the
 // last_claim consumption-boundary column (plans/os-c61c3392.md);
 // generation 9 the reservations table and the budget columns
-// (plans/os-cecac5de.md).
-const cacheSchemaVersion = 9
+// (plans/os-cecac5de.md); generation 10 the runs table
+// (plans/os-1dad487d.md).
+const cacheSchemaVersion = 10
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-const cacheVersion = "10"
+const cacheVersion = "11"
 
 // Cache returns the cache projection.
 func Cache() Projection {
@@ -65,6 +66,8 @@ var cacheDDL = []string{
 	`CREATE INDEX offers_subject ON offers(subject)`,
 	`CREATE TABLE reservations (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, amount INTEGER NOT NULL, closed_position INTEGER, closed_kind TEXT, closed_actuals INTEGER)`,
 	`CREATE INDEX reservations_subject ON reservations(subject)`,
+	`CREATE TABLE runs (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, fence INTEGER NOT NULL, kind TEXT NOT NULL, reservation INTEGER, units INTEGER, lines INTEGER)`,
+	`CREATE INDEX runs_subject ON runs(subject)`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
 	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
 	`CREATE INDEX actor_history_fp ON actor_history(fingerprint)`,
@@ -195,6 +198,14 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 			}
 			if s.Budget != "" {
 				budgetClass = s.Budget
+			}
+			for _, st := range s.RunStarts {
+				w.exec(`INSERT INTO runs VALUES (?, ?, ?, ?, 'started', ?, NULL, NULL)`,
+					c.Subject, st.Pos, st.Signer, st.Fence, st.Reservation)
+			}
+			for _, r := range s.Runs {
+				w.exec(`INSERT INTO runs VALUES (?, ?, ?, ?, 'settled', NULL, ?, ?)`,
+					c.Subject, r.Pos, r.Signer, r.Fence, r.Units, r.Lines)
 			}
 			if len(s.Reservations) > 0 || len(s.BudgetCloses) > 0 {
 				// The view posture (plans/os-cecac5de.md D6): the

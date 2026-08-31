@@ -53,6 +53,8 @@ type ContractEntry struct {
 	LastClaim     *string               `json:"last_claim,omitempty"`
 	Budget        *ContractBudget       `json:"budget,omitempty"`
 	Reservations  []ContractReservation `json:"reservations,omitempty"`
+	RunStarts     []ContractRunStart    `json:"run_starts,omitempty"`
+	Runs          []ContractRun         `json:"runs,omitempty"`
 	FirstPosition int                   `json:"first_position"`
 	LastPosition  int                   `json:"last_position"`
 	Events        []ContractEvent       `json:"events"`
@@ -87,6 +89,28 @@ type ContractClose struct {
 	Position string `json:"position"`
 	Kind     string `json:"kind"`
 	Actuals  int    `json:"actuals"`
+}
+
+// ContractRunStart is one folded run.started (plans/os-1dad487d.md;
+// next/spec/executors.md): the gated spend initiation fencing a run
+// to its reservation. Omitted when a subject has no run facts, so
+// run-free chains keep byte-identical views.
+type ContractRunStart struct {
+	Position    string `json:"position"`
+	Signer      string `json:"signer"`
+	Fence       string `json:"fence"`
+	Reservation string `json:"reservation"`
+}
+
+// ContractRun is one folded run.settled: the once-per-fence metering
+// aggregate. Telemetry, never authority — budget.settle carries the
+// actuals.
+type ContractRun struct {
+	Position string `json:"position"`
+	Signer   string `json:"signer"`
+	Fence    string `json:"fence"`
+	Units    int    `json:"units"`
+	Lines    int    `json:"lines"`
 }
 
 // ContractAcceptance is the folded acceptance spec: the artifact
@@ -173,10 +197,12 @@ type ContractClaim struct {
 // last-claim consumption boundary (plans/os-c61c3392.md), both
 // omitted on offer-free, never-claimed subjects; Version "10" the
 // derived budget view and reservations (plans/os-cecac5de.md),
-// omitted on budget-inactive subjects — each republishing under a
-// new build id via the version-in-identity machinery.
+// omitted on budget-inactive subjects; Version "11" the
+// execution-run facts (plans/os-1dad487d.md), omitted on run-free
+// subjects — each republishing under a new build id via the
+// version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "10", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "11", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -284,6 +310,23 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 				e.LastClaim = &lc
 			}
 			e.Budget, e.Reservations = budgetOf(e.Subject, s)
+			for _, st := range s.RunStarts {
+				e.RunStarts = append(e.RunStarts, ContractRunStart{
+					Position:    fmt.Sprintf("%d", st.Pos),
+					Signer:      st.Signer,
+					Fence:       fmt.Sprintf("%d", st.Fence),
+					Reservation: fmt.Sprintf("%d", st.Reservation),
+				})
+			}
+			for _, r := range s.Runs {
+				e.Runs = append(e.Runs, ContractRun{
+					Position: fmt.Sprintf("%d", r.Pos),
+					Signer:   r.Signer,
+					Fence:    fmt.Sprintf("%d", r.Fence),
+					Units:    r.Units,
+					Lines:    r.Lines,
+				})
+			}
 		}
 		out = append(out, *e)
 	}

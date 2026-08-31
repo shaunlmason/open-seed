@@ -198,7 +198,10 @@ verdict (`reconciliation.md`), and `check.sealed` admits only on
 fail (`reconciliation.md`), and `offer.published` admits only on
 `ready` subjects with an unexpired-at-admission expiry (`offers.md`),
 and the `budget.*` facts admit only on `in_progress` subjects inside
-the claim window they spend under (`budgets.md`) — the §8 chain is
+the claim window they spend under (`budgets.md`), and `run.started`
+admits only inside the active claim window against an open
+reservation while `run.settled` cites any applied claim fence that
+carries a start (`executors.md`) — the §8 chain is
 fully piped and the §7 commitment window is pinned.
 
 ## Projections
