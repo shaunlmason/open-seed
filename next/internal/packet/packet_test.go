@@ -65,6 +65,26 @@ func TestPacketShape(t *testing.T) {
 		}
 	}
 
+	// A null array part decodes into the same nil slice an absent key
+	// does and would slip past presence plus the range loops; the shape
+	// requires literal arrays, explicitly empty where honesty allows.
+	for _, c := range []struct{ name, old, new, part string }{
+		{"null acceptance", `"acceptance": ["done"]`, `"acceptance": null`, "acceptance"},
+		{"null decisions", `"decisions": []`, `"decisions": null`, "decisions"},
+		{"null refs", `"refs": []`, `"refs": null`, "refs"},
+		{"null findings", `"findings": []`, `"findings": null`, "findings"},
+	} {
+		mutated := strings.Replace(minimal, c.old, c.new, 1)
+		if mutated == minimal {
+			t.Fatalf("%s: mutation did not apply", c.name)
+		}
+		_, err := packet.Parse("c-1", []byte(mutated))
+		pe, ok := err.(*packet.Error)
+		if !ok || pe.Part != c.part {
+			t.Fatalf("%s: a null part must refuse naming part %q, got %v", c.name, c.part, err)
+		}
+	}
+
 	// Unknown keys refuse (strict shape), at the top level and inside
 	// entries.
 	for _, m := range []string{
