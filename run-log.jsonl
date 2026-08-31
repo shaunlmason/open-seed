@@ -659,3 +659,4 @@
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-1dad487d","ts":"2026-08-31T19:08:59Z","verb":"close"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-0f718b4e","ts":"2026-08-31T19:09:24Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T20:09:27Z"},"task":"os-0f718b4e","ts":"2026-08-31T19:09:27Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-0f718b4e","ts":"2026-08-31T19:13:20Z","verb":"transition"}
