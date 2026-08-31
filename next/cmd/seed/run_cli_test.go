@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -128,6 +129,24 @@ func TestDisposabilityDrill(t *testing.T) {
 	if _, err := lw.Provision(spec); !errors.Is(err, executor.ErrNoAdmittedStart) {
 		t.Fatalf("Provision refuses without the admitted run.started: %v", err)
 	}
+
+	// Fold presence is never admission (review finding on the task
+	// PR): raw-pushed starts fold into the list but fail the
+	// position-accurate boundary — the holder lacks the verb's
+	// capability, and a supervisor start citing no valid reservation
+	// fails its citation — so Provision refuses both.
+	rawStart := rawAppend(t, ld, workerRawKey(22), "run.started", "c-1",
+		`{"fence": "`+fence+`", "reservation": "`+reservation+`"}`)
+	spec.Started = rawStart
+	if _, err := lw.Provision(spec); !errors.Is(err, executor.ErrNoAdmittedStart) {
+		t.Fatalf("a raw holder-signed start provisions nothing: %v", err)
+	}
+	rawCite := rawAppend(t, ld, workerRawKey(21), "run.started", "c-1",
+		`{"fence": "`+fence+`", "reservation": "999"}`)
+	spec.Started = rawCite
+	if _, err := lw.Provision(spec); !errors.Is(err, executor.ErrNoAdmittedStart) {
+		t.Fatalf("a start citing no valid reservation provisions nothing: %v", err)
+	}
 	if e, code = runEnv(t, "ledger", "append", "--ledger", ld, "--key", keys["supervisor"],
 		"--verb", "run.started", "--subject", "c-1", "--payload",
 		`{"fence": "`+fence+`", "reservation": "`+reservation+`"}`); code != 0 {
@@ -135,6 +154,32 @@ func TestDisposabilityDrill(t *testing.T) {
 	}
 	started, _ := strconv.Atoi(*e.Position)
 	spec.Started = started
+
+	// A refused provision leaks no checkout (review finding on the
+	// task PR): fail provisioning after the worktree add — the
+	// observation root is a file, so the stream directory cannot be
+	// made — and the worktree registration rolls back.
+	worktrees := func() int {
+		out, err := exec.Command("git", "-C", src, "worktree", "list", "--porcelain").Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Count(string(out), "worktree ")
+	}
+	before := worktrees()
+	badObs := filepath.Join(t.TempDir(), "obs-as-file")
+	if err := os.WriteFile(badObs, []byte("not a directory"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	badSpec := spec
+	badSpec.ObsDir = badObs
+	if _, err := lw.Provision(badSpec); err == nil {
+		t.Fatal("provisioning must fail when the observation root is a file")
+	}
+	if got := worktrees(); got != before {
+		t.Fatalf("a failed provision rolls its worktree back: %d registered, want %d", got, before)
+	}
+
 	run, err := lw.Provision(spec)
 	if err != nil {
 		t.Fatalf("Provision against the admitted start: %v", err)

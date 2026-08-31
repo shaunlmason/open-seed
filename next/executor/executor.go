@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
@@ -112,16 +113,27 @@ func (LocalWorktree) Provision(spec ProvisionSpec) (Run, error) {
 	workspace := filepath.Join(dir, "ws")
 	add := exec.Command("git", "-C", spec.Repo, "worktree", "add", "--detach", workspace, spec.Base)
 	if out, err := add.CombinedOutput(); err != nil {
+		_ = os.RemoveAll(dir)
 		return nil, fmt.Errorf("worktree add: %v: %s", err, out)
+	}
+	// Every failure past the add rolls the worktree registration and
+	// the allocation back (review finding on the task PR): a refused
+	// provision leaks no checkout.
+	rollback := func() {
+		_ = exec.Command("git", "-C", spec.Repo, "worktree", "remove", "--force", workspace).Run()
+		_ = os.RemoveAll(dir)
 	}
 	runDir := filepath.Join(workspace, ".seed-run")
 	if err := os.MkdirAll(runDir, 0o755); err != nil {
+		rollback()
 		return nil, err
 	}
 	if err := os.WriteFile(filepath.Join(runDir, "packet.json"), spec.Packet, 0o644); err != nil {
+		rollback()
 		return nil, err
 	}
 	if err := os.MkdirAll(filepath.Join(spec.ObsDir, spec.Actor), 0o755); err != nil {
+		rollback()
 		return nil, err
 	}
 	return &localRun{spec: spec, workspace: workspace}, nil
@@ -153,7 +165,13 @@ func verifyStarted(spec ProvisionSpec) error {
 		return ErrNoAdmittedStart
 	}
 	for _, st := range s.RunStarts {
-		if st.Pos == spec.Started && st.Fence == spec.Fence {
+		if st.Pos == spec.Started && st.Fence == spec.Fence &&
+			admit.RunStartValid(records, table, spec.Subject, st) {
+			// Fold presence is never proof of admission (review
+			// finding on the task PR): the start must pass the same
+			// position-accurate boundary the run rule enforces, or a
+			// raw-pushed start would provision an unbudgeted
+			// workspace.
 			return nil
 		}
 	}
