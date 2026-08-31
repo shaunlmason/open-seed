@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "task": "os-73c00a50",
+  "merge_base": "259be3e7b4fcbbc776619fb4794866199f4eb9d0",
+  "head": "fb3ec6cf73244fdc8f8f51336b10dc8dfe8aa327",
+  "plan_path": "plans/os-73c00a50.md",
+  "plan_sha256": "4e839360a47ee8a51a1374d1bf2116916415a521f2002222a89bd5771b7acf41",
+  "diff_files": [
+    "Makefile",
+    "flavors/core-Makefile",
+    "memory/LEARNINGS.md",
+    "next/cmd/seed-admit/main_test.go",
+    "next/cmd/seed/remote_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/lifecycle_test.go",
+    "next/internal/classify/testdata/hostile/request-prose.aggregate_text_budget.json",
+    "next/internal/gitref/gitref_test.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/cache_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/transition/acceptance.go",
+    "next/internal/transition/acceptance_test.go",
+    "next/internal/transition/transition.go",
+    "next/internal/transition/transition_test.go",
+    "next/spec/acceptance.md",
+    "next/spec/lifecycle.md",
+    "next/spec/projections.md"
+  ],
+  "diff_sha256": "197773f92ef4cfb9c8f87dd83c4c836a4c362f1a590be64bcce8e1817551bd1d",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/admit/... ./internal/project/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
