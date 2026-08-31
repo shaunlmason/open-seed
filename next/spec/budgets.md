@@ -82,10 +82,12 @@ folds as an anomaly, never a fact.
 ## Spending verbs
 
 The charter's "spending verbs require an admitted `budget.reserve`"
-lands as a data table of spending verbs, **empty in v0**: Phase
-7.3's metering fills it. The budget rule refuses any listed verb on
-a subject with no open valid reservation; the gate is drilled
-through test injection so it exists before its first customer.
+lands as a data table of spending verbs. Its first entry is
+**`run.started`** ([`executors.md`](executors.md)): execution spend
+initiates through it, so no run provisions outside the reservation
+gate. The budget rule refuses any listed verb on
+a subject with no open valid reservation; the gate is additionally
+drilled through test injection in isolation.
 Exhaustion produces a structured refusal the worker can act on; the
 deliberate park-with-packet on exhaustion is Phase 7.4's worker
 behavior, and the envelope's `{reserved, remaining}` block is Phase

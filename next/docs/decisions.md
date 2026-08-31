@@ -686,3 +686,35 @@ here. Newest last.
   budget-inactive chains keep byte-identical views), report v7
   (republish only), cache generation 9 (reservations table + budget
   columns).
+- 2026-08-31 — The executor adapter is a public package and execution
+  is fenced to the reservation end to end (os-1dad487d,
+  plans/os-1dad487d.md as amended in the #150 review round; charter
+  II §9 executor prose, III.H rows 6–8). next/executor is the
+  module's one non-internal package: Adapter
+  (Provision/Wake/Tuple) and Run (Workspace/Meter/Dispose), with the
+  local worktree adapter first (detached git worktree, fixed argv,
+  packet at .seed-run/packet.json, Wake the documented no-op, Tuple
+  the honest local-worktree/v0 stub until Phase 10). run.started is
+  the spending-verb table's first entry — strict {fence,
+  reservation}, in_progress only, the ACTIVE fence, an open valid
+  reservation revalidated position-accurately, once per fence,
+  {supervise, operator} — and Provision refuses without the admitted
+  start it cites, so the bracket is reserve, start, provision,
+  meter, settle, budget.settle. run.settled aggregates once per
+  started fence (prior fences included: a run settles after its
+  window closed); metering rides the observation channel via the
+  additive units line field. One review-visible deviation from the
+  plan's mechanism note: the plan said the run facts' fence field
+  "doubles as the fence rule's citation", but the fence rule's
+  active-fence semantics would refuse the prior-fence settles the
+  plan REQUIRES, so run verbs are fence-rule-exempt and the run rule
+  validates the reference against the applied claim positions
+  instead — behavior preserved, mechanism corrected. The
+  disposability drill SIGKILLs a real worker subprocess (test-binary
+  re-exec) at a seeded randomized site after an admitted
+  submission.made: the chain verifies, the contract completes
+  elsewhere from the surviving ledger alone, the loss is exactly the
+  post-sync observation lines, and disposing the dead workspace
+  loses nothing admitted. Projections: contracts v11 (run facts,
+  omitempty), report v8 (republish only), cache generation 10 (runs
+  table).

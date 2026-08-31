@@ -261,6 +261,19 @@ func (e *BudgetError) Error() string {
 	return fmt.Sprintf("budget on %s refused: %s (next/spec/budgets.md)", e.Subject, e.Reason)
 }
 
+// RunError is the run rule's refusal: a malformed payload, a start
+// outside its claim window or citation boundary, or a settle on a
+// start-less or already-settled fence. It rides the established
+// shape-refusal exit mapping.
+type RunError struct {
+	Subject string
+	Reason  string
+}
+
+func (e *RunError) Error() string {
+	return fmt.Sprintf("run on %s refused: %s (next/spec/executors.md)", e.Subject, e.Reason)
+}
+
 // VerbInactiveError refuses a verb whose semantics are not active under
 // the chain's protocol version: an actor.* draft on a seed/0 tip is a
 // verb illegal in this state (exit 3) until the deployment upgrades.
@@ -369,6 +382,16 @@ func Default() []Rule {
 				return nil
 			}
 			verb := rec.Event.Verb
+			if verb == transition.RunStartedVerb || verb == transition.RunSettledVerb {
+				// The run facts' "fence" field is the run's window
+				// reference, not a fence-rule citation: a settle
+				// legitimately cites a PRIOR fence after its window
+				// closed (plans/os-1dad487d.md), which the
+				// active-fence citation semantics here would refuse.
+				// The run rule validates the reference against the
+				// applied claim positions instead.
+				return nil
+			}
 			if c.Table.Exclusive(verb) {
 				if s, ok := c.Lifecycle.State(rec.Event.Subject); ok && s.Claim != nil {
 					// A rival claim is contention, the lifecycle
@@ -717,6 +740,132 @@ func Default() []Rule {
 				}
 				return nil
 			}
+		}},
+		{Name: "run", Check: func(c *Context, rec *event.Record) error {
+			// The execution-run facts (plans/os-1dad487d.md;
+			// next/spec/executors.md): run.started is the spending
+			// gate's first customer (the budget rule already required
+			// an open valid reservation on the subject; this rule
+			// revalidates the SPECIFIC citation, the laundering
+			// shape), and run.settled is the once-per-fence aggregate
+			// on a fence that carries an admitted start. Capability
+			// rides the grant rule.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			verb := rec.Event.Verb
+			if verb != transition.RunStartedVerb && verb != transition.RunSettledVerb {
+				return nil
+			}
+			subject := rec.Event.Subject
+			s, ok := c.Lifecycle.State(subject)
+			if !ok {
+				return &transition.InvalidTransitionError{Subject: subject, Verb: verb}
+			}
+			startValid := func(st transition.RunStartFact) bool {
+				// The laundering shape (review finding on the task
+				// PR): a folded start counts toward the one-per-fence
+				// rule or satisfies a settle only when its signer held
+				// the run lanes AT its position and its cited
+				// reservation exists and passed the authoring
+				// boundary — a raw start neither blocks the
+				// legitimate supervisor nor launders a settle through.
+				if st.Pos < 0 || st.Pos >= len(c.Records) {
+					return false
+				}
+				ring, _, err := keyring.StateAt(c.Records[:st.Pos])
+				if err != nil || ring == nil ||
+					!ring.HasAnyCapability(st.Signer, keyring.AcceptedCapabilities(transition.RunStartedVerb)) {
+					return false
+				}
+				for _, r := range s.Reservations {
+					if r.Pos == st.Reservation {
+						return ReservationValid(c.Records, c.Table, subject, r)
+					}
+				}
+				return false
+			}
+			if verb == transition.RunStartedVerb {
+				var p struct {
+					Fence       string `json:"fence"`
+					Reservation string `json:"reservation"`
+				}
+				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+				dec.DisallowUnknownFields()
+				if err := dec.Decode(&p); err != nil {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("the start payload is the strict object {fence, reservation}: %v", err)}
+				}
+				if s.State != "in_progress" {
+					return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
+				}
+				fence, err := strconv.Atoi(strings.TrimSpace(p.Fence))
+				if err != nil || s.Claim == nil || fence != s.Claim.Fence {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("fence %q is not the active claim fence — a run starts inside the claim window it spends under", p.Fence)}
+				}
+				for _, st := range s.RunStarts {
+					if st.Fence == fence && startValid(st) {
+						return &RunError{Subject: subject, Reason: fmt.Sprintf("fence %d already carries a run.started at position %d — one run per claim window", fence, st.Pos)}
+					}
+				}
+				cited, err := strconv.Atoi(strings.TrimSpace(p.Reservation))
+				if err != nil {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("reservation %q is not a chain position", p.Reservation)}
+				}
+				var res *transition.ReservationFact
+				for i := range s.Reservations {
+					if s.Reservations[i].Pos == cited {
+						res = &s.Reservations[i]
+						break
+					}
+				}
+				if res == nil {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("position %d is no reservation on this subject", cited)}
+				}
+				view := BudgetViewAt(c.Records, c.Table, subject, s)
+				if !ReservationValid(c.Records, c.Table, subject, *res) {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("the reservation at position %d never passed the authoring boundary — a run cannot be fenced to laundered spend", cited)}
+				}
+				if _, closed := view.ClosedBy[cited]; closed {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("the reservation at position %d is already effectively closed — a run needs an open reservation", cited)}
+				}
+				return nil
+			}
+			var p struct {
+				Fence string `json:"fence"`
+				Units string `json:"units"`
+				Lines string `json:"lines"`
+			}
+			dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+			dec.DisallowUnknownFields()
+			if err := dec.Decode(&p); err != nil {
+				return &RunError{Subject: subject, Reason: fmt.Sprintf("the settle payload is the strict object {fence, units, lines}: %v", err)}
+			}
+			fence, err := strconv.Atoi(strings.TrimSpace(p.Fence))
+			if err != nil || !s.ClaimFences[fence] {
+				return &RunError{Subject: subject, Reason: fmt.Sprintf("fence %q is not an applied claim position on this subject", p.Fence)}
+			}
+			started := false
+			for _, st := range s.RunStarts {
+				if st.Fence == fence && startValid(st) {
+					started = true
+					break
+				}
+			}
+			if !started {
+				return &RunError{Subject: subject, Reason: fmt.Sprintf("fence %d carries no admitted run.started — a run settles only after its gated initiation", fence)}
+			}
+			for _, r := range s.Runs {
+				if r.Fence == fence {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("fence %d already carries a run.settled at position %d — one run, one aggregate", fence, r.Pos)}
+				}
+			}
+			for name, v := range map[string]string{"units": p.Units, "lines": p.Lines} {
+				n, err := strconv.Atoi(strings.TrimSpace(v))
+				if err != nil || n < 0 {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("%s %q is not a non-negative integer", name, v)}
+				}
+			}
+			return nil
 		}},
 		{Name: "chain", Check: func(c *Context, rec *event.Record) error {
 			// The reconciliation chain (plans/os-6cdc15be.md;

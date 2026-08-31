@@ -28,6 +28,11 @@ type Line struct {
 	Subject string `json:"subject"`
 	Count   int    `json:"count"`
 	Step    string `json:"step"`
+	// Units is metered usage (plans/os-1dad487d.md): a metering line
+	// is an ordinary observation line with units set. Omitted when
+	// zero, so pre-metering streams and snapshot digests stay
+	// byte-identical.
+	Units int `json:"units,omitempty"`
 }
 
 // Append writes one observation line to the per-run stream

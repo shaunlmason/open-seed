@@ -29,12 +29,17 @@ non-authoritative by construction, nothing downstream trusts it for
 a decision, and the ledger facts stay signed as always.
 
 ```json
-{"ts": "<rfc3339>", "subject": "<contract>", "count": <int>, "step": "<state>"}
+{"ts": "<rfc3339>", "subject": "<contract>", "count": <int>, "step": "<state>", "units": <int, optional>}
 ```
 
 `count` is the **monotonic completed-item counter**: progress is
 measured by counts, never file modification time. `step` is the
-**declared in-step state** for long-running work. `seed obs emit`
+**declared in-step state** for long-running work. `units` is metered
+usage (plans/os-1dad487d.md; [`executors.md`](executors.md)): a
+metering line is an ordinary line with units set, omitted when zero
+so pre-metering streams and digests stay byte-identical; the
+per-fence stream's units settle to the ledger at run end via
+`run.settled`. `seed obs emit`
 writes one line, creating the per-run file as needed.
 
 ## Classification: expiry vs. wedge

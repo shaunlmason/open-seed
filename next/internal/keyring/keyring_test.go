@@ -377,6 +377,7 @@ func TestCapabilityVocabulary(t *testing.T) {
 		"merge.requested", "verdict.rendered", "check.sealed",
 		"contract.returned", "merge.overridden", "offer.published",
 		"budget.reserve", "budget.settle", "budget.release",
+		"run.started", "run.settled",
 	} {
 		if _, ok := spec[verb]; !ok {
 			t.Errorf("%s is governed by code but missing from the spec table", verb)

@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "task": "os-1dad487d",
+  "merge_base": "4b2eaeb2092c94f573479df77e7eb97706a5c87b",
+  "head": "542ae252dbe7fa9f712fe15687a1792c0fbc634f",
+  "plan_path": "plans/os-1dad487d.md",
+  "plan_sha256": "cc9af7b002714d106629a2e3a8b32c308ae94db30834cd5d6ba1653c2388eac4",
+  "diff_files": [
+    "next/cmd/seed/run_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/executor/executor.go",
+    "next/executor/executor_test.go",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/run_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/obs/obs.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/cache_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/project/report.go",
+    "next/internal/transition/run_test.go",
+    "next/internal/transition/transition.go",
+    "next/spec/actors.md",
+    "next/spec/budgets.md",
+    "next/spec/executors.md",
+    "next/spec/lifecycle.md",
+    "next/spec/observations.md"
+  ],
+  "diff_sha256": "b55807043bdfe781a9a6bea0fe51c1f4e3b3112531ef6e7c4d5e7812e03b0a2f",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./executor/... ./... -run 'Run|Executor|Disposab|Worktree' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
