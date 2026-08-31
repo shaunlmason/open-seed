@@ -87,17 +87,24 @@ func loadVerdictState(dir string) (*verdictState, *envelope.Envelope) {
 		tip: rep.Tip, active: rep.ActiveVersion, count: rep.Count}, nil
 }
 
-// verdictInput assembles the receipt computation's input for a review
-// subject: the bound submission's packet names the range, the fold
-// carries the plan anchor and acceptance, and everything else is
-// recomputed (enumerable inputs).
-func (st *verdictState) verdictInput(subject, repo string, timeout time.Duration) (verdict.Input, transition.SubjectState, *envelope.Envelope) {
+// verdictInput assembles the receipt computation's input: the bound
+// submission's packet names the range, the fold carries the plan
+// anchor and acceptance, and everything else is recomputed
+// (enumerable inputs). requireReview gates receipt and render to
+// review subjects; check passes false, because reconciliation runs
+// exactly after merge.observed has moved the contract on and the
+// fold retains the bound submission (review finding on the task PR).
+func (st *verdictState) verdictInput(subject, repo string, timeout time.Duration, requireReview bool) (verdict.Input, transition.SubjectState, *envelope.Envelope) {
 	s, ok := st.fold.State(subject)
 	if !ok {
+		if !requireReview {
+			return verdict.Input{}, s, envelope.Fail(envelope.ExitNotFound, "not_found",
+				fmt.Sprintf("no contract %s in the fold", subject))
+		}
 		return verdict.Input{}, s, envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition",
 			(&transition.InvalidTransitionError{Subject: subject, Verb: transition.VerdictRenderedVerb}).Error())
 	}
-	if s.State != "review" {
+	if requireReview && s.State != "review" {
 		return verdict.Input{}, s, envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition",
 			(&transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: transition.VerdictRenderedVerb}).Error())
 	}
@@ -192,7 +199,7 @@ func runVerdictReceipt(args []string, stdout, stderr io.Writer) int {
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
-	in, _, failEnv := st.verdictInput(*subject, *repo, *timeout)
+	in, _, failEnv := st.verdictInput(*subject, *repo, *timeout, true)
 	if failEnv != nil {
 		return render(stampTip(failEnv, st.count), stdout, stderr)
 	}
@@ -240,7 +247,7 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
-	in, s, failEnv := st.verdictInput(*subject, *repo, *timeout)
+	in, s, failEnv := st.verdictInput(*subject, *repo, *timeout, true)
 	if failEnv != nil {
 		return render(stampTip(failEnv, st.count), stdout, stderr)
 	}
@@ -323,9 +330,10 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 	dir := fs.String("ledger", "", "ledger directory")
 	subject := fs.String("subject", "", "contract with a rendered verdict")
 	repo := fs.String("repo", "", "source repository the submission range names")
+	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
 	timeout := fs.Duration("timeout", 0, "per-command wall-clock bound (default 10m)")
 	if err := fs.Parse(args); err != nil || *dir == "" || *subject == "" || *repo == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict check requires --ledger <dir> --subject <id> --repo <dir> [--timeout <dur>]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict check requires --ledger <dir> --subject <id> --repo <dir> [--artifacts <dir>] [--timeout <dur>]"), stdout, stderr)
 	}
 	st, failEnv := loadVerdictState(*dir)
 	if failEnv != nil {
@@ -351,7 +359,15 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 		return render(stampTip(envelope.Fail(envelope.ExitNotFound, "not_found",
 			fmt.Sprintf("no rendered verdict on %s", *subject)), st.count), stdout, stderr)
 	}
-	in, _, failEnv := st.verdictInput(*subject, *repo, *timeout)
+	// The stored receipt is retrievable evidence: a check is not green
+	// over a store that lost or corrupted the cited artifact, however
+	// clean the recomputation (review finding on the task PR).
+	// artifact.Get digest-verifies content on the way out.
+	if _, err := artifact.Open(artifactsDir(*artifacts, *repo)).Get(strings.TrimSpace(cited.Receipt)); err != nil {
+		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
+			fmt.Sprintf("the cited receipt %s is not retrievable intact from the artifact store: %v — the evidence a verdict points at must survive verbatim (6.2 reconciliation input)", cited.Receipt, err)), st.count), stdout, stderr)
+	}
+	in, _, failEnv := st.verdictInput(*subject, *repo, *timeout, false)
 	if failEnv != nil {
 		return render(stampTip(failEnv, st.count), stdout, stderr)
 	}
@@ -372,5 +388,6 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 		"receipt":    digest,
 		"verdict":    cited.Verdict,
 		"submission": cited.Submission,
+		"artifact":   "verified",
 	}), st.count), stdout, stderr)
 }

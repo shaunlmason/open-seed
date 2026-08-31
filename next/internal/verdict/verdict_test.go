@@ -387,3 +387,28 @@ func TestRefusalMessagesNameTheirContracts(t *testing.T) {
 		}
 	}
 }
+
+func TestCloneSharesNoObjectStorage(t *testing.T) {
+	// A same-filesystem local clone must copy objects, never
+	// hard-link them: with a shared inode, a hostile spec command
+	// overwriting a clone-side object file would corrupt the parent
+	// repository's object store despite the removed origin. The drill
+	// makes every clone-side loose object writable garbage and then
+	// asserts the parent still verifies from its own store.
+	dir, _, _, head := repo(t)
+	ws, err := NewWorkspace(dir, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ws.Cleanup()
+	tr := Runner{}.Run(ws, `chmod -R u+w .git/objects && find .git/objects -type f | while read -r f; do echo garbage > "$f"; done`)
+	if tr.Exit != 0 {
+		t.Fatalf("the corruption command itself must run: %+v", tr)
+	}
+	if _, err := runGit([]string{"-C", dir, "fsck", "--no-progress", "--strict"}); err != nil {
+		t.Fatalf("the parent object store must survive clone-side corruption: %v", err)
+	}
+	if out, err := runGit([]string{"-C", dir, "cat-file", "-e", head + "^{commit}"}); err != nil {
+		t.Fatalf("the parent must still serve the head commit: %v %s", err, out)
+	}
+}

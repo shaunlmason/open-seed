@@ -58,11 +58,15 @@ dies with its claim window).
 
 The verifier executes in **clean per-run isolation**: a detached local
 clone of the repository at the submission head under a fresh unique
-temp dir, with the origin remote removed — deliberately not a
-`git worktree` checkout, whose `.git` link shares the parent
-repository's refs and object store and would hand a hostile spec
-command `git update-ref` reach back into the host. Parallel runs never
-collide (unique dirs); cleanup fires pass or fail.
+temp dir, with the origin remote removed and objects **copied, never
+hard-linked** (`--no-hardlinks`: a same-filesystem local clone
+otherwise hard-links loose object files, so a hostile spec command
+overwriting one through the shared inode would corrupt the parent's
+object store) — and deliberately not a `git worktree` checkout, whose
+`.git` link shares the parent repository's refs and object store and
+would hand a hostile spec command `git update-ref` reach back into the
+host. Both holes are drilled. Parallel runs never collide (unique
+dirs); cleanup fires pass or fail.
 
 The charter's "sandbox with declared, minimal capability" lands as a
 **runner capability profile, declared in the receipt**. v0 ships the
@@ -120,8 +124,14 @@ workspace; transcripts carry each command, its exit, and the digest and
 byte count of its combined output — never inline bytes, so receipts
 stay bounded. **Verification recomputes everything from the submission
 head and fails on mismatch** — a first-class verb (`seed verdict
-check`, refusing exit **21 `receipt_mismatch`** naming both digests),
-not only a test.
+check`, refusing exit **21 `receipt_mismatch`**), not only a test.
+Check verifies two things and names what failed: the cited artifact is
+retrievable intact from the store (the evidence a verdict points at
+must survive verbatim), and the fresh recomputation reproduces the
+cited digest. It runs in **every post-submission state**, not only
+`review`: reconciliation needs it exactly after `merge.observed` has
+moved the contract on, and the fold retains the bound submission —
+only `receipt` and `render` stay review-gated.
 
 ## Gate-before-run
 

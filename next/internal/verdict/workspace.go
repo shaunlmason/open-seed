@@ -55,7 +55,14 @@ func NewWorkspace(repoDir, head string) (*Workspace, error) {
 		}
 	}
 	steps := [][]string{
-		{"clone", "--quiet", "--no-checkout", repoDir, ws.Repo},
+		// --no-hardlinks: a same-filesystem local clone otherwise
+		// hard-links loose object files, so a hostile spec command
+		// overwriting one through the shared inode would corrupt the
+		// parent repository's object store despite the removed origin
+		// (review finding on the task PR). Copied objects make the
+		// isolation real; the drill corrupts every clone-side object
+		// and asserts the parent still verifies.
+		{"clone", "--quiet", "--no-checkout", "--no-hardlinks", repoDir, ws.Repo},
 		{"-C", ws.Repo, "checkout", "--quiet", "--detach", head},
 		{"-C", ws.Repo, "remote", "remove", "origin"},
 	}

@@ -206,6 +206,33 @@ func TestVerdictEndToEndCLI(t *testing.T) {
 	if e, code = runEnv(t, "verdict", "check", "--ledger", ld, "--subject", "c-none", "--repo", src); code != 4 {
 		t.Fatalf("check without a rendered verdict refuses 4, got %d %+v", code, e)
 	}
+
+	// Reconciliation outlives review: after merge.observed moves c-1
+	// to done, check still recomputes against the fold's bound
+	// submission (receipt/render stay review-gated).
+	verdictLibAppend(t, ld, rootKey, "merge.observed", "c-1", `{}`)
+	if e, code = runEnv(t, "verdict", "check", "--ledger", ld, "--subject", "c-1", "--repo", src); code != 0 || e.Result["artifact"] != "verified" {
+		t.Fatalf("check must work after the merge it reconciles: %d %+v", code, e)
+	}
+	if e, code = runEnv(t, "verdict", "receipt", "--ledger", ld, "--subject", "c-1", "--repo", src); code != 3 {
+		t.Fatalf("receipt stays review-gated after done, got %d %+v", code, e)
+	}
+
+	// The stored receipt is retrievable evidence: a lost or corrupted
+	// artifact makes check red however clean the recomputation.
+	stored := filepath.Join(src, "next", "var", "artifacts", "sha256", digest)
+	if err := os.Remove(stored); err != nil {
+		t.Fatal(err)
+	}
+	if e, code = runEnv(t, "verdict", "check", "--ledger", ld, "--subject", "c-1", "--repo", src); code != 21 || !strings.Contains(e.Error.Message, "retrievable") {
+		t.Fatalf("a missing stored receipt refuses receipt_mismatch: %d %+v", code, e)
+	}
+	if err := os.WriteFile(stored, []byte("garbage"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if e, code = runEnv(t, "verdict", "check", "--ledger", ld, "--subject", "c-1", "--repo", src); code != 21 {
+		t.Fatalf("a corrupted stored receipt refuses receipt_mismatch: %d %+v", code, e)
+	}
 }
 
 func TestVerdictCLIRefusalSurfaces(t *testing.T) {
