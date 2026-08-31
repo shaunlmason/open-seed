@@ -189,7 +189,10 @@ Phase 7, as added rules on the shared set.
 - 5.5 falsifiable-plan lint + plan-gating — os-16c1d142 — plan PR
   #120 (merged, amended: two-layer plan binding with the Phase 6
   receipt closing the ancestry hole; classify ships as an invocable
-  check, per review) — after 5.1 and 5.2
+  check, per review) — **implementing** (stacked on 5.4's branch):
+  internal/plan lint + classifier, seed plan lint/classify verbs,
+  exit 16 plan_required, the submission plan gate over the fold's
+  tier and plan.approved facts, plan.* capability rows
 - 5.6 observation streams v0 + expiry vs. wedge — os-2ff8dbf1 — plan
   PR #121 (open, amended per review: input-bearing build identity,
   fence-keyed streams, position throttle) — after 5.2
@@ -208,9 +211,10 @@ Phase 7, as added rules on the shared set.
 Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
 plan is merged or open-amended: #113–#116 and #120 merged, #121 (5.6)
-open. 5.1 (#122), 5.2 (#123), and 5.3 (#124) are in review as a stack;
-**this PR implements 5.4** (os-73c00a50, the acceptance gate),
-stacked on #124's branch. **Next action: 5.5 (falsifiable-plan lint)
-and 5.6 (observations v0) stack next, completing Phase 5's items.**
+open. 5.1 (#122) is merged and closed; 5.2 (#123), 5.3 (#124), and 5.4
+(#125) are in review as a stack on main; **this PR implements 5.5**
+(os-16c1d142), stacked on #125's branch. **Next action: 5.6
+(observations v0) stacks last, completing Phase 5's items; then the
+Phase 5 exit record and Phase 6 (the verdict pipeline).**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

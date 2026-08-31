@@ -90,6 +90,14 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapClaim, CapOperator}
 	case "contract.cancelled", "merge.observed":
 		return []string{CapOperator}
+	// The plan verbs (plans/os-16c1d142.md): the claim holder plans
+	// (the fence matrix applies on a claimed subject); approval is an
+	// external-fact observation, operator-attested in v0 like
+	// merge.observed.
+	case "plan.proposed":
+		return []string{CapClaim, CapOperator}
+	case "plan.approved":
+		return []string{CapOperator}
 	}
 	return nil
 }

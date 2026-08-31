@@ -349,6 +349,28 @@ func Default() []Rule {
 			_, err := packet.FromPayload(rec.Event.Subject, rec.Event.Payload)
 			return err
 		}},
+		{Name: "plan", Check: func(c *Context, rec *event.Record) error {
+			// The plan gate (plans/os-16c1d142.md): plan.* payloads
+			// carry their anchors, and a submission above the trivial
+			// tier requires an admitted plan.approved plus the cited
+			// plan anchor (exit 16 plan_required). The ancestry
+			// binding is Phase 6's receipt computation.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			verb := rec.Event.Verb
+			if err := transition.CheckPlanEventShape(verb, rec.Event.Subject, rec.Event.Payload); err != nil {
+				return err
+			}
+			if verb != "submission.made" {
+				return nil
+			}
+			tier := ""
+			if s, ok := c.Lifecycle.State(rec.Event.Subject); ok {
+				tier = s.Tier
+			}
+			return c.Lifecycle.CheckPlanGate(rec.Event.Subject, tier, rec.Event.Payload)
+		}},
 		{Name: "proposal", Check: func(c *Context, rec *event.Record) error {
 			// Outside text can propose, never arm (III.F row 2,
 			// plans/os-73c00a50.md): request.* payloads structurally
