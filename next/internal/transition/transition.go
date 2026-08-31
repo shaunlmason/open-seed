@@ -927,12 +927,28 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 					if err != nil {
 						continue
 					}
+					// A raw duplicate on a once-per-fence fact stays
+					// visible AND counts an anomaly (the plan's
+					// duplicate-history posture; review finding on the
+					// task PR).
+					for _, st := range s.RunStarts {
+						if st.Fence == fence {
+							s.Anomalies++
+							break
+						}
+					}
 					s.RunStarts = append(s.RunStarts, RunStartFact{Pos: pos, Signer: e.Actor, Fence: fence, Reservation: res})
 				} else {
 					units, uerr := strconv.Atoi(strings.TrimSpace(p.Units))
 					lines, lerr := strconv.Atoi(strings.TrimSpace(p.Lines))
 					if uerr != nil || lerr != nil || units < 0 || lines < 0 {
 						continue
+					}
+					for _, r := range s.Runs {
+						if r.Fence == fence {
+							s.Anomalies++
+							break
+						}
 					}
 					s.Runs = append(s.Runs, RunFact{Pos: pos, Signer: e.Actor, Fence: fence, Units: units, Lines: lines})
 				}

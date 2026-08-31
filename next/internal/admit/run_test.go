@@ -100,10 +100,19 @@ func TestRunAdmissionMatrix(t *testing.T) {
 		}
 	}
 
+	// The laundering shape (review finding on the task PR): a
+	// raw-pushed start by a boundary-invalid signer neither blocks
+	// the legitimate supervisor's start nor satisfies a settle.
+	ctx = step(k.holder, version.Seed1, "run.started", "c-1", startBody(openRes))
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", `{"fence": "`+fence+`", "units": "1", "lines": "1"}`, ctx.Tip)); err == nil || !strings.Contains(err.Error(), "no admitted run.started") {
+		t.Fatalf("a raw invalid start satisfies no settle: %v", err)
+	}
+
 	// The happy path admits once per fence; the supervisor and the
-	// operator both stand in the lane.
+	// operator both stand in the lane, and the raw invalid start
+	// blocked neither.
 	if err := Check(ctx, draftV(t, k.signer, version.Seed1, "run.started", "c-1", startBody(openRes), ctx.Tip)); err != nil {
-		t.Fatalf("the operator's start admits: %v", err)
+		t.Fatalf("the operator's start admits past the raw invalid one: %v", err)
 	}
 	ctx = step(k.supervisor, version.Seed1, "run.started", "c-1", startBody(openRes))
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.started", "c-1", startBody(openRes), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "one run per claim window") {

@@ -42,4 +42,20 @@ func TestRunFactFold(t *testing.T) {
 	if s.Anomalies == 0 {
 		t.Fatal("a run fact citing a dangling fence counts an anomaly, never a fact")
 	}
+
+	// Raw duplicates on a once-per-fence fact stay visible AND count
+	// anomalies (review finding on the task PR).
+	before := s.Anomalies
+	records = append(records,
+		payloadEvent("seed/1", "run.started", "c-1", `{"fence": "2", "reservation": "3"}`),         // 8: duplicate start
+		payloadEvent("seed/1", "run.settled", "c-1", `{"fence": "2", "units": "1", "lines": "1"}`), // 9: duplicate settle
+	)
+	fold = tab.FoldRecords(records)
+	s, _ = fold.State("c-1")
+	if len(s.RunStarts) != 2 || len(s.Runs) != 2 {
+		t.Fatalf("duplicates stay visible: %d starts, %d runs", len(s.RunStarts), len(s.Runs))
+	}
+	if s.Anomalies != before+2 {
+		t.Fatalf("each raw duplicate counts an anomaly: %d then %d", before, s.Anomalies)
+	}
 }
