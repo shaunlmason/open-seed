@@ -678,3 +678,4 @@
 {"actor":"shaunlmason","data":{"title":"engine: receipt verify surfaces the failing validation command's output"},"task":"os-edc79ab7","ts":"2026-08-31T21:20:27Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: force-preemption drill polls for growth instead of a fixed window"},"task":"os-a95db3f5","ts":"2026-08-31T21:20:30Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 8.1 — affordance envelope"},"task":"os-f5551001","ts":"2026-08-31T21:20:42Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-f5551001","ts":"2026-08-31T21:20:55Z","verb":"promote"}
