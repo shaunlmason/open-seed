@@ -286,7 +286,11 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   divergence drills — os-6cdc15be — plan PR #136 (merged, amended
   per review: target-ref observation replaces the unreachable
   two-sha signal; honest ancestry cases with attested_divergence as
-  a surfaced state) — **this task PR**: merge.requested piped
+  a surfaced state) — **done** (merged #137; card closed; the review
+  round landed unlaunderable verdicts at both admitted chain steps
+  plus reconcile.VerifyVerdicts/verdict_unverified, the
+  coexisting-failure evidence walk, explicit-null chain fields, and
+  the cache reconciliation row): merge.requested piped
   (pass-verdict citation, review-only, claim lane), merge.observed
   deepened to the observer's forge fact behind the full chain rule
   with the observer capability lane, fold chain facts, the
@@ -297,7 +301,26 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   target_rewritten, evidence_missing) and the induced-divergence
   drills, spec/reconciliation.md
 - 6.3 sealed checks (salted commitment, age-encrypted body, rotation
-  re-encryption, capability audit) — os-3128535a — backlog
+  re-encryption, capability audit) — os-3128535a — plan PR #138
+  (merged, amended per review: the pre-claim window closes the
+  release-path laundering hole, verdict check recomputes sealed
+  transcripts, the sealer lane drops the operator fallback, empty
+  seals refuse at both ends) — **this task PR**: check.sealed
+  admitted only in ready with no prior claim (one commitment per
+  subject; raw seals outside the window fold as anomalies, never
+  facts), the salted JCS envelope with the salt inside the
+  ciphertext, internal/seal over filippo.io/age v1.2.1 (agessh
+  recipients = the verdict-granted keys; the audit's header tag
+  scan), the mutable sealed bucket keyed by commitment, the sealer
+  capability with grant disjointness against claim and operator
+  (root's implicit operator included) plus the seal-author claim
+  refusal and the capability-audit decrypt drills, render's
+  unseal-and-run with sealed transcripts in the receipt behind
+  exits 22/23/24 (the above-trivial gate), check's sealed
+  recompute-and-mismatch, seed seal create|rotate|audit (rotation
+  re-encrypts open subjects without touching the ledger), the
+  reconcile unsealed class, contracts v7 / report v4 / cache
+  generation 6, spec/sealed-checks.md
 - 6.4 red-verdict lockout + operator override verb — os-d2497eb7 —
   backlog
 
@@ -308,10 +331,12 @@ Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
 three post-merge follow-ups (#127, #128, #129), and the engine
 v0.15.1 receipt-runner pin (#130) are merged, and the Phase 5 exit
 record above is card os-6e37b10e's task PR (#134, merged; card
-closed). 6.1 is merged (#135; card closed). **This task PR
-implements 6.2** (os-6cdc15be, the reconciliation chain and
-divergence detection, against merged plan #136). **Next action: land
-this PR; then 6.3's plan** (os-3128535a, sealed checks). The Phase 6
+closed). 6.1 is merged (#135; card closed); 6.2 is merged (#137;
+card closed). **This task PR implements 6.3** (os-3128535a, sealed
+checks, against merged plan #138). **Next action: land this PR; then
+6.4** (os-d2497eb7, red-verdict lockout and the operator override
+verb — the last Phase 6 item; the fold's verdict fact, fail
+included, is already recorded for it). The Phase 6
 exit subset is charter
 III.G minus L2/L3 levels and rubric calibration (Phase 10/11): the
 reconciliation drills, the receipt recompute-and-mismatch test, and

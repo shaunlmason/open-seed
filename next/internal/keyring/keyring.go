@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -68,6 +69,14 @@ const (
 	// CapClaim is the worker set: taking, releasing, and parking
 	// claims, and submitting work.
 	CapClaim = "claim"
+	// CapSealer authors sealed checks (plans/os-3128535a.md). Like the
+	// verdict lane it has no operator fallback: operator already
+	// stands in the claim and submission lanes, so an operator row
+	// here would put authoring and implementation authority on one
+	// capability and the charter's capability audit could prove
+	// nothing. Grant-level disjointness with claim and operator is
+	// enforced at actor.granted admission.
+	CapSealer = "sealer"
 )
 
 // AcceptedCapabilities returns the set of capabilities any one of which
@@ -109,6 +118,11 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapClaim, CapOperator}
 	case "merge.observed":
 		return []string{CapObserver, CapOperator}
+	// The sealed-checks commitment (plans/os-3128535a.md): sealer
+	// only, no operator fallback, mirroring the verdict lane's
+	// posture — authoring isolation is the row's whole point.
+	case "check.sealed":
+		return []string{CapSealer}
 	// The plan verbs (plans/os-16c1d142.md): the claim holder plans
 	// (the fence matrix applies on a claimed subject); approval is an
 	// external-fact observation, operator-attested in v0 like
@@ -233,6 +247,57 @@ func (s *State) Get(fp string) (Entry, bool) {
 func (s *State) IsActiveRoot(fp string) bool {
 	e := s.entries[fp]
 	return e != nil && e.Root && e.Standing == StandingActive
+}
+
+// sealerDisjoint refuses a grant that would co-hold sealed-check
+// authoring and implementation authority on one key: sealer cannot
+// join claim or operator (a governance root's implicit operator
+// standing included), and neither can join sealer.
+func sealerDisjoint(cur *Entry, granting string) error {
+	implLane := map[string]bool{CapClaim: true, CapOperator: true}
+	has := func(c string) bool {
+		if c == CapOperator && cur.Root {
+			return true
+		}
+		for _, g := range cur.Grants {
+			if g == c {
+				return true
+			}
+		}
+		return false
+	}
+	if granting == CapSealer && (has(CapClaim) || has(CapOperator)) {
+		return errors.New("sealer cannot be granted to a key holding claim or operator — sealed checks are authored under a grant disjoint from implementation grants (plans/os-3128535a.md)")
+	}
+	if implLane[granting] && has(CapSealer) {
+		return fmt.Errorf("%s cannot be granted to a key holding sealer — sealed checks are authored under a grant disjoint from implementation grants (plans/os-3128535a.md)", granting)
+	}
+	return nil
+}
+
+// Granted returns the active entries holding the capability, sorted by
+// fingerprint: the sealed-check recipient set is "the current verifier
+// keyring", and rotation re-derives it from here.
+func (s *State) Granted(capability string) []Entry {
+	var out []Entry
+	fps := make([]string, 0, len(s.entries))
+	for fp := range s.entries {
+		fps = append(fps, fp)
+	}
+	sort.Strings(fps)
+	for _, fp := range fps {
+		e := s.entries[fp]
+		if e.Standing != StandingActive {
+			continue
+		}
+		for _, g := range e.Grants {
+			if g == capability {
+				out = append(out, *e)
+				break
+			}
+		}
+	}
+	return out
 }
 
 // HasAnyCapability reports whether the actor holds any of the listed
@@ -369,6 +434,13 @@ func (s *State) Advance(rec *event.Record) error {
 		}
 		if cur.Standing == StandingRevoked {
 			return fmt.Errorf("actor %s is revoked; revocation is terminal", e.Subject)
+		}
+		// Sealed-check authoring isolation (plans/os-3128535a.md):
+		// sealer and the implementation lanes (claim, and operator,
+		// which stands in for claim) are disjoint at the grant, both
+		// directions, so the capability audit has something to prove.
+		if err := sealerDisjoint(cur, p.Capability); err != nil {
+			return fmt.Errorf("%s to %s: %v", e.Verb, e.Subject, err)
 		}
 		cur.Grants = append(cur.Grants, p.Capability)
 	case VerbSuspended, VerbRevoked:

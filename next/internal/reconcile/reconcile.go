@@ -45,6 +45,12 @@ const (
 // PR).
 const ClassVerdictUnverified = "verdict_unverified"
 
+// ClassUnsealed is an above-trivial subject at or past in_progress
+// with no sealed-checks commitment (plans/os-3128535a.md): reported
+// neutrally — the hard gate is verdict render's exit 24, and this
+// class is the record-derivable surfacing beside it.
+const ClassUnsealed = "unsealed"
+
 // Finding is one surfaced divergence on one subject.
 type Finding struct {
 	Subject string `json:"subject"`
@@ -72,6 +78,11 @@ func Subject(id string, s transition.SubjectState) []Finding {
 	if !merged && passVerdict {
 		out = append(out, Finding{Subject: id, Class: ClassUnreconciled,
 			Detail: fmt.Sprintf("the pass verdict at position %d has no observed merge yet — pending or diverged is an age judgment for maintenance, not this classifier", s.Verdict.Pos)})
+	}
+	pastClaim := s.State == "in_progress" || s.State == "review" || s.State == "done"
+	if pastClaim && s.Tier != transition.TrivialTier && s.Sealed == nil {
+		out = append(out, Finding{Subject: id, Class: ClassUnsealed,
+			Detail: fmt.Sprintf("tier %q with implementation under way and no sealed-checks commitment — above the trivial tier contracts carry sealed checks, and render refuses a verdict without one", s.Tier)})
 	}
 	return out
 }

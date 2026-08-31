@@ -602,6 +602,61 @@ func Default() []Rule {
 			}
 			return nil
 		}},
+		{Name: "seal", Check: func(c *Context, rec *event.Record) error {
+			// The sealed-checks commitment and its authoring isolation
+			// (plans/os-3128535a.md; next/spec/sealed-checks.md).
+			// Capability rides the grant rule (sealer only); grant
+			// disjointness rides the keyring preview.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			verb := rec.Event.Verb
+			switch verb {
+			case transition.CheckSealedVerb:
+				subject := rec.Event.Subject
+				s, ok := c.Lifecycle.State(subject)
+				if !ok {
+					return &transition.InvalidTransitionError{Subject: subject, Verb: verb}
+				}
+				if s.State != "ready" {
+					return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
+				}
+				if len(s.PriorClaimants) > 0 {
+					// Ready again after claim.released or claim.reaped:
+					// implementation already began, and a commitment
+					// appended now would not prove pre-existence
+					// (review finding on the 6.3 plan).
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "the subject has already been claimed — a commitment after implementation began proves nothing; cancel and re-file to change sealed checks"}
+				}
+				if s.Sealed != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("a commitment already stands at position %d — one seal per subject; rotation re-encrypts, never re-commits", s.Sealed.Pos)}
+				}
+				var p struct {
+					Commitment string `json:"commitment"`
+				}
+				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+				dec.DisallowUnknownFields()
+				if err := dec.Decode(&p); err != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {commitment}: %v", err)}
+				}
+				if strings.TrimSpace(p.Commitment) == "" {
+					return &transition.IncompleteError{Verb: verb, Subject: subject, Missing: []string{"commitment"}}
+				}
+				if !receiptDigestRE.MatchString(strings.TrimSpace(p.Commitment)) {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("commitment %q is not a lowercase-hex sha256 — the ledger references the sealed body by its salted hash", p.Commitment)}
+				}
+				return nil
+			case "claim.taken":
+				// The per-subject half of authoring isolation: the key
+				// that sealed the checks never implements against them.
+				s, ok := c.Lifecycle.State(rec.Event.Subject)
+				if ok && s.Sealed != nil && s.Sealed.Signer == rec.Event.Actor {
+					return &transition.ChainError{Subject: rec.Event.Subject, Verb: verb, Reason: fmt.Sprintf("the claiming key authored this subject's sealed checks at position %d — sealed checks are authored under a grant disjoint from implementation", s.Sealed.Pos)}
+				}
+				return nil
+			}
+			return nil
+		}},
 		{Name: "lifecycle", Check: func(c *Context, rec *event.Record) error {
 			// Lifecycle legality is admission policy at seed/1, the
 			// halt/classification/grant precedent (plans/os-d69a6c91.md):

@@ -333,3 +333,19 @@ Fresh sessions read this file instead of rediscovering.
   cannot verify, a natural fit over the 5.6 observation streams.
   Design input to verify against the charter, never authority; the
   6.3 card carries the detailed pointer (comment cm-126a17b7).
+
+- agessh makes "recipients = the verifier keyring" literal: filippo.io/age's
+  agessh package derives X25519 age recipients and identities from ordinary
+  ed25519 keys (ssh wire form), so an encrypted-to-the-keyring design needs
+  no parallel key enrollment; the header's `-> ssh-ed25519 <tag>` stanzas
+  carry base64(SHA-256(wire pubkey)[:4]) tags, auditable against the keyring
+  without any secret. Two caveats worth repeating: it is cross-protocol use
+  of a signing key (fine as a documented v0 trade, name the dedicated-keys
+  successor), and the tags are four bytes — identification hints, not
+  exclusivity proofs, so keep a real decrypt drill beside any tag audit.
+- Adding fields to a hash-anchored artifact (the verdict receipt) wants
+  `omitempty`, not the explicit-null convention used for versioned views:
+  omitted-when-absent keeps every previously stored artifact's canonical
+  bytes and digest stable, so old receipts still recompute-and-match, while
+  views republish under a version bump anyway and can afford explicit null.
+  One compatibility rule per surface kind, chosen by what anchors identity.

@@ -108,11 +108,12 @@ type ReportReconciliation struct {
 // observation section and the declared-inputs identity (the section is
 // null on an input-free build, so version, not content, is what
 // republishes existing prefixes); Version "3" the reconciliation
-// section (plans/os-6cdc15be.md). Inputs marks it as the one
+// section (plans/os-6cdc15be.md); Version "4" the unsealed class in
+// it (plans/os-3128535a.md). Inputs marks it as the one
 // input-consuming projection, everything else staying byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "3", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "4", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the

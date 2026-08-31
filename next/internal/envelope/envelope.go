@@ -38,8 +38,16 @@ const (
 	ExitSpecUnrunnable    = 19
 	ExitChecksRed         = 20
 	ExitReceiptMismatch   = 21
-	ExitUsage             = 64
-	ExitUnreadable        = 66
+	// The sealed-checks refusals (plans/os-3128535a.md;
+	// next/spec/sealed-checks.md): a broken seal (missing ciphertext,
+	// commitment mismatch, or an empty-checks envelope), an identity
+	// outside the recipient set (rotation lag), and an above-trivial
+	// subject with no commitment at the verifier boundary.
+	ExitSealBroken   = 22
+	ExitNotRecipient = 23
+	ExitUnsealed     = 24
+	ExitUsage        = 64
+	ExitUnreadable   = 66
 )
 
 // Error is the machine-branchable half of a refusal: a stable code to

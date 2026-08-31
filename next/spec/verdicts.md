@@ -107,7 +107,9 @@ store (`internal/artifact`, filesystem-rooted under
   "diff_sha256": "<hex>",
   "files": ["<changed path>", ...],
   "transcripts": [{"cmd": "<command>", "exit": 0, "output_sha256": "<hex>", "output_bytes": 0}, ...],
-  "environment": {"os": "<GOOS>", "arch": "<GOARCH>", "go": "<version>", "runner": "exec"}
+  "environment": {"os": "<GOOS>", "arch": "<GOARCH>", "go": "<version>", "runner": "exec"},
+  "commitment": "<hex, sealed subjects only>",
+  "sealed_transcripts": [{"cmd": "...", "exit": 0, "output_sha256": "<hex>", "output_bytes": 0}, ...]
 }
 ```
 
@@ -134,6 +136,24 @@ cited digest. It runs in **every post-submission state**, not only
 `review`: reconciliation needs it exactly after `merge.observed` has
 moved the contract on, and the fold retains the bound submission —
 only `receipt` and `render` stay review-gated.
+
+On a **sealed** subject ([`sealed-checks.md`](sealed-checks.md)) the
+receipt gains the charter's "visible and sealed check transcripts":
+`commitment` is the ledger's salted hash the run unsealed against, and
+`sealed_transcripts` the sealed commands' outcomes, run under the same
+profile in the same workspace; both are omitted on unsealed subjects,
+so every pre-6.3 receipt's canonical bytes and digest are unchanged.
+The recompute-and-mismatch guarantee covers them: `verdict check` on a
+sealed subject requires `--key` with an identity able to unseal,
+decrypts, verifies the commitment, and reruns the sealed commands into
+the recomputation — invented sealed transcripts in a raw-pushed
+receipt recompute differently and fail at exit 21, an identity outside
+the recipient set refuses exit **23 `not_recipient`**, and a broken
+seal (missing or tampered ciphertext, commitment mismatch, or an
+empty-checks envelope) refuses exit **22 `seal_broken`**. There is no
+silent partial verification of a sealed subject. `verdict receipt`
+stays the visible-half preview; the render is the authoritative
+sealed run.
 
 ## Gate-before-run
 
@@ -167,7 +187,12 @@ re-run commands nor read a verifier-local artifact store (the
 cooperative-posture precedent: the client refuses to draft doomed
 work). A raw-pushed pass-over-red is not silent: `seed verdict check`
 recomputes from the submission head and goes red, and that mismatch is
-6.2 reconciliation input.
+6.2 reconciliation input. Sealed checks ride the same rule: a red
+sealed transcript forbids pass exactly like a visible one, and render
+on an **above-trivial subject with no commitment refuses exit 24
+`unsealed`** — the "contracts carry sealed checks" gate, enforced at
+the verifier boundary where checks run; the trivial tier is exempt
+(`sealed-checks.md`).
 
 ## Visibility
 

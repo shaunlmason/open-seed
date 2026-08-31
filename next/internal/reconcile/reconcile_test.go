@@ -21,28 +21,39 @@ func TestSubjectClassifiesInducedDivergences(t *testing.T) {
 	fail := &transition.VerdictFact{Pos: 9, Verdict: "fail", Receipt: "r"}
 	req := &transition.RequestFact{Pos: 10, CitedVerdict: 9}
 	merged := &transition.MergeFact{Pos: 11, SHA: "abc"}
+	// The chain drills run on the trivial tier so the sealed-checks
+	// class stays out of their way; the sealed drills below induce it
+	// deliberately (plans/os-3128535a.md).
+	triv := transition.TrivialTier
 
 	cases := map[string]struct {
 		state transition.SubjectState
 		want  []string
 	}{
 		"clean full chain": {
-			transition.SubjectState{State: "done", Verdict: pass, Requested: req, Merged: merged}, nil},
+			transition.SubjectState{State: "done", Tier: triv, Verdict: pass, Requested: req, Merged: merged}, nil},
 		"no chain activity": {
-			transition.SubjectState{State: "in_progress"}, nil},
+			transition.SubjectState{State: "in_progress", Tier: triv}, nil},
 		"merge without any verdict": {
-			transition.SubjectState{State: "done", Merged: merged}, []string{ClassMergeWithoutVerdict}},
+			transition.SubjectState{State: "done", Tier: triv, Merged: merged}, []string{ClassMergeWithoutVerdict}},
 		"merge over a fail verdict": {
-			transition.SubjectState{State: "done", Verdict: fail, Merged: merged}, []string{ClassMergeWithoutVerdict}},
+			transition.SubjectState{State: "done", Tier: triv, Verdict: fail, Merged: merged}, []string{ClassMergeWithoutVerdict}},
 		"chain skipped, no request": {
-			transition.SubjectState{State: "done", Verdict: pass, Merged: merged}, []string{ClassChainSkipped}},
+			transition.SubjectState{State: "done", Tier: triv, Verdict: pass, Merged: merged}, []string{ClassChainSkipped}},
 		"chain skipped, wrong citation": {
-			transition.SubjectState{State: "done", Verdict: pass,
+			transition.SubjectState{State: "done", Tier: triv, Verdict: pass,
 				Requested: &transition.RequestFact{Pos: 10, CitedVerdict: 3}, Merged: merged}, []string{ClassChainSkipped}},
 		"unreconciled pass verdict": {
-			transition.SubjectState{State: "review", Verdict: pass}, []string{ClassUnreconciled}},
+			transition.SubjectState{State: "review", Tier: triv, Verdict: pass}, []string{ClassUnreconciled}},
 		"fail verdict alone is not unreconciled": {
-			transition.SubjectState{State: "review", Verdict: fail}, nil},
+			transition.SubjectState{State: "review", Tier: triv, Verdict: fail}, nil},
+		"above-trivial implementation with no commitment": {
+			transition.SubjectState{State: "in_progress", Tier: "standard"}, []string{ClassUnsealed}},
+		"above-trivial sealed subject is clean": {
+			transition.SubjectState{State: "in_progress", Tier: "standard",
+				Sealed: &transition.SealedFact{Pos: 3, Commitment: "c"}}, nil},
+		"above-trivial still ready is not yet flagged": {
+			transition.SubjectState{State: "ready", Tier: "standard"}, nil},
 	}
 	for name, c := range cases {
 		got := Subject("c-x", c.state)
