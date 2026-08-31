@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "task": "os-d69a6c91",
+  "merge_base": "71a0ee9f53e1633a33a9ee9ba8bb01c97d66765a",
+  "head": "76ad3732bd9af0bdbab841715508e2a82eb994e0",
+  "plan_path": "plans/os-d69a6c91.md",
+  "plan_sha256": "18133da5e5b31cc7bfc0f562a74f553ebb97dac323f78d383090ed32d87a4e53",
+  "diff_files": [
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/project/cache.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/project/queue.go",
+    "next/internal/transition/transition.go",
+    "next/internal/transition/transition_test.go",
+    "next/spec/lifecycle.md"
+  ],
+  "diff_sha256": "8e1ea0bdb19ff986264d559cdb0018c68ecc59cbba26c7683ebbe61e68947a66",
+  "validation": [
+    {
+      "cmd": "make check-next",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/transition/... ./internal/admit/... ./internal/keyring/... ./internal/project/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/... ./cmd/... -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
