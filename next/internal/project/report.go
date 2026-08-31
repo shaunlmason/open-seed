@@ -172,7 +172,7 @@ func reportView(records []*event.Record) (*ReportView, error) {
 		if err != nil {
 			return nil, err
 		}
-		findings := reconcile.Classify(table.FoldRecords(records))
+		findings := reconcile.Classify(records, table.FoldRecords(records))
 		if findings == nil {
 			findings = []reconcile.Finding{}
 		}

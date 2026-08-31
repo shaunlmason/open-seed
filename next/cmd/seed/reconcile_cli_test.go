@@ -149,6 +149,32 @@ func TestReconcileEndToEndCLI(t *testing.T) {
 		t.Fatalf("a rewritten target surfaces target_rewritten: %+v", e.Result)
 	}
 
+	// Coexisting failures never mask each other: c-1 lost its receipt
+	// AND the target moved past its merge, and both classes surface
+	// (review finding on this PR).
+	e, _ = runEnv(t, "reconcile", "--ledger", ld, "--repo", src, "--subject", "c-1")
+	if by := classesOf(t, e); by["evidence_missing"] != 1 || by["target_rewritten"] != 1 {
+		t.Fatalf("lost evidence must not hide a rewritten target: %+v", e.Result)
+	}
+
+	// The laundered chain: a raw-pushed verdict by the implementing
+	// root, then facts-complete request and observation. The chain
+	// looks whole to the fold, and the retroactive boundary check
+	// surfaces it as verdict_unverified.
+	verdictLibAppend(t, ld, rootKey, "intent.filed", "c-5", `{"intent": "launder", "tier": "trivial", "budget": "s", "routing": "core"}`)
+	verdictLibAppend(t, ld, rootKey, "contract.specified", "c-5", `{"acceptance": {"ref": "accept.md @ `+specCommit+`", "executable": false}}`)
+	fencePos = verdictLibAppend(t, ld, rootKey, "claim.taken", "c-5", `{}`)
+	subPos := verdictLibAppend(t, ld, rootKey, "submission.made", "c-5", fmt.Sprintf(
+		`{"fence": "%d", "packet": {"acceptance": ["x"], "decisions": [], "base": %q, "refs": [], "findings": []}}`, fencePos, rng))
+	rawVerdict := verdictLibAppend(t, ld, rootKey, "verdict.rendered", "c-5", fmt.Sprintf(
+		`{"verdict": "pass", "receipt": %q, "submission": "%d", "independence": "L1"}`, digest, subPos))
+	verdictLibAppend(t, ld, rootKey, "merge.requested", "c-5", fmt.Sprintf(`{"verdict": "%d"}`, rawVerdict))
+	verdictLibAppend(t, ld, rootKey, "merge.observed", "c-5", fmt.Sprintf(`{"merged": %q, "pr": "pr/9"}`, head))
+	e, _ = runEnv(t, "reconcile", "--ledger", ld, "--repo", src, "--subject", "c-5")
+	if classesOf(t, e)["verdict_unverified"] != 1 {
+		t.Fatalf("the laundered chain surfaces verdict_unverified: %+v", e.Result)
+	}
+
 	// The whole-fold walk merges every class and stays a report at
 	// exit 0: detection is data, not a refusal.
 	e, code = runEnv(t, "reconcile", "--ledger", ld, "--repo", src)

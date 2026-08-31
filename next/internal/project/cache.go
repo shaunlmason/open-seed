@@ -198,6 +198,9 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 	w.exec(`INSERT INTO report VALUES ('halt', ?)`, w.jsonOf(view.Halt))
 	w.exec(`INSERT INTO report VALUES ('checkpoints', ?)`, w.jsonOf(view.Checkpoints))
 	w.exec(`INSERT INTO report VALUES ('contracts', ?)`, w.jsonOf(view.Contracts))
+	if view.Reconciliation != nil {
+		w.exec(`INSERT INTO report VALUES ('reconciliation', ?)`, w.jsonOf(view.Reconciliation))
+	}
 	w.exec(`INSERT INTO stamp VALUES (?, ?, ?, ?)`, "cache", position, tip, cacheVersion)
 	if err = w.err; err != nil {
 		return nil, fmt.Errorf("cache write: %v", err)

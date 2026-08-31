@@ -555,6 +555,9 @@ func Default() []Rule {
 				if s.Verdict.Verdict != "pass" {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the verdict at position %d is %q — a red verdict is unmergeable", s.Verdict.Pos, s.Verdict.Verdict)}
 				}
+				if ce := launderedVerdict(c, subject, verb, s); ce != nil {
+					return ce
+				}
 				return nil
 			case transition.MergeObservedVerb:
 				subject := rec.Event.Subject
@@ -591,6 +594,9 @@ func Default() []Rule {
 				}
 				if s.Requested == nil || s.Requested.CitedVerdict != s.Verdict.Pos {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("no merge.requested cites the pass verdict at position %d — each chain step is its own event", s.Verdict.Pos)}
+				}
+				if ce := launderedVerdict(c, subject, verb, s); ce != nil {
+					return ce
 				}
 				return nil
 			}
@@ -665,6 +671,32 @@ var receiptDigestRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
 // mergedSHARE is merge.observed's forge-fact wire form: a full
 // lowercase-hex commit (40-64 hex, the classify anchor convention).
 var mergedSHARE = regexp.MustCompile(`^[0-9a-f]{40,64}$`)
+
+// launderedVerdict refuses an admitted chain step built on a folded
+// verdict that never passed the verifier boundary (review finding on
+// the 6.2 task PR): in raw-pushed history any active signer can plant
+// a verdict.rendered, and without this check an ADMITTED
+// merge.requested or merge.observed would launder it into a clean
+// chain. The signer must hold the verdict capability (checked against
+// the tip keyring, the v0 approximation of standing at the verdict's
+// own position; seed reconcile replays position-accurately) and be
+// disjoint from the implementing keys, exactly what the verdict rule
+// enforces on the front door.
+func launderedVerdict(c *Context, subject, verb string, s transition.SubjectState) *transition.ChainError {
+	if c.Keyring == nil || s.Verdict == nil {
+		return nil
+	}
+	signer := s.Verdict.Signer
+	if !c.Keyring.HasAnyCapability(signer, keyring.AcceptedCapabilities(transition.VerdictRenderedVerb)) {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the cited verdict at position %d was signed by %s, which holds no verdict grant — a raw-pushed verdict cannot be laundered through the admitted chain", s.Verdict.Pos, signer)}
+	}
+	if s.PriorClaimants[signer] || (s.Submission != nil && signer == s.Submission.Signer) {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the cited verdict at position %d was signed by implementing key %s — L1 independence is not launderable through the admitted chain", s.Verdict.Pos, signer)}
+	}
+	return nil
+}
 
 // fenceCitation extracts the payload's fence field: the string form
 // of the cited claim position, absent when the payload carries none.

@@ -45,6 +45,10 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 		subjects = []string{*subject}
 	}
 	store := artifact.Open(artifactsDir(*artifacts, *repo))
+	verdictFindings := map[string][]reconcile.Finding{}
+	for _, f := range reconcile.VerifyVerdicts(st.records, st.fold) {
+		verdictFindings[f.Subject] = append(verdictFindings[f.Subject], f)
+	}
 	var findings []reconcile.Finding
 	checked := 0
 	for _, id := range subjects {
@@ -54,6 +58,7 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 		}
 		checked++
 		findings = append(findings, reconcile.Subject(id, s)...)
+		findings = append(findings, verdictFindings[id]...)
 		findings = append(findings, evidenceFindings(id, s, store, *repo)...)
 	}
 	if findings == nil {
@@ -82,26 +87,32 @@ func evidenceFindings(id string, s transition.SubjectState, store *artifact.Stor
 		return nil
 	}
 	var out []reconcile.Finding
-	body, err := store.Get(s.Verdict.Receipt)
-	if err != nil {
-		return append(out, reconcile.Finding{Subject: id, Class: reconcile.ClassEvidenceMissing,
-			Detail: fmt.Sprintf("the receipt %s cited by the verdict at position %d is not retrievable intact: %v — the evidence a verdict points at must survive verbatim", s.Verdict.Receipt, s.Verdict.Pos, err)})
-	}
-	var rcpt struct {
-		Head string `json:"head"`
-	}
-	if jerr := json.Unmarshal(body, &rcpt); jerr != nil || rcpt.Head == "" {
-		return append(out, reconcile.Finding{Subject: id, Class: reconcile.ClassEvidenceMissing,
-			Detail: fmt.Sprintf("the stored receipt %s carries no attested head", s.Verdict.Receipt)})
-	}
 	merged := s.Merged.SHA
+	// The attested comparison needs the receipt; the target check
+	// below does not, so lost evidence never hides a rewritten target
+	// when multiple failures coexist (review finding on this PR).
+	attestedHead := ""
+	if body, err := store.Get(s.Verdict.Receipt); err != nil {
+		out = append(out, reconcile.Finding{Subject: id, Class: reconcile.ClassEvidenceMissing,
+			Detail: fmt.Sprintf("the receipt %s cited by the verdict at position %d is not retrievable intact: %v — the evidence a verdict points at must survive verbatim", s.Verdict.Receipt, s.Verdict.Pos, err)})
+	} else {
+		var rcpt struct {
+			Head string `json:"head"`
+		}
+		if jerr := json.Unmarshal(body, &rcpt); jerr != nil || rcpt.Head == "" {
+			out = append(out, reconcile.Finding{Subject: id, Class: reconcile.ClassEvidenceMissing,
+				Detail: fmt.Sprintf("the stored receipt %s carries no attested head", s.Verdict.Receipt)})
+		} else {
+			attestedHead = rcpt.Head
+		}
+	}
 	// Clean ancestry: fast-forward (observed == attested) or a true
 	// merge commit (attested head an ancestor of the observed sha).
 	// Anything else is a surfaced state, not a fabrication verdict:
 	// rebase and squash flows land here by design in v0.
-	if merged != rcpt.Head && !gitAncestor(repo, rcpt.Head, merged) {
+	if attestedHead != "" && merged != attestedHead && !gitAncestor(repo, attestedHead, merged) {
 		out = append(out, reconcile.Finding{Subject: id, Class: reconcile.ClassAttestedDivergence,
-			Detail: fmt.Sprintf("the observed merge %s is neither the attested head %s nor its descendant (receipt %s) — rebase and squash flows surface here until patch-equivalence reconciliation lands", merged, rcpt.Head, s.Verdict.Receipt)})
+			Detail: fmt.Sprintf("the observed merge %s is neither the attested head %s nor its descendant (receipt %s) — rebase and squash flows surface here until patch-equivalence reconciliation lands", merged, attestedHead, s.Verdict.Receipt)})
 	}
 	// Target rewrite: the merged commit must resolve and still sit
 	// under the target tip (v0: the repository's checked-out default

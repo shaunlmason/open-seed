@@ -12,6 +12,8 @@ package reconcile
 import (
 	"fmt"
 
+	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -33,6 +35,15 @@ const (
 	ClassAttestedDivergence = "attested_divergence"
 	ClassTargetRewritten    = "target_rewritten"
 )
+
+// ClassVerdictUnverified is record-derivable like the fold classes but
+// needs the raw records: a folded verdict whose signer never satisfied
+// the verifier boundary (no verdict grant at the verdict's position,
+// or an implementing key). Admission refuses laundering such a verdict
+// through the chain's later steps; this class surfaces the ones
+// raw-pushed history already carries (review finding on the 6.2 task
+// PR).
+const ClassVerdictUnverified = "verdict_unverified"
 
 // Finding is one surfaced divergence on one subject.
 type Finding struct {
@@ -65,13 +76,46 @@ func Subject(id string, s transition.SubjectState) []Finding {
 	return out
 }
 
-// Classify walks every folded subject in first-appearance order.
-func Classify(f *transition.Fold) []Finding {
+// VerifyVerdicts replays the keyring to each folded verdict's own
+// position and checks the verifier boundary retroactively: the signer
+// held the verdict capability there and was no implementing key.
+// Record-derivable and deterministic, so the report may carry it.
+func VerifyVerdicts(records []*event.Record, f *transition.Fold) []Finding {
+	var out []Finding
+	for _, id := range f.Subjects() {
+		s, ok := f.State(id)
+		if !ok || s.Verdict == nil {
+			continue
+		}
+		pos, signer := s.Verdict.Pos, s.Verdict.Signer
+		if pos < 0 || pos >= len(records) {
+			continue
+		}
+		ring, _, err := keyring.StateAt(records[:pos])
+		if err != nil {
+			continue
+		}
+		if !ring.HasAnyCapability(signer, keyring.AcceptedCapabilities(transition.VerdictRenderedVerb)) {
+			out = append(out, Finding{Subject: id, Class: ClassVerdictUnverified,
+				Detail: fmt.Sprintf("the verdict at position %d was signed by %s, which held no verdict grant there — it never passed the verifier boundary", pos, signer)})
+			continue
+		}
+		if s.PriorClaimants[signer] || (s.Submission != nil && signer == s.Submission.Signer) {
+			out = append(out, Finding{Subject: id, Class: ClassVerdictUnverified,
+				Detail: fmt.Sprintf("the verdict at position %d was signed by implementing key %s — L1 independence never held", pos, signer)})
+		}
+	}
+	return out
+}
+
+// Classify walks every folded subject in first-appearance order and
+// appends the retroactive verdict verification.
+func Classify(records []*event.Record, f *transition.Fold) []Finding {
 	var out []Finding
 	for _, id := range f.Subjects() {
 		if s, ok := f.State(id); ok {
 			out = append(out, Subject(id, s)...)
 		}
 	}
-	return out
+	return append(out, VerifyVerdicts(records, f)...)
 }

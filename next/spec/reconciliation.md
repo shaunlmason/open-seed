@@ -54,6 +54,16 @@ single admitted observation `{position, sha}`, singular by
 construction: the first valid observation lands on terminal `done`,
 so a second can never admit, and raw-pushed extras stay anomalies).
 
+**A raw-pushed verdict is not launderable.** In cooperative history
+any active signer can plant a `verdict.rendered`, and the fold records
+it like any fact — so both admitted chain steps additionally validate
+the cited verdict's *signer* against the verifier boundary: it must
+hold the verdict capability (checked at the tip keyring, the v0
+approximation of standing at the verdict's own position; `seed
+reconcile` replays position-accurately) and be disjoint from the
+implementing keys. Either failure refuses by name: the chain the
+verifier never judged is not the chain.
+
 Raw-pushed chain violations verify and fold tolerated with anomalies
 counted, the established posture — which is exactly what makes
 divergence *detection* necessary rather than assumed impossible.
@@ -72,6 +82,7 @@ never the artifact store or the repository):
 | `merge_without_verdict` | done, or an observed merge, with no admitted pass verdict |
 | `chain_skipped` | an observed merge with no admitted `merge.requested` citing the verdict |
 | `unreconciled` | a pass verdict with no observed merge yet |
+| `verdict_unverified` | a folded verdict whose signer, replayed to the verdict's own position, held no verdict grant or was an implementing key — a raw-pushed verdict that never passed the verifier boundary |
 
 `unreconciled` is reported **neutrally**, never as an accusation: no
 build carries a wall clock, so "failed" versus "pending" is an age

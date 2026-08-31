@@ -185,3 +185,36 @@ func TestRawPushedSkippedLinksFoldTolerated(t *testing.T) {
 		t.Fatalf("skipped chain links are counted visibly, never silently: %+v", s)
 	}
 }
+
+func TestLaunderedVerdictRefusesAtTheChain(t *testing.T) {
+	// A raw-pushed verdict that never passed the verifier boundary
+	// must not be launderable through the ADMITTED chain steps
+	// (review finding on the 6.2 task PR).
+	ctx, k, step, subPos := verdictFixture(t)
+
+	// worker2 holds claim but no verdict grant: its raw-pushed pass
+	// verdict folds, and the admitted request refuses on the grant.
+	rawPos := ctx.Count
+	ctx = step(k.worker2, version.Seed1, "verdict.rendered", "c-1", verdictBody("pass", subPos))
+	var ce *transition.ChainError
+	err := Check(ctx, draftV(t, k.worker, version.Seed1, "merge.requested", "c-1", fmt.Sprintf(`{"verdict": "%d"}`, rawPos), ctx.Tip))
+	if !errors.As(err, &ce) || !strings.Contains(ce.Reason, "verdict grant") {
+		t.Fatalf("an ungranted raw verdict cannot be laundered through the request, got %v", err)
+	}
+
+	// The worker's own raw verdict (grant held, independence not):
+	// refused on the implementing key — and the observation path is
+	// equally closed when the request itself was raw-pushed.
+	implPos := ctx.Count
+	ctx = step(k.worker, version.Seed1, "verdict.rendered", "c-1", verdictBody("pass", subPos))
+	err = Check(ctx, draftV(t, k.worker, version.Seed1, "merge.requested", "c-1", fmt.Sprintf(`{"verdict": "%d"}`, implPos), ctx.Tip))
+	if !errors.As(err, &ce) || !strings.Contains(ce.Reason, "implementing key") {
+		t.Fatalf("an implementing key's raw verdict cannot be laundered, got %v", err)
+	}
+	ctx = step(k.worker, version.Seed1, "merge.requested", "c-1", fmt.Sprintf(`{"verdict": "%d"}`, implPos))
+	ctx = step(k.signer, version.Seed1, keyring.VerbGranted, fpOf(t, k.worker2), `{"capability": "`+keyring.CapObserver+`"}`)
+	err = Check(ctx, draftV(t, k.worker2, version.Seed1, "merge.observed", "c-1", observedBody(observedSHA), ctx.Tip))
+	if !errors.As(err, &ce) || !strings.Contains(ce.Reason, "implementing key") {
+		t.Fatalf("the observation refuses the laundered chain too, got %v", err)
+	}
+}

@@ -43,9 +43,9 @@ type ContractEntry struct {
 	Anomalies     int                 `json:"anomalies"`
 	Claim         *ContractClaim      `json:"claim,omitempty"`
 	Acceptance    *ContractAcceptance `json:"acceptance,omitempty"`
-	Verdict       *ContractVerdict    `json:"verdict,omitempty"`
-	Requested     *string             `json:"requested,omitempty"`
-	Merged        *ContractMerge      `json:"merged,omitempty"`
+	Verdict       *ContractVerdict    `json:"verdict"`
+	Requested     *string             `json:"requested"`
+	Merged        *ContractMerge      `json:"merged"`
 	FirstPosition int                 `json:"first_position"`
 	LastPosition  int                 `json:"last_position"`
 	Events        []ContractEvent     `json:"events"`
