@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0",
   "task": "os-c61c3392",
-  "merge_base": "5467a9015409ad8946458111ae45d42d42564ca2",
-  "head": "fb973038b19190ace2332e38d4f13c7ab021e00c",
+  "merge_base": "77912ed23dc984821c3c569998912b1baf37187f",
+  "head": "32763ef6885105dacf0a09c9b9996c75da13fe65",
   "plan_path": "plans/os-c61c3392.md",
-  "plan_sha256": "5e5ae792754222bf5ef91fd8a5bc10b1eacbdd288d20c8377322ba93cce0c0bb",
+  "plan_sha256": "2790c17b345639374af212492164620752257c4fc4828c8b154d3b436ded85f2",
   "diff_files": [
     "memory/LEARNINGS.md",
     "next/cmd/seed/main.go",
@@ -33,8 +33,8 @@
   "diff_sha256": "17546a53605784c14e98563c33334c5251b7e05ed3f71007e88965f56598a5f4",
   "validation": [
     {
-      "cmd": "go test ./next/... -run 'Offer|Wakeless|AcceptedCapabilities|Contracts|Cache' -count=1",
-      "exit": 1
+      "cmd": "cd next \u0026\u0026 go test ./... -run 'Offer|Wakeless|AcceptedCapabilities|Contracts|Cache' -count=1",
+      "exit": 0
     },
     {
       "cmd": "make check",
