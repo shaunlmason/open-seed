@@ -53,6 +53,11 @@ const (
 	// CapDispatch is queue management: filing, specifying, blocking,
 	// unblocking, and reaping contracts (plans/os-d69a6c91.md).
 	CapDispatch = "dispatch"
+	// CapObserver is the observer lane (plans/os-6cdc15be.md): a
+	// governed observer records forge fact (merge.observed) behind
+	// the full chain rule; the charter names merge.observed an
+	// observation by a governed observer, and Phase 6 adds the lane.
+	CapObserver = "observer"
 	// CapVerdict is the verifier lane: rendering verdicts
 	// (plans/os-f6d2c267.md). Deliberately the one row without the
 	// operator fallback: III.G names operator override its own
@@ -95,8 +100,15 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapDispatch, CapOperator}
 	case "claim.taken", "claim.released", "claim.parked", "submission.made":
 		return []string{CapClaim, CapOperator}
-	case "contract.cancelled", "merge.observed":
+	case "contract.cancelled":
 		return []string{CapOperator}
+	// The reconciliation chain (plans/os-6cdc15be.md): asking for the
+	// merge is the work lane's act; observing the forge fact is the
+	// observer lane's.
+	case "merge.requested":
+		return []string{CapClaim, CapOperator}
+	case "merge.observed":
+		return []string{CapObserver, CapOperator}
 	// The plan verbs (plans/os-16c1d142.md): the claim holder plans
 	// (the fence matrix applies on a claimed subject); approval is an
 	// external-fact observation, operator-attested in v0 like

@@ -320,3 +320,16 @@ Fresh sessions read this file instead of rediscovering.
   those cells unticked, or the parser reads the aside as vocabulary
   (the actors.md capability table's parser caught exactly this when
   the verdict row's aside quoted the capability name).
+- Prior art worth consulting when sealed checks (6.3) and Phase 7
+  metering get planned: 27-GROUP/kveritas-go (Apache-2.0, reviewed
+  2026-08-31 at ab0b1f8) independently converged on much of the
+  verdict pipeline's shape — canonical-JSON receipts under signature,
+  a hash-chained agent-session log with tamper localization, salted
+  commitments with disclosure levels for private artifacts, and
+  selective-disclosure Merkle proofs that reveal one leaf against a
+  signed snapshot. Its two ideas Seed lacks: metric-blind
+  execution-coherence scoring over run telemetry, and physical-bounds
+  compute attestation — the attestation answer to work recomputation
+  cannot verify, a natural fit over the 5.6 observation streams.
+  Design input to verify against the charter, never authority; the
+  6.3 card carries the detailed pointer (comment cm-126a17b7).

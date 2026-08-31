@@ -398,20 +398,28 @@ func TestRemoteAppendLifecycle(t *testing.T) {
 	resolve := seedRemoteGenesis(t, remote)
 	libAppend(t, remote, resolve, "seed/0", ledger.UpgradeVerb, "system", `{"to": "seed/1"}`)
 	state := filepath.Join(dir, "state")
+	vkey, vpub, vfp := writeWorkerKey(t, 11)
 
-	steps := []struct{ verb, subject, payload string }{
-		{"intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "s", "routing": "core"}`},
-		{"contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`},
-		{"claim.taken", "c-1", `{}`},
-		// The claim admitted at position 4 (genesis, upgrade, filed,
-		// specified, taken): the submission cites that fence and, like
-		// every deliberate exit, carries its handoff packet.
-		{"submission.made", "c-1", `{"branch": "seed/c-1", "fence": "4", "packet": {"acceptance": ["c-1 resumes"], "decisions": [], "base": "1234567..1234567", "refs": [], "findings": []}}`},
-		{"merge.observed", "c-1", `{"pr": "9"}`},
+	// Done is reachable only through the full reconciliation chain
+	// (plans/os-6cdc15be.md): a disjoint verdict-granted key renders
+	// pass, the work lane requests citing it, and the observation
+	// records the merged commit. Positions: genesis 0, upgrade 1,
+	// enroll 2, grant 3, filed 4, specified 5, taken 6 (the fence),
+	// submission 7, verdict 8, request 9, observation 10.
+	steps := []struct{ key, verb, subject, payload string }{
+		{priv, "actor.enrolled", vfp, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "verifier"}`, vpub)},
+		{priv, "actor.granted", vfp, `{"capability": "verdict"}`},
+		{priv, "intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "s", "routing": "core"}`},
+		{priv, "contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`},
+		{priv, "claim.taken", "c-1", `{}`},
+		{priv, "submission.made", "c-1", `{"branch": "seed/c-1", "fence": "6", "packet": {"acceptance": ["c-1 resumes"], "decisions": [], "base": "1234567..1234567", "refs": [], "findings": []}}`},
+		{vkey, "verdict.rendered", "c-1", `{"verdict": "pass", "receipt": "` + strings.Repeat("ab", 32) + `", "submission": "7", "independence": "L1"}`},
+		{priv, "merge.requested", "c-1", `{"verdict": "8"}`},
+		{priv, "merge.observed", "c-1", `{"merged": "` + strings.Repeat("cd", 20) + `", "pr": "9"}`},
 	}
 	for _, s := range steps {
 		e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
-			"--key", priv, "--verb", s.verb, "--subject", s.subject, "--payload", s.payload)
+			"--key", s.key, "--verb", s.verb, "--subject", s.subject, "--payload", s.payload)
 		if code != 0 || !e.OK {
 			t.Fatalf("%s must land through the CLI: %d %+v", s.verb, code, e)
 		}

@@ -505,3 +505,36 @@ here. Newest last.
   exported plan.Commands, so the verifier executes exactly what the
   lint reads. The contracts view is unchanged; surfacing verdicts in
   projections rides 6.2's divergence work.
+- 2026-08-31 — The reconciliation chain is fully piped and divergence
+  is a detected, surfaced state (plans/os-6cdc15be.md, task PR for
+  os-6cdc15be). merge.requested admits only in review citing the
+  admitted pass verdict by position (the chain-legality half of "a
+  red verdict is unmergeable"; the implementer lockout half is
+  6.4's), from the claim lane; merge.observed stays the table's one
+  transition to done and deepens to the observer's forge fact
+  {merged: full sha, pr}, admitted only behind the full chain (pass
+  verdict, then a request citing it), from the new observer
+  capability lane. The fold records the chain facts (latest verdict
+  pass-or-fail for 6.4, latest request with its citation, and THE
+  admitted observation, singular by construction since done is
+  terminal; a raw-pushed skipped chain applies tolerantly and counts
+  an anomaly like a packetless exit). Divergence detection is split
+  by what each surface may read: internal/reconcile and the report's
+  new reconciliation section carry the record-derivable classes
+  (merge_without_verdict, chain_skipped, unreconciled — the last
+  reported neutrally: no build carries a wall clock, so
+  pending-versus-failed is Phase 9 maintenance's age judgment), and
+  seed reconcile alone reads the artifact store and the repository
+  for the evidence grades: attested-head reconciliation with honest
+  ancestry cases (fast-forward and true merge commits clean;
+  anything else, rebase and squash flows included by design in v0,
+  surfaces attested_divergence as a state, not a fabrication
+  verdict, with patch-equivalence reconciliation against the
+  receipt's diff hash as the named successor) and target-rewrite
+  detection by observing the target ref (v0: the checked-out default
+  branch tip; a forge force-push writes no ledger event, so the
+  reachability of the observed merge under the tip is the signal —
+  review finding that replaced an unreachable two-observation
+  design). Detection is a report at exit 0, never a refusal;
+  projections surface the pipeline at contracts v6, report v3, and
+  cache generation 5.

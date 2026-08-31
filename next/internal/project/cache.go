@@ -32,12 +32,13 @@ const CacheFile = "cache.db"
 // chain position. Generation 2 added contract_state and the derived
 // queue rows (plans/os-d69a6c91.md); generation 3 the claim columns
 // (plans/os-5dc16a7c.md); generation 4 the acceptance columns
-// (plans/os-73c00a50.md).
-const cacheSchemaVersion = 4
+// (plans/os-73c00a50.md); generation 5 the reconciliation-chain
+// columns (plans/os-6cdc15be.md).
+const cacheSchemaVersion = 5
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-const cacheVersion = "5"
+const cacheVersion = "6"
 
 // Cache returns the cache projection.
 func Cache() Projection {
@@ -53,7 +54,7 @@ var cacheDDL = []string{
 	`CREATE TABLE contracts (subject TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL)`,
 	`CREATE INDEX contracts_subject ON contracts(subject)`,
 	`CREATE TABLE queue (subject TEXT NOT NULL, since_position INTEGER NOT NULL)`,
-	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT, acc_ref TEXT, acc_executable INTEGER, acc_gated INTEGER) WITHOUT ROWID`,
+	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT, acc_ref TEXT, acc_executable INTEGER, acc_gated INTEGER, verdict_position INTEGER, verdict TEXT, verdict_receipt TEXT, requested_position INTEGER, merged_position INTEGER, merged_sha TEXT) WITHOUT ROWID`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
 	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
 	`CREATE INDEX actor_history_fp ON actor_history(fingerprint)`,
@@ -145,6 +146,7 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 				c.Subject, e.Position, e.Verb, e.Actor, string(e.Payload))
 		}
 		var state, holder, fence, accRef, accExec, accGated any
+		var verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA any
 		anomalies := 0
 		if s, ok := fold.State(c.Subject); ok {
 			anomalies = s.Anomalies
@@ -158,8 +160,17 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 				accRef = s.Acceptance.Ref
 				accExec, accGated = boolInt(s.Acceptance.Executable), boolInt(s.Acceptance.Gated)
 			}
+			if s.Verdict != nil {
+				verdictPos, verdictVal, verdictReceipt = s.Verdict.Pos, s.Verdict.Verdict, s.Verdict.Receipt
+			}
+			if s.Requested != nil {
+				requestedPos = s.Requested.Pos
+			}
+			if s.Merged != nil {
+				mergedPos, mergedSHA = s.Merged.Pos, s.Merged.SHA
+			}
 		}
-		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence, accRef, accExec, accGated)
+		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence, accRef, accExec, accGated, verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA)
 	}
 	// The queue mirrors the JSON view's derivation exactly: the
 	// transition table's ready set, oldest first.
@@ -187,6 +198,9 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 	w.exec(`INSERT INTO report VALUES ('halt', ?)`, w.jsonOf(view.Halt))
 	w.exec(`INSERT INTO report VALUES ('checkpoints', ?)`, w.jsonOf(view.Checkpoints))
 	w.exec(`INSERT INTO report VALUES ('contracts', ?)`, w.jsonOf(view.Contracts))
+	if view.Reconciliation != nil {
+		w.exec(`INSERT INTO report VALUES ('reconciliation', ?)`, w.jsonOf(view.Reconciliation))
+	}
 	w.exec(`INSERT INTO stamp VALUES (?, ?, ?, ?)`, "cache", position, tip, cacheVersion)
 	if err = w.err; err != nil {
 		return nil, fmt.Errorf("cache write: %v", err)

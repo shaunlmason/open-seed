@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "task": "os-6cdc15be",
+  "merge_base": "eca48db12529d54eb4329a1db30725833841037c",
+  "head": "dff026497cf2dc9cc718c3f63077e0d5c5eba979",
+  "plan_path": "plans/os-6cdc15be.md",
+  "plan_sha256": "60851fd4a2167da82f7952da58385dfdef7b821a7733651b83ba91d8dc0b9aba",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/reconcile.go",
+    "next/cmd/seed/reconcile_cli_test.go",
+    "next/cmd/seed/remote_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/chain_test.go",
+    "next/internal/admit/lifecycle_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/cache_test.go",
+    "next/internal/project/chain_views_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/project/report.go",
+    "next/internal/reconcile/reconcile.go",
+    "next/internal/reconcile/reconcile_test.go",
+    "next/internal/transition/transition.go",
+    "next/internal/transition/transition_test.go",
+    "next/seed",
+    "next/spec/actors.md",
+    "next/spec/lifecycle.md",
+    "next/spec/reconciliation.md",
+    "next/spec/verdicts.md"
+  ],
+  "diff_sha256": "8e0594e347cdbf561a61155827400f134313f57d1fa62cdb3a8a30c7cb6ad5a4",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/reconcile/... ./internal/transition/... ./internal/admit/... ./internal/keyring/... ./internal/project/... ./cmd/seed/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

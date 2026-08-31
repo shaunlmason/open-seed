@@ -7,7 +7,8 @@
 > Phase 6 item 1; plan `plans/os-f6d2c267.md`. Implemented by
 > `internal/verdict`, `internal/artifact`, the `verdict` admission
 > rule, and `seed verdict receipt|render|check`. The reconciliation
-> chain (`merge.requested`/`merge.observed` piping, divergence) is 6.2;
+> chain and divergence detection landed with 6.2
+> ([`reconciliation.md`](reconciliation.md));
 > sealed checks 6.3; red-verdict lockout and the operator override verb
 > 6.4; rubrics and L2/L3 are Phase 10/11.
 
@@ -16,7 +17,8 @@
 `verdict.rendered` is a **fact, not a transition**: it admits only on a
 subject whose folded state is `review` (elsewhere it refuses exit 3,
 the illegal-verb-in-state posture), changes no state, and `done` still
-arrives only through `merge.observed`. Its payload is strict:
+arrives only through `merge.observed`, behind the full chain rule
+([`reconciliation.md`](reconciliation.md)). Its payload is strict:
 
 ```json
 {"verdict": "pass" | "fail", "receipt": "<sha256 hex>", "submission": "<position>", "independence": "L1"}

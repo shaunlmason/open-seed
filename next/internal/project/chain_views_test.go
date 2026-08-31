@@ -1,0 +1,119 @@
+package project_test
+
+// The reconciliation-chain view drills (plans/os-6cdc15be.md):
+// contracts v6 carries the verdict, requested, and merged facts;
+// report v3 carries the record-derivable divergence classes with the
+// evidence-grade surface named; a clean full chain yields no findings.
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/project"
+	"github.com/shaunlmason/open-seed/next/internal/reconcile"
+	"github.com/shaunlmason/open-seed/next/internal/version"
+)
+
+func TestReconciliationViews(t *testing.T) {
+	root, worker, verifier := pKey(t, 1), pKey(t, 2), pKey(t, 3)
+	dir, resolve, add := fixtureChain(t, root, worker, verifier)
+	add(root, version.Protocol, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
+	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
+	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, verifier), enrollJSON(t, verifier, "agent", "verifier"))
+	add(root, version.Seed1, keyring.VerbGranted, pFP(t, verifier), `{"capability": "verdict"}`)
+	packet := `{"acceptance": ["done means done"], "decisions": [], "base": "1234567..1234567", "refs": [], "findings": []}`
+	sha := strings.Repeat("ef", 20)
+	receipt := strings.Repeat("ab", 32)
+
+	// c-F walks the full chain with the granted, disjoint verifier:
+	// submission at 8, pass verdict at 9, request at 10 citing it,
+	// observation at 11.
+	add(root, version.Seed1, "intent.filed", "c-F", `{"intent": "ship", "tier": "standard", "budget": "s", "routing": "core"}`)
+	add(root, version.Seed1, "contract.specified", "c-F", `{"acceptance": {"ref": "specs/f.md @ abc1234", "executable": false}}`)
+	add(worker, version.Seed1, "claim.taken", "c-F", `{}`)
+	add(worker, version.Seed1, "submission.made", "c-F", `{"fence": "7", "packet": `+packet+`}`)
+	add(verifier, version.Seed1, "verdict.rendered", "c-F", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "8", "independence": "L1"}`)
+	add(worker, version.Seed1, "merge.requested", "c-F", `{"verdict": "9"}`)
+	add(root, version.Seed1, "merge.observed", "c-F", `{"merged": "`+sha+`", "pr": "pr/1"}`)
+
+	// c-G reaches done through a raw-pushed observation with no
+	// verdict at all: merge_without_verdict.
+	add(root, version.Seed1, "intent.filed", "c-G", `{"intent": "slip", "tier": "standard", "budget": "s", "routing": "core"}`)
+	add(root, version.Seed1, "contract.specified", "c-G", `{"acceptance": {"ref": "specs/g.md @ abc1234", "executable": false}}`)
+	add(worker, version.Seed1, "claim.taken", "c-G", `{}`)
+	add(worker, version.Seed1, "submission.made", "c-G", `{"fence": "14", "packet": `+packet+`}`)
+	add(root, version.Seed1, "merge.observed", "c-G", `{"merged": "`+sha+`", "pr": "pr/2"}`)
+
+	// c-H holds a pass verdict with no merge yet: unreconciled,
+	// neutrally.
+	add(root, version.Seed1, "intent.filed", "c-H", `{"intent": "wait", "tier": "standard", "budget": "s", "routing": "core"}`)
+	add(root, version.Seed1, "contract.specified", "c-H", `{"acceptance": {"ref": "specs/h.md @ abc1234", "executable": false}}`)
+	add(worker, version.Seed1, "claim.taken", "c-H", `{}`)
+	add(worker, version.Seed1, "submission.made", "c-H", `{"fence": "19", "packet": `+packet+`}`)
+	add(verifier, version.Seed1, "verdict.rendered", "c-H", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "20", "independence": "L1"}`)
+
+	// c-I is the laundered chain: a raw-pushed verdict signed by the
+	// ungranted, implementing worker, then a facts-complete request
+	// and observation. Every fold fact lines up, and the retroactive
+	// boundary check is what surfaces it.
+	add(root, version.Seed1, "intent.filed", "c-I", `{"intent": "launder", "tier": "standard", "budget": "s", "routing": "core"}`)
+	add(root, version.Seed1, "contract.specified", "c-I", `{"acceptance": {"ref": "specs/i.md @ abc1234", "executable": false}}`)
+	add(worker, version.Seed1, "claim.taken", "c-I", `{}`)
+	add(worker, version.Seed1, "submission.made", "c-I", `{"fence": "24", "packet": `+packet+`}`)
+	add(worker, version.Seed1, "verdict.rendered", "c-I", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "25", "independence": "L1"}`)
+	add(worker, version.Seed1, "merge.requested", "c-I", `{"verdict": "26"}`)
+	add(root, version.Seed1, "merge.observed", "c-I", `{"merged": "`+sha+`", "pr": "pr/3"}`)
+
+	out := rebuildAll(t, dir, resolve)
+
+	var entries []project.ContractEntry
+	readView(t, out, "contracts", project.ContractsFile, &entries)
+	byID := map[string]project.ContractEntry{}
+	for _, e := range entries {
+		byID[e.Subject] = e
+	}
+	f := byID["c-F"]
+	if f.Verdict == nil || f.Verdict.Position != "9" || f.Verdict.Verdict != "pass" || f.Verdict.Receipt != receipt {
+		t.Fatalf("c-F must carry the verdict fact: %+v", f.Verdict)
+	}
+	if f.Requested == nil || *f.Requested != "10" {
+		t.Fatalf("c-F must carry the request position: %+v", f.Requested)
+	}
+	if f.Merged == nil || f.Merged.Position != "11" || f.Merged.SHA != sha {
+		t.Fatalf("c-F must carry the merged fact: %+v", f.Merged)
+	}
+	g := byID["c-G"]
+	if g.State == nil || *g.State != "done" || g.Verdict != nil || g.Merged == nil || g.Anomalies == 0 {
+		t.Fatalf("c-G is done with a recorded merge, no verdict, and a visible anomaly: %+v", g)
+	}
+
+	var rep project.ReportView
+	readView(t, out, "report", project.ReportFile, &rep)
+	if rep.Reconciliation == nil {
+		t.Fatal("the report carries the reconciliation section when work subjects exist")
+	}
+	by := rep.Reconciliation.ByClass
+	if by[reconcile.ClassMergeWithoutVerdict] != 1 || by[reconcile.ClassUnreconciled] != 1 ||
+		by[reconcile.ClassChainSkipped] != 0 || by[reconcile.ClassVerdictUnverified] != 1 {
+		t.Fatalf("the classes must count c-G, c-H, and the laundered c-I: %+v", by)
+	}
+	launderedSeen := false
+	for _, fnd := range rep.Reconciliation.Findings {
+		if fnd.Subject == "c-I" && fnd.Class == reconcile.ClassVerdictUnverified {
+			launderedSeen = true
+		}
+	}
+	if !launderedSeen {
+		t.Fatal("the laundered chain must surface as verdict_unverified on c-I")
+	}
+	for _, fnd := range rep.Reconciliation.Findings {
+		if fnd.Subject == "c-F" {
+			t.Fatalf("a clean full chain yields no findings: %+v", fnd)
+		}
+	}
+	if !strings.Contains(rep.Reconciliation.EvidenceGrade, "seed reconcile") {
+		t.Fatalf("the evidence-grade surface is named: %q", rep.Reconciliation.EvidenceGrade)
+	}
+}

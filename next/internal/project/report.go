@@ -14,6 +14,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
+	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -80,22 +81,38 @@ type ReportObservation struct {
 // rebuild declared no observation inputs: absence of data is stated,
 // never fabricated (next/spec/observations.md).
 type ReportView struct {
-	Chain       ReportChain        `json:"chain"`
-	Actors      ReportActors       `json:"actors"`
-	Halt        ReportHalt         `json:"halt"`
-	Checkpoints ReportCheckpoints  `json:"checkpoints"`
-	Contracts   ReportContracts    `json:"contracts"`
-	Observation *ReportObservation `json:"observation"`
+	Chain          ReportChain           `json:"chain"`
+	Actors         ReportActors          `json:"actors"`
+	Halt           ReportHalt            `json:"halt"`
+	Checkpoints    ReportCheckpoints     `json:"checkpoints"`
+	Contracts      ReportContracts       `json:"contracts"`
+	Reconciliation *ReportReconciliation `json:"reconciliation"`
+	Observation    *ReportObservation    `json:"observation"`
+}
+
+// ReportReconciliation is the record-derivable half of divergence
+// detection (plans/os-6cdc15be.md; next/spec/reconciliation.md):
+// findings by class over the lifecycle fold, with seed reconcile named
+// for the evidence-grade rest — projection builds never read the
+// artifact store or the repository. Null only when no work subject
+// exists at all, so the section's presence is itself record-derived.
+type ReportReconciliation struct {
+	Findings []reconcile.Finding `json:"findings"`
+	ByClass  map[string]int      `json:"by_class"`
+	// EvidenceGrade names the surface carrying the checks a build
+	// cannot run (attested heads, target rewrites).
+	EvidenceGrade string `json:"evidence_grade"`
 }
 
 // Report returns the report projection. Version "2" added the
 // observation section and the declared-inputs identity (the section is
 // null on an input-free build, so version, not content, is what
-// republishes existing prefixes); Inputs marks it as the one
+// republishes existing prefixes); Version "3" the reconciliation
+// section (plans/os-6cdc15be.md). Inputs marks it as the one
 // input-consuming projection, everything else staying byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "2", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "3", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -149,6 +166,22 @@ func reportView(records []*event.Record) (*ReportView, error) {
 	view.Contracts.Subjects = len(entries)
 	for _, e := range entries {
 		view.Contracts.Events += len(e.Events)
+	}
+	if len(entries) > 0 {
+		table, err := transition.Default()
+		if err != nil {
+			return nil, err
+		}
+		findings := reconcile.Classify(records, table.FoldRecords(records))
+		if findings == nil {
+			findings = []reconcile.Finding{}
+		}
+		rec := &ReportReconciliation{Findings: findings, ByClass: map[string]int{},
+			EvidenceGrade: "seed reconcile (attested heads, target rewrites; next/spec/reconciliation.md)"}
+		for _, f := range findings {
+			rec.ByClass[f.Class]++
+		}
+		view.Reconciliation = rec
 	}
 	return &view, nil
 }
