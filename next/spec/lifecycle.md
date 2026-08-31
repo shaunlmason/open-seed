@@ -164,8 +164,10 @@ management, not worker self-service.
 Lifecycle legality is **admission policy**, exactly like halt,
 classification, and grants: admission refuses illegal transitions at
 `seed/1` (records under `seed/0` are grandfathered inert, the keyring
-precedent) with exit 3 `invalid_transition` naming subject, current
-state, and verb; a birth verb on an existing subject and a non-birth
+precedent, and the fold honors the same boundary: pre-activation
+records occupy no state, so an upgraded ledger's history cannot make
+a real filing look like a second birth) with exit 3
+`invalid_transition` naming subject, current state, and verb; a birth verb on an existing subject and a non-birth
 verb on an unknown subject refuse the same way. Verification
 tolerates illegal transitions in raw-pushed history — the cooperative
 posture's named consequence — and the projection fold **skips them

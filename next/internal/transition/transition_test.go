@@ -223,6 +223,22 @@ func TestCheckAndFold(t *testing.T) {
 	if subs := fold.Subjects(); len(subs) != 2 || subs[0] != "c-A" || subs[1] != "c-B" {
 		t.Fatalf("subjects in first-appearance order: %v", subs)
 	}
+
+	// Pre-activation history is inert: an upgraded ledger's seed/0
+	// events stay grandfathered even where their verbs later became
+	// lifecycle verbs, so they occupy no state and the real seed/1
+	// filing is the birth, not a duplicate.
+	pre := lifecycleEvent("intent.filed", "c-G")
+	pre.Event.V = "seed/0"
+	gfold := tab.FoldRecords([]*event.Record{pre})
+	if _, ok := gfold.State("c-G"); ok {
+		t.Fatal("a pre-activation event must fold inert")
+	}
+	gfold = tab.FoldRecords([]*event.Record{pre, lifecycleEvent("intent.filed", "c-G")})
+	g, ok := gfold.State("c-G")
+	if !ok || g.State != "backlog" || g.Anomalies != 0 || g.Since != 1 {
+		t.Fatalf("a seed/1 filing after grandfathered history must be the birth: %+v ok=%v", g, ok)
+	}
 }
 
 func asInvalid(err error, target **transition.InvalidTransitionError) bool {

@@ -223,11 +223,10 @@ Phase 7, as added rules on the shared set.
 Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
 plan is merged (#113–#116, #120, #121); implementations 5.1 (#122)
-through 5.5 (#126), 5.3's hardening (#127), and 5.2's
-claimless-citation fix (#128) are all merged. **This PR implements
-5.6** (os-2ff8dbf1, observations v0), completing the Phase 5
-implementation set; #129 (5.1's fold activation boundary) is the one
-sibling still open. **Next action: land this PR and #129; then the
+through 5.5 (#126) and all three post-merge review follow-ups (#127,
+#128, #129) are merged. **This PR implements 5.6** (os-2ff8dbf1,
+observations v0), the last open Phase 5 PR: landing it completes the
+Phase 5 implementation set. **Next action: land this PR; then the
 Phase 5 exit record and Phase 6 (the verdict pipeline).**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
