@@ -699,3 +699,4 @@
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-f5551001","ts":"2026-08-31T22:06:01Z","verb":"close"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-148d3ba1","ts":"2026-08-31T22:11:44Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-c6fb95ee","ts":"2026-08-31T22:53:26Z","verb":"close"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:162","to":"ready"},"task":"os-148d3ba1","ts":"2026-08-31T22:53:58Z","verb":"plan-unblock"}
