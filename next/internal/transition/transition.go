@@ -380,21 +380,38 @@ type SubjectState struct {
 	// seals outside it stay anomalies, never facts
 	// (plans/os-3128535a.md).
 	Sealed *SealedFact
+	// SubmissionFails collects every fail verdict citing the current
+	// submission window (cleared on each submission.made): the
+	// red-verdict lockout scans the whole window, so a raw-pushed
+	// later verdict can never bury an authentic fail
+	// (plans/os-d2497eb7.md).
+	SubmissionFails []VerdictFact
+	// Override is the current window's admitted operator override,
+	// cleared on each submission.made; a raw-pushed second override
+	// in one window stays an anomaly, never the fact.
+	Override *OverrideFact
 }
 
 // VerdictFact is the fold's record of the latest rendered verdict.
+// Submission is the position the verdict's payload cited (-1 when
+// unparseable): the red-verdict lockout binds fails to the submission
+// they judged (plans/os-d2497eb7.md).
 type VerdictFact struct {
-	Pos     int
-	Verdict string
-	Receipt string
-	Signer  string
+	Pos        int
+	Verdict    string
+	Receipt    string
+	Signer     string
+	Submission int
 }
 
-// RequestFact is the latest merge.requested and its cited verdict
-// position.
+// RequestFact is the latest merge.requested and its citation: exactly
+// one of CitedVerdict or CitedOverride is set (-1 otherwise), the
+// pass-verdict path or the operator-override path
+// (plans/os-d2497eb7.md).
 type RequestFact struct {
-	Pos          int
-	CitedVerdict int
+	Pos           int
+	CitedVerdict  int
+	CitedOverride int
 }
 
 // MergeFact is the admitted merge.observed: the chain position and
@@ -402,6 +419,18 @@ type RequestFact struct {
 type MergeFact struct {
 	Pos int
 	SHA string
+}
+
+// OverrideFact is the admitted operator override
+// (plans/os-d2497eb7.md): its chain position, the operator that signed
+// it, the required reason, and the boundary-validated fail verdict it
+// overruled. It is never a verdict, and every surface shows it under
+// its own name.
+type OverrideFact struct {
+	Pos          int
+	Signer       string
+	Reason       string
+	CitedVerdict int
 }
 
 // SealedFact is the sealed-checks commitment (plans/os-3128535a.md;
@@ -502,11 +531,23 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			// binds nothing.
 			if s, ok := f.states[e.Subject]; ok {
 				var v struct {
-					Verdict string `json:"verdict"`
-					Receipt string `json:"receipt"`
+					Verdict    string `json:"verdict"`
+					Receipt    string `json:"receipt"`
+					Submission string `json:"submission"`
 				}
 				if json.Unmarshal(e.Payload, &v) == nil && v.Verdict != "" {
-					s.Verdict = &VerdictFact{Pos: pos, Verdict: v.Verdict, Receipt: v.Receipt, Signer: e.Actor}
+					cited := -1
+					if n, err := strconv.Atoi(strings.TrimSpace(v.Submission)); err == nil {
+						cited = n
+					}
+					fact := VerdictFact{Pos: pos, Verdict: v.Verdict, Receipt: v.Receipt, Signer: e.Actor, Submission: cited}
+					s.Verdict = &fact
+					// The lockout scans the whole submission window, so
+					// a later raw verdict can never bury an authentic
+					// fail (plans/os-d2497eb7.md).
+					if v.Verdict == "fail" && s.Submission != nil && cited == s.Submission.Pos {
+						s.SubmissionFails = append(s.SubmissionFails, fact)
+					}
 				}
 			}
 			continue
@@ -514,12 +555,44 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		if e.Verb == MergeRequestedVerb {
 			if s, ok := f.states[e.Subject]; ok {
 				var r struct {
-					Verdict string `json:"verdict"`
+					Verdict  string `json:"verdict"`
+					Override string `json:"override"`
 				}
 				if json.Unmarshal(e.Payload, &r) == nil {
-					if cited, err := strconv.Atoi(strings.TrimSpace(r.Verdict)); err == nil {
-						s.Requested = &RequestFact{Pos: pos, CitedVerdict: cited}
+					fact := RequestFact{Pos: pos, CitedVerdict: -1, CitedOverride: -1}
+					set := false
+					if cited, err := strconv.Atoi(strings.TrimSpace(r.Verdict)); err == nil && r.Verdict != "" {
+						fact.CitedVerdict, set = cited, true
 					}
+					if cited, err := strconv.Atoi(strings.TrimSpace(r.Override)); err == nil && r.Override != "" {
+						fact.CitedOverride, set = cited, true
+					}
+					if set {
+						s.Requested = &fact
+					}
+				}
+			}
+			continue
+		}
+		if e.Verb == MergeOverriddenVerb {
+			// The override folds only from its window: a review subject
+			// with no override yet. Raw pushes outside it stay
+			// anomalies, never facts (plans/os-d2497eb7.md).
+			if s, ok := f.states[e.Subject]; ok {
+				var o struct {
+					Reason  string `json:"reason"`
+					Verdict string `json:"verdict"`
+				}
+				cited := -1
+				if json.Unmarshal(e.Payload, &o) == nil {
+					if n, err := strconv.Atoi(strings.TrimSpace(o.Verdict)); err == nil && o.Verdict != "" {
+						cited = n
+					}
+				}
+				if o.Reason != "" && cited >= 0 && s.State == "review" && s.Override == nil {
+					s.Override = &OverrideFact{Pos: pos, Signer: e.Actor, Reason: o.Reason, CitedVerdict: cited}
+				} else {
+					s.Anomalies++
 				}
 			}
 			continue
@@ -610,6 +683,11 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		s.State, s.Since = to, pos
 		if e.Verb == "submission.made" {
 			s.Submission = &SubmissionFact{Pos: pos, Signer: e.Actor}
+			// A new submission opens a new judgment window: the lockout
+			// and the override both bind to the submission they judged
+			// (plans/os-d2497eb7.md).
+			s.SubmissionFails = nil
+			s.Override = nil
 		}
 		if e.Verb == MergeObservedVerb {
 			// Applied transitions only: a raw-pushed second observation
@@ -670,6 +748,10 @@ func (t *Table) StateAt(records []*event.Record, subject string) (SubjectState, 
 // (plans/os-73c00a50.md).
 var completeness = map[string][]string{
 	"intent.filed": {"intent", "tier", "budget", "routing"},
+	// The failed verdict's return path cites the red verdict that
+	// authorizes it (plans/os-d2497eb7.md); the return rule in admit
+	// validates the citation, completeness pins presence.
+	"contract.returned": {"verdict"},
 }
 
 // CheckCompleteness enforces the completeness rules for the verb's
@@ -762,6 +844,16 @@ const (
 // while the subject is in ready with no prior claim, so the position
 // ordering is the pre-existence proof. A fact, never a transition.
 const CheckSealedVerb = "check.sealed"
+
+// The red-verdict lockout's companions (plans/os-d2497eb7.md):
+// contract.returned is the failed verdict's table row out of review
+// (lifecycle.md's named extension point, resolved); merge.overridden
+// is the operator's attributable substitute for a pass verdict, never
+// a disguised one.
+const (
+	ContractReturnedVerb = "contract.returned"
+	MergeOverriddenVerb  = "merge.overridden"
+)
 
 // ChainError refuses a reconciliation-chain event whose links are
 // missing or mismatched (next/spec/reconciliation.md): done is

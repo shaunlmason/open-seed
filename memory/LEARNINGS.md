@@ -349,3 +349,17 @@ Fresh sessions read this file instead of rediscovering.
   bytes and digest stable, so old receipts still recompute-and-match, while
   views republish under a version bump anyway and can afford explicit null.
   One compatibility rule per surface kind, chosen by what anchors identity.
+
+- When an authorization consults "the latest X" from a tolerant fold,
+  ask what a raw-pushed later X does to it: latest-wins facts let an
+  attacker bury an authentic fact under a garbage one (a raw fail
+  hiding a real fail would have unlocked the 6.4 red-verdict
+  lockout). The fix shape: keep the whole window's facts in the fold
+  (cleared at the window boundary) and authorize against any
+  authenticated member, never only the latest.
+- cmd/seed test infra: genesis.Bootstrap's resolver knows genesis
+  keys only, so verdictLibAppend can raw-append solely as the root;
+  raw-pushing as any other enrolled key needs a loose resolver that
+  short-circuits that key's fingerprint (rawAppend in the lockout
+  drills). Symptom otherwise: "actor fingerprint not in the keyring"
+  on a key that is genuinely enrolled.

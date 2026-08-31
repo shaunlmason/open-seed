@@ -54,6 +54,25 @@ single admitted observation `{position, sha}`, singular by
 construction: the first valid observation lands on terminal `done`,
 so a second can never admit, and raw-pushed extras stay anomalies).
 
+**The override path** (6.4, plans/os-d2497eb7.md): the operator's
+attributable substitute for a pass verdict, never a disguised one.
+`merge.overridden` is a fact admitted only on `review` subjects from
+the `operator` lane (the third no-fallback capability row), strict
+payload `{"reason": "<nonempty>", "verdict": "<position>"}` citing a
+standing, boundary-validated **fail** verdict on the current
+submission — no verdict, a pass verdict, a stale-submission fail, and
+a laundered fail each refuse by name, so the hatch overrules a red
+verdict and never routes around independent verification. One
+override per submission window. `merge.requested` then cites exactly
+one of `{"verdict"}` or `{"override"}`, and `merge.observed` accepts
+an admitted override plus a request citing it exactly as it accepts a
+pass verdict plus its citation — each step its own event, nothing
+collapsed. Both chain steps validate the override's signer against
+the operator boundary, and reconciliation surfaces every
+override-backed chain as `overridden` (neutral, by name) with
+`override_unverified` for a raw-pushed override whose signer,
+replayed to its own position, held no operator standing.
+
 **A raw-pushed verdict is not launderable.** In cooperative history
 any active signer can plant a `verdict.rendered`, and the fold records
 it like any fact — so both admitted chain steps additionally validate
@@ -83,6 +102,8 @@ never the artifact store or the repository):
 | `chain_skipped` | an observed merge with no admitted `merge.requested` citing the verdict |
 | `unreconciled` | a pass verdict with no observed merge yet |
 | `verdict_unverified` | a folded verdict whose signer, replayed to the verdict's own position, held no verdict grant or was an implementing key — a raw-pushed verdict that never passed the verifier boundary |
+| `overridden` | the merge chain ran through an operator override — the sanctioned alternative, surfaced neutrally and by name, never as a divergence |
+| `override_unverified` | a folded override whose signer, replayed to its own position, held no operator standing — a raw-pushed override that substitutes for nothing |
 
 `unreconciled` is reported **neutrally**, never as an accusation: no
 build carries a wall clock, so "failed" versus "pending" is an age

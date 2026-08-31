@@ -34,12 +34,13 @@ const CacheFile = "cache.db"
 // (plans/os-5dc16a7c.md); generation 4 the acceptance columns
 // (plans/os-73c00a50.md); generation 5 the reconciliation-chain
 // columns (plans/os-6cdc15be.md); generation 6 the sealed-commitment
-// columns (plans/os-3128535a.md).
-const cacheSchemaVersion = 6
+// columns (plans/os-3128535a.md); generation 7 the override columns
+// (plans/os-d2497eb7.md).
+const cacheSchemaVersion = 7
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-const cacheVersion = "7"
+const cacheVersion = "8"
 
 // Cache returns the cache projection.
 func Cache() Projection {
@@ -55,7 +56,7 @@ var cacheDDL = []string{
 	`CREATE TABLE contracts (subject TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL)`,
 	`CREATE INDEX contracts_subject ON contracts(subject)`,
 	`CREATE TABLE queue (subject TEXT NOT NULL, since_position INTEGER NOT NULL)`,
-	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT, acc_ref TEXT, acc_executable INTEGER, acc_gated INTEGER, verdict_position INTEGER, verdict TEXT, verdict_receipt TEXT, requested_position INTEGER, merged_position INTEGER, merged_sha TEXT, sealed_position INTEGER, sealed_commitment TEXT) WITHOUT ROWID`,
+	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT, acc_ref TEXT, acc_executable INTEGER, acc_gated INTEGER, verdict_position INTEGER, verdict TEXT, verdict_receipt TEXT, requested_position INTEGER, merged_position INTEGER, merged_sha TEXT, sealed_position INTEGER, sealed_commitment TEXT, override_position INTEGER, override_reason TEXT) WITHOUT ROWID`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
 	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
 	`CREATE INDEX actor_history_fp ON actor_history(fingerprint)`,
@@ -147,7 +148,7 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 				c.Subject, e.Position, e.Verb, e.Actor, string(e.Payload))
 		}
 		var state, holder, fence, accRef, accExec, accGated any
-		var verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment any
+		var verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment, overridePos, overrideReason any
 		anomalies := 0
 		if s, ok := fold.State(c.Subject); ok {
 			anomalies = s.Anomalies
@@ -173,8 +174,11 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 			if s.Sealed != nil {
 				sealedPos, sealedCommitment = s.Sealed.Pos, s.Sealed.Commitment
 			}
+			if s.Override != nil {
+				overridePos, overrideReason = s.Override.Pos, s.Override.Reason
+			}
 		}
-		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence, accRef, accExec, accGated, verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment)
+		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence, accRef, accExec, accGated, verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment, overridePos, overrideReason)
 	}
 	// The queue mirrors the JSON view's derivation exactly: the
 	// transition table's ready set, oldest first.

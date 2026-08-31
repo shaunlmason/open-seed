@@ -72,6 +72,19 @@ func TestReconciliationViews(t *testing.T) {
 	add(worker, version.Seed1, "merge.requested", "c-I", `{"verdict": "29"}`)
 	add(root, version.Seed1, "merge.observed", "c-I", `{"merged": "`+sha+`", "pr": "pr/3"}`)
 
+	// c-J is the override-backed chain: a validated fail, the
+	// operator's cited override, the request citing it, and the
+	// observation — done through the sanctioned alternative
+	// (plans/os-d2497eb7.md).
+	add(root, version.Seed1, "intent.filed", "c-J", `{"intent": "override", "tier": "standard", "budget": "s", "routing": "core"}`)
+	add(root, version.Seed1, "contract.specified", "c-J", `{"acceptance": {"ref": "specs/j.md @ abc1234", "executable": false}}`)
+	add(worker, version.Seed1, "claim.taken", "c-J", `{}`)
+	add(worker, version.Seed1, "submission.made", "c-J", `{"fence": "34", "packet": `+packet+`}`)
+	add(verifier, version.Seed1, "verdict.rendered", "c-J", `{"verdict": "fail", "receipt": "`+receipt+`", "submission": "35", "independence": "L1"}`)
+	add(root, version.Seed1, "merge.overridden", "c-J", `{"reason": "verifier judged the wrong artifact", "verdict": "36"}`)
+	add(worker, version.Seed1, "merge.requested", "c-J", `{"override": "37"}`)
+	add(root, version.Seed1, "merge.observed", "c-J", `{"merged": "`+sha+`", "pr": "pr/4"}`)
+
 	out := rebuildAll(t, dir, resolve)
 
 	var entries []project.ContractEntry
@@ -97,6 +110,13 @@ func TestReconciliationViews(t *testing.T) {
 	if g.State == nil || *g.State != "done" || g.Verdict != nil || g.Merged == nil || g.Anomalies == 0 {
 		t.Fatalf("c-G is done with a recorded merge, no verdict, and a visible anomaly: %+v", g)
 	}
+	j := byID["c-J"]
+	if j.Override == nil || j.Override.Position != "37" || j.Override.Reason == "" {
+		t.Fatalf("c-J must carry the override under its own name: %+v", j.Override)
+	}
+	if f.Override != nil {
+		t.Fatalf("a chain with no override marshals it as explicit null: %+v", f.Override)
+	}
 
 	var rep project.ReportView
 	readView(t, out, "report", project.ReportFile, &rep)
@@ -106,8 +126,14 @@ func TestReconciliationViews(t *testing.T) {
 	by := rep.Reconciliation.ByClass
 	if by[reconcile.ClassMergeWithoutVerdict] != 1 || by[reconcile.ClassUnreconciled] != 1 ||
 		by[reconcile.ClassChainSkipped] != 0 || by[reconcile.ClassVerdictUnverified] != 1 ||
-		by[reconcile.ClassUnsealed] != 3 {
-		t.Fatalf("the classes must count c-G, c-H, the laundered c-I, and the three unsealed standard-tier chains: %+v", by)
+		by[reconcile.ClassUnsealed] != 4 || by[reconcile.ClassOverridden] != 1 ||
+		by[reconcile.ClassOverrideUnverified] != 0 {
+		t.Fatalf("the classes must count c-G, c-H, the laundered c-I, the unsealed chains, and c-J's named override: %+v", by)
+	}
+	for _, fnd := range rep.Reconciliation.Findings {
+		if fnd.Subject == "c-J" && fnd.Class == reconcile.ClassMergeWithoutVerdict {
+			t.Fatal("the override-backed chain must never surface as merge_without_verdict")
+		}
 	}
 	launderedSeen := false
 	for _, fnd := range rep.Reconciliation.Findings {

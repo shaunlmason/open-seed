@@ -27,6 +27,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
@@ -269,6 +270,16 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	if failEnv != nil {
 		return render(stampTip(failEnv, st.count), stdout, stderr)
 	}
+	// The red-verdict lockout at the render surface
+	// (plans/os-d2497eb7.md): pass over a submission an authenticated
+	// fail already judged refuses until a new submission; fail stays
+	// renderable. The admission rule enforces the same bound.
+	if *verdictFlag == "pass" {
+		if locked := renderLocked(st, s); locked != nil {
+			return render(stampTip(envelope.Fail(envelope.ExitRedLocked, "red_locked",
+				fmt.Sprintf("a fail verdict at position %d already judged the bound submission — a red verdict locks pass out until a new submission (contract.returned, re-claim, resubmit; next/spec/verdicts.md)", locked.Pos)), st.count), stdout, stderr)
+		}
+	}
 	// The "contracts carry sealed checks" gate, enforced at the
 	// verifier boundary (plans/os-3128535a.md): above the trivial
 	// tier a subject with no commitment does not render; the trivial
@@ -447,4 +458,27 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 		"submission": cited.Submission,
 		"artifact":   "verified",
 	}), st.count), stdout, stderr)
+}
+
+// renderLocked finds the authenticated fail that locks pass out of the
+// current submission window, mirroring the admission rule's bound: the
+// signer holds the verdict grant at the tip keyring and is no
+// implementing key, so a raw-pushed fail locks nothing
+// (plans/os-d2497eb7.md).
+func renderLocked(st *verdictState, s transition.SubjectState) *transition.VerdictFact {
+	ks, _, err := keyring.StateAt(st.records)
+	if err != nil || ks == nil {
+		return nil
+	}
+	for i := range s.SubmissionFails {
+		f := &s.SubmissionFails[i]
+		if !ks.HasAnyCapability(f.Signer, keyring.AcceptedCapabilities(transition.VerdictRenderedVerb)) {
+			continue
+		}
+		if s.PriorClaimants[f.Signer] || (s.Submission != nil && f.Signer == s.Submission.Signer) {
+			continue
+		}
+		return f
+	}
+	return nil
 }

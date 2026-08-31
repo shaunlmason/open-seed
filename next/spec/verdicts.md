@@ -187,7 +187,23 @@ re-run commands nor read a verifier-local artifact store (the
 cooperative-posture precedent: the client refuses to draft doomed
 work). A raw-pushed pass-over-red is not silent: `seed verdict check`
 recomputes from the submission head and goes red, and that mismatch is
-6.2 reconciliation input. Sealed checks ride the same rule: a red
+6.2 reconciliation input.
+
+**The red-verdict lockout** (6.4, plans/os-d2497eb7.md): once an
+**authenticated** fail verdict judges the bound submission, rendering
+`pass` refuses — at admission and at render, exit **25
+`red_locked`** — until a **new submission** arrives through
+`contract.returned`, a fresh claim, and a resubmission
+([`lifecycle.md`](lifecycle.md)). Only boundary-validated fails lock
+(verdict grant plus implementing-key disjointness): the tolerant fold
+records any well-shaped raw verdict, so the lockout scans the whole
+submission window and an unauthenticated fail locks nothing,
+authorizes nothing, and surfaces as `verdict_unverified`. Fail
+restatements stay renderable, and no implementer-held lane can clear
+the lockout. The operator's escape hatch is `merge.overridden`
+([`reconciliation.md`](reconciliation.md)): it clears the merge path,
+never `verdict.rendered(pass)` — an override substitutes for a
+verdict, it does not manufacture one. Sealed checks ride the same rule: a red
 sealed transcript forbids pass exactly like a visible one, and render
 on an **above-trivial subject with no commitment refuses exit 24
 `unsealed`** — the "contracts carry sealed checks" gate, enforced at

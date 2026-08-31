@@ -18,6 +18,7 @@
     {"verb": "claim.parked", "from": ["in_progress"], "to": "blocked"},
     {"verb": "claim.reaped", "from": ["in_progress"], "to": "ready"},
     {"verb": "merge.observed", "from": ["review"], "to": "done"},
+    {"verb": "contract.returned", "from": ["review"], "to": "ready"},
     {"verb": "contract.blocked", "from": ["ready"], "to": "blocked"},
     {"verb": "contract.unblocked", "from": ["blocked"], "to": "ready"},
     {"verb": "contract.cancelled", "from": ["backlog", "ready", "blocked", "review"], "to": "cancelled"}

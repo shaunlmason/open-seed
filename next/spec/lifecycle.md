@@ -37,6 +37,7 @@ later phase's machinery):
     {"verb": "claim.parked", "from": ["in_progress"], "to": "blocked"},
     {"verb": "claim.reaped", "from": ["in_progress"], "to": "ready"},
     {"verb": "merge.observed", "from": ["review"], "to": "done"},
+    {"verb": "contract.returned", "from": ["review"], "to": "ready"},
     {"verb": "contract.blocked", "from": ["ready"], "to": "blocked"},
     {"verb": "contract.unblocked", "from": ["blocked"], "to": "ready"},
     {"verb": "contract.cancelled", "from": ["backlog", "ready", "blocked", "review"], "to": "cancelled"}
@@ -76,10 +77,16 @@ only behind the full chain rule, recording the merged commit
 ([`reconciliation.md`](reconciliation.md)). 6.3 adds the pre-claim
 fact: `check.sealed` admits only while the subject is in `ready` with
 no prior claim, committing the sealed checks before implementation
-begins ([`sealed-checks.md`](sealed-checks.md)). A failed verdict's return
-path out of `review` is Phase 6's **named extension point**, not
-guessed here (`review` reaches a terminal state today via
-`contract.cancelled`).
+begins ([`sealed-checks.md`](sealed-checks.md)). 6.4 resolves what was
+Phase 6's named extension point: **`contract.returned`**
+(`review` → `ready`) is the failed verdict's return path, admitted
+only citing a standing, boundary-validated **fail** verdict on the
+current submission (`{"verdict": "<position>"}`, the
+`dispatch`/`operator` lanes) — nobody yanks an in-review contract
+whose verdict is pass or pending, and a raw-pushed fail authorizes
+nothing. The subject re-enters `ready` for a fresh
+claim → submission → verdict cycle; prior facts, the sealed
+commitment included, persist as history.
 
 ## Claims and fences
 
@@ -186,8 +193,10 @@ summarization boundary (`observations.md`), `verdict.rendered` admits
 only on `review` subjects under L1 independence (`verdicts.md`), and
 `merge.requested` admits only on `review` subjects citing the pass
 verdict (`reconciliation.md`), and `check.sealed` admits only on
-`ready` subjects with no prior claim (`sealed-checks.md`) — the §8
-chain is fully piped and the §7 commitment window is pinned.
+`ready` subjects with no prior claim (`sealed-checks.md`), and
+`merge.overridden` admits only on `review` subjects over a validated
+fail (`reconciliation.md`) — the §8 chain is fully piped and the §7
+commitment window is pinned.
 
 ## Projections
 
@@ -212,4 +221,4 @@ derived `queue` rows, schema generation 3).
   hook, and the CLI.
 - III.F fences, packets, spec-gate content, plan-gating, verdicts —
   5.2 through 5.6 and Phase 6, per their plans; the review exits
-  beyond `contract.cancelled` are Phase 6's named extension point.
+  beyond `contract.cancelled` arrived with 6.4's `contract.returned`.
