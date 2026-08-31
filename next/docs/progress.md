@@ -330,7 +330,11 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   plan PR #140 (merged, amended per review: only boundary-validated
   fails lock or authorize, and the override requires a standing
   validated fail on the current submission — an escape hatch, never
-  a bypass) — **this task PR**: contract.returned resolves
+  a bypass) — **done** (merged #141; card closed; the review round
+  bound the lockout, the return, and the override to
+  boundary-validated fails only, revalidated the override's citation
+  at the chain steps, and taught the fold's anomaly check the
+  override path): contract.returned resolves
   lifecycle.md's named extension point (review to ready, citing the
   authenticated fail, dispatch/operator lanes; prior facts and the
   seal survive); the lockout scans the whole submission window
@@ -347,6 +351,62 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   report v5, cache generation 7; lifecycle/verdicts/reconciliation/
   actors spec updates
 
+**Phase 6 exit (the III.G subset docs/next-build-plan.md scopes): met.**
+Met means the subset the plan's own Phase 6 item list and exit drills
+assign to this phase, the scoped-exit posture of the Phase 2, 3, and
+5 records: the plan itself defers L2 runtime-tuple separation and L3
+deterministic-first verification to Phase 10's per-tier level
+declarations and rubric-verdict calibration (per-item evidence, the
+human gold set, drift-triggered authority suspension) to Phase 11,
+so those III.G rows are later phases' bound work, not this exit's.
+The exit line's three named drills are green on main: the
+induced-divergence reconciliation drills (#137's
+merge_without_verdict, chain_skipped, neutral unreconciled,
+attested_divergence, target_rewritten, evidence_missing, and
+verdict_unverified, extended by #139's unsealed and seal_unverified
+and #141's overridden and override_unverified — every class induced
+and detected); the receipt recompute-and-mismatch test (#135's exit
+21, with #139 putting sealed transcripts inside the recompute
+boundary so invented sealed outcomes fail the same way); and the
+sealed-check audit (#139: sealer/claim and sealer/operator grant
+disjointness both directions, the seal-author claim refusal, the
+implementer-cannot-decrypt drills, the recipient-tag audit, and
+rotation that touches no history). The III.G rows each merged PR
+evidences: done is reachable only through the chain with each step
+its own event and no code path collapsing them (#137; #141's
+override-backed path stays uncollapsed); verdicts are signed by
+verdict-granted keys provably disjoint from every implementing key,
+and operator override is its own attributable verb, never a
+disguised verdict (#135's L1 exit 17; #141's operator-only
+merge.overridden folding as its own fact, surfaced by name);
+the verifier executes in clean per-run isolation with cleanup firing
+pass or fail and enumerable, exclusively self-executed inputs
+(#135's origin-stripped workspaces); receipts bind contract id, plan
+hash at merge-base, diff hash, changed-file inventory, visible and
+sealed check transcripts, and environment fingerprint, and
+verification recomputes everything from the submission head (#135,
+#139); and a red verdict is unmergeable and locks the implementer
+out of self-approval until a new submission (#137's chain-legality
+half; #141's lockout exit 25 with contract.returned as the resolved
+return path). The Phase 5 exit's named sealed-checks carve-out is
+closed by #139, honest-scope documentation included. This exit
+record is card os-600be59e's task PR (an administrative card, not a
+Phase 6 item).
+
+## Phase 7 — Supervisor, offers, budgets (docs/next-build-plan.md Phase 7; deps: 5 ✓)
+
+- 7.1 offers (offer.published eligibility-scoped and expiring;
+  workers pull and claim; the wakeless poll-only drill proving wake
+  is advisory) — os-c61c3392 — backlog
+- 7.2 budgets (budget.reserve / settle / release; admission
+  decrements reservations; the reservation race drill; per-adapter
+  risk limits) — os-cecac5de — backlog
+- 7.3 executor adapter interface + the local worktree adapter
+  (provision / wake / meter / report-tuple; metering to the
+  observation stream; run.settled aggregate) — os-1dad487d — backlog
+- 7.4 graceful preemption (safe-point park with packet; force reap
+  packet) — os-0f718b4e — backlog
+
 ## Frontier
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
@@ -354,18 +414,16 @@ Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
 three post-merge follow-ups (#127, #128, #129), and the engine
 v0.15.1 receipt-runner pin (#130) are merged, and the Phase 5 exit
 record above is card os-6e37b10e's task PR (#134, merged; card
-closed). 6.1 is merged (#135; card closed); 6.2 is merged (#137;
-card closed); 6.3 is merged (#139; card closed). **This task PR
-implements 6.4** (os-d2497eb7, the last Phase 6 item, against merged
-plan #140). **Next action: land this PR; then the Phase 6 exit
-record** (a card mirroring the Phase 5 exit precedent: the III.G
-subset the build plan scopes — reconciliation drills, receipt
-recompute-and-mismatch, sealed-check audit, lockout and override —
-met; L2/L3 levels and rubric calibration deferred to Phase 10/11).
-Phase 7 (supervisor, offers, budgets) follows. The Phase 6
-exit subset is charter
-III.G minus L2/L3 levels and rubric calibration (Phase 10/11): the
-reconciliation drills, the receipt recompute-and-mismatch test, and
-the sealed-check audit.
+closed). Phase 6 is done and closed: every plan (#133, #136, #138,
+#140), every implementation (6.1 #135, 6.2 #137, 6.3 #139, 6.4
+#141), and the exit record above (card os-600be59e's task PR) are
+merged with every card closed. **Next action: 7.1's plan**
+(os-c61c3392, offers: offer.published eligibility-scoped and
+expiring, workers pull and claim, and the wakeless poll-only drill
+proving wake is advisory; plan-first on seed/os-c61c3392-plan). The
+Phase 7 exit subset is charter III.H for the implemented adapter:
+the poll-only run, the reservation race drill, and the
+disposability drill (randomized kill after sync; complete
+elsewhere).
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
