@@ -2,12 +2,13 @@
   "schema_version": "1.0",
   "task": "os-3128535a",
   "merge_base": "d7e10365b456e94e6d001931988b8286f6f697e2",
-  "head": "b7669cd418a53dc3164546003ce6d1a3d7b7341a",
+  "head": "356f5611ea4098132b98dd50d68d9a40f4b4173d",
   "plan_path": "plans/os-3128535a.md",
   "plan_sha256": "b5aca83fb3dbffd223508fa20d0b54b12bb7cb0944f95ff310c362b4b3258a64",
   "diff_files": [
     "memory/LEARNINGS.md",
     "next/cmd/seed/main.go",
+    "next/cmd/seed/reconcile.go",
     "next/cmd/seed/seal.go",
     "next/cmd/seed/seal_cli_test.go",
     "next/cmd/seed/verdict.go",
@@ -39,7 +40,7 @@
     "next/spec/sealed-checks.md",
     "next/spec/verdicts.md"
   ],
-  "diff_sha256": "d4aaa8de895f206ced21d8358506c94b2e83b6e69a7be50d3ce453aaf269dea8",
+  "diff_sha256": "00a05dca4f5127afcfadf479d67316788eee468f8c300e3baf5b796fa12f0cf3",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/seal/... ./internal/artifact/... ./internal/transition/... ./internal/admit/... ./internal/keyring/... ./internal/reconcile/... ./internal/project/... ./cmd/seed/... -count=1",
