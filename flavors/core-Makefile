@@ -24,7 +24,11 @@ check-next:
 	@cd next && badfmt="$$(gofmt -l .)" && { test -z "$$badfmt" || { echo "check-next: gofmt failures:"; echo "$$badfmt"; exit 1; }; }
 	@cd next && out="$$(go vet ./... 2>&1)" || { echo "check-next: go vet failed:"; echo "$$out"; exit 1; }
 	@cd next && out="$$(go build ./... 2>&1)" || { echo "check-next: go build failed:"; echo "$$out"; exit 1; }
-	@cd next && out="$$(go test ./... -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/... 2>&1)" || { echo "check-next: go test failed:"; echo "$$out"; exit 1; }
+	@# -p 1 serializes package test binaries: concurrent binaries under the
+	@# subprocess-heavy drills can collide coverage counter files (same pid
+	@# and second after heavy pid recycling), silently dropping one package
+	@# from the merged profile and misreading coverage far below truth.
+	@cd next && out="$$(go test -p 1 ./... -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/... 2>&1)" || { echo "check-next: go test failed:"; echo "$$out"; exit 1; }
 	@cd next && go tool cover -func=coverage.out | awk '/^total:/ { cov=$$3; sub(/%/,"",cov); if (cov+0.0 < 90.0) { printf "check-next: coverage %s%% is below the 90%% gate (docs/next-build-plan.md §0)\n", cov; exit 1 } printf "check-next: gofmt/vet/build/test ok; coverage %s%% (gate 90%%)\n", cov }'
 
 # End-to-end loop smoke in a temp instantiation (no model, no secrets).

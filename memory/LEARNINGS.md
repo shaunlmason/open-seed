@@ -259,3 +259,15 @@ Fresh sessions read this file instead of rediscovering.
   The storm only surfaced under the slower unprivileged run: timing
   shifts change which fixture flaws fire, one more reason the
   nobody-run is part of the gate.
+
+- The coverage mis-merge root cause: `go test ./...` runs package
+  test binaries concurrently, and under subprocess-heavy drills
+  (hundreds of short-lived git/CLI children recycling pids) two
+  binaries can write coverage counter files with colliding names
+  (same pid, same second), so the merged profile silently loses one
+  package: that package's functions then read as covered only where
+  OTHER binaries exercised them via -coverpkg. Fingerprint: exactly
+  one function craters between runs while its isolated package run
+  is fine. Fix: `-p 1` on the coverage invocation (three cold runs
+  agree to the decimal); receipts embed their own run, so READ the
+  recorded exits before claiming a receipt green.
