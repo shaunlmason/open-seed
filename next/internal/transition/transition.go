@@ -702,8 +702,11 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 			_ = json.Unmarshal(e.Payload, &m)
 			s.Merged = &MergeFact{Pos: pos, SHA: strings.TrimSpace(m.Merged)}
-			if s.Verdict == nil || s.Verdict.Verdict != "pass" ||
-				s.Requested == nil || s.Requested.CitedVerdict != s.Verdict.Pos {
+			passChain := s.Verdict != nil && s.Verdict.Verdict == "pass" &&
+				s.Requested != nil && s.Requested.CitedVerdict == s.Verdict.Pos
+			overrideChain := s.Override != nil && s.Requested != nil &&
+				s.Requested.CitedOverride == s.Override.Pos
+			if !passChain && !overrideChain {
 				s.Anomalies++
 			}
 		}

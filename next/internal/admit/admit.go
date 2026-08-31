@@ -566,7 +566,7 @@ func Default() []Rule {
 					if cited != s.Override.Pos {
 						return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("cites position %d; the admitted override on this subject is at position %d", cited, s.Override.Pos)}
 					}
-					if ce := launderedOverride(c, subject, verb, s.Override); ce != nil {
+					if ce := overrideBacking(c, subject, verb, s); ce != nil {
 						return ce
 					}
 					return nil
@@ -623,7 +623,7 @@ func Default() []Rule {
 				// for the pass verdict plus its citation — each step
 				// still its own event.
 				if s.Override != nil && s.Requested != nil && s.Requested.CitedOverride == s.Override.Pos {
-					if ce := launderedOverride(c, subject, verb, s.Override); ce != nil {
+					if ce := overrideBacking(c, subject, verb, s); ce != nil {
 						return ce
 					}
 					return nil
@@ -917,6 +917,32 @@ func launderedOverride(c *Context, subject, verb string, o *transition.OverrideF
 	if !c.Keyring.HasAnyCapability(o.Signer, keyring.AcceptedCapabilities(transition.MergeOverriddenVerb)) {
 		return &transition.ChainError{Subject: subject, Verb: verb,
 			Reason: fmt.Sprintf("the cited override at position %d was signed by %s, which holds no operator standing — a raw-pushed override substitutes for nothing", o.Pos, o.Signer)}
+	}
+	return nil
+}
+
+// overrideBacking validates everything a chain step must re-check
+// before trusting the folded override: the signer's operator standing
+// AND the override's own citation — a standing, boundary-validated
+// fail on the current submission. The override admission rule checks
+// the citation for cooperative appends, but a raw-pushed well-shaped
+// override by an operator-capable key folds without it, and trusting
+// it here would turn the escape hatch into a wholesale bypass (review
+// finding on the task PR).
+func overrideBacking(c *Context, subject, verb string, s transition.SubjectState) *transition.ChainError {
+	if ce := launderedOverride(c, subject, verb, s.Override); ce != nil {
+		return ce
+	}
+	if s.Override == nil {
+		return nil
+	}
+	fail := windowFail(s, s.Override.CitedVerdict)
+	if fail == nil {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the override at position %d cites position %d, which is not a fail verdict on the current submission — an override overrules a standing red verdict, it never routes around independent verification", s.Override.Pos, s.Override.CitedVerdict)}
+	}
+	if ce := verdictBoundary(c, subject, verb, s, *fail); ce != nil {
+		return ce
 	}
 	return nil
 }

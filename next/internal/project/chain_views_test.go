@@ -114,6 +114,9 @@ func TestReconciliationViews(t *testing.T) {
 	if j.Override == nil || j.Override.Position != "37" || j.Override.Reason == "" {
 		t.Fatalf("c-J must carry the override under its own name: %+v", j.Override)
 	}
+	if j.Anomalies != 0 {
+		t.Fatalf("a legitimate override chain is no anomaly (review finding on the task PR): %d", j.Anomalies)
+	}
 	if f.Override != nil {
 		t.Fatalf("a chain with no override marshals it as explicit null: %+v", f.Override)
 	}

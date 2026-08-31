@@ -261,6 +261,21 @@ func TestRawOverrideSubstitutesForNothing(t *testing.T) {
 	if !errors.As(err, &ce) || !strings.Contains(ce.Reason, "no operator standing") {
 		t.Fatalf("the observation over a raw override refuses: %v", err)
 	}
+	// An operator-capable raw override citing a non-fail folds too,
+	// and the chain steps revalidate the citation: without a standing
+	// authenticated fail it substitutes for nothing (review finding
+	// on this PR).
+	ctx2, k2, step2, subPos2 := lockoutFixture(t)
+	ctx2 = step2(k2.signer, version.Seed1, transition.MergeOverriddenVerb, "c-1", fmt.Sprintf(`{"reason": "shortcut", "verdict": "%d"}`, subPos2))
+	s2, _ := ctx2.Lifecycle.State("c-1")
+	if s2.Override == nil {
+		t.Fatal("the operator's raw override folds — refusal happens at the chain")
+	}
+	err2 := Check(ctx2, draftV(t, k2.worker, version.Seed1, "merge.requested", "c-1", fmt.Sprintf(`{"override": "%d"}`, s2.Override.Pos), ctx2.Tip))
+	if !errors.As(err2, &ce) || !strings.Contains(ce.Reason, "not a fail verdict") {
+		t.Fatalf("a request over an override with no authenticated fail refuses: %v", err2)
+	}
+
 	// A raw second override in the window stays an anomaly and the
 	// fact stands.
 	before, _ := ctx.Lifecycle.State("c-1")

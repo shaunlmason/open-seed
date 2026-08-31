@@ -67,9 +67,14 @@ override per submission window. `merge.requested` then cites exactly
 one of `{"verdict"}` or `{"override"}`, and `merge.observed` accepts
 an admitted override plus a request citing it exactly as it accepts a
 pass verdict plus its citation — each step its own event, nothing
-collapsed. Both chain steps validate the override's signer against
-the operator boundary, and reconciliation surfaces every
-override-backed chain as `overridden` (neutral, by name) with
+collapsed. Both chain steps revalidate everything a raw-pushed
+override could skip: the signer's operator standing AND the cited
+fail against the current window and the verifier boundary (a
+well-shaped raw override by an operator-capable key folds, and
+trusting it unrevalidated would turn the hatch into a bypass).
+Reconciliation surfaces a chain as `overridden` (neutral, by name)
+only when the request actually cites the override — an override
+beside a skipped chain stays divergence — with
 `override_unverified` for a raw-pushed override whose signer,
 replayed to its own position, held no operator standing.
 

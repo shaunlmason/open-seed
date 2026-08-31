@@ -81,11 +81,13 @@ func Subject(id string, s transition.SubjectState) []Finding {
 	var out []Finding
 	merged := s.Merged != nil || s.State == "done"
 	passVerdict := s.Verdict != nil && s.Verdict.Verdict == "pass"
-	if merged && !passVerdict && s.Override == nil {
-		// An override-backed chain is the sanctioned alternative and
-		// surfaces as ClassOverridden below, never as this divergence;
-		// a raw-pushed override's authenticity is VerifyOverrides'
-		// separate finding (plans/os-d2497eb7.md).
+	// An override is the sanctioned cover only when the chain actually
+	// ran through it: the request must cite it (review finding on the
+	// task PR — a raw override beside a skipped chain is divergence,
+	// not the sanctioned path). Authenticity stays VerifyOverrides'
+	// separate finding.
+	overrideBacked := s.Override != nil && s.Requested != nil && s.Requested.CitedOverride == s.Override.Pos
+	if merged && !passVerdict && !overrideBacked {
 		detail := "the subject reached done with no admitted pass verdict"
 		if s.Verdict != nil {
 			detail = fmt.Sprintf("the subject reached done and the admitted verdict at position %d is %q", s.Verdict.Pos, s.Verdict.Verdict)
@@ -100,7 +102,7 @@ func Subject(id string, s transition.SubjectState) []Finding {
 		out = append(out, Finding{Subject: id, Class: ClassUnreconciled,
 			Detail: fmt.Sprintf("the pass verdict at position %d has no observed merge yet — pending or diverged is an age judgment for maintenance, not this classifier", s.Verdict.Pos)})
 	}
-	if s.Override != nil && (s.Merged != nil || s.State == "done") {
+	if overrideBacked && merged {
 		out = append(out, Finding{Subject: id, Class: ClassOverridden,
 			Detail: fmt.Sprintf("the merge chain ran through the operator override at position %d (reason: %s) — an attributable substitute for a pass verdict, surfaced by name, never a disguised verdict", s.Override.Pos, s.Override.Reason)})
 	}
