@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-c61c3392",
   "merge_base": "5467a9015409ad8946458111ae45d42d42564ca2",
-  "head": "77faabe875fd2edd36f190626367ce3d53c40b8b",
+  "head": "fb973038b19190ace2332e38d4f13c7ab021e00c",
   "plan_path": "plans/os-c61c3392.md",
   "plan_sha256": "5e5ae792754222bf5ef91fd8a5bc10b1eacbdd288d20c8377322ba93cce0c0bb",
   "diff_files": [
@@ -30,7 +30,7 @@
     "next/spec/projections.md",
     "next/spec/protocol.md"
   ],
-  "diff_sha256": "a4f60b24517bbd06201ee814d25edf6e5cd7082a26a6cb080bf5150e1407acce",
+  "diff_sha256": "17546a53605784c14e98563c33334c5251b7e05ed3f71007e88965f56598a5f4",
   "validation": [
     {
       "cmd": "go test ./next/... -run 'Offer|Wakeless|AcceptedCapabilities|Contracts|Cache' -count=1",
