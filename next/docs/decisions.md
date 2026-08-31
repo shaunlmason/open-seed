@@ -385,6 +385,21 @@ here. Newest last.
   build id and be discarded as a duplicate; Version 4 / generation 4
   re-key every such rebuild (#124 review). Gate-before-specified
   enforced here; gate-before-run named as Phase 6's half. (PR #125)
+- 2026-08-31 — Plan-gating is ordering plus citation at admission,
+  ancestry at the verdict (plans/os-16c1d142.md): the fold tracks
+  the filed tier and plan.approved facts (plan.* verbs are facts,
+  not transitions — the pinned four exits stand), and above the
+  literal "trivial" tier a submission refuses exit 16 plan_required
+  without an admitted approval AND the cited plan anchor; Phase 6's
+  receipt (plan hash at merge-base) closes the
+  implementation-before-approval window, named not silent. The
+  falsifiable-plan lint is a pure reader of the repo's own plan
+  shape with missing-retention the charter-quoted distinct finding;
+  seed plan classify is the CI-invocable disjointness check refusing
+  mixed change sets at exit 9, with forge-required wiring assigned
+  to Phase 12's protections reconciler. plan.proposed rides the
+  claim lane under the existing fence matrix; plan.approved is
+  operator-attested v0 like merge.observed. (PR #126)
 - 2026-08-31 — Coverage collection in check-next serializes package
   test binaries (-p 1), both Makefiles in lockstep: under the
   subprocess-heavy drills, concurrent test binaries can collide

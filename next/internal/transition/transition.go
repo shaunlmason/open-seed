@@ -343,6 +343,10 @@ type SubjectState struct {
 	// Claim is the active claim while the subject is in_progress,
 	// cleared by every deliberate exit; nil otherwise.
 	Claim *Claim
+	// Tier is the contract's filed tier (presence-only data whose one
+	// distinguished value, "trivial", exempts the plan gate;
+	// plans/os-16c1d142.md).
+	Tier string
 	// Acceptance is the folded acceptance spec from the last admitted
 	// contract.specified: the artifact anchor, the executable flag,
 	// and whether gate evidence bound to the revision is present (or
@@ -362,14 +366,31 @@ type SubjectState struct {
 type Fold struct {
 	states map[string]*SubjectState
 	order  []string
+	// planned maps subject -> the last admitted plan.approved's plan
+	// anchor. plan.* events are facts, not transitions
+	// (plans/os-16c1d142.md): they change no lifecycle state and the
+	// submission gate consults them.
+	planned map[string]string
+}
+
+// PlanApproved reports the subject's approved-plan anchor, if any.
+func (f *Fold) PlanApproved(subject string) (string, bool) {
+	ref, ok := f.planned[subject]
+	return ref, ok
 }
 
 // FoldRecords folds every subject's lifecycle events, skipping illegal
 // history without wedging, the halt.StateAt posture.
 func (t *Table) FoldRecords(records []*event.Record) *Fold {
-	f := &Fold{states: map[string]*SubjectState{}}
+	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}}
 	for pos, rec := range records {
 		e := &rec.Event
+		if e.Verb == PlanApprovedVerb {
+			if ref, _ := planAnchor(e.Payload); ref != "" {
+				f.planned[e.Subject] = ref
+			}
+			continue
+		}
 		if !t.IsLifecycleVerb(e.Verb) {
 			continue
 		}
@@ -408,6 +429,14 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		if packet.Required(e.Verb) {
 			if _, perr := packet.FromPayload(e.Subject, e.Payload); perr != nil {
 				s.Anomalies++
+			}
+		}
+		if e.Verb == t.birth {
+			var filed struct {
+				Tier string `json:"tier"`
+			}
+			if json.Unmarshal(e.Payload, &filed) == nil {
+				s.Tier = filed.Tier
 			}
 		}
 		if e.Verb == "contract.specified" {
@@ -522,4 +551,87 @@ func fenceCited(payload []byte) (string, bool) {
 		return strings.TrimSpace(string(raw)), true
 	}
 	return s, true
+}
+
+// The plan.* vocabulary (the charter catalog's only two plan verbs;
+// plans/os-16c1d142.md): proposals and merge observations are facts
+// the fold and the submission gate consult.
+const (
+	PlanProposedVerb = "plan.proposed"
+	PlanApprovedVerb = "plan.approved"
+	// TrivialTier is the one distinguished tier value: the charter's
+	// own term for the tier whose contracts submit without a plan.
+	TrivialTier = "trivial"
+)
+
+// planAnchor extracts a payload's plan anchor.
+func planAnchor(payload []byte) (string, bool) {
+	var m struct {
+		Plan string `json:"plan"`
+	}
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return "", false
+	}
+	return m.Plan, m.Plan != ""
+}
+
+// PlanRequiredError is the plan-gate refusal (exit 16 plan_required):
+// claiming an unplanned contract authorizes planning only, so a
+// submission above the trivial tier needs an approved plan and must
+// cite the plan anchor it implements. Missing names which half.
+type PlanRequiredError struct {
+	Subject string
+	Tier    string
+	Missing string
+}
+
+func (e *PlanRequiredError) Error() string {
+	return fmt.Sprintf("submission on %s (tier %q) refused: %s — above the trivial tier, claiming an unplanned contract authorizes planning only; merge the plan PR (observed as plan.approved) and cite its anchor (next/spec/plans.md)", e.Subject, e.Tier, e.Missing)
+}
+
+// CheckPlanGate enforces the submission gate: above the trivial tier,
+// the subject carries an admitted plan.approved and the submission
+// payload cites the plan anchor it implements. The ancestry binding
+// (the implementation actually built on the approved plan) is
+// Phase 6's receipt computation, the named closing item.
+func (f *Fold) CheckPlanGate(subject, tier string, payload []byte) error {
+	if tier == TrivialTier {
+		return nil
+	}
+	if _, ok := f.PlanApproved(subject); !ok {
+		return &PlanRequiredError{Subject: subject, Tier: tier, Missing: "no plan.approved on the subject"}
+	}
+	if _, ok := planAnchor(payload); !ok {
+		return &PlanRequiredError{Subject: subject, Tier: tier, Missing: "the submission must cite the plan anchor it implements ({\"plan\": \"<path @ commit>\"})"}
+	}
+	return nil
+}
+
+// CheckPlanEventShape enforces payload presence for the plan.* verbs:
+// a proposal names the plan artifact anchor; an approval names the
+// plan anchor and the merged PR (both combined anchors, the
+// external-fact observation posture).
+func CheckPlanEventShape(verb, subject string, payload []byte) error {
+	switch verb {
+	case PlanProposedVerb:
+		if _, ok := planAnchor(payload); !ok {
+			return &IncompleteError{Verb: verb, Subject: subject, Missing: []string{"plan"}}
+		}
+	case PlanApprovedVerb:
+		var m struct {
+			Plan string `json:"plan"`
+			PR   string `json:"pr"`
+		}
+		if err := json.Unmarshal(payload, &m); err != nil || m.Plan == "" || m.PR == "" {
+			var missing []string
+			if m.Plan == "" {
+				missing = append(missing, "plan")
+			}
+			if m.PR == "" {
+				missing = append(missing, "pr")
+			}
+			return &IncompleteError{Verb: verb, Subject: subject, Missing: missing}
+		}
+	}
+	return nil
 }

@@ -94,6 +94,8 @@ ending standing is deferred until the catalog grows a verb for it.
 | `claim.parked` | `claim`, `operator` |
 | `submission.made` | `claim`, `operator` |
 | `contract.cancelled` | `operator` (until a real need appears) |
+| `plan.proposed` | `claim`, `operator` (the claim holder plans; the fence matrix applies) |
+| `plan.approved` | `operator` (an external-fact observation, the merge.observed posture) |
 | `merge.observed` | `operator` (Phase 6 adds the observer lane) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit

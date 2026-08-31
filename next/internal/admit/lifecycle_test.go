@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	filedBody = `{"intent": "fix the thing", "tier": "standard", "budget": "small", "routing": "core"}`
+	filedBody = `{"intent": "fix the thing", "tier": "trivial", "budget": "small", "routing": "core"}`
 	specBody  = `{"acceptance": {"ref": "specs/thing.md @ abc1234", "executable": false}}`
 	// minPacket is the minimal honest packet: empty decisions, refs,
 	// and findings, a zero-length base range (no work pushed).

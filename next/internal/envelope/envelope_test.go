@@ -41,6 +41,7 @@ func TestExitCodesMatchSpecTable(t *testing.T) {
 		"ok":                 {ExitOK, 0},
 		"contention":         {ExitContention, 2},
 		"invalid_transition": {ExitInvalidTransition, 3},
+		"plan_required":      {ExitPlanRequired, 16},
 		"not_found":          {ExitNotFound, 4},
 		"unavailable":        {ExitUnavailable, 5},
 		"fenced_out":         {ExitFenced, 6},

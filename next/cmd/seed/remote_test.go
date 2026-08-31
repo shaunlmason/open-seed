@@ -400,7 +400,7 @@ func TestRemoteAppendLifecycle(t *testing.T) {
 	state := filepath.Join(dir, "state")
 
 	steps := []struct{ verb, subject, payload string }{
-		{"intent.filed", "c-1", `{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`},
+		{"intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "s", "routing": "core"}`},
 		{"contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`},
 		{"claim.taken", "c-1", `{}`},
 		// The claim admitted at position 4 (genesis, upgrade, filed,
@@ -455,7 +455,7 @@ func TestRemoteClaimFencingCLI(t *testing.T) {
 		return runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
 			"--key", priv, "--verb", verb, "--subject", subject, "--payload", payload)
 	}
-	if _, code := appendCLI("intent.filed", "c-1", `{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`); code != 0 {
+	if _, code := appendCLI("intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "s", "routing": "core"}`); code != 0 {
 		t.Fatal("filing failed")
 	}
 	if _, code := appendCLI("contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`); code != 0 {

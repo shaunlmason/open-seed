@@ -32,6 +32,7 @@ const (
 	ExitPostureInvalid    = 13
 	ExitOutOfGrant        = 14
 	ExitStale             = 15
+	ExitPlanRequired      = 16
 	ExitUsage             = 64
 	ExitUnreadable        = 66
 )
