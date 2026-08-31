@@ -558,3 +558,4 @@
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-2ff8dbf1","ts":"2026-08-31T03:51:35Z","verb":"close"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 5 exit — frontier update (progress.md)"},"task":"os-6e37b10e","ts":"2026-08-31T03:51:59Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 6.1 — submission.made, verifier workspace, receipt computation, verdict.rendered (L1)"},"task":"os-f6d2c267","ts":"2026-08-31T03:52:09Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-6e37b10e","ts":"2026-08-31T03:52:43Z","verb":"promote"}
