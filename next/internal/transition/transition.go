@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -365,6 +366,37 @@ type SubjectState struct {
 	// the L1 independence set includes (plans/os-f6d2c267.md). Set
 	// each time a submission applies; the verdict rule consults it.
 	Submission *SubmissionFact
+	// Verdict is the latest admitted verdict.rendered on the subject
+	// (pass or fail: 6.4's lockout will consult it); Requested the
+	// latest merge.requested and the verdict position it cited; Merged
+	// the admitted merge.observed — singular by construction, since
+	// the first valid observation lands on terminal done
+	// (plans/os-6cdc15be.md).
+	Verdict   *VerdictFact
+	Requested *RequestFact
+	Merged    *MergeFact
+}
+
+// VerdictFact is the fold's record of the latest rendered verdict.
+type VerdictFact struct {
+	Pos     int
+	Verdict string
+	Receipt string
+	Signer  string
+}
+
+// RequestFact is the latest merge.requested and its cited verdict
+// position.
+type RequestFact struct {
+	Pos          int
+	CitedVerdict int
+}
+
+// MergeFact is the admitted merge.observed: the chain position and
+// the merged commit the observer recorded.
+type MergeFact struct {
+	Pos int
+	SHA string
 }
 
 // SubmissionFact binds a verdict to the submission it judges
@@ -448,6 +480,34 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 			continue
 		}
+		if e.Verb == VerdictRenderedVerb {
+			// The chain facts activate at seed/1 with the rest of the
+			// pipeline; a fact on a subject no lifecycle event created
+			// binds nothing.
+			if s, ok := f.states[e.Subject]; ok {
+				var v struct {
+					Verdict string `json:"verdict"`
+					Receipt string `json:"receipt"`
+				}
+				if json.Unmarshal(e.Payload, &v) == nil && v.Verdict != "" {
+					s.Verdict = &VerdictFact{Pos: pos, Verdict: v.Verdict, Receipt: v.Receipt, Signer: e.Actor}
+				}
+			}
+			continue
+		}
+		if e.Verb == MergeRequestedVerb {
+			if s, ok := f.states[e.Subject]; ok {
+				var r struct {
+					Verdict string `json:"verdict"`
+				}
+				if json.Unmarshal(e.Payload, &r) == nil {
+					if cited, err := strconv.Atoi(strings.TrimSpace(r.Verdict)); err == nil {
+						s.Requested = &RequestFact{Pos: pos, CitedVerdict: cited}
+					}
+				}
+			}
+			continue
+		}
 		if !t.IsLifecycleVerb(e.Verb) {
 			continue
 		}
@@ -515,6 +575,24 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		s.State, s.Since = to, pos
 		if e.Verb == "submission.made" {
 			s.Submission = &SubmissionFact{Pos: pos, Signer: e.Actor}
+		}
+		if e.Verb == MergeObservedVerb {
+			// Applied transitions only: a raw-pushed second observation
+			// is an anomaly the loop above already skipped, so the fact
+			// stays singular (plans/os-6cdc15be.md). An applied
+			// observation with skipped chain links (no pass verdict, or
+			// no request citing it) is tolerated like a packetless exit:
+			// counted visibly, never silently, and reconciliation is
+			// what surfaces it.
+			var m struct {
+				Merged string `json:"merged"`
+			}
+			_ = json.Unmarshal(e.Payload, &m)
+			s.Merged = &MergeFact{Pos: pos, SHA: strings.TrimSpace(m.Merged)}
+			if s.Verdict == nil || s.Verdict.Verdict != "pass" ||
+				s.Requested == nil || s.Requested.CitedVerdict != s.Verdict.Pos {
+				s.Anomalies++
+			}
 		}
 		if t.exclusive[e.Verb] {
 			s.Claim = &Claim{Holder: e.Actor, Fence: pos}
@@ -634,6 +712,30 @@ const (
 // review subjects under L1 independence, changing no state — done
 // still arrives only through merge.observed.
 const VerdictRenderedVerb = "verdict.rendered"
+
+// The reconciliation chain's remaining verbs (plans/os-6cdc15be.md;
+// next/spec/reconciliation.md): merge.requested is a fact citing the
+// pass verdict; merge.observed is the table's one transition to done,
+// deepened to the observer's forge fact.
+const (
+	MergeRequestedVerb = "merge.requested"
+	MergeObservedVerb  = "merge.observed"
+)
+
+// ChainError refuses a reconciliation-chain event whose links are
+// missing or mismatched (next/spec/reconciliation.md): done is
+// reachable only through verdict.rendered(pass), merge.requested, and
+// merge.observed, in order. It rides the established shape-refusal
+// exit mapping.
+type ChainError struct {
+	Subject string
+	Verb    string
+	Reason  string
+}
+
+func (e *ChainError) Error() string {
+	return fmt.Sprintf("%s on %s refused: %s (next/spec/reconciliation.md)", e.Verb, e.Subject, e.Reason)
+}
 
 const (
 	MilestoneVerb     = "progress.milestone"

@@ -271,7 +271,9 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   verdict.rendered at L1 — os-f6d2c267 — plan PR #133 (merged,
   amended per review: sandbox runner profile with declared
   capability, immutable head binding, transcript-derived pass
-  rule) — **this task PR**: internal/verdict (origin-stripped clone
+  rule) — **done** (merged #135; card closed; the review round
+  landed copied clone objects, the post-review check, and
+  stored-evidence verification in-PR): internal/verdict (origin-stripped clone
   workspaces, the exec runner profile named in every receipt, JCS
   receipts with full immutable SHAs and plan-at-merge-base),
   internal/artifact, the verdict admission rule (review-only,
@@ -281,7 +283,19 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
   (exit 20) and recompute-and-mismatch (exit 21), plan.Commands,
   spec/verdicts.md
 - 6.2 reconciliation chain (merge.requested, merge.observed, done) +
-  divergence drills — os-6cdc15be — backlog
+  divergence drills — os-6cdc15be — plan PR #136 (merged, amended
+  per review: target-ref observation replaces the unreachable
+  two-sha signal; honest ancestry cases with attested_divergence as
+  a surfaced state) — **this task PR**: merge.requested piped
+  (pass-verdict citation, review-only, claim lane), merge.observed
+  deepened to the observer's forge fact behind the full chain rule
+  with the observer capability lane, fold chain facts, the
+  internal/reconcile classifier (merge_without_verdict,
+  chain_skipped, neutral unreconciled), contracts v6 / report v3
+  reconciliation section / cache generation 5, and seed reconcile
+  with the evidence-grade checks (attested_divergence,
+  target_rewritten, evidence_missing) and the induced-divergence
+  drills, spec/reconciliation.md
 - 6.3 sealed checks (salted commitment, age-encrypted body, rotation
   re-encryption, capability audit) — os-3128535a — backlog
 - 6.4 red-verdict lockout + operator override verb — os-d2497eb7 —
@@ -294,10 +308,11 @@ Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
 three post-merge follow-ups (#127, #128, #129), and the engine
 v0.15.1 receipt-runner pin (#130) are merged, and the Phase 5 exit
 record above is card os-6e37b10e's task PR (#134, merged; card
-closed). **This task PR implements 6.1** (os-f6d2c267, the verdict
-pipeline's first half, against merged plan #133). **Next action:
-land this PR; then 6.2's plan** (os-6cdc15be, the reconciliation
-chain). The Phase 6 exit subset is charter
+closed). 6.1 is merged (#135; card closed). **This task PR
+implements 6.2** (os-6cdc15be, the reconciliation chain and
+divergence detection, against merged plan #136). **Next action: land
+this PR; then 6.3's plan** (os-3128535a, sealed checks). The Phase 6
+exit subset is charter
 III.G minus L2/L3 levels and rubric calibration (Phase 10/11): the
 reconciliation drills, the receipt recompute-and-mismatch test, and
 the sealed-check audit.

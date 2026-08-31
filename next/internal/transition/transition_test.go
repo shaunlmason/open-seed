@@ -200,11 +200,13 @@ func TestCheckAndFold(t *testing.T) {
 	}
 	fold := tab.FoldRecords(records)
 	a, ok := fold.State("c-A")
-	// Five visible anomalies: the two table-illegal events, the raw
-	// specification's empty acceptance, and the raw submission's
-	// missing fence citation and missing packet (the exits still
-	// apply — skipping them would wedge the subject).
-	if !ok || a.State != "done" || a.Anomalies != 5 || a.Since != 7 {
+	// Six visible anomalies: the two table-illegal events, the raw
+	// specification's empty acceptance, the raw submission's missing
+	// fence citation and missing packet (the exits still apply —
+	// skipping them would wedge the subject), and the applied
+	// observation's skipped reconciliation chain
+	// (plans/os-6cdc15be.md).
+	if !ok || a.State != "done" || a.Anomalies != 6 || a.Since != 7 {
 		t.Fatalf("c-A fold wrong: %+v ok=%v", a, ok)
 	}
 	if a.Claim != nil {

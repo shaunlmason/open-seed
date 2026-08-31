@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/classify"
@@ -507,6 +508,94 @@ func Default() []Rule {
 			}
 			return nil
 		}},
+		{Name: "chain", Check: func(c *Context, rec *event.Record) error {
+			// The reconciliation chain (plans/os-6cdc15be.md;
+			// next/spec/reconciliation.md): done is reachable only
+			// through verdict.rendered(pass), merge.requested, and
+			// merge.observed, in order. merge.requested is a fact
+			// admitted only in review citing the pass verdict;
+			// merge.observed's state legality stays the table's (the
+			// lifecycle rule), and this rule holds its chain links and
+			// forge-fact shape.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			verb := rec.Event.Verb
+			switch verb {
+			case transition.MergeRequestedVerb:
+				subject := rec.Event.Subject
+				s, ok := c.Lifecycle.State(subject)
+				if !ok {
+					return &transition.InvalidTransitionError{Subject: subject, Verb: verb}
+				}
+				if s.State != "review" {
+					return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
+				}
+				var p struct {
+					Verdict string `json:"verdict"`
+				}
+				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+				dec.DisallowUnknownFields()
+				if err := dec.Decode(&p); err != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {verdict}: %v", err)}
+				}
+				if strings.TrimSpace(p.Verdict) == "" {
+					return &transition.IncompleteError{Verb: verb, Subject: subject, Missing: []string{"verdict"}}
+				}
+				cited, err := strconv.Atoi(strings.TrimSpace(p.Verdict))
+				if err != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("verdict %q is not a chain position", p.Verdict)}
+				}
+				if s.Verdict == nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "no verdict has been rendered on this subject — the chain starts at verdict.rendered(pass)"}
+				}
+				if cited != s.Verdict.Pos {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("cites position %d; the admitted verdict on this subject is at position %d", cited, s.Verdict.Pos)}
+				}
+				if s.Verdict.Verdict != "pass" {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the verdict at position %d is %q — a red verdict is unmergeable", s.Verdict.Pos, s.Verdict.Verdict)}
+				}
+				return nil
+			case transition.MergeObservedVerb:
+				subject := rec.Event.Subject
+				s, ok := c.Lifecycle.State(subject)
+				if !ok || s.State != "review" {
+					// State legality is the table's; the lifecycle rule
+					// refuses with the proper positioned message.
+					return nil
+				}
+				var p struct {
+					Merged string `json:"merged"`
+					PR     string `json:"pr"`
+				}
+				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+				dec.DisallowUnknownFields()
+				if err := dec.Decode(&p); err != nil {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {merged, pr}: %v", err)}
+				}
+				var missing []string
+				if strings.TrimSpace(p.Merged) == "" {
+					missing = append(missing, "merged")
+				}
+				if strings.TrimSpace(p.PR) == "" {
+					missing = append(missing, "pr")
+				}
+				if len(missing) > 0 {
+					return &transition.IncompleteError{Verb: verb, Subject: subject, Missing: missing}
+				}
+				if !mergedSHARE.MatchString(strings.TrimSpace(p.Merged)) {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("merged %q is not a full lowercase-hex commit — the observer records which commit the forge merged", p.Merged)}
+				}
+				if s.Verdict == nil || s.Verdict.Verdict != "pass" {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "no pass verdict on this subject — done is reachable only through the full chain"}
+				}
+				if s.Requested == nil || s.Requested.CitedVerdict != s.Verdict.Pos {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("no merge.requested cites the pass verdict at position %d — each chain step is its own event", s.Verdict.Pos)}
+				}
+				return nil
+			}
+			return nil
+		}},
 		{Name: "lifecycle", Check: func(c *Context, rec *event.Record) error {
 			// Lifecycle legality is admission policy at seed/1, the
 			// halt/classification/grant precedent (plans/os-d69a6c91.md):
@@ -572,6 +661,10 @@ func Validate(opts ...Option) func(*ledger.Store, *event.Record) error {
 
 // receiptDigestRE is the verdict payload's receipt-digest wire form.
 var receiptDigestRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// mergedSHARE is merge.observed's forge-fact wire form: a full
+// lowercase-hex commit (40-64 hex, the classify anchor convention).
+var mergedSHARE = regexp.MustCompile(`^[0-9a-f]{40,64}$`)
 
 // fenceCitation extracts the payload's fence field: the string form
 // of the cited claim position, absent when the payload carries none.

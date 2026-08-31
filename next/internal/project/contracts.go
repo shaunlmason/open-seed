@@ -43,6 +43,9 @@ type ContractEntry struct {
 	Anomalies     int                 `json:"anomalies"`
 	Claim         *ContractClaim      `json:"claim,omitempty"`
 	Acceptance    *ContractAcceptance `json:"acceptance,omitempty"`
+	Verdict       *ContractVerdict    `json:"verdict,omitempty"`
+	Requested     *string             `json:"requested,omitempty"`
+	Merged        *ContractMerge      `json:"merged,omitempty"`
 	FirstPosition int                 `json:"first_position"`
 	LastPosition  int                 `json:"last_position"`
 	Events        []ContractEvent     `json:"events"`
@@ -56,6 +59,24 @@ type ContractAcceptance struct {
 	Ref        string `json:"ref"`
 	Executable bool   `json:"executable"`
 	Gated      bool   `json:"gated"`
+}
+
+// ContractVerdict is the fold's latest rendered verdict on a subject
+// (plans/os-6cdc15be.md): the chain position (string per the envelope
+// position convention), the pass/fail literal, and the cited receipt
+// digest, so the reconciliation chain is independently checkable
+// against the published view.
+type ContractVerdict struct {
+	Position string `json:"position"`
+	Verdict  string `json:"verdict"`
+	Receipt  string `json:"receipt"`
+}
+
+// ContractMerge is the admitted merge.observed: its chain position
+// and the merged commit the observer recorded.
+type ContractMerge struct {
+	Position string `json:"position"`
+	SHA      string `json:"sha"`
 }
 
 // ContractClaim is the active claim while a subject is in_progress:
@@ -72,11 +93,12 @@ type ContractClaim struct {
 // Contracts returns the contract-detail projection. Version "2" added
 // the folded state and anomaly count; Version "3" the claim object;
 // Version "4" the acceptance field; Version "5" the fold's seed/1
-// activation boundary (pre-activation records inert) — each
-// republishing under a new
-// build id via the version-in-identity machinery.
+// activation boundary (pre-activation records inert); Version "6" the
+// reconciliation-chain facts (verdict, requested, merged;
+// plans/os-6cdc15be.md) — each republishing under a new build id via
+// the version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "5", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "6", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -130,6 +152,16 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 			}
 			if s.Acceptance != nil {
 				e.Acceptance = &ContractAcceptance{Ref: s.Acceptance.Ref, Executable: s.Acceptance.Executable, Gated: s.Acceptance.Gated}
+			}
+			if s.Verdict != nil {
+				e.Verdict = &ContractVerdict{Position: fmt.Sprintf("%d", s.Verdict.Pos), Verdict: s.Verdict.Verdict, Receipt: s.Verdict.Receipt}
+			}
+			if s.Requested != nil {
+				pos := fmt.Sprintf("%d", s.Requested.Pos)
+				e.Requested = &pos
+			}
+			if s.Merged != nil {
+				e.Merged = &ContractMerge{Position: fmt.Sprintf("%d", s.Merged.Pos), SHA: s.Merged.SHA}
 			}
 		}
 		out = append(out, *e)

@@ -12,6 +12,7 @@ package admit
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -28,7 +29,7 @@ const (
 )
 
 func TestLifecycleHappyPathAdmits(t *testing.T) {
-	ctx, signer, worker, _, step := grantFixture(t)
+	ctx, signer, worker, verifier, step := grantFixture(t)
 	ctx = step(signer, version.Seed1, keyring.VerbGranted, fpOf(t, worker), `{"capability": "`+keyring.CapClaim+`"}`)
 
 	// filed -> specified -> taken -> made -> merge.observed, each
@@ -50,10 +51,28 @@ func TestLifecycleHappyPathAdmits(t *testing.T) {
 		t.Fatalf("submission must admit: %v", err)
 	}
 	ctx = step(worker, version.Seed1, "submission.made", "c-1", made)
-	if err := Check(ctx, draftV(t, signer, version.Seed1, "merge.observed", "c-1", `{"pr": "1"}`, ctx.Tip)); err != nil {
+	// Done is reachable only through the full reconciliation chain
+	// (plans/os-6cdc15be.md): a disjoint verdict-granted key (the
+	// fixture's third enrolled key, which never touched c-1) renders
+	// pass, the work lane requests the merge citing it, and the
+	// observation records the merged commit.
+	ctx = step(signer, version.Seed1, keyring.VerbGranted, fpOf(t, verifier), `{"capability": "`+keyring.CapVerdict+`"}`)
+	verdictPos := ctx.Count
+	verdictBody := `{"verdict": "pass", "receipt": "` + strings.Repeat("ab", 32) + `", "submission": "` + fmt.Sprintf("%d", subPosOf(t, ctx, "c-1")) + `", "independence": "L1"}`
+	if err := Check(ctx, draftV(t, verifier, version.Seed1, "verdict.rendered", "c-1", verdictBody, ctx.Tip)); err != nil {
+		t.Fatalf("the pass verdict must admit: %v", err)
+	}
+	ctx = step(verifier, version.Seed1, "verdict.rendered", "c-1", verdictBody)
+	requested := fmt.Sprintf(`{"verdict": "%d"}`, verdictPos)
+	if err := Check(ctx, draftV(t, worker, version.Seed1, "merge.requested", "c-1", requested, ctx.Tip)); err != nil {
+		t.Fatalf("the merge request must admit: %v", err)
+	}
+	ctx = step(worker, version.Seed1, "merge.requested", "c-1", requested)
+	observed := `{"merged": "` + strings.Repeat("cd", 20) + `", "pr": "1"}`
+	if err := Check(ctx, draftV(t, signer, version.Seed1, "merge.observed", "c-1", observed, ctx.Tip)); err != nil {
 		t.Fatalf("the done observation must admit: %v", err)
 	}
-	ctx = step(signer, version.Seed1, "merge.observed", "c-1", `{"pr": "1"}`)
+	ctx = step(signer, version.Seed1, "merge.observed", "c-1", observed)
 
 	// done is terminal: nothing moves the subject again.
 	err := Check(ctx, draftV(t, signer, version.Seed1, "contract.cancelled", "c-1", `{}`, ctx.Tip))
@@ -279,4 +298,14 @@ func fenced(t *testing.T, ctx *Context, subject string) string {
 func fencedExit(t *testing.T, ctx *Context, subject string) string {
 	t.Helper()
 	return `{"fence": "` + activeFence(t, ctx, subject) + `", "packet": ` + minPacket + `}`
+}
+
+// subPosOf reads the fold's bound submission position for a subject.
+func subPosOf(t *testing.T, ctx *Context, subject string) int {
+	t.Helper()
+	s, ok := ctx.Lifecycle.State(subject)
+	if !ok || s.Submission == nil {
+		t.Fatalf("no bound submission on %s", subject)
+	}
+	return s.Submission.Pos
 }

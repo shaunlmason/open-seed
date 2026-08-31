@@ -55,6 +55,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runPlan(args[1:], os.Stdin, stdout, stderr)
 	case "verdict":
 		return runVerdict(args[1:], stdout, stderr)
+	case "reconcile":
+		return runReconcile(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
 	default:

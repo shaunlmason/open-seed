@@ -70,8 +70,10 @@ without one. **Done is reached only through
 chain (`verdict.rendered(pass) → merge.requested → merge.observed`);
 `verdict.rendered` is piped as of 6.1 — a fact admitted only on
 `review` subjects under L1 independence ([`verdicts.md`](verdicts.md)),
-changing no state — while `merge.requested` stays a free stream event
-until 6.2 pipes the rest of the chain, and a failed verdict's return
+changing no state — and 6.2 pipes the rest: `merge.requested` admits
+only in `review` citing the pass verdict, and `merge.observed` admits
+only behind the full chain rule, recording the merged commit
+([`reconciliation.md`](reconciliation.md)). A failed verdict's return
 path out of `review` is Phase 6's **named extension point**, not
 guessed here (`review` reaches a terminal state today via
 `contract.cancelled`).
@@ -179,8 +181,8 @@ silence. Verbs outside the table stay facts, not transitions:
 `progress.milestone` and `wedge.declared` admit under the
 summarization boundary (`observations.md`), `verdict.rendered` admits
 only on `review` subjects under L1 independence (`verdicts.md`), and
-the not-yet-piped `merge.requested` admits on subjects in every state
-and appears in contract streams untouched.
+`merge.requested` admits only on `review` subjects citing the pass
+verdict (`reconciliation.md`) — the §8 chain is fully piped.
 
 ## Projections
 
