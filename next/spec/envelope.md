@@ -32,10 +32,26 @@ Every verb response is exactly one JSON line:
   It is `null` until the ledger lands (Phase 1); from then on every response
   stamps it.
 - `affordances` lists the verbs currently legal **for this actor on this
-  subject**, computed from the same rule set admission enforces (one rule
-  set, two consumers; the property test lands in Phase 8). Subjectless verbs
-  (e.g. `version`) carry an empty list.
-- `budget` is the reservation block (`null` until budgets land, Phase 7).
+  subject**, computed by drafting one signed probe per catalog verb and
+  running the same rule set admission enforces (one rule set, two
+  consumers, zero exceptions; `admit.Affordances`, landed in Phase 8.1
+  with its lifecycle-walk and catalog-completeness drills; item 2's
+  regression-class harness generalizes them). Every append-path response
+  stamps the list for its signing actor and subject at the stamped
+  position, refusals included: the refusal plus what IS legal is the
+  envelope's point, and a computation failure degrades to the empty
+  list, never to a failed verb. Responses lacking a ledger, signing
+  key, or subject (e.g. `version`, `doctor`, keyless read surfaces:
+  probes must be signed, so a fingerprint alone cannot compute) carry
+  the empty list. One named carve-out: `actor.enrolled` is listed only
+  where the prober could supply the subject's public key, which no
+  fingerprint-holder can derive — the enrollment surface knows its key
+  out of band.
+- `budget` is the reservation block, derived from the shared budget view
+  (`admit.BudgetBlock`): `reserved` sums the open valid reservations,
+  `remaining` is the derived remaining, both decimal strings; `null` on
+  subjects carrying no budget facts. `seed budget status` accepts
+  `--key` to stamp affordances beside the block it already reports.
 - `exit` duplicates the process exit code so machine callers can branch on
   the envelope alone.
 

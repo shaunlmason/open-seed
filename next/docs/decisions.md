@@ -754,6 +754,38 @@ here. Newest last.
   v12 (interrupts, omitempty), report v9 (republish only), cache
   generation 11 (interrupts table).
 
+## 2026-08-31 — 8.1 affordance envelope (os-f5551001, plan #158)
+
+- Affordances are computed by probing the real rule set: one signed
+  draft per catalog verb through the same admit.Check admission
+  enforces — one rule set, two consumers, zero exceptions (the
+  signature rule included: probes are signed with the caller's key,
+  so the API takes the private key, and a fingerprint-only surface
+  cannot compute). The probe-payload table is synthesis data, never
+  legality logic; templates fill from the live context (active
+  fence, open reservation, bound submission, standing verdict) with
+  placeholder positions where anchors are absent, so illegality is
+  always the rules' judgment. Fence-optional verbs cite the active
+  fence exactly when one stands, matching the fence matrix for
+  holder and non-holder signers alike.
+- No under-listing: every catalog verb has a synthesizer, pinned by
+  a completeness test against the spec verb table, and the
+  lifecycle walk asserts each verb listed somewhere legal. The one
+  named carve-out is actor.enrolled, whose valid payload requires
+  the queried subject's public key: fingerprints are hashes, no
+  prober can derive it, and the enrollment surface knows its key
+  out of band (spec sentence records it).
+- Every append-path response stamps affordances and the budget
+  block, success and refusal alike, via one shared helper; stamping
+  degrades to the empty list rather than ever failing the verb.
+  budget status gains --key (not --actor: probes must be signed).
+  The budget block derives from the shared BudgetViewAt: reserved =
+  open valid reservation sum, remaining = derived remaining.
+- The walk corrected two of the plan's legality guesses against the
+  actual rules (halt.lifted is admissible with no halt standing;
+  contract.blocked's one source state is ready): the affordance
+  computation reports the rules, so the drills assert the rules.
+
 ## 2026-08-31 — ledger writeHead race fix (os-c6fb95ee, plan #159)
 
 - The store's HEAD rewrite used one shared HEAD.tmp path from two

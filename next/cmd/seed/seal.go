@@ -247,18 +247,18 @@ func runSealCreate(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot sign the commitment: %v", err)), stdout, stderr)
 	}
 	if err := admit.Check(ctx, rec); err != nil {
-		return render(stampTip(remoteFailureEnvelope(err), ctx.Count), stdout, stderr)
+		return render(stampTip(stampAffordances(remoteFailureEnvelope(err), *dir, signer, *subject), ctx.Count), stdout, stderr)
 	}
 	pos, err := store.Append(rec, ctx.Resolve)
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		return render(stampAffordances(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), *dir, signer, *subject), stdout, stderr)
 	}
-	return render(stampTip(envelope.OK(map[string]any{
+	return render(stampTip(stampAffordances(envelope.OK(map[string]any{
 		"subject":    *subject,
 		"commitment": commitment,
 		"checks":     fmt.Sprintf("%d", len(checks)),
 		"recipients": fmt.Sprintf("%d", len(recipients)),
-	}), pos+1), stdout, stderr)
+	}), *dir, signer, *subject), pos+1), stdout, stderr)
 }
 
 // terminalState reports a folded state no rotation or audit touches:

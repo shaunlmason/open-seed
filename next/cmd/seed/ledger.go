@@ -246,23 +246,24 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 		if err := ring.Preview(rec); err != nil {
 			env := envelope.Fail(envelope.ExitChainInvalid, "chain_invalid",
 				fmt.Sprintf("actor event would fail verification: %v", err))
-			return render(stampTip(env, rep.Count), stdout, stderr)
+			return render(stampTip(stampAffordances(env, *dir, signer, *subject), rep.Count), stdout, stderr)
 		}
 	}
 	pos, err := store.Append(rec, appendResolve)
 	if err != nil {
 		if errors.Is(err, ledger.ErrUnknownActor) {
-			return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid",
-				fmt.Sprintf("signer is not resolvable at the tip (genesis root, or keyring standing from %s): %v", version.Seed1, err)), stdout, stderr)
+			env := envelope.Fail(envelope.ExitChainInvalid, "chain_invalid",
+				fmt.Sprintf("signer is not resolvable at the tip (genesis root, or keyring standing from %s): %v", version.Seed1, err))
+			return render(stampAffordances(env, *dir, signer, *subject), stdout, stderr)
 		}
-		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		return render(stampAffordances(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), *dir, signer, *subject), stdout, stderr)
 	}
 	hash, err := rec.Event.Hash()
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
 	env := envelope.OK(map[string]any{"appended": hash, "verb": *verb})
-	return render(stampTip(env, pos+1), stdout, stderr)
+	return render(stampTip(stampAffordances(env, *dir, signer, *subject), pos+1), stdout, stderr)
 }
 
 func runLedgerShow(args []string, stdout, stderr io.Writer) int {
