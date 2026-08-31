@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "task": "os-cecac5de",
+  "merge_base": "2a7d1b3874af66842756a97a39f68e7912a9f668",
+  "head": "b9eb76e95b575b62fd7ef9049c46666a13de7449",
+  "plan_path": "plans/os-cecac5de.md",
+  "plan_sha256": "95402c42c4333c8f81e847952999d02070d72f1ec5fd55f00d49f3e8c932b308",
+  "diff_files": [
+    "next/cmd/seed/budget.go",
+    "next/cmd/seed/budget_cli_test.go",
+    "next/cmd/seed/main.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/budget_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/project/budget_views_test.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/cache_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/project/report.go",
+    "next/internal/transition/budget_test.go",
+    "next/internal/transition/transition.go",
+    "next/spec/actors.md",
+    "next/spec/budgets.md",
+    "next/spec/lifecycle.md",
+    "next/spec/projections.md"
+  ],
+  "diff_sha256": "48469550f1f8ef22b4dda13337ae386fd57eaca86c7601cc7c5acba9d8f46814",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -run 'Budget|Reservation' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
