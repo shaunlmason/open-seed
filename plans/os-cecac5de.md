@@ -55,16 +55,29 @@ reservation machinery they consume.
   revalidate it per D4. Concurrent over-spend is structurally
   impossible because the second draft admits against the tip that
   already carries the first — the claim-race shape, drilled.
-- **D4 — the laundering shape, on both sides.** The tolerant fold
-  records any well-shaped budget fact (raw pushes included). The
-  capacity computation and the settle/release citation check count
-  only reservations whose signer held {claim, operator} standing AT
-  the reservation's position and, for claim-lane signers, was the
-  claim holder or a prior claimant of the subject there — so a
-  raw-pushed foreign reserve can never consume capacity
-  (denial-of-service by raw push) and a foreign settle can never
-  close someone's reservation. Position-accurate, the
-  VerifySeals/offerAuthorized replay pattern.
+- **D4 — the laundering shape, on both sides, with derivation not
+  mutation.** The tolerant fold records any well-shaped budget fact
+  (raw pushes included) as an independent fact: reservations and
+  close attempts, in chain order, and a close attempt NEVER mutates
+  the reservation it cites. Effective state is derived at every
+  consuming surface (the admission computation, the citation check,
+  `seed budget status`), position-accurately per the
+  VerifySeals/offerAuthorized replay pattern: a reservation is
+  **valid** only when its signer was the operator lane or THE
+  active claim holder at that position — prior claimants are
+  excluded, since a released worker reserving under the next
+  holder's window would consume a budget it no longer works under —
+  and a reservation is **effectively closed** only by its first
+  **valid close**: one whose signer is that reservation's own
+  reserving signer or the operator lane at the close's position.
+  Consequences, all drilled: a raw foreign reserve consumes no
+  capacity (no denial-of-service by raw push); a raw foreign
+  release frees no capacity (no over-spend by laundered close); a
+  raw foreign settle neither closes the reservation nor locks the
+  owner out — the owner's later settle is still the effective
+  closure; and a released prior claimant cannot reserve against the
+  active holder's window even while citing the active fence the
+  fence rule requires of it.
 - **D5 — spending verbs are a table, empty in v0.** The charter's
   "spending verbs require an admitted budget.reserve" lands as a
   data table of spending verbs in the budgets spec (the
@@ -75,9 +88,13 @@ reservation machinery they consume.
   its first customer.
 - **D6 — fold, projections, CLI.** The birth fold keeps the filed
   `budget` class beside Tier; SubjectState gains
-  `Reservations []ReservationFact{Pos, Signer, Amount, Actuals,
-  Closed, ClosedBy}` (settle/release close in fold order; facts
-  persist, nothing erased). Contracts view "10" serializes a
+  `Reservations []ReservationFact{Pos, Signer, Amount}` and
+  `BudgetCloses []CloseFact{Pos, Signer, Reservation, Kind,
+  Actuals}` as independent fact lists (facts persist, nothing
+  erased, nothing mutated); shared derivation helpers compute
+  validity, effective closure, and remaining per D4 for the admit
+  rule, the CLI, and the projections alike. Contracts view "10"
+  serializes a
   `budget` object (class, capacity, remaining) plus reservations,
   all omitempty so budget-inactive chains keep byte-identical "9"
   bodies; report "7" (republish only); cache generation 9 adds a
@@ -103,12 +120,13 @@ reservation machinery they consume.
    operator}).
 2. **Keyring.** `AcceptedCapabilities` rows for the three verbs;
    vocabulary and completeness test rows; actors.md pin.
-3. **Fold.** Budget class captured at birth; ReservationFact
-   capture for well-shaped reserve/settle/release in chain order
-   (settle and release mark the cited reservation closed when it
-   exists and is open; malformed payloads fold to nothing; a
-   settle/release citing nothing folds as an anomaly, the
-   raw-override posture).
+3. **Fold.** Budget class captured at birth; ReservationFact and
+   CloseFact capture for well-shaped reserve/settle/release in
+   chain order as independent lists — a close attempt never mutates
+   the reservation it cites (effective closure is D4's derivation);
+   malformed payloads fold to nothing; a settle/release citing a
+   position that is no reservation on the subject folds as an
+   anomaly, the raw-override posture.
 4. **Class table in code.** A small budgets package or transition
    addition holding the class→capacity map and the spending-verb
    set, both mirroring the spec by parsing test (the actors.md
@@ -116,10 +134,14 @@ reservation machinery they consume.
    functions the admit rule and the CLI share.
 5. **Admission.** The `budget` rule: verb-gated on the three verbs
    plus the spending-verb table; strict payload decode; in_progress
-   window; positive integer amounts; the D3 remaining computation
-   with the D4 boundary filter; settle/release citation validation
-   (exists, open, boundary-valid, signer is holder/prior
-   claimant/operator). Check previews it cooperatively.
+   window; positive integer amounts; a reserve additionally requires
+   the drafting signer to be the active claim holder or operator
+   NOW (the fence rule alone would let a prior claimant through);
+   the D3 remaining computation with the D4 validity filter;
+   settle/release citation validation (cites a valid reservation,
+   not yet effectively closed, and the drafting signer is that
+   reservation's owner or operator). Check previews it
+   cooperatively.
 6. **CLI.** `next/cmd/seed/budget.go`: `seed budget status` per D6.
 7. **Drills** (package tests + `budget_cli_test.go`), each naming
    III.H: the **reservation race** — two concurrent reserves of 8
@@ -131,8 +153,12 @@ reservation machinery they consume.
    closes and frees nothing (actuals consume), release frees,
    top-up reserves coexist, overrun settle records actuals above
    reserved and shrinks remaining accordingly; **laundering** — a
-   raw foreign reserve consumes no capacity and a foreign settle
-   cannot close a holder's reservation (both fold, both inert);
+   raw foreign reserve consumes no capacity, a raw foreign release
+   frees none (remaining unchanged, no over-spend opened), a raw
+   foreign settle does not close the reservation and the owner's
+   later settle still admits as the effective closure, and a
+   released prior claimant's reserve refuses while the active
+   holder's admits (all facts fold, all invalid ones inert);
    **spending gate** — an injected spending verb refuses without an
    open reservation and admits with one; **unknown class** — zero
    capacity, reserve refuses; fold and status-surface assertions;
@@ -169,7 +195,9 @@ reservation machinery they consume.
   included) and closes; release closes free; both refuse citations
   of missing, closed, or boundary-invalid reservations.
 - A raw-pushed foreign reserve folds but consumes no capacity; a
-  foreign settle closes nothing; an injected spending verb refuses
+  foreign release frees none; a foreign settle closes nothing and
+  the owner's later settle still admits; a released prior
+  claimant's reserve refuses; an injected spending verb refuses
   without an open reservation and admits with one; an unknown class
   yields zero capacity.
 - `seed budget status` reports class, capacity, open reservations,
