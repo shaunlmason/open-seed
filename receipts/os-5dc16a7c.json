@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-5dc16a7c",
-  "merge_base": "71a0ee9f53e1633a33a9ee9ba8bb01c97d66765a",
-  "head": "0723c700ea74a8ec228704009de7ec2c8d5a1f18",
+  "merge_base": "07f8e70bdc772a3a64d6c464894fe141e88c7ea6",
+  "head": "33b50b2d1acda757751719314f74793dd7eb6b6a",
   "plan_path": "plans/os-5dc16a7c.md",
   "plan_sha256": "91af97ceb52be84c8f1d9ac050ef2308cc0af92c82550c501f17c1b3f26caa75",
   "diff_files": [
@@ -11,7 +11,7 @@
     "next/internal/admit/admit.go",
     "next/internal/admit/fence_test.go"
   ],
-  "diff_sha256": "2e0abd4fef03cca0c17ce91662cdd1fed4b9d550bf2adf36dce96d59be7239f4",
+  "diff_sha256": "64a5ab260bcbf70cd2907ce2aa07c920de33e4982c5064d39401e5e968adf93c",
   "validation": [
     {
       "cmd": "make check-next",
