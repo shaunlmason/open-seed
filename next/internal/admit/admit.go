@@ -763,27 +763,7 @@ func Default() []Rule {
 				return &transition.InvalidTransitionError{Subject: subject, Verb: verb}
 			}
 			startValid := func(st transition.RunStartFact) bool {
-				// The laundering shape (review finding on the task
-				// PR): a folded start counts toward the one-per-fence
-				// rule or satisfies a settle only when its signer held
-				// the run lanes AT its position and its cited
-				// reservation exists and passed the authoring
-				// boundary — a raw start neither blocks the
-				// legitimate supervisor nor launders a settle through.
-				if st.Pos < 0 || st.Pos >= len(c.Records) {
-					return false
-				}
-				ring, _, err := keyring.StateAt(c.Records[:st.Pos])
-				if err != nil || ring == nil ||
-					!ring.HasAnyCapability(st.Signer, keyring.AcceptedCapabilities(transition.RunStartedVerb)) {
-					return false
-				}
-				for _, r := range s.Reservations {
-					if r.Pos == st.Reservation {
-						return ReservationValid(c.Records, c.Table, subject, r)
-					}
-				}
-				return false
+				return RunStartValid(c.Records, c.Table, subject, s, st)
 			}
 			if verb == transition.RunStartedVerb {
 				var p struct {
@@ -1350,6 +1330,37 @@ func BudgetViewAt(records []*event.Record, table *transition.Table, subject stri
 			return BudgetCloseValid(records, c, r)
 		},
 	)
+}
+
+// RunStartValid reports whether a folded run.started passed the
+// admission boundary at its own position (review findings on the
+// task PR: fold presence is never proof of admission): the signer
+// held the run lanes there, the cited fence was the subject's ACTIVE
+// claim fence there, and the cited reservation exists and passed the
+// authoring boundary. The run rule's one-per-fence and
+// carries-a-start checks and the executor's Provision gate all share
+// this one derivation, so a raw start neither blocks the legitimate
+// supervisor, nor launders a settle through, nor provisions an
+// unbudgeted workspace.
+func RunStartValid(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState, st transition.RunStartFact) bool {
+	if st.Pos < 0 || st.Pos >= len(records) {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:st.Pos])
+	if err != nil || ring == nil ||
+		!ring.HasAnyCapability(st.Signer, keyring.AcceptedCapabilities(transition.RunStartedVerb)) {
+		return false
+	}
+	prior, ok := table.StateAt(records[:st.Pos], subject)
+	if !ok || prior.Claim == nil || prior.Claim.Fence != st.Fence {
+		return false
+	}
+	for _, r := range s.Reservations {
+		if r.Pos == st.Reservation {
+			return ReservationValid(records, table, subject, r)
+		}
+	}
+	return false
 }
 
 func fenceCitation(payload []byte) (string, bool) {
