@@ -705,3 +705,4 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-148d3ba1","ts":"2026-08-31T23:08:20Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 8.3 — refusal-rate metric in the report"},"task":"os-edf73d66","ts":"2026-08-31T23:10:24Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-edf73d66","ts":"2026-08-31T23:10:33Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T00:10:36Z"},"task":"os-edf73d66","ts":"2026-08-31T23:10:36Z","verb":"claim"}
