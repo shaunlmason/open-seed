@@ -685,3 +685,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-c6fb95ee","ts":"2026-08-31T21:35:18Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-08-31T22:35:21Z"},"task":"os-c6fb95ee","ts":"2026-08-31T21:35:21Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-c6fb95ee","ts":"2026-08-31T21:36:18Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:158","to":"ready"},"task":"os-f5551001","ts":"2026-08-31T21:37:18Z","verb":"plan-unblock"}
