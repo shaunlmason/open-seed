@@ -10,7 +10,11 @@ claim:
     claimed_at: "2026-08-31T16:31:27Z"
     lease_expires: "2026-08-31T17:42:50Z"
 created_at: "2026-08-31T13:26:28Z"
-updated_at: "2026-08-31T16:42:50Z"
+updated_at: "2026-08-31T16:48:42Z"
 ---
 
 docs/next-build-plan.md Phase 7 item 2: budget.reserve / settle / release; admission decrements reservations; reservation race drill (concurrent over-spend impossible); risk-limit declaration per adapter. Plan-first (plans/<id>.md).
+
+## Evidence ev-8f12781d (pr, seed-next-implementer, 2026-08-31T16:48:42Z)
+
+https://github.com/shaunlmason/open-seed/pull/149
