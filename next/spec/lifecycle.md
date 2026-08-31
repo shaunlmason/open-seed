@@ -195,8 +195,10 @@ only on `review` subjects under L1 independence (`verdicts.md`), and
 verdict (`reconciliation.md`), and `check.sealed` admits only on
 `ready` subjects with no prior claim (`sealed-checks.md`), and
 `merge.overridden` admits only on `review` subjects over a validated
-fail (`reconciliation.md`) — the §8 chain is fully piped and the §7
-commitment window is pinned.
+fail (`reconciliation.md`), and `offer.published` admits only on
+`ready` subjects with an unexpired-at-admission expiry (`offers.md`)
+— the §8 chain is fully piped and the §7 commitment window is
+pinned.
 
 ## Projections
 

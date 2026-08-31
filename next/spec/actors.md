@@ -104,6 +104,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `check.sealed` | `sealer` (the second no-fallback row: operator already stands in the claim and submission lanes, so an operator fallback here would put authoring and implementation authority on one capability and the capability audit could prove nothing, sealed-checks.md) |
 | `contract.returned` | `dispatch`, `operator` (returning a fail-verdicted contract to the queue is queue management; the payload cites the authenticated red verdict, lifecycle.md) |
 | `merge.overridden` | `operator` (the third no-fallback row: the charter names the override its own attributable verb, never a disguised verdict — it admits only over a standing, boundary-validated fail on the current submission, reconciliation.md) |
+| `offer.published` | `supervise`, `operator` (the supervisor lane: an offer invites claims and grants nothing — the claim it invites settles at admission like any claim — so the standard operator fallback stands, offers.md) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

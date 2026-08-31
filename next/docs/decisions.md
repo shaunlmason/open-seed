@@ -622,3 +622,30 @@ here. Newest last.
   all) is deferred to the halt and governance paths. Projections:
   contracts v8 (override explicit-null), report v5, cache
   generation 7.
+- 2026-08-31 — Offers are supervisor facts inviting claims, consumed
+  by the claims they invite (os-c61c3392, plans/os-c61c3392.md;
+  charter II §9, III.H rows 1–2). offer.published admits only on
+  ready subjects from the new supervise capability or its operator
+  fallback (no disjointness: an offer grants nothing — the claim it
+  invites settles at admission like any claim); strict
+  {eligibility{capabilities, tiers}, expires} payload with a
+  deterministic born-dead refusal against the event's own ts, since
+  admission never reads a wall clock. Liveness is fully derived,
+  never stored: ready AND unexpired AND no applied claim.taken after
+  the offer's position (review finding on plan #144: without the
+  consumption term a taken offer resurrects when the subject
+  re-readies inside its expiry window, rescheduling from stale
+  supervisor intent — "claimed or expire" makes re-offering a fresh
+  publication). No offer.expired/withdrawn verbs; no position
+  throttle (publishing is lane-gated, unlike open-lane milestones).
+  The tolerant fold records raw pushes as OfferFacts and seed offer
+  list applies the laundering shape at the consuming surface
+  (position-accurate supervise boundary via keyring replay), so
+  foreign offers are inert: never listed, never authority. The
+  wakeless poll-only drill runs the whole loop to done with no wake
+  channel in existence, and the race drill's loser gets the
+  structured contention refusal at admission. Verb-catalog growth is
+  additive (no protocol bump). Projections: contracts v9 (offers +
+  last_claim, omitempty so offer-free chains keep byte-identical
+  views), report v6 (republish only), cache generation 8 (offers
+  table + last_claim column).

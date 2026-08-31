@@ -373,3 +373,10 @@ Fresh sessions read this file instead of rediscovering.
   finding or a preemption of one); Phase 7's offers and budget
   reservations will meet the same pattern, so design it in from the
   plan, not the review round.
+
+- The next CLI holds exclusive verbs (claim.taken) to the online
+  path: `seed ledger append` refuses them offline by design, so CLI
+  drills that need a claim run the same admission sequence through
+  the library (ContextAt, Check, Append with the context resolver) —
+  which is also exactly the shape that lets a race drill assert the
+  loser's structured contention refusal instead of a process exit.

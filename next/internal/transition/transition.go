@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
@@ -390,6 +391,17 @@ type SubjectState struct {
 	// cleared on each submission.made; a raw-pushed second override
 	// in one window stays an anomaly, never the fact.
 	Override *OverrideFact
+	// Offers is every well-shaped offer.published on the subject, in
+	// chain order (plans/os-c61c3392.md): the tolerant fold records
+	// raw pushes too, and the consuming surface applies liveness
+	// (ready, unexpired, unconsumed) and the signer's position-
+	// accurate supervise boundary. Facts persist; nothing is erased.
+	Offers []OfferFact
+	// LastClaim is the position of the latest applied claim.taken,
+	// the offer-consumption boundary: a claim consumes every offer at
+	// or before it ("claimed or expire", SEED-NEXT.md §II.9).
+	// Meaningful only when PriorClaimants is non-empty.
+	LastClaim int
 }
 
 // VerdictFact is the fold's record of the latest rendered verdict.
@@ -442,6 +454,44 @@ type SealedFact struct {
 	Pos        int
 	Commitment string
 	Signer     string
+}
+
+// OfferFact is one folded offer.published (plans/os-c61c3392.md): its
+// chain position, the publishing signer (whose supervise standing the
+// list surface validates at exactly that position), the eligibility
+// scopes (empty means unscoped), and the RFC3339 expiry. Liveness is
+// derived, never stored: ready subject, unexpired, and no applied
+// claim.taken after Pos.
+type OfferFact struct {
+	Pos          int
+	Signer       string
+	Capabilities []string
+	Tiers        []string
+	Expires      string
+}
+
+// LiveOffers derives the subject's live offers at now
+// (plans/os-c61c3392.md): the subject is ready, the offer is
+// unexpired (expires strictly after now), and no applied claim.taken
+// landed after it — a claim consumes every offer at or before it. The
+// signer's position-accurate supervise boundary is the consuming
+// surface's remaining check, since it needs keyring replay.
+func (s *SubjectState) LiveOffers(now time.Time) []OfferFact {
+	if s == nil || s.State != "ready" {
+		return nil
+	}
+	var live []OfferFact
+	for _, o := range s.Offers {
+		if len(s.PriorClaimants) > 0 && s.LastClaim > o.Pos {
+			continue
+		}
+		exp, err := time.Parse(time.RFC3339, o.Expires)
+		if err != nil || !exp.After(now) {
+			continue
+		}
+		live = append(live, o)
+	}
+	return live
 }
 
 // SubmissionFact binds a verdict to the submission it judges
@@ -616,6 +666,33 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 			continue
 		}
+		if e.Verb == OfferPublishedVerb {
+			// The tolerant posture (plans/os-c61c3392.md): any
+			// well-shaped offer folds, raw pushes included, and the
+			// consuming surface derives liveness and validates the
+			// signer's boundary; a malformed payload folds to nothing,
+			// and a fact on a subject no lifecycle event created binds
+			// nothing.
+			if s, ok := f.states[e.Subject]; ok {
+				var o struct {
+					Eligibility *struct {
+						Capabilities []string `json:"capabilities"`
+						Tiers        []string `json:"tiers"`
+					} `json:"eligibility"`
+					Expires string `json:"expires"`
+				}
+				if json.Unmarshal(e.Payload, &o) == nil && o.Eligibility != nil && strings.TrimSpace(o.Expires) != "" {
+					s.Offers = append(s.Offers, OfferFact{
+						Pos:          pos,
+						Signer:       e.Actor,
+						Capabilities: o.Eligibility.Capabilities,
+						Tiers:        o.Eligibility.Tiers,
+						Expires:      strings.TrimSpace(o.Expires),
+					})
+				}
+			}
+			continue
+		}
 		if !t.IsLifecycleVerb(e.Verb) {
 			continue
 		}
@@ -716,6 +793,11 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 				s.PriorClaimants = map[string]bool{}
 			}
 			s.PriorClaimants[e.Actor] = true
+			// The offer-consumption boundary (plans/os-c61c3392.md):
+			// an applied claim consumes every offer at or before it,
+			// so a taken offer never resurrects when the subject
+			// re-readies inside its expiry window.
+			s.LastClaim = pos
 		} else if s.Claim != nil && s.State != "in_progress" {
 			// Every deliberate exit ends the claim window; the fence
 			// dies with it.
@@ -857,6 +939,13 @@ const (
 	ContractReturnedVerb = "contract.returned"
 	MergeOverriddenVerb  = "merge.overridden"
 )
+
+// OfferPublishedVerb is the supervisor's eligibility-scoped invitation
+// to claim (plans/os-c61c3392.md; next/spec/offers.md; SEED-NEXT.md
+// §II.9): a fact admitted only on ready subjects, changing no state
+// and granting nothing — the claim it invites settles at admission
+// like any claim.
+const OfferPublishedVerb = "offer.published"
 
 // ChainError refuses a reconciliation-chain event whose links are
 // missing or mismatched (next/spec/reconciliation.md): done is

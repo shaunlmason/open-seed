@@ -77,6 +77,12 @@ const (
 	// nothing. Grant-level disjointness with claim and operator is
 	// enforced at actor.granted admission.
 	CapSealer = "sealer"
+	// CapSupervise is the supervisor lane (plans/os-c61c3392.md;
+	// SEED-NEXT.md §II.9): publishing eligibility-scoped offers. No
+	// disjointness constraints attach — an offer grants nothing, the
+	// claim it invites settles at admission like any claim — so the
+	// row keeps the standard operator fallback.
+	CapSupervise = "supervise"
 )
 
 // AcceptedCapabilities returns the set of capabilities any one of which
@@ -131,6 +137,11 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapDispatch, CapOperator}
 	case "merge.overridden":
 		return []string{CapOperator}
+	// The supervisor lane (plans/os-c61c3392.md): offers invite
+	// claims and grant nothing, so the standard operator fallback
+	// stands.
+	case "offer.published":
+		return []string{CapSupervise, CapOperator}
 	// The plan verbs (plans/os-16c1d142.md): the claim holder plans
 	// (the fence matrix applies on a claimed subject); approval is an
 	// external-fact observation, operator-attested in v0 like
