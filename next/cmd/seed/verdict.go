@@ -162,6 +162,14 @@ func redTranscript(r *verdict.Receipt) (verdict.Transcript, bool) {
 			return tr, true
 		}
 	}
+	// A red sealed check forbids pass exactly like a visible one
+	// (plans/os-3128535a.md): the verdict derives from every
+	// transcript the run executed.
+	for _, tr := range r.SealedTranscripts {
+		if tr.Exit != 0 {
+			return tr, true
+		}
+	}
 	return verdict.Transcript{}, false
 }
 
@@ -172,7 +180,12 @@ func receiptSummary(subject string, r *verdict.Receipt, digest string) map[strin
 			red++
 		}
 	}
-	return map[string]any{
+	for _, tr := range r.SealedTranscripts {
+		if tr.Exit != 0 {
+			red++
+		}
+	}
+	out := map[string]any{
 		"subject":     subject,
 		"receipt":     digest,
 		"merge_base":  r.MergeBase,
@@ -182,6 +195,11 @@ func receiptSummary(subject string, r *verdict.Receipt, digest string) map[strin
 		"red":         fmt.Sprintf("%d", red),
 		"runner":      r.Environment.Runner,
 	}
+	if r.Commitment != "" {
+		out["commitment"] = r.Commitment
+		out["sealed_transcripts"] = fmt.Sprintf("%d", len(r.SealedTranscripts))
+	}
+	return out
 }
 
 func runVerdictReceipt(args []string, stdout, stderr io.Writer) int {
@@ -251,6 +269,19 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	if failEnv != nil {
 		return render(stampTip(failEnv, st.count), stdout, stderr)
 	}
+	// The "contracts carry sealed checks" gate, enforced at the
+	// verifier boundary (plans/os-3128535a.md): above the trivial
+	// tier a subject with no commitment does not render; the trivial
+	// tier is exempt.
+	if s.Sealed == nil && s.Tier != transition.TrivialTier {
+		return render(stampTip(envelope.Fail(envelope.ExitUnsealed, "unsealed",
+			fmt.Sprintf("contract %s (tier %q) carries no sealed-checks commitment — above the trivial tier contracts carry sealed checks, sealed before the first claim (next/spec/sealed-checks.md)", *subject, s.Tier)), st.count), stdout, stderr)
+	}
+	sealedIn, sealFail := unsealChecks(st.records, s, signer, artifact.Open(artifactsDir(*artifacts, *repo)))
+	if sealFail != nil {
+		return render(stampTip(sealFail, st.count), stdout, stderr)
+	}
+	in.Sealed = sealedIn
 	r, err := verdict.Compute(in)
 	if err != nil {
 		return render(stampTip(verdictFailEnvelope(err), st.count), stdout, stderr)
@@ -330,10 +361,11 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 	dir := fs.String("ledger", "", "ledger directory")
 	subject := fs.String("subject", "", "contract with a rendered verdict")
 	repo := fs.String("repo", "", "source repository the submission range names")
+	keyPath := fs.String("key", "", "OpenSSH ed25519 private key able to unseal (required for a sealed subject)")
 	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
 	timeout := fs.Duration("timeout", 0, "per-command wall-clock bound (default 10m)")
 	if err := fs.Parse(args); err != nil || *dir == "" || *subject == "" || *repo == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict check requires --ledger <dir> --subject <id> --repo <dir> [--artifacts <dir>] [--timeout <dur>]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict check requires --ledger <dir> --subject <id> --repo <dir> [--key <path>] [--artifacts <dir>] [--timeout <dur>]"), stdout, stderr)
 	}
 	st, failEnv := loadVerdictState(*dir)
 	if failEnv != nil {
@@ -367,9 +399,34 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
 			fmt.Sprintf("the cited receipt %s is not retrievable intact from the artifact store: %v — the evidence a verdict points at must survive verbatim (6.2 reconciliation input)", cited.Receipt, err)), st.count), stdout, stderr)
 	}
-	in, _, failEnv := st.verdictInput(*subject, *repo, *timeout, false)
+	in, s, failEnv := st.verdictInput(*subject, *repo, *timeout, false)
 	if failEnv != nil {
 		return render(stampTip(failEnv, st.count), stdout, stderr)
+	}
+	// A sealed subject holds the full recompute-and-mismatch
+	// guarantee (review finding on the 6.3 plan): the check decrypts
+	// and reruns the sealed commands, so a raw-pushed receipt with
+	// invented passing sealed transcripts recomputes differently and
+	// fails below. There is no silent partial verification: without a
+	// capable key, the check refuses.
+	if s.Sealed != nil {
+		if *keyPath == "" {
+			return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage",
+				fmt.Sprintf("contract %s carries sealed checks — verdict check needs --key with an identity able to unseal, or the sealed transcripts cannot be recomputed", *subject)), st.count), stdout, stderr)
+		}
+		keyBytes, err := os.ReadFile(*keyPath)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --key: %v", err)), stdout, stderr)
+		}
+		identity, err := event.ParsePrivateKey(keyBytes)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--key: %v", err)), stdout, stderr)
+		}
+		sealedIn, sealFail := unsealChecks(st.records, s, identity, artifact.Open(artifactsDir(*artifacts, *repo)))
+		if sealFail != nil {
+			return render(stampTip(sealFail, st.count), stdout, stderr)
+		}
+		in.Sealed = sealedIn
 	}
 	r, err := verdict.Compute(in)
 	if err != nil {

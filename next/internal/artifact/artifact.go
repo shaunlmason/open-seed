@@ -80,3 +80,56 @@ func (s *Store) Get(digest string) ([]byte, error) {
 	}
 	return b, nil
 }
+
+// The sealed bucket (plans/os-3128535a.md; next/spec/sealed-checks.md)
+// sits beside the content-addressed tree: mutable ciphertext under the
+// immutable commitment that keys it. Rotation overwrites the file in
+// place and touches no history; deleting one is the charter's erasure
+// path, surfaced by the audit, never silence. Content is NOT
+// digest-checked on the way out — the commitment verifies the
+// decrypted plaintext, not the ciphertext, which rotation rewrites.
+
+func (s *Store) sealedPath(commitment string) string {
+	return filepath.Join(s.root, "sealed", commitment+".age")
+}
+
+// PutSealed stores (or replaces) the ciphertext for a commitment.
+func (s *Store) PutSealed(commitment string, b []byte) error {
+	if !digestRE.MatchString(commitment) {
+		return fmt.Errorf("artifact store: %q is not a lowercase-hex sha256 commitment", commitment)
+	}
+	dst := s.sealedPath(commitment)
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(dst), "seal-*")
+	if err != nil {
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	if _, err := tmp.Write(b); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	if err := os.Rename(tmp.Name(), dst); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	return nil
+}
+
+// GetSealed returns the ciphertext stored for a commitment.
+func (s *Store) GetSealed(commitment string) ([]byte, error) {
+	if !digestRE.MatchString(commitment) {
+		return nil, fmt.Errorf("artifact store: %q is not a lowercase-hex sha256 commitment", commitment)
+	}
+	b, err := os.ReadFile(s.sealedPath(commitment))
+	if err != nil {
+		return nil, fmt.Errorf("artifact store: %w", err)
+	}
+	return b, nil
+}

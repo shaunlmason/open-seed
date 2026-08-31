@@ -17,25 +17,31 @@ import (
 )
 
 func TestReconciliationViews(t *testing.T) {
-	root, worker, verifier := pKey(t, 1), pKey(t, 2), pKey(t, 3)
-	dir, resolve, add := fixtureChain(t, root, worker, verifier)
+	root, worker, verifier, sealer := pKey(t, 1), pKey(t, 2), pKey(t, 3), pKey(t, 4)
+	dir, resolve, add := fixtureChain(t, root, worker, verifier, sealer)
 	add(root, version.Protocol, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
 	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
 	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, verifier), enrollJSON(t, verifier, "agent", "verifier"))
 	add(root, version.Seed1, keyring.VerbGranted, pFP(t, verifier), `{"capability": "verdict"}`)
+	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, sealer), enrollJSON(t, sealer, "agent", "sealer"))
+	add(root, version.Seed1, keyring.VerbGranted, pFP(t, sealer), `{"capability": "sealer"}`)
 	packet := `{"acceptance": ["done means done"], "decisions": [], "base": "1234567..1234567", "refs": [], "findings": []}`
 	sha := strings.Repeat("ef", 20)
 	receipt := strings.Repeat("ab", 32)
 
-	// c-F walks the full chain with the granted, disjoint verifier:
-	// submission at 8, pass verdict at 9, request at 10 citing it,
-	// observation at 11.
+	// c-F walks the full chain with the granted, disjoint verifier,
+	// sealed by the granted sealer in its ready window
+	// (plans/os-3128535a.md): seal at 9, claim at 10, submission at
+	// 11, pass verdict at 12, request at 13 citing it, observation at
+	// 14.
+	commitment := strings.Repeat("cd", 32)
 	add(root, version.Seed1, "intent.filed", "c-F", `{"intent": "ship", "tier": "standard", "budget": "s", "routing": "core"}`)
 	add(root, version.Seed1, "contract.specified", "c-F", `{"acceptance": {"ref": "specs/f.md @ abc1234", "executable": false}}`)
+	add(sealer, version.Seed1, "check.sealed", "c-F", `{"commitment": "`+commitment+`"}`)
 	add(worker, version.Seed1, "claim.taken", "c-F", `{}`)
-	add(worker, version.Seed1, "submission.made", "c-F", `{"fence": "7", "packet": `+packet+`}`)
-	add(verifier, version.Seed1, "verdict.rendered", "c-F", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "8", "independence": "L1"}`)
-	add(worker, version.Seed1, "merge.requested", "c-F", `{"verdict": "9"}`)
+	add(worker, version.Seed1, "submission.made", "c-F", `{"fence": "10", "packet": `+packet+`}`)
+	add(verifier, version.Seed1, "verdict.rendered", "c-F", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "11", "independence": "L1"}`)
+	add(worker, version.Seed1, "merge.requested", "c-F", `{"verdict": "12"}`)
 	add(root, version.Seed1, "merge.observed", "c-F", `{"merged": "`+sha+`", "pr": "pr/1"}`)
 
 	// c-G reaches done through a raw-pushed observation with no
@@ -43,7 +49,7 @@ func TestReconciliationViews(t *testing.T) {
 	add(root, version.Seed1, "intent.filed", "c-G", `{"intent": "slip", "tier": "standard", "budget": "s", "routing": "core"}`)
 	add(root, version.Seed1, "contract.specified", "c-G", `{"acceptance": {"ref": "specs/g.md @ abc1234", "executable": false}}`)
 	add(worker, version.Seed1, "claim.taken", "c-G", `{}`)
-	add(worker, version.Seed1, "submission.made", "c-G", `{"fence": "14", "packet": `+packet+`}`)
+	add(worker, version.Seed1, "submission.made", "c-G", `{"fence": "17", "packet": `+packet+`}`)
 	add(root, version.Seed1, "merge.observed", "c-G", `{"merged": "`+sha+`", "pr": "pr/2"}`)
 
 	// c-H holds a pass verdict with no merge yet: unreconciled,
@@ -51,8 +57,8 @@ func TestReconciliationViews(t *testing.T) {
 	add(root, version.Seed1, "intent.filed", "c-H", `{"intent": "wait", "tier": "standard", "budget": "s", "routing": "core"}`)
 	add(root, version.Seed1, "contract.specified", "c-H", `{"acceptance": {"ref": "specs/h.md @ abc1234", "executable": false}}`)
 	add(worker, version.Seed1, "claim.taken", "c-H", `{}`)
-	add(worker, version.Seed1, "submission.made", "c-H", `{"fence": "19", "packet": `+packet+`}`)
-	add(verifier, version.Seed1, "verdict.rendered", "c-H", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "20", "independence": "L1"}`)
+	add(worker, version.Seed1, "submission.made", "c-H", `{"fence": "22", "packet": `+packet+`}`)
+	add(verifier, version.Seed1, "verdict.rendered", "c-H", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "23", "independence": "L1"}`)
 
 	// c-I is the laundered chain: a raw-pushed verdict signed by the
 	// ungranted, implementing worker, then a facts-complete request
@@ -61,9 +67,9 @@ func TestReconciliationViews(t *testing.T) {
 	add(root, version.Seed1, "intent.filed", "c-I", `{"intent": "launder", "tier": "standard", "budget": "s", "routing": "core"}`)
 	add(root, version.Seed1, "contract.specified", "c-I", `{"acceptance": {"ref": "specs/i.md @ abc1234", "executable": false}}`)
 	add(worker, version.Seed1, "claim.taken", "c-I", `{}`)
-	add(worker, version.Seed1, "submission.made", "c-I", `{"fence": "24", "packet": `+packet+`}`)
-	add(worker, version.Seed1, "verdict.rendered", "c-I", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "25", "independence": "L1"}`)
-	add(worker, version.Seed1, "merge.requested", "c-I", `{"verdict": "26"}`)
+	add(worker, version.Seed1, "submission.made", "c-I", `{"fence": "27", "packet": `+packet+`}`)
+	add(worker, version.Seed1, "verdict.rendered", "c-I", `{"verdict": "pass", "receipt": "`+receipt+`", "submission": "28", "independence": "L1"}`)
+	add(worker, version.Seed1, "merge.requested", "c-I", `{"verdict": "29"}`)
 	add(root, version.Seed1, "merge.observed", "c-I", `{"merged": "`+sha+`", "pr": "pr/3"}`)
 
 	out := rebuildAll(t, dir, resolve)
@@ -75,14 +81,17 @@ func TestReconciliationViews(t *testing.T) {
 		byID[e.Subject] = e
 	}
 	f := byID["c-F"]
-	if f.Verdict == nil || f.Verdict.Position != "9" || f.Verdict.Verdict != "pass" || f.Verdict.Receipt != receipt {
+	if f.Verdict == nil || f.Verdict.Position != "12" || f.Verdict.Verdict != "pass" || f.Verdict.Receipt != receipt {
 		t.Fatalf("c-F must carry the verdict fact: %+v", f.Verdict)
 	}
-	if f.Requested == nil || *f.Requested != "10" {
+	if f.Requested == nil || *f.Requested != "13" {
 		t.Fatalf("c-F must carry the request position: %+v", f.Requested)
 	}
-	if f.Merged == nil || f.Merged.Position != "11" || f.Merged.SHA != sha {
+	if f.Merged == nil || f.Merged.Position != "14" || f.Merged.SHA != sha {
 		t.Fatalf("c-F must carry the merged fact: %+v", f.Merged)
+	}
+	if f.Sealed == nil || f.Sealed.Position != "9" || f.Sealed.Commitment != commitment {
+		t.Fatalf("c-F must carry the sealed commitment: %+v", f.Sealed)
 	}
 	g := byID["c-G"]
 	if g.State == nil || *g.State != "done" || g.Verdict != nil || g.Merged == nil || g.Anomalies == 0 {
@@ -96,8 +105,9 @@ func TestReconciliationViews(t *testing.T) {
 	}
 	by := rep.Reconciliation.ByClass
 	if by[reconcile.ClassMergeWithoutVerdict] != 1 || by[reconcile.ClassUnreconciled] != 1 ||
-		by[reconcile.ClassChainSkipped] != 0 || by[reconcile.ClassVerdictUnverified] != 1 {
-		t.Fatalf("the classes must count c-G, c-H, and the laundered c-I: %+v", by)
+		by[reconcile.ClassChainSkipped] != 0 || by[reconcile.ClassVerdictUnverified] != 1 ||
+		by[reconcile.ClassUnsealed] != 3 {
+		t.Fatalf("the classes must count c-G, c-H, the laundered c-I, and the three unsealed standard-tier chains: %+v", by)
 	}
 	launderedSeen := false
 	for _, fnd := range rep.Reconciliation.Findings {

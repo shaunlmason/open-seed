@@ -56,7 +56,7 @@ attributed to it.
 | `enrolled` (suspended key) | standing suspended | reinstated: standing active, kind/name updated |
 | `enrolled` (active key) | — | **refuses** (already enrolled) |
 | `enrolled`/`suspended`/`granted` (revoked key) | — | **refuses**: revocation is terminal |
-| `granted` | subject enrolled, not revoked | capability appended |
+| `granted` | subject enrolled, not revoked, and the grant keeps sealer disjoint from claim and operator in both directions (a root's implicit operator standing included; sealed-checks.md) | capability appended |
 | `suspended` | subject active | standing suspended |
 | `revoked` | subject not already revoked | standing revoked |
 
@@ -101,6 +101,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `merge.requested` | `claim`, `operator` (asking for the merge is the work lane's act; the payload cites the pass verdict, reconciliation.md) |
 | `merge.observed` | `observer`, `operator` (the observer lane records forge fact behind the full chain rule, reconciliation.md) |
 | `verdict.rendered` | `verdict` (deliberately no operator fallback: III.G names operator override its own attributable verb, never a disguised verdict — that verb is 6.4's; a governance root that judges holds an explicit verdict grant, and L1 independence applies to every signer, verdicts.md) |
+| `check.sealed` | `sealer` (the second no-fallback row: operator already stands in the claim and submission lanes, so an operator fallback here would put authoring and implementation authority on one capability and the capability audit could prove nothing, sealed-checks.md) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

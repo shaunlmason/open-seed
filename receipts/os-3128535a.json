@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "task": "os-3128535a",
+  "merge_base": "d7e10365b456e94e6d001931988b8286f6f697e2",
+  "head": "356f5611ea4098132b98dd50d68d9a40f4b4173d",
+  "plan_path": "plans/os-3128535a.md",
+  "plan_sha256": "b5aca83fb3dbffd223508fa20d0b54b12bb7cb0944f95ff310c362b4b3258a64",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/reconcile.go",
+    "next/cmd/seed/seal.go",
+    "next/cmd/seed/seal_cli_test.go",
+    "next/cmd/seed/verdict.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/go.mod",
+    "next/go.sum",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/seal_test.go",
+    "next/internal/artifact/artifact.go",
+    "next/internal/envelope/envelope.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/keyring/sealer_test.go",
+    "next/internal/project/cache.go",
+    "next/internal/project/cache_test.go",
+    "next/internal/project/chain_views_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/project/report.go",
+    "next/internal/reconcile/reconcile.go",
+    "next/internal/reconcile/reconcile_test.go",
+    "next/internal/seal/seal.go",
+    "next/internal/seal/seal_test.go",
+    "next/internal/transition/transition.go",
+    "next/internal/verdict/verdict.go",
+    "next/spec/actors.md",
+    "next/spec/lifecycle.md",
+    "next/spec/sealed-checks.md",
+    "next/spec/verdicts.md"
+  ],
+  "diff_sha256": "00a05dca4f5127afcfadf479d67316788eee468f8c300e3baf5b796fa12f0cf3",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/seal/... ./internal/artifact/... ./internal/transition/... ./internal/admit/... ./internal/keyring/... ./internal/reconcile/... ./internal/project/... ./cmd/seed/... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

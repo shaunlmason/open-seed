@@ -538,3 +538,53 @@ here. Newest last.
   design). Detection is a report at exit 0, never a refusal;
   projections surface the pipeline at contracts v6, report v3, and
   cache generation 5.
+- 2026-08-31 — Sealed checks are a commitment with a pre-claim window,
+  encrypted custody, and a verifier-boundary gate (os-3128535a,
+  plans/os-3128535a.md; charter II §7, §8; III.F sealed rows;
+  next/spec/sealed-checks.md). check.sealed is a fact admitted only
+  in ready with NO prior claim.taken — the release path lands
+  subjects back in ready, so state alone would launder
+  post-implementation seals (review finding on plan #138) — one
+  commitment per subject, and the fold records the fact only from
+  that legal window (raw seals outside it are anomalies, never
+  facts: they must not retroactively claim a pre-existence the
+  ordering disproves). The commitment is SHA-256 over the JCS sealed
+  envelope {salt, checks}, the 32-byte salt living only inside the
+  ciphertext (publishing it would invite dictionary attacks on
+  low-entropy check bodies), so commitment verification is a
+  decrypting party's act, performed at every unseal; empty seals
+  refuse at creation AND at unseal (a zero-check envelope would pass
+  vacuously). Encryption rides the binding default filippo.io/age
+  v1.2.1 with recipients derived from the verdict-granted ed25519
+  keys as ssh-ed25519 age recipients (agessh) — "recipients = the
+  verifier keyring" with no new key material; the cross-protocol use
+  of one ed25519 key for verdict signatures and seal unwrapping is
+  the documented v0 trade, dedicated X25519 enrollment the named
+  successor. Ciphertext is mutable custody at
+  next/var/artifacts/sealed/<commitment>.age (the ledger references
+  it by the immutable commitment; deletion is the charter's erasure
+  path, surfaced by the audit); rotation decrypts with a still-able
+  identity and re-encrypts open subjects to the current keyring,
+  writing no ledger events, terminal subjects skipped (exposure
+  bounded to the compromise window). Authoring isolation binds three
+  times: the sealer capability row has no operator fallback (the
+  verdict-lane posture: operator stands in the claim lanes, so a
+  fallback would put authoring and implementation on one capability
+  and the audit could prove nothing — review finding), actor.granted
+  refuses sealer/claim and sealer/operator co-holding both
+  directions (a root's implicit operator standing included), and
+  claim.taken refuses the seal author. Receipts gain commitment +
+  sealed_transcripts via omitempty so every pre-6.3 receipt's
+  canonical bytes and digest are unchanged (the compatibility twin
+  of the views' explicit-null convention); verdict check on a sealed
+  subject requires an unsealing identity and reruns the sealed
+  commands inside recompute-and-mismatch (review finding: presence
+  checking would let invented sealed transcripts check green).
+  Render gates above-trivial unsealed subjects at exit 24; exits 22
+  seal_broken and 23 not_recipient name the broken-seal and
+  rotation-lag refusals. seed seal audit reads only the age header's
+  recipient stanza tags (agessh four-byte fingerprints — an
+  identification hint; the decrypt drills carry the cryptographic
+  claim) and reports stale/foreign/missing at exit 0; reconcile
+  gains the neutral unsealed class. Projections: contracts v7
+  (sealed explicit-null), report v4, cache generation 6.

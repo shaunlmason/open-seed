@@ -375,6 +375,11 @@ type SubjectState struct {
 	Verdict   *VerdictFact
 	Requested *RequestFact
 	Merged    *MergeFact
+	// Sealed is the sealed-checks commitment, captured only in its
+	// legal window (ready, no prior claim, first seal); raw-pushed
+	// seals outside it stay anomalies, never facts
+	// (plans/os-3128535a.md).
+	Sealed *SealedFact
 }
 
 // VerdictFact is the fold's record of the latest rendered verdict.
@@ -397,6 +402,17 @@ type RequestFact struct {
 type MergeFact struct {
 	Pos int
 	SHA string
+}
+
+// SealedFact is the sealed-checks commitment (plans/os-3128535a.md;
+// next/spec/sealed-checks.md): the chain position proves the checks
+// predate implementation, Commitment is the salted hash the ciphertext
+// must verify against, and Signer is the sealing key the per-subject
+// authoring-isolation check consults at claim.taken.
+type SealedFact struct {
+	Pos        int
+	Commitment string
+	Signer     string
 }
 
 // SubmissionFact binds a verdict to the submission it judges
@@ -504,6 +520,25 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 					if cited, err := strconv.Atoi(strings.TrimSpace(r.Verdict)); err == nil {
 						s.Requested = &RequestFact{Pos: pos, CitedVerdict: cited}
 					}
+				}
+			}
+			continue
+		}
+		if e.Verb == CheckSealedVerb {
+			// The commitment folds only from its legal window: ready,
+			// no prior claim, first seal. A raw-pushed seal outside it
+			// would retroactively claim pre-existence the ordering
+			// disproves, so it stays an anomaly, never a fact
+			// (plans/os-3128535a.md).
+			if s, ok := f.states[e.Subject]; ok {
+				var c struct {
+					Commitment string `json:"commitment"`
+				}
+				if json.Unmarshal(e.Payload, &c) == nil && c.Commitment != "" &&
+					s.State == "ready" && len(s.PriorClaimants) == 0 && s.Sealed == nil {
+					s.Sealed = &SealedFact{Pos: pos, Commitment: strings.TrimSpace(c.Commitment), Signer: e.Actor}
+				} else {
+					s.Anomalies++
 				}
 			}
 			continue
@@ -721,6 +756,12 @@ const (
 	MergeRequestedVerb = "merge.requested"
 	MergeObservedVerb  = "merge.observed"
 )
+
+// CheckSealedVerb is the sealed-checks commitment fact
+// (plans/os-3128535a.md; next/spec/sealed-checks.md): admitted only
+// while the subject is in ready with no prior claim, so the position
+// ordering is the pre-existence proof. A fact, never a transition.
+const CheckSealedVerb = "check.sealed"
 
 // ChainError refuses a reconciliation-chain event whose links are
 // missing or mismatched (next/spec/reconciliation.md): done is

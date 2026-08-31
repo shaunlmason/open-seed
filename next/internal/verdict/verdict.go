@@ -53,6 +53,13 @@ type Receipt struct {
 	Files       []string     `json:"files"`
 	Transcripts []Transcript `json:"transcripts"`
 	Environment Environment  `json:"environment"`
+	// The sealed half (plans/os-3128535a.md): the commitment the run
+	// unsealed against and the sealed-check transcripts, the
+	// charter's "visible and sealed check transcripts". Both omit
+	// when the subject carries no seal, so every pre-6.3 receipt's
+	// canonical bytes, and digest, are unchanged.
+	Commitment        string       `json:"commitment,omitempty"`
+	SealedTranscripts []Transcript `json:"sealed_transcripts,omitempty"`
 }
 
 // Canonical returns the receipt's RFC 8785 (JCS) bytes.
@@ -122,6 +129,18 @@ type Input struct {
 	PlanAnchor string
 	Acceptance *transition.AcceptanceInfo
 	Runner     Runner
+	// Sealed carries the decrypted sealed checks when the subject has
+	// a commitment: the CLI unseals (it holds the identity and the
+	// store) and the run executes. Nil for unsealed subjects.
+	Sealed *SealedInput
+}
+
+// SealedInput is one unsealed check set: the commitment the plaintext
+// verified against and the commands to run under the same profile as
+// the visible checks.
+type SealedInput struct {
+	Commitment string
+	Checks     []string
 }
 
 // anchorParts splits a combined anchor "path @ commit".
@@ -219,6 +238,16 @@ func computeIn(ws *Workspace, in Input, mbRef, headRef string) (*Receipt, error)
 		}
 		for _, c := range cmds {
 			r.Transcripts = append(r.Transcripts, in.Runner.Run(ws, c))
+		}
+	}
+	if in.Sealed != nil {
+		// The sealed checks run after the visible ones, under the same
+		// profile, in the same workspace; their transcripts bind into
+		// the receipt beside the commitment they were unsealed against.
+		r.Commitment = in.Sealed.Commitment
+		r.SealedTranscripts = []Transcript{}
+		for _, c := range in.Sealed.Checks {
+			r.SealedTranscripts = append(r.SealedTranscripts, in.Runner.Run(ws, c))
 		}
 	}
 	return r, nil

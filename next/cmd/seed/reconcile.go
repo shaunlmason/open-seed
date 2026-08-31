@@ -49,6 +49,9 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 	for _, f := range reconcile.VerifyVerdicts(st.records, st.fold) {
 		verdictFindings[f.Subject] = append(verdictFindings[f.Subject], f)
 	}
+	for _, f := range reconcile.VerifySeals(st.records, st.fold) {
+		verdictFindings[f.Subject] = append(verdictFindings[f.Subject], f)
+	}
 	var findings []reconcile.Finding
 	checked := 0
 	for _, id := range subjects {

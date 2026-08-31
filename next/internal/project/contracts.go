@@ -46,6 +46,7 @@ type ContractEntry struct {
 	Verdict       *ContractVerdict    `json:"verdict"`
 	Requested     *string             `json:"requested"`
 	Merged        *ContractMerge      `json:"merged"`
+	Sealed        *ContractSealed     `json:"sealed"`
 	FirstPosition int                 `json:"first_position"`
 	LastPosition  int                 `json:"last_position"`
 	Events        []ContractEvent     `json:"events"`
@@ -79,6 +80,15 @@ type ContractMerge struct {
 	SHA      string `json:"sha"`
 }
 
+// ContractSealed is the sealed-checks commitment fact
+// (plans/os-3128535a.md): the chain position that proves the checks
+// predate implementation and the salted hash the ciphertext verifies
+// against. Explicit null when absent, the v6 chain-field convention.
+type ContractSealed struct {
+	Position   string `json:"position"`
+	Commitment string `json:"commitment"`
+}
+
 // ContractClaim is the active claim while a subject is in_progress:
 // the holder's fingerprint and the fence (the admitted claim.taken
 // position, string per the envelope position convention), so
@@ -95,10 +105,11 @@ type ContractClaim struct {
 // Version "4" the acceptance field; Version "5" the fold's seed/1
 // activation boundary (pre-activation records inert); Version "6" the
 // reconciliation-chain facts (verdict, requested, merged;
-// plans/os-6cdc15be.md) — each republishing under a new build id via
+// plans/os-6cdc15be.md); Version "7" the sealed-checks commitment
+// (plans/os-3128535a.md) — each republishing under a new build id via
 // the version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "6", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "7", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -159,6 +170,9 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 			if s.Requested != nil {
 				pos := fmt.Sprintf("%d", s.Requested.Pos)
 				e.Requested = &pos
+			}
+			if s.Sealed != nil {
+				e.Sealed = &ContractSealed{Position: fmt.Sprintf("%d", s.Sealed.Pos), Commitment: s.Sealed.Commitment}
 			}
 			if s.Merged != nil {
 				e.Merged = &ContractMerge{Position: fmt.Sprintf("%d", s.Merged.Pos), SHA: s.Merged.SHA}

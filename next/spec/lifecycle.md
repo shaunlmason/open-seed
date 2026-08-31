@@ -73,7 +73,10 @@ chain (`verdict.rendered(pass) → merge.requested → merge.observed`);
 changing no state — and 6.2 pipes the rest: `merge.requested` admits
 only in `review` citing the pass verdict, and `merge.observed` admits
 only behind the full chain rule, recording the merged commit
-([`reconciliation.md`](reconciliation.md)). A failed verdict's return
+([`reconciliation.md`](reconciliation.md)). 6.3 adds the pre-claim
+fact: `check.sealed` admits only while the subject is in `ready` with
+no prior claim, committing the sealed checks before implementation
+begins ([`sealed-checks.md`](sealed-checks.md)). A failed verdict's return
 path out of `review` is Phase 6's **named extension point**, not
 guessed here (`review` reaches a terminal state today via
 `contract.cancelled`).
@@ -182,7 +185,9 @@ silence. Verbs outside the table stay facts, not transitions:
 summarization boundary (`observations.md`), `verdict.rendered` admits
 only on `review` subjects under L1 independence (`verdicts.md`), and
 `merge.requested` admits only on `review` subjects citing the pass
-verdict (`reconciliation.md`) — the §8 chain is fully piped.
+verdict (`reconciliation.md`), and `check.sealed` admits only on
+`ready` subjects with no prior claim (`sealed-checks.md`) — the §8
+chain is fully piped and the §7 commitment window is pinned.
 
 ## Projections
 

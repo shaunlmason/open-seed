@@ -45,6 +45,18 @@ const (
 // PR).
 const ClassVerdictUnverified = "verdict_unverified"
 
+// ClassUnsealed is an above-trivial subject at or past in_progress
+// with no sealed-checks commitment (plans/os-3128535a.md): reported
+// neutrally — the hard gate is verdict render's exit 24, and this
+// class is the record-derivable surfacing beside it.
+const ClassUnsealed = "unsealed"
+
+// ClassSealUnverified is a folded seal whose signer, replayed to the
+// seal's own position, held no sealer grant — a raw-pushed seal that
+// never passed the authoring boundary. Render and check refuse to
+// unseal it; this class surfaces it record-side.
+const ClassSealUnverified = "seal_unverified"
+
 // Finding is one surfaced divergence on one subject.
 type Finding struct {
 	Subject string `json:"subject"`
@@ -72,6 +84,11 @@ func Subject(id string, s transition.SubjectState) []Finding {
 	if !merged && passVerdict {
 		out = append(out, Finding{Subject: id, Class: ClassUnreconciled,
 			Detail: fmt.Sprintf("the pass verdict at position %d has no observed merge yet — pending or diverged is an age judgment for maintenance, not this classifier", s.Verdict.Pos)})
+	}
+	pastClaim := s.State == "in_progress" || s.State == "review" || s.State == "done"
+	if pastClaim && s.Tier != transition.TrivialTier && s.Sealed == nil {
+		out = append(out, Finding{Subject: id, Class: ClassUnsealed,
+			Detail: fmt.Sprintf("tier %q with implementation under way and no sealed-checks commitment — above the trivial tier contracts carry sealed checks, and render refuses a verdict without one", s.Tier)})
 	}
 	return out
 }
@@ -108,8 +125,40 @@ func VerifyVerdicts(records []*event.Record, f *transition.Fold) []Finding {
 	return out
 }
 
+// VerifySeals replays the keyring to each folded seal's own position
+// and checks the authoring boundary retroactively: the signer held the
+// sealer grant there. The fold's window rule already refuses seals
+// after any claim, but it cannot see grants — a raw seal planted by an
+// implementation-capable key inside the window would otherwise become
+// the authoritative fact (review finding on the task PR: the
+// verdict-laundering pattern, replayed against seals). Render and
+// check refuse such a seal at use; this is the record-derivable
+// surfacing beside them.
+func VerifySeals(records []*event.Record, f *transition.Fold) []Finding {
+	var out []Finding
+	for _, id := range f.Subjects() {
+		s, ok := f.State(id)
+		if !ok || s.Sealed == nil {
+			continue
+		}
+		pos, signer := s.Sealed.Pos, s.Sealed.Signer
+		if pos < 0 || pos >= len(records) {
+			continue
+		}
+		ring, _, err := keyring.StateAt(records[:pos])
+		if err != nil {
+			continue
+		}
+		if !ring.HasAnyCapability(signer, keyring.AcceptedCapabilities(transition.CheckSealedVerb)) {
+			out = append(out, Finding{Subject: id, Class: ClassSealUnverified,
+				Detail: fmt.Sprintf("the seal at position %d was signed by %s, which held no sealer grant there — it never passed the authoring boundary, and render refuses to unseal it", pos, signer)})
+		}
+	}
+	return out
+}
+
 // Classify walks every folded subject in first-appearance order and
-// appends the retroactive verdict verification.
+// appends the retroactive verdict and seal verification.
 func Classify(records []*event.Record, f *transition.Fold) []Finding {
 	var out []Finding
 	for _, id := range f.Subjects() {
@@ -117,5 +166,6 @@ func Classify(records []*event.Record, f *transition.Fold) []Finding {
 			out = append(out, Subject(id, s)...)
 		}
 	}
-	return append(out, VerifyVerdicts(records, f)...)
+	out = append(out, VerifyVerdicts(records, f)...)
+	return append(out, VerifySeals(records, f)...)
 }
