@@ -133,6 +133,35 @@ func TestRunAdmissionMatrix(t *testing.T) {
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence2, "5"), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "no admitted run.started") {
 		t.Fatalf("a settle on a start-less fence refuses: %v", err)
 	}
+
+	// The temporal laundering shape (review finding on the follow-up
+	// PR): validity is judged against the prefix the start appended
+	// onto. A raw capability-bearing start citing a reservation that
+	// lands only later validates nothing.
+	futureRes := fmt.Sprintf("%d", ctx.Count+1)
+	start2 := func(res string) string {
+		return fmt.Sprintf(`{"fence": %q, "reservation": %q}`, fence2, res)
+	}
+	ctx = step(k.supervisor, version.Seed1, "run.started", "c-1", start2(futureRes))
+	ctx = step(k.holder, version.Seed1, "budget.reserve", "c-1", reserveBody("10", fence2))
+	if got := fmt.Sprintf("%d", ctx.Count-1); got != futureRes {
+		t.Fatalf("the drill's reservation must land at the cited position: %s != %s", got, futureRes)
+	}
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence2, "5"), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "no admitted run.started") {
+		t.Fatalf("a start citing a later-appended reservation satisfies no settle: %v", err)
+	}
+	// Nor does one citing a reservation already closed at the start's
+	// own position.
+	ctx = step(k.holder, version.Seed1, "budget.release", "c-1", `{"reservation": "`+futureRes+`", "fence": "`+fence2+`"}`)
+	ctx = step(k.supervisor, version.Seed1, "run.started", "c-1", start2(futureRes))
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence2, "5"), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "no admitted run.started") {
+		t.Fatalf("a start citing an already-closed reservation satisfies no settle: %v", err)
+	}
+	// Neither temporal raw start blocks the legitimate one.
+	ctx = step(k.holder, version.Seed1, "budget.reserve", "c-1", reserveBody("10", fence2))
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.started", "c-1", start2(fmt.Sprintf("%d", ctx.Count-1)), ctx.Tip)); err != nil {
+		t.Fatalf("the legitimate start admits past the temporal raw ones: %v", err)
+	}
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "run.settled", "c-1", settle(fence, "-3"), ctx.Tip)); err == nil {
 		t.Fatal("negative units refuse")
 	}

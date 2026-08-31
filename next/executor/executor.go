@@ -166,7 +166,7 @@ func verifyStarted(spec ProvisionSpec) error {
 	}
 	for _, st := range s.RunStarts {
 		if st.Pos == spec.Started && st.Fence == spec.Fence &&
-			admit.RunStartValid(records, table, spec.Subject, s, st) {
+			admit.RunStartValid(records, table, spec.Subject, st) {
 			// Fold presence is never proof of admission (review
 			// finding on the task PR): the start must pass the same
 			// position-accurate boundary the run rule enforces, or a
