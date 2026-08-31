@@ -107,9 +107,16 @@ func TestAffordanceRegressionClass(t *testing.T) {
 				t.Errorf("III.I class: nondeterministic affordances for %s on %s at position %d: %v vs %v",
 					pair.lane, pair.subject, pos, listed, again)
 			}
-			if !slices.IsSorted(listed) {
-				t.Errorf("III.I class: unsorted affordances for %s on %s at position %d: %v",
-					pair.lane, pair.subject, pos, listed)
+			// Strictly ascending: sorted AND deduplicated in one
+			// assertion, because IsSorted alone accepts adjacent
+			// duplicates (review finding on this PR) and the
+			// contract's list is a set.
+			for i := 1; i < len(listed); i++ {
+				if listed[i-1] >= listed[i] {
+					t.Errorf("III.I class: affordances not strictly ascending (unsorted or duplicated) for %s on %s at position %d: %v",
+						pair.lane, pair.subject, pos, listed)
+					break
+				}
 			}
 			fp := fpOf(t, key)
 			v := probeViewAt(ctx, pair.subject)
