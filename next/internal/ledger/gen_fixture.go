@@ -58,7 +58,7 @@ func main() {
 			V:       "seed/0",
 			TS:      ts,
 			Actor:   fp,
-			Verb:    "progress.milestone",
+			Verb:    "message.sent",
 			Subject: "c-0001",
 			Payload: json.RawMessage(fmt.Sprintf(`{"n": %d}`, i)),
 			Prev:    prev,

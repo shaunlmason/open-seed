@@ -445,3 +445,22 @@ here. Newest last.
   different bytes for such a ledger, and only a new version re-keys
   the build id so the correction republishes at an unchanged tip
   (#129 review, the #124-round principle).
+- 2026-08-31 — Observations are declared inputs, never ambient
+  (plans/os-2ff8dbf1.md): the v0 channel is per-executor JSONL
+  streams keyed <actor>/<fence> under next/var/obs/ (the existing
+  var/ ignore rule already covers the directory), unsigned and lossy
+  by declaration; classification (live/expired/wedged/no_data) is a
+  pure function of the active claim's own stream, a declared as_of,
+  and the spec'd thresholds (900s/1800s), with no wall clock in any
+  build. The engine grew one seam: Builders take Inputs, only the
+  report declares consumption (Version "2"), and an input-bearing
+  build keys its stamp and build id with the snapshot's RFC 8785
+  digest (-i<digest12>) so changed inputs republish at an unchanged
+  tip while input-free projections stay byte-identical by
+  construction. progress.milestone admits strictly advancing counts
+  at a 25-position minimum spacing (position-derived, never ts,
+  which is metadata with no ordering authority); wedge.declared is
+  an operator fact with presence-checked evidence; both are facts,
+  never transitions. The ungoverned-verb test specimen moved from
+  progress.milestone to message.sent, since milestones now carry a
+  capability row.

@@ -139,7 +139,7 @@ func TestExitVerbsMatchTheTable(t *testing.T) {
 	if fmt.Sprint(fromTable) != fmt.Sprint(pinned) {
 		t.Fatalf("packet.ExitVerbs %v drifted from the table's deliberate exits %v", pinned, fromTable)
 	}
-	if packet.Required("progress.milestone") || !packet.Required("submission.made") {
+	if packet.Required("message.sent") || !packet.Required("submission.made") {
 		t.Fatal("Required must gate exactly the exit verbs")
 	}
 }

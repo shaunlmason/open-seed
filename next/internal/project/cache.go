@@ -62,7 +62,7 @@ var cacheDDL = []string{
 	`CREATE TABLE report (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID`,
 }
 
-func buildCache(records []*event.Record) (files map[string][]byte, err error) {
+func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err error) {
 	tmpDir, err := os.MkdirTemp("", "seed-cache-build-")
 	if err != nil {
 		return nil, err

@@ -49,7 +49,7 @@ func Actors() Projection {
 	return Projection{Name: "actors", Build: buildActors}
 }
 
-func buildActors(records []*event.Record) (map[string][]byte, error) {
+func buildActors(records []*event.Record, _ Inputs) (map[string][]byte, error) {
 	state, _, err := keyring.StateAt(records)
 	if err != nil {
 		return nil, err

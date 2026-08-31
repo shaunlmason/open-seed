@@ -297,3 +297,14 @@ Fresh sessions read this file instead of rediscovering.
   46.4% merged) while the rest hold. Diff `go tool cover -func`
   between runs to spot it, disprove with the isolated package run,
   and only trust two agreeing cold uniform-flag runs.
+- The coverage mis-merge's real root cause: the shared Go BUILD
+  cache, not the testcache. Many worktrees of the same module leave
+  stale instrumented objects for identical import paths; a run in a
+  freshly switched worktree can link them and mis-attribute counter
+  rows, so totals misread anywhere from 89% down to 80% while the
+  suite passes and CI (always cold) stays green. go clean
+  -testcache never purges it; `go clean -cache -testcache` before a
+  receipt in a switched worktree restores the true reading
+  immediately. Keep reading recorded receipt exits with a checker
+  that sys.exit(1)s on any nonzero, and never let a retry loop's
+  echo swallow that status into a chained push.

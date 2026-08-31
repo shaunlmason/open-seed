@@ -75,7 +75,7 @@ func TestDrillRawAdversaryPerPosture(t *testing.T) {
 			before := remoteTip(t, d.remote)
 
 			err := craftPush(t, d.remote, resolve, func(dir string, store *ledger.Store) {
-				appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0001", hostile, tipOf(t, store)))
+				appendRaw(t, store, resolve, signed(t, "message.sent", "c-0001", hostile, tipOf(t, store)))
 			})
 			after := remoteTip(t, d.remote)
 			if d.posture.Enforced() {
@@ -101,7 +101,7 @@ func TestDrillRawAdversaryPerPosture(t *testing.T) {
 			}
 			_, err = c.AppendLoop(gitref.Draft{
 				V: "seed/0", TS: "2026-09-01T03:00:00Z", Actor: fp,
-				Verb: "progress.milestone", Subject: "c-0002", Payload: json.RawMessage(hostile),
+				Verb: "message.sent", Subject: "c-0002", Payload: json.RawMessage(hostile),
 			}, func(e event.Event) (*event.Record, error) { return event.Sign(e, priv) }, resolve, admit.Validate(), 3)
 			var cls *admit.ClassificationError
 			if !errors.As(err, &cls) {
@@ -129,7 +129,7 @@ func TestDrillKillAndReplace(t *testing.T) {
 		}
 		_, err = c.AppendLoop(gitref.Draft{
 			V: "seed/0", TS: "2026-09-01T03:00:00Z", Actor: fp,
-			Verb: "progress.milestone", Subject: subject, Payload: json.RawMessage(`{"n": 1}`),
+			Verb: "message.sent", Subject: subject, Payload: json.RawMessage(`{"n": 1}`),
 		}, func(e event.Event) (*event.Record, error) { return event.Sign(e, priv) }, resolve, admit.Validate(), 3)
 		return err
 	}
@@ -142,14 +142,14 @@ func TestDrillKillAndReplace(t *testing.T) {
 		got := map[string]string{}
 		for name, mutate := range map[string]func(dir string, store *ledger.Store){
 			"classification": func(dir string, store *ledger.Store) {
-				appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0009", hostile, tipOf(t, store)))
+				appendRaw(t, store, resolve, signed(t, "message.sent", "c-0009", hostile, tipOf(t, store)))
 			},
 			"halted": func(dir string, store *ledger.Store) {
 				appendRaw(t, store, resolve, signed(t, "system.halt.declared", "system", `{"reason": "drill"}`, tipOf(t, store)))
-				appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0009", `{"n": 9}`, tipOf(t, store)))
+				appendRaw(t, store, resolve, signed(t, "message.sent", "c-0009", `{"n": 9}`, tipOf(t, store)))
 			},
 			"verify": func(dir string, store *ledger.Store) {
-				appendRaw(t, store, resolve, signedV(t, "seed/9", "progress.milestone", "c-0009", `{"n": 9}`, tipOf(t, store)))
+				appendRaw(t, store, resolve, signedV(t, "seed/9", "message.sent", "c-0009", `{"n": 9}`, tipOf(t, store)))
 			},
 		} {
 			before := remoteTip(t, remote)

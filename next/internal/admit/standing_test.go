@@ -122,7 +122,7 @@ func TestStandingRefusesNonRootActorVerbs(t *testing.T) {
 
 	// The enrolled worker signs ordinary verbs (the keyring is the
 	// resolver now) but not actor lifecycle verbs.
-	if err := Check(ctx, draftV(t, worker, version.Seed1, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, worker, version.Seed1, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)); err != nil {
 		t.Fatalf("an enrolled key must admit ordinary verbs: %v", err)
 	}
 	err = Check(ctx, draftV(t, worker, version.Seed1, keyring.VerbEnrolled, fpOf(t, third), enrollBody(t, third, "agent", "third"), ctx.Tip))
@@ -138,7 +138,7 @@ func TestStandingRefusesNonRootActorVerbs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = Check(ctx, draftV(t, worker, version.Seed1, "progress.milestone", "c-0002", `{"n": 2}`, ctx.Tip))
+	err = Check(ctx, draftV(t, worker, version.Seed1, "message.sent", "c-0002", `{"n": 2}`, ctx.Tip))
 	if !errors.Is(err, ledger.ErrUnknownActor) {
 		t.Fatalf("a revoked key must not admit anything, got %v", err)
 	}

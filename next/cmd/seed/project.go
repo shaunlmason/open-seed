@@ -15,10 +15,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/project"
 )
 
@@ -124,8 +126,32 @@ func runProjectRebuild(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(io.Discard)
 	dir := fs.String("ledger", "", "ledger directory")
 	out := fs.String("out", "projections", "projection output root")
+	obsDir := fs.String("obs", "", "observation channel directory (declares inputs)")
+	asOf := fs.String("as-of", "", "classification instant (RFC3339; required with --obs)")
+	expiryAfter := fs.Int("expiry-after", 900, "expiry threshold in seconds")
+	wedgeAfter := fs.Int("wedge-after", 1800, "wedge threshold in seconds")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || *dir == "" {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "project rebuild --ledger <dir> [--out <dir>]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "project rebuild --ledger <dir> [--out <dir>] [--obs <dir> --as-of <rfc3339> [--expiry-after <s>] [--wedge-after <s>]]"), stdout, stderr)
+	}
+	// Inputs are declared, never ambient: an observation directory
+	// without a declared as_of would smuggle the wall clock into a
+	// deterministic build, so the pair travels together.
+	var in project.Inputs
+	if *obsDir != "" {
+		when, err := time.Parse(time.RFC3339, *asOf)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--obs requires --as-of in RFC3339 (got %q): classification is computed at a declared instant, never the wall clock", *asOf)), stdout, stderr)
+		}
+		snap, err := obs.Load(*obsDir)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("observation channel %s: %v", *obsDir, err)), stdout, stderr)
+		}
+		in = project.Inputs{Obs: snap, AsOf: when, Thresholds: obs.Thresholds{
+			ExpiryAfter: time.Duration(*expiryAfter) * time.Second,
+			WedgeAfter:  time.Duration(*wedgeAfter) * time.Second,
+		}}
+	} else if *asOf != "" {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "--as-of declares observation inputs and needs --obs beside it"), stdout, stderr)
 	}
 	if err := project.CheckOverlap(*dir, *out); err != nil {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
@@ -138,7 +164,7 @@ func runProjectRebuild(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
-	results, err := project.Rebuild(*dir, *out, project.Default(), resolve)
+	results, err := project.RebuildWith(*dir, *out, project.Default(), resolve, in)
 	if err != nil {
 		var fail *ledger.Failure
 		if errors.As(err, &fail) {

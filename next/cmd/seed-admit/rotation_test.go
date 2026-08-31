@@ -57,7 +57,7 @@ func TestDrillKeyRotation(t *testing.T) {
 	}
 	if _, err := client().AppendLoop(gitref.Draft{
 		V: version.Seed1, TS: "2026-09-01T04:00:00Z", Actor: fpFor(t, keyA),
-		Verb: "progress.milestone", Subject: "c-1001", Payload: json.RawMessage(`{"n": 1}`),
+		Verb: "message.sent", Subject: "c-1001", Payload: json.RawMessage(`{"n": 1}`),
 	}, signerFor(keyA), resolve, admit.Validate(), 3); err != nil {
 		t.Fatalf("A must work before the rotation: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestDrillKeyRotation(t *testing.T) {
 	}
 	attributed := false
 	if err := store.Records(func(pos int, rec *event.Record) error {
-		if rec.Event.Verb == "progress.milestone" && rec.Event.Subject == "c-1001" {
+		if rec.Event.Verb == "message.sent" && rec.Event.Subject == "c-1001" {
 			attributed = rec.Event.Actor == fpFor(t, keyA)
 		}
 		return nil
@@ -107,7 +107,7 @@ func TestDrillKeyRotation(t *testing.T) {
 	// confers nothing: standing is read first.
 	_, err = client().AppendLoop(gitref.Draft{
 		V: version.Seed1, TS: "2026-09-01T04:10:00Z", Actor: fpFor(t, keyA),
-		Verb: "progress.milestone", Subject: "c-1002", Payload: json.RawMessage(`{"n": 2}`),
+		Verb: "message.sent", Subject: "c-1002", Payload: json.RawMessage(`{"n": 2}`),
 	}, signerFor(keyA), resolve, admit.Validate(), 3)
 	if !errors.Is(err, ledger.ErrUnknownActor) {
 		t.Fatalf("the rule set must refuse revoked A, got %v", err)
@@ -121,14 +121,14 @@ func TestDrillKeyRotation(t *testing.T) {
 	}
 	before := remoteTip(t, remote)
 	err = craftPush(t, remote, loose, func(dir string, store *ledger.Store) {
-		appendRaw(t, store, loose, signedBy(t, keyA, version.Seed1, "progress.milestone", "c-1003", `{"n": 3}`, tipOf(t, store)))
+		appendRaw(t, store, loose, signedBy(t, keyA, version.Seed1, "message.sent", "c-1003", `{"n": 3}`, tipOf(t, store)))
 	})
 	if !errors.Is(err, gitref.ErrRemoteRejected) || remoteTip(t, remote) != before || !strings.Contains(err.Error(), "revoked") {
 		t.Fatalf("the boundary must refuse revoked A naming the standing, got %v", err)
 	}
 	if _, err := client().AppendLoop(gitref.Draft{
 		V: version.Seed1, TS: "2026-09-01T04:12:00Z", Actor: fpFor(t, keyB),
-		Verb: "progress.milestone", Subject: "c-1004", Payload: json.RawMessage(`{"n": 4}`),
+		Verb: "message.sent", Subject: "c-1004", Payload: json.RawMessage(`{"n": 4}`),
 	}, signerFor(keyB), resolve, admit.Validate(), 3); err != nil {
 		t.Fatalf("B must work after the rotation: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestDrillCompromisedKeyCutPerPosture(t *testing.T) {
 
 			before := remoteTip(t, d.remote)
 			err := craftPush(t, d.remote, loose, func(dir string, store *ledger.Store) {
-				appendRaw(t, store, loose, signedBy(t, keyA, version.Seed1, "progress.milestone", "c-2001", `{"n": 1}`, tipOf(t, store)))
+				appendRaw(t, store, loose, signedBy(t, keyA, version.Seed1, "message.sent", "c-2001", `{"n": 1}`, tipOf(t, store)))
 			})
 			after := remoteTip(t, d.remote)
 			if d.posture.Enforced() {
@@ -189,7 +189,7 @@ func TestDrillCompromisedKeyCutPerPosture(t *testing.T) {
 			// reader at the revoked signer's position.
 			_, err = mustClient(t, d.remote).AppendLoop(gitref.Draft{
 				V: version.Seed1, TS: "2026-09-01T05:00:00Z", Actor: fpFor(t, root),
-				Verb: "progress.milestone", Subject: "c-2002", Payload: json.RawMessage(`{"n": 2}`),
+				Verb: "message.sent", Subject: "c-2002", Payload: json.RawMessage(`{"n": 2}`),
 			}, signerFor(root), resolve, admit.Validate(), 3)
 			if err == nil || !strings.Contains(err.Error(), "failed verification") || !strings.Contains(err.Error(), "revoked") {
 				t.Fatalf("the client's replay must report the broken chain with the standing named, got %v", err)

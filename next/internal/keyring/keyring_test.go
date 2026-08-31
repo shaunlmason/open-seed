@@ -286,7 +286,7 @@ func TestUnseededKeyringRefusesActorEvents(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "governance root") {
 		t.Fatalf("an unseeded keyring must refuse actor events, got %v", err)
 	}
-	if err := s.Advance(rec(t, root, "progress.milestone", "c-0001", `{"n": 1}`)); err != nil {
+	if err := s.Advance(rec(t, root, "message.sent", "c-0001", `{"n": 1}`)); err != nil {
 		t.Fatalf("non-actor verbs no-op even unseeded: %v", err)
 	}
 }
@@ -295,7 +295,7 @@ func TestAppliesOnlyAtSeed1(t *testing.T) {
 	if keyring.Applies(version.Protocol) || !keyring.Applies(version.Seed1) || keyring.Applies("seed/9") {
 		t.Fatal("keyring semantics activate exactly at seed/1")
 	}
-	if !keyring.IsActorVerb("actor.enrolled") || keyring.IsActorVerb("progress.milestone") {
+	if !keyring.IsActorVerb("actor.enrolled") || keyring.IsActorVerb("message.sent") {
 		t.Fatal("actor verb detection is namespace-based")
 	}
 }
@@ -380,7 +380,7 @@ func TestCapabilityVocabulary(t *testing.T) {
 		}
 	}
 	// Ungoverned verbs need active standing only, on both sides.
-	for _, verb := range []string{"progress.milestone", "system.genesis"} {
+	for _, verb := range []string{"message.sent", "system.genesis"} {
 		if got := keyring.AcceptedCapabilities(verb); got != nil {
 			t.Errorf("%s must need active standing only, got %v", verb, got)
 		}

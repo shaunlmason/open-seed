@@ -79,7 +79,7 @@ func milestoneDraft(t testing.TB, priv ed25519.PrivateKey, n int) Draft {
 	}
 	return Draft{
 		V: "seed/0", TS: "2026-09-01T01:00:00Z", Actor: fp,
-		Verb: "progress.milestone", Subject: "c-0001",
+		Verb: "message.sent", Subject: "c-0001",
 		Payload: json.RawMessage(fmt.Sprintf(`{"n": %d}`, n)),
 	}
 }

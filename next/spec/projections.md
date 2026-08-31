@@ -67,6 +67,17 @@ The stamp is the staleness surface: consumers read it, may demand a
 minimum position, and never treat the view as authoritative. The
 `seed project rebuild` envelope reports the same values per projection.
 
+**Declared inputs** (`observations.md`): a projection that declares
+input consumption and receives an observation snapshot carries the
+declared-inputs digest — computed over the snapshot, `as_of`, and
+the thresholds together — in the stamp (`"inputs": "<digest>"`,
+omitted otherwise) and appends it to the build id as a fourth
+segment, `<position>-<tip12>-v<version>-i<digest12>`, so ANY changed
+input at an unchanged tip republishes under a new id instead of
+being discarded as a same-id duplicate. Input-free projections never carry
+the field or the segment and are byte-identical with and without
+inputs by construction.
+
 ## Registered projections
 
 Candidate actors derive from the chain itself (the genesis payload's
@@ -122,9 +133,14 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   (position, tip, active version), `actors` (counts by standing,
   roots, total), `halt` (halted flag; declaring position and actor
   while halted), `checkpoints` (count; last position when any exist),
-  `contracts` (subject and event counts). Sections needing Phase 5+
-  facts (claims, offers, budgets, expiry-vs-wedge, divergence) are
-  extension points named here, not emitted empty.
+  `contracts` (subject and event counts), and `observation`
+  (Version "2"; `observations.md`): null on an input-free build, else
+  the declared inputs echoed (`as_of`, digest, thresholds) plus one
+  expiry-vs-wedge classification per active claim, read only from the
+  claim's own fence-keyed stream. The report is the one
+  input-consuming projection; remaining sections needing later facts
+  (offers, budgets, divergence) stay named extension points, not
+  emitted empty.
 
 - **`cache`** (`cache.db`): the single-machine read-throughput
   surface — one SQLite database mirroring the views (`roster`,

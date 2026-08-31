@@ -159,14 +159,17 @@ Phase 7, as added rules on the shared set.
 - 5.1 transition table as data + lifecycle verbs — os-d69a6c91 —
   plan PR #113 (merged, amended: charter Appendix catalog vocabulary,
   merge.observed-only done, capability rows, completeness presence at
-  the claimability transition, per review) — **implementing**:
+  the claimability transition, per review) — **done** (merged #122;
+  card closed; the fold's seed/1 activation boundary rides follow-up
+  #129, per the post-merge review round):
   transitions.json + self-validation, the lifecycle admission rule
   across rule set/hook/CLI, dispatch/claim capability lanes,
   contracts v2 (state + anomalies), queue v2 ("transitions/1"),
   cache generation 2, spec/lifecycle.md
 - 5.2 claims with fences — os-5dc16a7c — plan PR #114 (merged,
-  amended: prior claimants stay fenced, per review) —
-  **implementing** (stacked on 5.1's branch): the exclusive table
+  amended: prior claimants stay fenced, per review) — **done**
+  (merged #123; card closed; the claimless-citation fence fix rides
+  follow-up #128, per the post-merge round): the exclusive table
   flag, the claim fold (holder, fence, prior claimants), the fence
   rule between grant and lifecycle, structured contention, the
   online-only client seam, contracts v3 with the claim object, cache
@@ -174,28 +177,37 @@ Phase 7, as added rules on the shared set.
 - 5.3 four-part handoff packets — os-b07b0f59 — plan PR #115
   (merged, amended: packets on ALL four exits incl. submission; the
   3072 canonical bound fits the payload cap; the mandatory base
-  range; combined anchors, per review) — **implementing** (stacked
-  on 5.2's branch): internal/packet strict schema, the packet
+  range; combined anchors, per review) — **done** (merged #124;
+  card in review pending follow-up #127, the resume-drill and
+  packet-shape hardening from the post-merge round): internal/packet strict schema, the packet
   admission rule, the classifier's bare-range exemption, tolerant
   fold counting packetless/fence-violating exits, the A/B resume
   drill
 - 5.4 acceptance-spec field + spec gate — os-73c00a50 — plan PR #116
   (merged, amended: no trivial-tier gate exemption; gate evidence
-  bound to the acceptance revision, per review) — **implementing**
-  (stacked on 5.3's branch): the structured acceptance field with
+  bound to the acceptance revision, per review) — **done** (merged
+  #125; card closed; the explicit executable marker and the -p 1
+  coverage serialization landed in-PR per review): the structured acceptance field with
   the universal gate rule and ref/gate commit equality, the
   propose-vs-arm proposal shape rule, contracts v4 with the
   {ref, executable, gated} object, cache generation 4
 - 5.5 falsifiable-plan lint + plan-gating — os-16c1d142 — plan PR
   #120 (merged, amended: two-layer plan binding with the Phase 6
   receipt closing the ancestry hole; classify ships as an invocable
-  check, per review) — **implementing** (stacked on 5.4's branch):
+  check, per review) — **done** (merged #126; card closed; the
+  anchor-equality gate and labeled lint landed in-PR per review; the
+  receipt's two plan-line rows go green with engine pin #130):
   internal/plan lint + classifier, seed plan lint/classify verbs,
   exit 16 plan_required, the submission plan gate over the fold's
   tier and plan.approved facts, plan.* capability rows
 - 5.6 observation streams v0 + expiry vs. wedge — os-2ff8dbf1 — plan
-  PR #121 (open, amended per review: input-bearing build identity,
-  fence-keyed streams, position throttle) — after 5.2
+  PR #121 (merged, amended per review: input-bearing build identity,
+  fence-keyed streams, position throttle) — **this PR**:
+  internal/obs (fence-keyed JSONL streams, snapshot digest, pure
+  classification), the engine Inputs seam with report Version "2"
+  and the -i<digest12> build identity, milestone/wedge admission
+  (monotonic counts, 25-position spacing, operator wedge facts),
+  seed obs emit + rebuild declared inputs, spec/observations.md
 - 4.4 write-boundary lint wired into check-next — os-8d5e9c45 — plan
   PR #107 (merged, amended: seam/write-separation lint + locked trees
   `0444`/`0555` with the engine unlock window, deletion via rebuild,
@@ -210,15 +222,11 @@ Phase 7, as added rules on the shared set.
 
 Phases 0 through 4 are done and closed (the #111/#112 stack collapse
 re-landed as #117/#118, and #119 completed Phase 4). Every Phase 5
-plan is merged: #113–#116, #120, #121. Implementations: 5.1 (#122)
-plan is merged: #113–#116, #120, #121. Implementations 5.1 (#122)
-through 5.5 (#126), 5.3's hardening (#127), and 5.2's
-claimless-citation fix (#128) are all merged; 5.6 (#131) is in
-review, completing the Phase 5 implementation set. **This follow-up
-PR fixes 5.1's post-merge review round**: the lifecycle fold honors
-the seed/1 activation boundary, with every fold-consuming derivation
-bumped (contracts 5, queue 3, cache 5) so corrected semantics
-republish at an unchanged tip. **Next action: land this PR and #131;
-then the Phase 5 exit record and Phase 6 (the verdict pipeline).**
+plan is merged (#113–#116, #120, #121); implementations 5.1 (#122)
+through 5.5 (#126) and all three post-merge review follow-ups (#127,
+#128, #129) are merged. **This PR implements 5.6** (os-2ff8dbf1,
+observations v0), the last open Phase 5 PR: landing it completes the
+Phase 5 implementation set. **Next action: land this PR; then the
+Phase 5 exit record and Phase 6 (the verdict pipeline).**
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

@@ -140,7 +140,7 @@ func lifecycleChain(t *testing.T) (string, ledger.Resolver, ed25519.PrivateKey, 
 	add(root, version.Protocol, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
 	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
 	add(root, version.Seed1, keyring.VerbGranted, pFP(t, worker), `{"capability": "maintenance"}`)
-	add(worker, version.Seed1, "progress.milestone", "c-0001", `{"n": 1}`)
+	add(worker, version.Seed1, "message.sent", "c-0001", `{"n": 1}`)
 	return dir, resolve, root, worker
 }
 
@@ -214,7 +214,7 @@ func TestRebuildByteIdenticalAndStamped(t *testing.T) {
 	}
 	rec, err := event.Sign(event.Event{
 		V: version.Seed1, TS: "2026-09-01T02:00:00Z", Actor: pFP(t, root),
-		Verb: "progress.milestone", Subject: "c-0002", Payload: json.RawMessage(`{"n": 2}`), Prev: tip,
+		Verb: "message.sent", Subject: "c-0002", Payload: json.RawMessage(`{"n": 2}`), Prev: tip,
 	}, root)
 	if err != nil {
 		t.Fatal(err)
@@ -247,7 +247,7 @@ func TestSemanticsChangeRepublishes(t *testing.T) {
 	dir, resolve, _, _ := lifecycleChain(t)
 	out := lockedTempOut(t, "projections")
 	probe := func(ver, body string) []project.Projection {
-		return []project.Projection{{Name: "probe", Version: ver, Build: func([]*event.Record) (map[string][]byte, error) {
+		return []project.Projection{{Name: "probe", Version: ver, Build: func([]*event.Record, project.Inputs) (map[string][]byte, error) {
 			return map[string][]byte{"probe.json": []byte(body + "\n")}, nil
 		}}}
 	}
@@ -431,7 +431,7 @@ func TestRefusalsAndLedgerImmutability(t *testing.T) {
 	}
 	rec, err := event.Sign(event.Event{
 		V: version.Seed1, TS: "2026-09-01T02:00:00Z", Actor: pFP(t, pKey(t, 1)),
-		Verb: "progress.milestone", Subject: "c-0009", Payload: json.RawMessage(`{"n": 9}`), Prev: tip,
+		Verb: "message.sent", Subject: "c-0009", Payload: json.RawMessage(`{"n": 9}`), Prev: tip,
 	}, pKey(t, 1))
 	if err != nil {
 		t.Fatal(err)

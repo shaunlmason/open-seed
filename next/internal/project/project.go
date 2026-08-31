@@ -13,6 +13,8 @@
 package project
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,34 +23,87 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
+
+	"github.com/gowebpki/jcs"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/obs"
 )
 
+// Inputs is the declared non-chain input a rebuild may carry
+// (next/spec/observations.md): the loaded observation snapshot, the
+// as_of instant classification is computed at, and the classification
+// thresholds. Everything here is declared by the caller, never read
+// from a wall clock or an ambient path, so an input-bearing build
+// stays a pure function of (records, inputs).
+type Inputs struct {
+	Obs        *obs.Snapshot
+	AsOf       time.Time
+	Thresholds obs.Thresholds
+}
+
+// Digest is the declared-inputs identity: the RFC 8785 digest over
+// EVERY declared input (the snapshot, as_of, and both thresholds),
+// because any of them changes the classification bytes, and an
+// identity covering only the snapshot would let a rebuild at a later
+// as_of be discarded as a same-id duplicate, leaving a silent worker
+// permanently live in the published view.
+func (in Inputs) Digest() (string, error) {
+	snapDigest, err := in.Obs.Digest()
+	if err != nil {
+		return "", err
+	}
+	b, err := json.Marshal(map[string]any{
+		"obs":                  snapDigest,
+		"as_of":                in.AsOf.UTC().Format(time.RFC3339),
+		"expiry_after_seconds": int(in.Thresholds.ExpiryAfter / time.Second),
+		"wedge_after_seconds":  int(in.Thresholds.WedgeAfter / time.Second),
+	})
+	if err != nil {
+		return "", err
+	}
+	canonical, err := jcs.Transform(b)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(canonical)
+	return hex.EncodeToString(sum[:]), nil
+}
+
 // Builder is one projection: a pure function from the verified record
-// prefix to named output files (slash-separated relative paths).
-type Builder func(records []*event.Record) (map[string][]byte, error)
+// prefix and the declared inputs to named output files
+// (slash-separated relative paths). The engine hands zero Inputs to a
+// projection that does not declare consumption, so an input-free view
+// is byte-identical with and without inputs by construction.
+type Builder func(records []*event.Record, in Inputs) (map[string][]byte, error)
 
 // Projection pairs a name with its builder. Version identifies the
 // builder's derivation semantics, not its input: bump it when Build's
 // logic changes so one ledger prefix republishes under a new build id
 // rather than being discarded as a same-id duplicate. Empty means "1".
+// Inputs declares that the builder consumes declared inputs; only
+// then do the snapshot digest, the stamp's inputs field, and the
+// build id's input segment apply.
 type Projection struct {
 	Name    string
 	Version string
+	Inputs  bool
 	Build   Builder
 }
 
 // Stamp is the staleness surface every build carries
 // (next/spec/projections.md): the exact verified position the view was
-// built at, and the derivation version that built it. Consumers read
-// it; the engine never hides it.
+// built at, the derivation version that built it, and, for an
+// input-bearing build, the declared-inputs digest that keyed it.
+// Consumers read it; the engine never hides it.
 type Stamp struct {
 	Name     string `json:"name"`
 	Position int    `json:"position"`
 	Tip      string `json:"tip"`
 	Version  string `json:"version"`
+	Inputs   string `json:"inputs,omitempty"`
 }
 
 // The published layout under <out>/<name>/: immutable build trees and
@@ -126,13 +181,24 @@ type Result struct {
 	Version  string
 }
 
-// Rebuild is the one-command rebuild: refuse overlapping paths, open
-// the ledger read-only, verify from genesis (a failure refuses before
-// anything is written), run every registered projection over the
-// verified records, and publish each tree. The build id derives from
-// the stamp, so identical prefixes reproduce identical trees, CURRENT
-// included: deleting the output loses nothing.
-func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.Resolver, vopts ...ledger.VerifyOption) (results []Result, err error) {
+// Rebuild is the one-command rebuild without declared inputs: every
+// projection builds from the verified records alone.
+func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.Resolver, vopts ...ledger.VerifyOption) ([]Result, error) {
+	return RebuildWith(ledgerDir, outDir, projections, resolve, Inputs{}, vopts...)
+}
+
+// RebuildWith is the one-command rebuild: refuse overlapping paths,
+// open the ledger read-only, verify from genesis (a failure refuses
+// before anything is written), run every registered projection over
+// the verified records, and publish each tree. The build id derives
+// from the stamp, so identical prefixes reproduce identical trees,
+// CURRENT included: deleting the output loses nothing. A projection
+// that declares Inputs and receives an observation snapshot keys its
+// build id and stamp with the declared-inputs digest (snapshot,
+// as_of, thresholds together), so any changed input at an unchanged
+// tip republishes under a new id; input-free projections ignore the
+// inputs entirely.
+func RebuildWith(ledgerDir, outDir string, projections []Projection, resolve ledger.Resolver, in Inputs, vopts ...ledger.VerifyOption) (results []Result, err error) {
 	if err := CheckOverlap(ledgerDir, outDir); err != nil {
 		return nil, err
 	}
@@ -172,13 +238,26 @@ func Rebuild(ledgerDir, outDir string, projections []Projection, resolve ledger.
 		// verified prefix AND the derivation semantics. A projection
 		// whose Build logic changes bumps Version, so the same ledger
 		// tip republishes under a new id instead of being discarded
-		// as a same-id duplicate (review finding on #109).
+		// as a same-id duplicate (review finding on #109). An
+		// input-bearing build appends the declared-inputs digest as a
+		// fourth segment for the same reason at an unchanged tip
+		// (review finding on #121).
 		buildID := fmt.Sprintf("%08d-%.12s-v%s", rep.Count, rep.Tip, ver)
-		files, err := p.Build(records)
+		bin := Inputs{}
+		digest := ""
+		if p.Inputs && in.Obs != nil {
+			bin = in
+			digest, err = in.Digest()
+			if err != nil {
+				return nil, fmt.Errorf("projection %s: inputs digest: %v", p.Name, err)
+			}
+			buildID = fmt.Sprintf("%s-i%.12s", buildID, digest)
+		}
+		files, err := p.Build(records, bin)
 		if err != nil {
 			return nil, fmt.Errorf("projection %s: %v", p.Name, err)
 		}
-		stamp, err := json.Marshal(Stamp{Name: p.Name, Position: rep.Count, Tip: rep.Tip, Version: ver})
+		stamp, err := json.Marshal(Stamp{Name: p.Name, Position: rep.Count, Tip: rep.Tip, Version: ver, Inputs: digest})
 		if err != nil {
 			return nil, err
 		}
