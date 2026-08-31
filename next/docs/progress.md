@@ -354,11 +354,12 @@ os-6e37b10e's task PR (an administrative card, not a Phase 6 item).
 **Phase 6 exit (the III.G subset docs/next-build-plan.md scopes): met.**
 Met means the subset the plan's own Phase 6 item list and exit drills
 assign to this phase, the scoped-exit posture of the Phase 2, 3, and
-5 records: the plan itself defers L2 runtime-tuple separation and L3
-deterministic-first verification to Phase 10's per-tier level
-declarations and rubric-verdict calibration (per-item evidence, the
-human gold set, drift-triggered authority suspension) to Phase 11,
-so those III.G rows are later phases' bound work, not this exit's.
+5 records: the plan itself defers both L2 runtime-tuple separation
+and L3 deterministic-first verification (the per-tier level
+declarations) and rubric-verdict calibration (per-item evidence, the
+human gold set, drift-triggered authority suspension) to Phase 10,
+whose exit names levels and calibration together, so those III.G
+rows are Phase 10's bound work, not this exit's.
 The exit line's three named drills are green on main: the
 induced-divergence reconciliation drills (#137's
 merge_without_verdict, chain_skipped, neutral unreconciled,
