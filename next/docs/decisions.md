@@ -408,3 +408,16 @@ here. Newest last.
   and misreading totals far below truth (79-89% readings against a
   stable 91.1%). The meter now measures the same number every run;
   the gate itself is unchanged. (PR #125)
+- 2026-08-31 — 5.1's post-merge review round (os-d69a6c91 follow-up):
+  the lifecycle fold now honors the seed/1 activation boundary the
+  spec and admission already stated (records under seed/0 are
+  grandfathered inert, the keyring.Applies posture). The fold
+  filtered by verb name alone, so an upgraded ledger's pre-activation
+  events would occupy states and make the real seed/1 filing refuse
+  as a second birth; version discipline pins e.V to the version
+  active at each position, so the filter is one record-level check.
+  Every fold-consuming derivation bumps with the corrected fold
+  (contracts 5, queue 3, cache 5): a published projection rebuilds to
+  different bytes for such a ledger, and only a new version re-keys
+  the build id so the correction republishes at an unchanged tip
+  (#129 review, the #124-round principle).

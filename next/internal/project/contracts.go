@@ -71,10 +71,12 @@ type ContractClaim struct {
 
 // Contracts returns the contract-detail projection. Version "2" added
 // the folded state and anomaly count; Version "3" the claim object;
-// Version "4" the acceptance field — each republishing under a new
+// Version "4" the acceptance field; Version "5" the fold's seed/1
+// activation boundary (pre-activation records inert) — each
+// republishing under a new
 // build id via the version-in-identity machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "4", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "5", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
