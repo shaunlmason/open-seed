@@ -361,6 +361,13 @@ type SubjectState struct {
 	PriorClaimants map[string]bool
 }
 
+// milestoneFact is a subject's milestone high-water mark: the highest
+// admitted count and the chain position of the latest milestone.
+type milestoneFact struct {
+	Count int
+	Pos   int
+}
+
 // Fold is the folded lifecycle state of every subject in a record
 // prefix, in first-appearance order.
 type Fold struct {
@@ -371,6 +378,12 @@ type Fold struct {
 	// (plans/os-16c1d142.md): they change no lifecycle state and the
 	// submission gate consults them.
 	planned map[string]string
+	// milestones maps subject -> its milestone high-water mark
+	// (plans/os-2ff8dbf1.md): progress.milestone is a fact too, and
+	// the summarization boundary consults the mark. Raw-pushed
+	// regressions keep the maximum count, so tolerated history never
+	// lowers the monotonic bar.
+	milestones map[string]milestoneFact
 }
 
 // PlanApproved reports the subject's approved-plan anchor, if any.
@@ -382,12 +395,26 @@ func (f *Fold) PlanApproved(subject string) (string, bool) {
 // FoldRecords folds every subject's lifecycle events, skipping illegal
 // history without wedging, the halt.StateAt posture.
 func (t *Table) FoldRecords(records []*event.Record) *Fold {
-	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}}
+	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}, milestones: map[string]milestoneFact{}}
 	for pos, rec := range records {
 		e := &rec.Event
 		if e.Verb == PlanApprovedVerb {
 			if ref, _ := planAnchor(e.Payload); ref != "" {
 				f.planned[e.Subject] = ref
+			}
+			continue
+		}
+		if e.Verb == MilestoneVerb {
+			var m struct {
+				Count *int `json:"count"`
+			}
+			if json.Unmarshal(e.Payload, &m) == nil && m.Count != nil {
+				fact, seen := f.milestones[e.Subject]
+				if !seen || *m.Count > fact.Count {
+					fact.Count = *m.Count
+				}
+				fact.Pos = pos
+				f.milestones[e.Subject] = fact
 			}
 			continue
 		}
@@ -563,6 +590,98 @@ const (
 	// own term for the tier whose contracts submit without a plan.
 	TrivialTier = "trivial"
 )
+
+// The observation summarization vocabulary (plans/os-2ff8dbf1.md;
+// SEED-NEXT.md Part II §5): the ephemeral channel is summarized into
+// ledger facts at material transitions, and these are the facts. Both
+// are free verbs, never transitions: the pinned four in_progress
+// exits stand.
+const (
+	MilestoneVerb     = "progress.milestone"
+	WedgeDeclaredVerb = "wedge.declared"
+	// MinMilestoneSpacing is the v0 bounded-frequency default: the
+	// minimum chain positions since the subject's last admitted
+	// milestone. Spacing is measured in positions, never timestamps:
+	// ts is human-readable metadata with no ordering authority, so a
+	// time rule would be signer-gameable and skew-prone, while
+	// position spacing is admission-derived, replay-deterministic,
+	// and bounds the protected quantity, the subject's share of
+	// ledger volume.
+	MinMilestoneSpacing = 25
+)
+
+// MilestoneError refuses a progress.milestone that violates the
+// monotonic or bounded-frequency rule at the summarization boundary.
+// It rides the established shape-refusal exit mapping: the plan
+// allocates no new code.
+type MilestoneError struct {
+	Subject string
+	Reason  string
+}
+
+func (e *MilestoneError) Error() string {
+	return fmt.Sprintf("progress.milestone on %s refused: %s (next/spec/observations.md)", e.Subject, e.Reason)
+}
+
+// CheckMilestone enforces the summarization boundary for a milestone
+// landing at position tip: payload presence ({count, step}), a
+// strictly advancing count against the fold's high-water mark, and
+// the minimum position spacing since the subject's latest milestone.
+func (f *Fold) CheckMilestone(subject string, tip int, payload []byte) error {
+	var m struct {
+		Count *int   `json:"count"`
+		Step  string `json:"step"`
+	}
+	var missing []string
+	if json.Unmarshal(payload, &m) != nil || m.Count == nil {
+		missing = append(missing, "count")
+	}
+	if strings.TrimSpace(m.Step) == "" {
+		missing = append(missing, "step")
+	}
+	if len(missing) > 0 {
+		return &IncompleteError{Verb: MilestoneVerb, Subject: subject, Missing: missing}
+	}
+	last, ok := f.milestones[subject]
+	if !ok {
+		return nil
+	}
+	if *m.Count <= last.Count {
+		return &MilestoneError{Subject: subject, Reason: fmt.Sprintf("count %d does not advance the last admitted milestone count %d — progress counts are monotonic, never clock-derived", *m.Count, last.Count)}
+	}
+	if tip-last.Pos < MinMilestoneSpacing {
+		return &MilestoneError{Subject: subject, Reason: fmt.Sprintf("position spacing %d since the milestone at position %d is under the minimum %d — milestones are coarse, bounded-frequency summaries", tip-last.Pos, last.Pos, MinMilestoneSpacing)}
+	}
+	return nil
+}
+
+// CheckWedgeShape enforces wedge.declared's presence payload
+// ({observed, count, since}): the visible wedge condition recorded
+// durably, changing no state.
+func CheckWedgeShape(subject string, payload []byte) error {
+	var m struct {
+		Observed string `json:"observed"`
+		Count    *int   `json:"count"`
+		Since    string `json:"since"`
+	}
+	if json.Unmarshal(payload, &m) != nil {
+		return &IncompleteError{Verb: WedgeDeclaredVerb, Subject: subject, Missing: []string{"observed", "count", "since"}}
+	}
+	var missing []string
+	if strings.TrimSpace(m.Observed) == "" {
+		missing = append(missing, "observed")
+	}
+	if m.Count == nil {
+		missing = append(missing, "count")
+	}
+	if strings.TrimSpace(m.Since) == "" {
+		missing = append(missing, "since")
+	}
+	if len(missing) > 0 {
+		return &IncompleteError{Verb: WedgeDeclaredVerb, Subject: subject, Missing: missing}
+	}
+	return nil
+}
 
 // planAnchor extracts a payload's plan anchor.
 func planAnchor(payload []byte) (string, bool) {

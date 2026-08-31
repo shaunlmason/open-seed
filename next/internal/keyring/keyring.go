@@ -98,6 +98,14 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapClaim, CapOperator}
 	case "plan.approved":
 		return []string{CapOperator}
+	// The observation summarization verbs (plans/os-2ff8dbf1.md): a
+	// milestone is the claim lane's coarse fact (the fence matrix
+	// applies on the claimed subject); declaring a wedge is operator
+	// judgment in v0, the merge.observed posture.
+	case "progress.milestone":
+		return []string{CapClaim, CapOperator}
+	case "wedge.declared":
+		return []string{CapOperator}
 	}
 	return nil
 }

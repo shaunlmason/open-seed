@@ -27,7 +27,7 @@ func TestBuildersSurfaceDerivationErrors(t *testing.T) {
 		"cache":  buildCache,
 	}
 	for name, build := range builders {
-		if _, err := build(unfoldableChain()); err == nil {
+		if _, err := build(unfoldableChain(), Inputs{}); err == nil {
 			t.Errorf("builder %s must surface a derivation error on unfoldable history", name)
 		}
 	}

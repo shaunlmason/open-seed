@@ -179,7 +179,7 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 	fp, _ := event.Fingerprint(priv.Public().(ed25519.PublicKey))
 	if _, err := c.AppendLoop(gitref.Draft{
 		V: "seed/0", TS: "2026-09-01T01:00:00Z", Actor: fp,
-		Verb: "progress.milestone", Subject: "c-0001", Payload: json.RawMessage(`{"n": 1}`),
+		Verb: "message.sent", Subject: "c-0001", Payload: json.RawMessage(`{"n": 1}`),
 	}, func(e event.Event) (*event.Record, error) { return event.Sign(e, priv) }, resolve, admit.Validate(), 3); err != nil {
 		t.Fatalf("valid append must land through the hook: %v", err)
 	}
@@ -190,17 +190,17 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 		mutate     func(dir string, store *ledger.Store)
 	}{
 		{"hostile payload", "classification", func(dir string, store *ledger.Store) {
-			appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0002", hostile, tipOf(t, store)))
+			appendRaw(t, store, resolve, signed(t, "message.sent", "c-0002", hostile, tipOf(t, store)))
 		}},
 		{"halt violation inside push", "halted", func(dir string, store *ledger.Store) {
 			appendRaw(t, store, resolve, signed(t, "system.halt.declared", "system", `{"reason": "drill"}`, tipOf(t, store)))
-			appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0002", `{"n": 2}`, tipOf(t, store)))
+			appendRaw(t, store, resolve, signed(t, "message.sent", "c-0002", `{"n": 2}`, tipOf(t, store)))
 		}},
 		{"malformed declare", "shape", func(dir string, store *ledger.Store) {
 			appendRaw(t, store, resolve, signed(t, "system.halt.declared", "system", `{}`, tipOf(t, store)))
 		}},
 		{"wrong version", "verify", func(dir string, store *ledger.Store) {
-			appendRaw(t, store, resolve, signedV(t, "seed/9", "progress.milestone", "c-0002", `{"n": 2}`, tipOf(t, store)))
+			appendRaw(t, store, resolve, signedV(t, "seed/9", "message.sent", "c-0002", `{"n": 2}`, tipOf(t, store)))
 		}},
 		{"claim contention", "already claimed", func(dir string, store *ledger.Store) {
 			appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"to": "seed/1"}`, tipOf(t, store)))
@@ -219,7 +219,7 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 			appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"note": "missing to"}`, tipOf(t, store)))
 		}},
 		{"forged signature", "verify", func(dir string, store *ledger.Store) {
-			appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0002", `{"n": 5}`, tipOf(t, store)))
+			appendRaw(t, store, resolve, signed(t, "message.sent", "c-0002", `{"n": 5}`, tipOf(t, store)))
 			segs, err := filepath.Glob(filepath.Join(dir, "segments", "*.jsonl"))
 			if err != nil || len(segs) == 0 {
 				t.Fatal("no segments")
@@ -254,8 +254,8 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 
 	// A multi-record valid push validates each record and lands.
 	if err := craftPush(t, remote, resolve, func(dir string, store *ledger.Store) {
-		appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0003", `{"n": 3}`, tipOf(t, store)))
-		appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0004", `{"n": 4}`, tipOf(t, store)))
+		appendRaw(t, store, resolve, signed(t, "message.sent", "c-0003", `{"n": 3}`, tipOf(t, store)))
+		appendRaw(t, store, resolve, signed(t, "message.sent", "c-0004", `{"n": 4}`, tipOf(t, store)))
 	}); err != nil {
 		t.Fatalf("multi-record valid push must land: %v", err)
 	}
@@ -290,7 +290,7 @@ func TestHookRefusesHistoryRewriteAndRefShapes(t *testing.T) {
 	fp, _ := event.Fingerprint(priv.Public().(ed25519.PublicKey))
 	if _, err := c.AppendLoop(gitref.Draft{
 		V: "seed/0", TS: "2026-09-01T01:00:00Z", Actor: fp,
-		Verb: "progress.milestone", Subject: "c-0001", Payload: json.RawMessage(`{"n": 1}`),
+		Verb: "message.sent", Subject: "c-0001", Payload: json.RawMessage(`{"n": 1}`),
 	}, func(e event.Event) (*event.Record, error) { return event.Sign(e, priv) }, resolve, admit.Validate(), 3); err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func TestHookRefusesHistoryRewriteAndRefShapes(t *testing.T) {
 	if _, err := store.Append(grec, resolve); err != nil {
 		t.Fatal(err)
 	}
-	appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-9999", `{"n": 9}`, tipOf(t, store)))
+	appendRaw(t, store, resolve, signed(t, "message.sent", "c-9999", `{"n": 9}`, tipOf(t, store)))
 	_, err = rc.CommitAndPush(dir, tipCommit, "adversary: rewritten history as descendant commit")
 	if !errors.Is(err, gitref.ErrRemoteRejected) || !strings.Contains(err.Error(), "rewrites admitted history") {
 		t.Fatalf("record-level rewrite must refuse, got %v", err)
@@ -468,7 +468,7 @@ func TestHookRefusesNonLedgerFiles(t *testing.T) {
 	}
 
 	err = craftPush(t, remote, resolve, func(dir string, store *ledger.Store) {
-		appendRaw(t, store, resolve, signed(t, "progress.milestone", "c-0001", `{"n": 1}`, tipOf(t, store)))
+		appendRaw(t, store, resolve, signed(t, "message.sent", "c-0001", `{"n": 1}`, tipOf(t, store)))
 		if werr := os.MkdirAll(filepath.Join(dir, "segments", "nested"), 0o755); werr != nil {
 			t.Fatal(werr)
 		}

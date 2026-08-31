@@ -79,7 +79,7 @@ func TestGrantChecksOperatorVerbs(t *testing.T) {
 	}
 
 	// Ordinary verbs need active standing only.
-	if err := Check(ctx, draftV(t, worker, version.Seed1, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, worker, version.Seed1, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)); err != nil {
 		t.Fatalf("an ungoverned verb by an enrolled key must admit, got %v", err)
 	}
 }
@@ -124,7 +124,7 @@ func TestKindParityDrill(t *testing.T) {
 		{"system.halt.declared", "system", `{"reason": "x"}`},
 		{ledger.UpgradeVerb, "system", `{"to": "seed/9"}`},
 		{keyring.VerbGranted, fpOf(t, signer), `{"capability": "x"}`},
-		{"progress.milestone", "c-0001", `{"n": 1}`},
+		{"message.sent", "c-0001", `{"n": 1}`},
 	} {
 		errA := Check(ctx, draftV(t, worker, version.Seed1, c.verb, c.subject, c.payload, ctx.Tip))
 		errB := Check(ctx, draftV(t, maintainer, version.Seed1, c.verb, c.subject, c.payload, ctx.Tip))

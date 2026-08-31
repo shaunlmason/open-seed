@@ -130,7 +130,7 @@ func TestVerifyEnrolledKeyLifecycle(t *testing.T) {
 	b, rootResolve := newChain(t, root, worker)
 	b.add(root, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
 	b.add(root, "actor.enrolled", aFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
-	b.add(worker, "progress.milestone", "c-0001", `{"n": 1}`)
+	b.add(worker, "message.sent", "c-0001", `{"n": 1}`)
 
 	rep, err := b.store.VerifyFromGenesis(rootResolve)
 	if err != nil || rep.Count != 4 || rep.ActiveVersion != version.Seed1 {
@@ -143,7 +143,7 @@ func TestVerifyEnrolledKeyLifecycle(t *testing.T) {
 	if rep, err := b.store.VerifyFromGenesis(rootResolve); err != nil || rep.Count != 5 {
 		t.Fatalf("history before the revocation stays attributed: %+v %v", rep, err)
 	}
-	b.add(worker, "progress.milestone", "c-0002", `{"n": 2}`)
+	b.add(worker, "message.sent", "c-0002", `{"n": 2}`)
 	var fail *ledger.Failure
 	_, err = b.store.VerifyFromGenesis(rootResolve)
 	if !errors.As(err, &fail) || fail.Position != 5 || fail.Reason != ledger.ReasonUnknownActor {
@@ -158,7 +158,7 @@ func TestVerifyPreEnrollmentSignatureRefuses(t *testing.T) {
 	root, worker := aKey(t, 1), aKey(t, 2)
 	b, rootResolve := newChain(t, root, worker)
 	b.add(root, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
-	b.add(worker, "progress.milestone", "c-0001", `{"n": 1}`)
+	b.add(worker, "message.sent", "c-0001", `{"n": 1}`)
 	var fail *ledger.Failure
 	_, err := b.store.VerifyFromGenesis(rootResolve)
 	if !errors.As(err, &fail) || fail.Position != 2 || fail.Reason != ledger.ReasonUnknownActor {
@@ -172,7 +172,7 @@ func TestVerifySuspensionPausesAndReinstates(t *testing.T) {
 	b.add(root, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
 	b.add(root, "actor.enrolled", aFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
 	b.add(root, "actor.suspended", aFP(t, worker), `{"reason": "drift"}`)
-	b.add(worker, "progress.milestone", "c-0001", `{"n": 1}`)
+	b.add(worker, "message.sent", "c-0001", `{"n": 1}`)
 	var fail *ledger.Failure
 	if _, err := b.store.VerifyFromGenesis(rootResolve); !errors.As(err, &fail) || fail.Position != 4 {
 		t.Fatalf("a suspended key must not sign, got %v", err)
@@ -184,7 +184,7 @@ func TestVerifySuspensionPausesAndReinstates(t *testing.T) {
 	b2.add(root, "actor.enrolled", aFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
 	b2.add(root, "actor.suspended", aFP(t, worker), `{"reason": "drift"}`)
 	b2.add(root, "actor.enrolled", aFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
-	b2.add(worker, "progress.milestone", "c-0001", `{"n": 1}`)
+	b2.add(worker, "message.sent", "c-0001", `{"n": 1}`)
 	if rep, err := b2.store.VerifyFromGenesis(rootResolve2); err != nil || rep.Count != 6 {
 		t.Fatalf("reinstatement must restore standing: %+v %v", rep, err)
 	}
@@ -197,7 +197,7 @@ func TestVerifyGrandfathersSeed0ActorEvents(t *testing.T) {
 	root, worker := aKey(t, 1), aKey(t, 2)
 	b, rootResolve := newChain(t, root, worker)
 	b.add(root, "actor.enrolled", "c-0001", `{"garbage": true}`)
-	b.add(root, "progress.milestone", "c-0002", `{"n": 1}`)
+	b.add(root, "message.sent", "c-0002", `{"n": 1}`)
 	if rep, err := b.store.VerifyFromGenesis(rootResolve); err != nil || rep.Count != 3 {
 		t.Fatalf("seed/0 actor events are grandfathered: %+v %v", rep, err)
 	}
@@ -205,7 +205,7 @@ func TestVerifyGrandfathersSeed0ActorEvents(t *testing.T) {
 	// The junk event has no keyring effect either: after upgrading, the
 	// worker still needs a real enrollment before signing.
 	b.add(root, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
-	b.add(worker, "progress.milestone", "c-0003", `{"n": 2}`)
+	b.add(worker, "message.sent", "c-0003", `{"n": 2}`)
 	var fail *ledger.Failure
 	if _, err := b.store.VerifyFromGenesis(rootResolve); !errors.As(err, &fail) || fail.Position != 4 {
 		t.Fatalf("grandfathered junk grants nothing, got %v", err)

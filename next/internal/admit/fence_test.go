@@ -26,36 +26,36 @@ func TestFenceLifecycle(t *testing.T) {
 
 	// The holder's free event must cite the fence; missing refuses 6
 	// naming the active fence and holder, stale refuses 6 naming both.
-	err := Check(ctx, draftV(t, worker, version.Seed1, "progress.milestone", "c-1", `{"n": 1}`, ctx.Tip))
+	err := Check(ctx, draftV(t, worker, version.Seed1, "message.sent", "c-1", `{"n": 1}`, ctx.Tip))
 	var fe *FenceError
 	if !errors.As(err, &fe) || fe.Cited != "" || fmt.Sprintf("%d", fe.Active) != fence || fe.Holder != fpOf(t, worker) {
 		t.Fatalf("the holder's fence-free event must refuse naming active and holder, got %v", err)
 	}
-	err = Check(ctx, draftV(t, worker, version.Seed1, "progress.milestone", "c-1", `{"n": 1, "fence": "999"}`, ctx.Tip))
+	err = Check(ctx, draftV(t, worker, version.Seed1, "message.sent", "c-1", `{"n": 1, "fence": "999"}`, ctx.Tip))
 	if !errors.As(err, &fe) || fe.Cited != "999" {
 		t.Fatalf("a stale citation must refuse naming the cited fence, got %v", err)
 	}
-	if err := Check(ctx, draftV(t, worker, version.Seed1, "progress.milestone", "c-1", `{"n": 1, "fence": "`+fence+`"}`, ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, worker, version.Seed1, "message.sent", "c-1", `{"n": 1, "fence": "`+fence+`"}`, ctx.Tip)); err != nil {
 		t.Fatalf("the holder citing the active fence must admit: %v", err)
 	}
 
 	// A never-claimed signer's observation passes with no fence, and
 	// its citation of the active fence also passes; citing a wrong
 	// fence refuses whoever signs.
-	if err := Check(ctx, draftV(t, signer, version.Seed1, "progress.milestone", "c-1", `{"n": 2}`, ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, signer, version.Seed1, "message.sent", "c-1", `{"n": 2}`, ctx.Tip)); err != nil {
 		t.Fatalf("a never-claimed signer observes freely: %v", err)
 	}
-	if err := Check(ctx, draftV(t, signer, version.Seed1, "progress.milestone", "c-1", `{"n": 2, "fence": "0"}`, ctx.Tip)); !errors.As(err, &fe) {
+	if err := Check(ctx, draftV(t, signer, version.Seed1, "message.sent", "c-1", `{"n": 2, "fence": "0"}`, ctx.Tip)); !errors.As(err, &fe) {
 		t.Fatalf("any citation present must match the active fence, got %v", err)
 	}
 
 	// Exits cite the fence they end; after release the fence is dead:
 	// free events need no citation, and citing the dead fence refuses.
 	ctx = step(worker, version.Seed1, "claim.released", "c-1", `{"fence": "`+fence+`", "packet": `+minPacket+`}`)
-	if err := Check(ctx, draftV(t, signer, version.Seed1, "progress.milestone", "c-1", `{"n": 3}`, ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, signer, version.Seed1, "message.sent", "c-1", `{"n": 3}`, ctx.Tip)); err != nil {
 		t.Fatalf("no active claim, no fence required: %v", err)
 	}
-	err = Check(ctx, draftV(t, signer, version.Seed1, "progress.milestone", "c-1", `{"n": 3, "fence": "`+fence+`"}`, ctx.Tip))
+	err = Check(ctx, draftV(t, signer, version.Seed1, "message.sent", "c-1", `{"n": 3, "fence": "`+fence+`"}`, ctx.Tip))
 	if !errors.As(err, &fe) || fe.Active != -1 {
 		t.Fatalf("a fence dies with its claim window, got %v", err)
 	}
@@ -67,7 +67,7 @@ func TestFenceLifecycle(t *testing.T) {
 	if fence2 == fence {
 		t.Fatalf("a second claim must mint a new fence: %s vs %s", fence2, fence)
 	}
-	err = Check(ctx, draftV(t, worker, version.Seed1, "progress.milestone", "c-1", `{"n": 4, "fence": "`+fence+`"}`, ctx.Tip))
+	err = Check(ctx, draftV(t, worker, version.Seed1, "message.sent", "c-1", `{"n": 4, "fence": "`+fence+`"}`, ctx.Tip))
 	if !errors.As(err, &fe) || fe.Cited != fence {
 		t.Fatalf("the retired fence must refuse stale, got %v", err)
 	}
@@ -93,21 +93,21 @@ func TestPriorClaimantsStayFenced(t *testing.T) {
 	// A's delayed milestone citing A's dead fence: stale. With no
 	// citation: missing (A is a prior claimant, not an observer).
 	var fe *FenceError
-	err := Check(ctx, draftV(t, workerA, version.Seed1, "progress.milestone", "c-1", `{"n": 9, "fence": "`+fenceA+`"}`, ctx.Tip))
+	err := Check(ctx, draftV(t, workerA, version.Seed1, "message.sent", "c-1", `{"n": 9, "fence": "`+fenceA+`"}`, ctx.Tip))
 	if !errors.As(err, &fe) || fe.Cited != fenceA {
 		t.Fatalf("a prior claimant's stale fence must refuse, got %v", err)
 	}
-	err = Check(ctx, draftV(t, workerA, version.Seed1, "progress.milestone", "c-1", `{"n": 9}`, ctx.Tip))
+	err = Check(ctx, draftV(t, workerA, version.Seed1, "message.sent", "c-1", `{"n": 9}`, ctx.Tip))
 	if !errors.As(err, &fe) || fe.Cited != "" {
 		t.Fatalf("a prior claimant cannot demote itself to observer, got %v", err)
 	}
 	// Citing B's active fence is the explicit acknowledgement.
-	if err := Check(ctx, draftV(t, workerA, version.Seed1, "progress.milestone", "c-1", `{"n": 9, "fence": "`+fenceB+`"}`, ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, workerA, version.Seed1, "message.sent", "c-1", `{"n": 9, "fence": "`+fenceB+`"}`, ctx.Tip)); err != nil {
 		t.Fatalf("a prior claimant citing the active fence admits: %v", err)
 	}
 	// After B releases there is no claim window: A observes freely.
 	ctx = step(workerB, version.Seed1, "claim.released", "c-1", `{"fence": "`+fenceB+`", "packet": `+minPacket+`}`)
-	if err := Check(ctx, draftV(t, workerA, version.Seed1, "progress.milestone", "c-1", `{"n": 10}`, ctx.Tip)); err != nil {
+	if err := Check(ctx, draftV(t, workerA, version.Seed1, "message.sent", "c-1", `{"n": 10}`, ctx.Tip)); err != nil {
 		t.Fatalf("outside a claim window a prior claimant is a plain observer: %v", err)
 	}
 }

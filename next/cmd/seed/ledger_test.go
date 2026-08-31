@@ -42,7 +42,7 @@ func TestLedgerRoundTrip(t *testing.T) {
 		t.Fatalf("init failed: %d %+v", code, e)
 	}
 	e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`)
+		"--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`)
 	if code != 0 || !e.OK || e.Position == nil || *e.Position != "1" {
 		t.Fatalf("append failed: %d %+v", code, e)
 	}
@@ -62,7 +62,7 @@ func TestLedgerRoundTrip(t *testing.T) {
 		t.Fatalf("show record failed: %d %+v", code, e)
 	}
 	ev := e.Result["event"].(map[string]any)
-	if ev["verb"] != "progress.milestone" {
+	if ev["verb"] != "message.sent" {
 		t.Fatalf("show returned wrong record: %+v", ev)
 	}
 	if _, code = runEnv(t, "ledger", "show", "--ledger", ld, "--position", "9"); code != 4 {
@@ -79,7 +79,7 @@ func TestLedgerVerifyFailureExitCodes(t *testing.T) {
 		t.Fatal("init failed")
 	}
 	if _, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`); code != 0 {
+		"--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`); code != 0 {
 		t.Fatal("append failed")
 	}
 
@@ -149,7 +149,7 @@ func TestLedgerAppendClassificationRefusal(t *testing.T) {
 	}
 	hostile := `{"transcript": "` + strings.Repeat("all work and no play ", 40) + `"}`
 	e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "progress.milestone", "--subject", "c-0001", "--payload", hostile)
+		"--verb", "message.sent", "--subject", "c-0001", "--payload", hostile)
 	if code != 9 || e.Error == nil || e.Error.Code != "classification_refused" {
 		t.Fatalf("hostile payload must exit 9 classification_refused, got %d %+v", code, e)
 	}
@@ -170,7 +170,7 @@ func TestLedgerShowNeverWrites(t *testing.T) {
 		t.Fatal("init failed")
 	}
 	if _, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`); code != 0 {
+		"--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`); code != 0 {
 		t.Fatal("append failed")
 	}
 	headPath := filepath.Join(ld, "HEAD")
@@ -215,7 +215,7 @@ func TestLedgerAppendFollowsActiveVersion(t *testing.T) {
 	// A build supporting only seed/0 must refuse to grow the upgraded
 	// chain, before writing anything.
 	e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`)
+		"--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`)
 	if code != 10 || e.Error == nil || e.Error.Code != "version_unsupported" {
 		t.Fatalf("append past an upgrade must refuse at exit 10, got %d %+v", code, e)
 	}
@@ -224,7 +224,7 @@ func TestLedgerAppendFollowsActiveVersion(t *testing.T) {
 	}
 	// A build supporting the new version signs at it.
 	e, code = runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv, "--supported", "seed/0,seed/9",
-		"--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`)
+		"--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`)
 	if code != 0 || !e.OK || e.Position == nil || *e.Position != "2" {
 		t.Fatalf("append with the upgraded set failed: %d %+v", code, e)
 	}

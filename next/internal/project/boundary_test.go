@@ -181,7 +181,7 @@ func TestLockedTreeRefusesReplacement(t *testing.T) {
 func TestWindowRelocksOnError(t *testing.T) {
 	dir, resolve, _, _ := lifecycleChain(t)
 	out := lockedTempOut(t, "projections")
-	bad := []project.Projection{{Name: "probe", Build: func([]*event.Record) (map[string][]byte, error) {
+	bad := []project.Projection{{Name: "probe", Build: func([]*event.Record, project.Inputs) (map[string][]byte, error) {
 		return map[string][]byte{"../escape.json": []byte("{}")}, nil
 	}}}
 	if _, err := project.Rebuild(dir, out, bad, resolve); err == nil {

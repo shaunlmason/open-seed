@@ -99,7 +99,7 @@ func rosterEntries(records []*event.Record) ([]RosterEntry, error) {
 	return entries, nil
 }
 
-func buildRoster(records []*event.Record) (map[string][]byte, error) {
+func buildRoster(records []*event.Record, _ Inputs) (map[string][]byte, error) {
 	entries, err := rosterEntries(records)
 	if err != nil {
 		return nil, err

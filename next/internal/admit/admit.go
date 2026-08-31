@@ -371,6 +371,23 @@ func Default() []Rule {
 			}
 			return c.Lifecycle.CheckPlanGate(rec.Event.Subject, tier, rec.Event.Payload)
 		}},
+		{Name: "observation", Check: func(c *Context, rec *event.Record) error {
+			// The summarization boundary (plans/os-2ff8dbf1.md):
+			// milestones are coarse, monotonic, position-throttled
+			// facts, and a declared wedge carries its evidence. Both
+			// are free verbs; capability rows and the fence matrix
+			// apply through their own rules.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			switch rec.Event.Verb {
+			case transition.MilestoneVerb:
+				return c.Lifecycle.CheckMilestone(rec.Event.Subject, c.Count, rec.Event.Payload)
+			case transition.WedgeDeclaredVerb:
+				return transition.CheckWedgeShape(rec.Event.Subject, rec.Event.Payload)
+			}
+			return nil
+		}},
 		{Name: "proposal", Check: func(c *Context, rec *event.Record) error {
 			// Outside text can propose, never arm (III.F row 2,
 			// plans/os-73c00a50.md): request.* payloads structurally

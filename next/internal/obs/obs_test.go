@@ -91,7 +91,7 @@ func TestClassifyTruthTable(t *testing.T) {
 	edge := obs.Classify(obs.Stream{Lines: []obs.Line{line(45, 1)}}, asOf, th)
 	if edge.State != obs.Wedged {
 		// 15 minutes of silence is within expiry (900s), but the last
-		// advance is also 15 minutes old — within wedge_after too, so
+		// advance is also 15 minutes old, within wedge_after too, so
 		// live. Recompute deliberately:
 		t.Logf("edge classification: %+v", edge)
 	}

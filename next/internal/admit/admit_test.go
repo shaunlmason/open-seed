@@ -101,13 +101,13 @@ func TestEachRuleRefusesItsCase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	clean := draft(t, signer, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)
+	clean := draft(t, signer, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
 	if err := Check(ctx, clean); err != nil {
 		t.Fatalf("clean draft must pass the whole set, got %v", err)
 	}
 
 	stranger := fixtureKey(t, 9)
-	forged := draft(t, signer, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)
+	forged := draft(t, signer, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
 	forged.Sig = strings.Repeat("a", 128)
 	hostile := `{"transcript": "` + strings.Repeat("all work and no play ", 40) + `"}`
 
@@ -117,15 +117,15 @@ func TestEachRuleRefusesItsCase(t *testing.T) {
 		rule string
 		as   func(error) bool
 	}{
-		{"unresolvable actor", draft(t, stranger, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip),
+		{"unresolvable actor", draft(t, stranger, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip),
 			"actor", func(err error) bool { return errors.Is(err, ledger.ErrUnknownActor) }},
 		{"forged signature", forged, "actor", func(err error) bool { return err != nil }},
-		{"wrong version", draftV(t, signer, "seed/9", "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip),
+		{"wrong version", draftV(t, signer, "seed/9", "message.sent", "c-0001", `{"n": 1}`, ctx.Tip),
 			"version", func(err error) bool {
 				var f *ledger.Failure
 				return errors.As(err, &f) && f.Reason == ledger.ReasonVersionMismatch
 			}},
-		{"classification-hostile payload", draft(t, signer, "progress.milestone", "c-0001", hostile, ctx.Tip),
+		{"classification-hostile payload", draft(t, signer, "message.sent", "c-0001", hostile, ctx.Tip),
 			"classification", func(err error) bool {
 				var c *ClassificationError
 				return errors.As(err, &c) && len(c.Violations) > 0
@@ -165,7 +165,7 @@ func TestHaltRulesUnderHalt(t *testing.T) {
 		t.Fatalf("context must project the halt, got %+v", ctx.Halt)
 	}
 
-	ordinary := draft(t, signer, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)
+	ordinary := draft(t, signer, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
 	err = Check(ctx, ordinary)
 	var herr *halt.HaltedError
 	if !errors.As(err, &herr) || herr.Reason != "drill" {
@@ -198,7 +198,7 @@ func TestVersionDisciplineFollowsUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	next := draftV(t, signer, "seed/9", "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)
+	next := draftV(t, signer, "seed/9", "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
 	err = Check(ctx, next)
 	var f *ledger.Failure
 	if !errors.As(err, &f) || f.Reason != ledger.ReasonVersionUnsupported {
@@ -216,7 +216,7 @@ func TestVersionDisciplineFollowsUpgrade(t *testing.T) {
 	if err := Check(ctx, next); err != nil {
 		t.Fatalf("the new version must pass under the upgraded set, got %v", err)
 	}
-	stale := draft(t, signer, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)
+	stale := draft(t, signer, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
 	err = Check(ctx, stale)
 	if !errors.As(err, &f) || f.Reason != ledger.ReasonVersionMismatch {
 		t.Fatalf("the old version must refuse under the upgraded set, got %v", err)
@@ -235,14 +235,14 @@ func TestAppendedRuleSlotsIn(t *testing.T) {
 	rules := append(Default(), Rule{Name: "capability", Check: func(*Context, *event.Record) error {
 		return phase3
 	}})
-	clean := draft(t, signer, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)
+	clean := draft(t, signer, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
 	err = Run(ctx, clean, rules)
 	var ref *Refusal
 	if !errors.As(err, &ref) || ref.Rule != "capability" || !errors.Is(err, phase3) {
 		t.Fatalf("the appended rule must be the one refusing, got %v", err)
 	}
 	stranger := fixtureKey(t, 9)
-	bad := draft(t, stranger, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip)
+	bad := draft(t, stranger, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
 	if err := Run(ctx, bad, rules); !errors.Is(err, ledger.ErrUnknownActor) {
 		t.Fatalf("default rules must still refuse first, got %v", err)
 	}
@@ -251,7 +251,7 @@ func TestAppendedRuleSlotsIn(t *testing.T) {
 // Admission never builds over a chain that does not verify.
 func TestContextRefusesInvalidChain(t *testing.T) {
 	store, resolve, signer := seededStore(t)
-	appendSigned(t, store, resolve, signer, "progress.milestone", "c-0001", `{"n": 1}`)
+	appendSigned(t, store, resolve, signer, "message.sent", "c-0001", `{"n": 1}`)
 	dir := dirs[store]
 	segs, err := filepath.Glob(filepath.Join(dir, "segments", "*.jsonl"))
 	if err != nil || len(segs) == 0 {
@@ -281,7 +281,7 @@ func TestValidateAdapter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := validate(store, draft(t, signer, "progress.milestone", "c-0001", `{"n": 1}`, tip)); err != nil {
+	if err := validate(store, draft(t, signer, "message.sent", "c-0001", `{"n": 1}`, tip)); err != nil {
 		t.Fatalf("clean draft must pass through the adapter, got %v", err)
 	}
 	appendSigned(t, store, resolve, signer, halt.DeclareVerb, "system", `{"reason": "drill"}`)
@@ -289,7 +289,7 @@ func TestValidateAdapter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = validate(store, draft(t, signer, "progress.milestone", "c-0002", `{"n": 2}`, tip))
+	err = validate(store, draft(t, signer, "message.sent", "c-0002", `{"n": 2}`, tip))
 	var herr *halt.HaltedError
 	if !errors.As(err, &herr) {
 		t.Fatalf("the adapter must re-read current state (now halted), got %v", err)
@@ -305,7 +305,7 @@ func TestErrorSurfaces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = Check(ctx, draft(t, signer, "progress.milestone", "c-0001", `{"n": 1}`, ctx.Tip))
+	err = Check(ctx, draft(t, signer, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip))
 	if msg := err.Error(); !strings.Contains(msg, "refused by rule halted") || !strings.Contains(msg, "drill") {
 		t.Fatalf("refusal message must name rule and cause, got %q", msg)
 	}
@@ -327,7 +327,7 @@ func TestErrorSurfaces(t *testing.T) {
 	if _, err := ContextAt(empty); err == nil {
 		t.Fatal("an empty store must yield no admission context")
 	}
-	if err := Validate()(empty, draft(t, signer, "progress.milestone", "c-0001", `{"n": 1}`, "")); err == nil {
+	if err := Validate()(empty, draft(t, signer, "message.sent", "c-0001", `{"n": 1}`, "")); err == nil {
 		t.Fatal("the adapter must surface context refusals")
 	}
 }
@@ -344,5 +344,5 @@ func ctxUnhalted(t *testing.T) *Context {
 
 func draftAt(t *testing.T, priv ed25519.PrivateKey, payload string) *event.Record {
 	t.Helper()
-	return draft(t, priv, "progress.milestone", "c-0001", payload, "")
+	return draft(t, priv, "message.sent", "c-0001", payload, "")
 }

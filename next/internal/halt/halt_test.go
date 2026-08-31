@@ -152,10 +152,10 @@ func TestHaltWindowInsideChainVerifies(t *testing.T) {
 	}
 	prev := event.EmptyHash
 	steps := []struct{ verb, subject, payload string }{
-		{"progress.milestone", "c-0001", `{"n": 1}`},
+		{"message.sent", "c-0001", `{"n": 1}`},
 		{DeclareVerb, "system", `{"reason": "drill"}`},
 		{LiftVerb, "system", `{}`},
-		{"progress.milestone", "c-0001", `{"n": 2}`},
+		{"message.sent", "c-0001", `{"n": 2}`},
 	}
 	var records []*event.Record
 	for _, st := range steps {

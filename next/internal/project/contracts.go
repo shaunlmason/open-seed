@@ -108,7 +108,7 @@ func contractEntries(records []*event.Record) []*ContractEntry {
 	return order
 }
 
-func buildContracts(records []*event.Record) (map[string][]byte, error) {
+func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error) {
 	table, err := transition.Default()
 	if err != nil {
 		return nil, err

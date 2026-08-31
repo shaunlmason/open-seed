@@ -132,7 +132,7 @@ func TestActorsHistorySurvivesRevocation(t *testing.T) {
 	add(root, version.Protocol, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
 	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
 	add(root, version.Seed1, keyring.VerbGranted, pFP(t, worker), `{"capability": "maintenance"}`)
-	add(worker, version.Seed1, "progress.milestone", "c-0001", `{"n": 1}`)
+	add(worker, version.Seed1, "message.sent", "c-0001", `{"n": 1}`)
 	add(root, version.Seed1, keyring.VerbRevoked, pFP(t, worker), `{"reason": "drill"}`)
 	out := rebuildAll(t, dir, resolve)
 
@@ -170,7 +170,7 @@ func TestActorsHistorySurvivesRevocation(t *testing.T) {
 			t.Fatalf("standing history [%d] = %+v, want %+v", i, w.StandingHistory[i], want)
 		}
 	}
-	if len(w.Signed) != 1 || w.Signed[0] != (project.SignedEvent{Position: 4, Verb: "progress.milestone", Subject: "c-0001"}) {
+	if len(w.Signed) != 1 || w.Signed[0] != (project.SignedEvent{Position: 4, Verb: "message.sent", Subject: "c-0001"}) {
 		t.Fatalf("the revoked key's attribution must survive: %+v", w.Signed)
 	}
 
@@ -188,7 +188,7 @@ func TestReportFactsMatchTheChain(t *testing.T) {
 	dir, resolve, add := fixtureChain(t, root, worker)
 	add(root, version.Protocol, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
 	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
-	add(worker, version.Seed1, "progress.milestone", "c-0001", `{"n": 1}`)
+	add(worker, version.Seed1, "message.sent", "c-0001", `{"n": 1}`)
 	add(root, version.Seed1, "system.checkpoint", "system", `{"note": "drill"}`)
 	add(root, version.Seed1, keyring.VerbRevoked, pFP(t, worker), `{"reason": "drill"}`)
 	out := rebuildAll(t, dir, resolve)

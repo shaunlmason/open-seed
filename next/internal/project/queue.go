@@ -72,7 +72,7 @@ func readyEntries(records []*event.Record) ([]QueueEntry, error) {
 	return ready, nil
 }
 
-func buildQueue(records []*event.Record) (map[string][]byte, error) {
+func buildQueue(records []*event.Record, _ Inputs) (map[string][]byte, error) {
 	ready, err := readyEntries(records)
 	if err != nil {
 		return nil, err

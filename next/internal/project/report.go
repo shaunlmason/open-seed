@@ -8,10 +8,13 @@ package project
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/obs"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
 // ReportFile is the report projection's one view file.
@@ -57,18 +60,42 @@ type ReportContracts struct {
 	Events   int `json:"events"`
 }
 
-// ReportView is the report.json shape.
-type ReportView struct {
-	Chain       ReportChain       `json:"chain"`
-	Actors      ReportActors      `json:"actors"`
-	Halt        ReportHalt        `json:"halt"`
-	Checkpoints ReportCheckpoints `json:"checkpoints"`
-	Contracts   ReportContracts   `json:"contracts"`
+// ReportObservationInputs echoes the declared inputs an observation
+// section was computed from: reproducibility means naming them.
+type ReportObservationInputs struct {
+	AsOf               string `json:"as_of"`
+	Digest             string `json:"digest"`
+	ExpiryAfterSeconds int    `json:"expiry_after_seconds"`
+	WedgeAfterSeconds  int    `json:"wedge_after_seconds"`
 }
 
-// Report returns the report projection.
+// ReportObservation is the expiry-vs-wedge section: one classification
+// per active claim, read ONLY from the claim's own fence-keyed stream.
+type ReportObservation struct {
+	Inputs ReportObservationInputs       `json:"inputs"`
+	Claims map[string]obs.Classification `json:"claims"`
+}
+
+// ReportView is the report.json shape. Observation is null when the
+// rebuild declared no observation inputs: absence of data is stated,
+// never fabricated (next/spec/observations.md).
+type ReportView struct {
+	Chain       ReportChain        `json:"chain"`
+	Actors      ReportActors       `json:"actors"`
+	Halt        ReportHalt         `json:"halt"`
+	Checkpoints ReportCheckpoints  `json:"checkpoints"`
+	Contracts   ReportContracts    `json:"contracts"`
+	Observation *ReportObservation `json:"observation"`
+}
+
+// Report returns the report projection. Version "2" added the
+// observation section and the declared-inputs identity (the section is
+// null on an input-free build, so version, not content, is what
+// republishes existing prefixes); Inputs marks it as the one
+// input-consuming projection, everything else staying byte-identical
+// with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Build: buildReport}
+	return Projection{Name: "report", Version: "2", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -126,14 +153,56 @@ func reportView(records []*event.Record) (*ReportView, error) {
 	return &view, nil
 }
 
-func buildReport(records []*event.Record) (map[string][]byte, error) {
+func buildReport(records []*event.Record, in Inputs) (map[string][]byte, error) {
 	view, err := reportView(records)
 	if err != nil {
 		return nil, err
+	}
+	if in.Obs != nil {
+		section, err := observationSection(records, in)
+		if err != nil {
+			return nil, err
+		}
+		view.Observation = section
 	}
 	b, err := json.MarshalIndent(view, "", "  ")
 	if err != nil {
 		return nil, err
 	}
 	return map[string][]byte{ReportFile: append(b, '\n')}, nil
+}
+
+// observationSection classifies every active claim against its own
+// fence-keyed stream at the declared as_of. A claim whose stream is
+// missing classifies no_data; a predecessor's stream under a dead
+// fence can neither revive nor wedge the current claim, because
+// StreamFor keys on (holder, fence) exactly.
+func observationSection(records []*event.Record, in Inputs) (*ReportObservation, error) {
+	table, err := transition.Default()
+	if err != nil {
+		return nil, err
+	}
+	digest, err := in.Obs.Digest()
+	if err != nil {
+		return nil, err
+	}
+	section := &ReportObservation{
+		Inputs: ReportObservationInputs{
+			AsOf:               in.AsOf.UTC().Format(time.RFC3339),
+			Digest:             digest,
+			ExpiryAfterSeconds: int(in.Thresholds.ExpiryAfter / time.Second),
+			WedgeAfterSeconds:  int(in.Thresholds.WedgeAfter / time.Second),
+		},
+		Claims: map[string]obs.Classification{},
+	}
+	fold := table.FoldRecords(records)
+	for _, subject := range fold.Subjects() {
+		s, ok := fold.State(subject)
+		if !ok || s.State != "in_progress" || s.Claim == nil {
+			continue
+		}
+		stream, _ := in.Obs.StreamFor(s.Claim.Holder, obs.FormatFence(s.Claim.Fence))
+		section.Claims[subject] = obs.Classify(stream, in.AsOf, in.Thresholds)
+	}
+	return section, nil
 }

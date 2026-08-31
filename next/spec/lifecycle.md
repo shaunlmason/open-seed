@@ -117,8 +117,11 @@ append (exit 2, quoting this posture); the boundary enforces
 exclusivity regardless — the client rule prevents drafting doomed
 work. Reading, planning, and continuing an admitted claim stay fully
 offline. **Racing mode is deferred entirely** (the build plan's
-binding default), and `wedge.declared` lands with 5.6's
-expiry-vs-wedge work — both named extension points, not gaps.
+binding default). `progress.milestone` and `wedge.declared` are
+**facts, not transitions** (`observations.md`): a milestone is the
+claim lane's coarse, monotonic, position-throttled summary and a
+declared wedge records the visible condition durably; neither
+changes state, and the pinned four `in_progress` exits stand.
 
 ## Self-validation
 

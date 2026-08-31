@@ -52,7 +52,7 @@ func signedRecord(t testing.TB, priv ed25519.PrivateKey, n int, ts, prev string)
 		V:       "seed/0",
 		TS:      ts,
 		Actor:   fingerprintOf(t, priv),
-		Verb:    "progress.milestone",
+		Verb:    "message.sent",
 		Subject: "c-0001",
 		Payload: json.RawMessage(fmt.Sprintf(`{"n": %d}`, n)),
 		Prev:    prev,

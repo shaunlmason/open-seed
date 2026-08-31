@@ -1,7 +1,7 @@
 // Package obs is the v0 observation channel (plans/os-2ff8dbf1.md;
 // SEED-NEXT.md Part II §5): liveness, progress, and fine metering ride
-// ephemeral, lossy-by-declaration streams — per-executor JSONL files,
-// one stream per claim fence — summarized into ledger facts only at
+// ephemeral, lossy-by-declaration streams (per-executor JSONL files,
+// one stream per claim fence), summarized into ledger facts only at
 // material transitions. Losing every observation stream loses no
 // coordination state: nothing here feeds an admission decision.
 package obs
@@ -169,12 +169,12 @@ const (
 	// Live: an observation within expiry_after and the count advanced
 	// within wedge_after.
 	Live State = "live"
-	// Expired: no observation within expiry_after — the
+	// Expired: no observation within expiry_after, the
 	// no-observations condition. Reap heuristic: after grace on the
 	// lease.
 	Expired State = "expired"
 	// Wedged: observations continue but the count last advanced more
-	// than wedge_after ago — observations without progress
+	// than wedge_after ago: observations without progress
 	// advancement. Reap heuristic: operator or maintenance judgment,
 	// the packet capturing the wedge.
 	Wedged State = "wedged"

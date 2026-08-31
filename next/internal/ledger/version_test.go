@@ -38,11 +38,11 @@ func buildChain(t *testing.T, recs []*event.Record) *Store {
 
 func chainWithUpgrade(t *testing.T) []*event.Record {
 	t.Helper()
-	a := signedVersioned(t, "seed/0", "progress.milestone", "c-0001", `{"n": 1}`, event.EmptyHash)
+	a := signedVersioned(t, "seed/0", "message.sent", "c-0001", `{"n": 1}`, event.EmptyHash)
 	ha, _ := a.Event.Hash()
 	up := signedVersioned(t, "seed/0", UpgradeVerb, "system", `{"to": "seed/1"}`, ha)
 	hup, _ := up.Event.Hash()
-	b := signedVersioned(t, "seed/1", "progress.milestone", "c-0001", `{"n": 2}`, hup)
+	b := signedVersioned(t, "seed/1", "message.sent", "c-0001", `{"n": 2}`, hup)
 	return []*event.Record{a, up, b}
 }
 
@@ -76,9 +76,9 @@ func TestUnsupportedActiveVersionRefuses(t *testing.T) {
 // event whose v differs from the active-at-position version breaks the
 // discipline even when the version itself is supported.
 func TestVersionMismatchWithoutUpgradeRefuses(t *testing.T) {
-	a := signedVersioned(t, "seed/0", "progress.milestone", "c-0001", `{"n": 1}`, event.EmptyHash)
+	a := signedVersioned(t, "seed/0", "message.sent", "c-0001", `{"n": 1}`, event.EmptyHash)
 	ha, _ := a.Event.Hash()
-	b := signedVersioned(t, "seed/1", "progress.milestone", "c-0001", `{"n": 2}`, ha)
+	b := signedVersioned(t, "seed/1", "message.sent", "c-0001", `{"n": 2}`, ha)
 	s := buildChain(t, []*event.Record{a, b})
 	resolve := fixtureResolver(t, fixtureKey(t, 1))
 	_, err := s.VerifyFromGenesis(resolve, WithSupportedVersions("seed/0", "seed/1"))
@@ -89,7 +89,7 @@ func TestVersionMismatchWithoutUpgradeRefuses(t *testing.T) {
 }
 
 func TestUpgradePayloadMustNameTarget(t *testing.T) {
-	a := signedVersioned(t, "seed/0", "progress.milestone", "c-0001", `{"n": 1}`, event.EmptyHash)
+	a := signedVersioned(t, "seed/0", "message.sent", "c-0001", `{"n": 1}`, event.EmptyHash)
 	ha, _ := a.Event.Hash()
 	up := signedVersioned(t, "seed/0", UpgradeVerb, "system", `{"note": "missing to"}`, ha)
 	s := buildChain(t, []*event.Record{a, up})
@@ -177,7 +177,7 @@ func TestValidateUpgradeShape(t *testing.T) {
 			t.Errorf("%s: got %v", name, err)
 		}
 	}
-	plain := signedVersioned(t, "seed/0", "progress.milestone", "c-0001", `{"n": 1}`, event.EmptyHash)
+	plain := signedVersioned(t, "seed/0", "message.sent", "c-0001", `{"n": 1}`, event.EmptyHash)
 	if err := ValidateUpgradeShape(&plain.Event); err != nil {
 		t.Errorf("non-upgrade verbs pass through, got %v", err)
 	}
@@ -186,7 +186,7 @@ func TestValidateUpgradeShape(t *testing.T) {
 	// event to the verifier: no wedge, no version switch.
 	a := signedVersioned(t, "seed/0", UpgradeVerb, "c-0001", `{"to": "seed/9"}`, event.EmptyHash)
 	ha, _ := a.Event.Hash()
-	b := signedVersioned(t, "seed/0", "progress.milestone", "c-0001", `{"n": 2}`, ha)
+	b := signedVersioned(t, "seed/0", "message.sent", "c-0001", `{"n": 2}`, ha)
 	s := buildChain(t, []*event.Record{a, b})
 	rep, err := s.VerifyFromGenesis(fixtureResolver(t, fixtureKey(t, 1)))
 	if err != nil || rep.Count != 2 || rep.ActiveVersion != "seed/0" {

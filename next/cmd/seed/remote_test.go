@@ -107,7 +107,7 @@ func TestRemoteAppendRoundTrip(t *testing.T) {
 	seedRemoteGenesis(t, remote)
 
 	e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", filepath.Join(dir, "state"),
-		"--key", priv, "--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`)
+		"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`)
 	if code != 0 || !e.OK || e.Position == nil || *e.Position != "1" {
 		t.Fatalf("remote append failed: %d %+v", code, e)
 	}
@@ -144,7 +144,7 @@ func TestRemoteAppendCooperativeRefusals(t *testing.T) {
 		libAppend(t, remote, resolve, "seed/0", "system.halt.declared", "system", `{"reason": "drill"}`)
 		before := remoteTip(t, remote)
 		e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
-			"--key", priv, "--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`)
+			"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`)
 		if code != 7 || e.Error == nil || e.Error.Code != "halted" || !strings.Contains(e.Error.Message, "drill") {
 			t.Fatalf("halted remote must refuse at 7 with the reason, got %d %+v", code, e)
 		}
@@ -162,7 +162,7 @@ func TestRemoteAppendCooperativeRefusals(t *testing.T) {
 		before := remoteTip(t, remote)
 		hostile := `{"transcript": "` + strings.Repeat("all work and no play ", 40) + `"}`
 		e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
-			"--key", priv, "--verb", "progress.milestone", "--subject", "c-0001", "--payload", hostile)
+			"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", hostile)
 		if code != 9 || e.Error == nil || e.Error.Code != "classification_refused" {
 			t.Fatalf("hostile payload must refuse at 9, got %d %+v", code, e)
 		}
@@ -177,7 +177,7 @@ func TestRemoteAppendCooperativeRefusals(t *testing.T) {
 		libAppend(t, remote, resolve, "seed/0", ledger.UpgradeVerb, "system", `{"to": "seed/9"}`)
 		before := remoteTip(t, remote)
 		e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
-			"--key", priv, "--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`)
+			"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`)
 		if code != 10 || e.Error == nil || e.Error.Code != "version_unsupported" {
 			t.Fatalf("upgraded remote must refuse the stale build at 10, got %d %+v", code, e)
 		}
@@ -221,7 +221,7 @@ func buildRivals(t *testing.T, remote string, resolve ledger.Resolver, n int) []
 	base := remoteTip(t, remote)
 	var rivals []string
 	for i := 0; i < n; i++ {
-		libAppend(t, remote, resolve, "seed/0", "progress.milestone", "c-rival", fmt.Sprintf(`{"n": %d}`, i))
+		libAppend(t, remote, resolve, "seed/0", "message.sent", "c-rival", fmt.Sprintf(`{"n": %d}`, i))
 		rivals = append(rivals, remoteTip(t, remote))
 	}
 	if out, err := exec.Command("git", "--git-dir", remote, "update-ref", remoteRef, base).CombinedOutput(); err != nil {
@@ -237,7 +237,7 @@ func TestRemoteAppendRaceRetriesAndLands(t *testing.T) {
 	installRivalHook(t, remote, buildRivals(t, remote, resolve, 1))
 
 	e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", filepath.Join(dir, "state"),
-		"--key", priv, "--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 9}`)
+		"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 9}`)
 	if code != 0 || !e.OK {
 		t.Fatalf("raced append must still land: %d %+v", code, e)
 	}
@@ -256,7 +256,7 @@ func TestRemoteAppendExhaustsAtContention(t *testing.T) {
 	installRivalHook(t, remote, buildRivals(t, remote, resolve, remoteMaxAttempts+1))
 
 	e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", filepath.Join(dir, "state"),
-		"--key", priv, "--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 9}`)
+		"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 9}`)
 	if code != 2 || e.Error == nil || e.Error.Code != "contention" {
 		t.Fatalf("perpetual rivals must exhaust at 2 contention, got %d %+v", code, e)
 	}
@@ -272,7 +272,7 @@ func TestRemoteAppendHookRejectionAt11(t *testing.T) {
 	}
 	before := remoteTip(t, remote)
 	e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", filepath.Join(dir, "state"),
-		"--key", priv, "--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`)
+		"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`)
 	if code != 11 || e.Error == nil || e.Error.Code != "remote_rejected" {
 		t.Fatalf("hook decline must exit 11 remote_rejected, got %d %+v", code, e)
 	}
@@ -291,14 +291,14 @@ func TestRemoteAppendVanishedRefRegression(t *testing.T) {
 	state := filepath.Join(dir, "state")
 
 	if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
-		"--key", priv, "--verb", "progress.milestone", "--subject", "c-0001", "--payload", `{"n": 1}`); code != 0 {
+		"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`); code != 0 {
 		t.Fatalf("first append failed: %d %+v", code, e)
 	}
 	if out, err := exec.Command("git", "--git-dir", remote, "update-ref", "-d", remoteRef).CombinedOutput(); err != nil {
 		t.Fatalf("delete ref: %v %s", err, out)
 	}
 	e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
-		"--key", priv, "--verb", "progress.milestone", "--subject", "c-0002", "--payload", `{"n": 2}`)
+		"--key", priv, "--verb", "message.sent", "--subject", "c-0002", "--payload", `{"n": 2}`)
 	if code != 12 || e.Error == nil || e.Error.Code != "head_regression" {
 		t.Fatalf("vanished ref after a verified head must exit 12 head_regression, got %d %+v", code, e)
 	}
@@ -313,7 +313,7 @@ func TestRemoteAppendMidInvocationRollbackRefuses(t *testing.T) {
 	remote := bareRemote(t)
 	resolve := seedRemoteGenesis(t, remote)
 	genesisTip := remoteTip(t, remote)
-	libAppend(t, remote, resolve, "seed/0", "progress.milestone", "c-0001", `{"n": 1}`)
+	libAppend(t, remote, resolve, "seed/0", "message.sent", "c-0001", `{"n": 1}`)
 
 	rf := filepath.Join(remote, "rollback")
 	if err := os.WriteFile(rf, []byte(genesisTip+"\n"), 0o644); err != nil {
@@ -333,7 +333,7 @@ exit 0
 	}
 
 	e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", filepath.Join(dir, "state"),
-		"--key", priv, "--verb", "progress.milestone", "--subject", "c-0002", "--payload", `{"n": 2}`)
+		"--key", priv, "--verb", "message.sent", "--subject", "c-0002", "--payload", `{"n": 2}`)
 	if code != 12 || e.Error == nil || e.Error.Code != "head_regression" {
 		t.Fatalf("mid-invocation rollback must refuse at exit 12, got %d %+v", code, e)
 	}
@@ -360,7 +360,7 @@ func TestRemoteAppendSharedStateSerializes(t *testing.T) {
 		go func(i int) {
 			var out, errOut strings.Builder
 			code := run([]string{"ledger", "append", "--remote", remote, "--state", state,
-				"--key", priv, "--verb", "progress.milestone", "--subject", fmt.Sprintf("c-%04d", i),
+				"--key", priv, "--verb", "message.sent", "--subject", fmt.Sprintf("c-%04d", i),
 				"--payload", fmt.Sprintf(`{"n": %d}`, i)}, &out, &errOut)
 			results <- outcome{code, out.String()}
 		}(i)
@@ -474,12 +474,12 @@ func TestRemoteClaimFencingCLI(t *testing.T) {
 	}
 
 	// The holder's fence-free milestone refuses 6 naming the fence.
-	e, code = appendCLI("progress.milestone", "c-1", `{"n": 1}`)
+	e, code = appendCLI("message.sent", "c-1", `{"n": 1}`)
 	if code != 6 || e.Error == nil || e.Error.Code != "fenced_out" ||
 		!strings.Contains(e.Error.Message, "4") {
 		t.Fatalf("a fence-free holder event must refuse 6, got %d %+v", code, e)
 	}
-	if _, code := appendCLI("progress.milestone", "c-1", `{"n": 1, "fence": "4"}`); code != 0 {
+	if _, code := appendCLI("message.sent", "c-1", `{"n": 1, "fence": "4"}`); code != 0 {
 		t.Fatal("the holder citing the active fence must admit")
 	}
 

@@ -75,7 +75,7 @@ func TestHookAdmitsEnrollmentChain(t *testing.T) {
 	err := craftPush(t, remote, loose, func(dir string, store *ledger.Store) {
 		appendRaw(t, store, loose, signedBy(t, root, "seed/0", ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`, tipOf(t, store)))
 		appendRaw(t, store, loose, signedBy(t, root, version.Seed1, "actor.enrolled", fpFor(t, worker), enrollFor(t, worker, "agent", "worker"), tipOf(t, store)))
-		appendRaw(t, store, loose, signedBy(t, worker, version.Seed1, "progress.milestone", "c-0001", `{"n": 1}`, tipOf(t, store)))
+		appendRaw(t, store, loose, signedBy(t, worker, version.Seed1, "message.sent", "c-0001", `{"n": 1}`, tipOf(t, store)))
 	})
 	if err != nil {
 		t.Fatalf("the hook must admit an upgrade + enrollment + enrolled-key event: %v", err)

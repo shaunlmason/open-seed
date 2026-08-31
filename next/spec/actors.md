@@ -96,6 +96,8 @@ ending standing is deferred until the catalog grows a verb for it.
 | `contract.cancelled` | `operator` (until a real need appears) |
 | `plan.proposed` | `claim`, `operator` (the claim holder plans; the fence matrix applies) |
 | `plan.approved` | `operator` (an external-fact observation, the merge.observed posture) |
+| `progress.milestone` | `claim`, `operator` (the claim lane's coarse summarization fact; the fence matrix applies) |
+| `wedge.declared` | `operator` (operator judgment in v0; the maintenance lane inherits it later) |
 | `merge.observed` | `operator` (Phase 6 adds the observer lane) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
