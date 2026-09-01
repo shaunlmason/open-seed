@@ -881,3 +881,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-2d5319ea","kind":"pr"},"task":"os-eb35672a","ts":"2026-09-01T17:02:23Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-eb35672a","ts":"2026-09-01T17:02:26Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: close the key-file TOCTOU between the loop's identity check and its signing site"},"task":"os-9a89245c","ts":"2026-09-01T17:20:36Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"next: Phase 9 item 2 — escalation with packet, question and decision"},"task":"os-f781f0da","ts":"2026-09-01T17:25:08Z","verb":"create"}
