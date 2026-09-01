@@ -325,3 +325,43 @@ func TestTheRaiseCarriesAPacketAndNoFence(t *testing.T) {
 		t.Fatalf("the zero-length range is legal on a raise: %v", err)
 	}
 }
+
+// conformance: the orientation read must not hide a legal act. The
+// affordance catalog SIGNS a synthesized payload per verb and lists
+// the verb only if the boundary admits it, so a synthesizer that does
+// not match what the current state accepts makes a legal act look
+// unavailable (review findings on #200).
+//
+// Two shapes of that, both drilled here: an answer whose option ids
+// are not the catalog's guess, and a cancellation once a citation is
+// required.
+func TestAffordancesOfferTheAnswersTheQuestionActuallyAllows(t *testing.T) {
+	ctx, signer, _, maintainer, step := escalationFixture(t)
+	// Ids deliberately unlike any a catalog could guess.
+	q := `{"question": "ship?", "options": [{"id": "yes", "choice": "ship it"}, {"id": "no", "choice": "hold"}]}`
+	ctx = step(maintainer, version.Seed1, "escalation.raised", "c-1", `{"packet": `+goodPacket+`, "escalation": `+q+`}`)
+
+	got := Affordances(ctx, signer, "c-1")
+	has := func(verb string) bool {
+		for _, v := range got {
+			if v == verb {
+				return true
+			}
+		}
+		return false
+	}
+	// The operator CAN answer: the two documented ways out of a
+	// standing question are the answer and a citing cancellation, and
+	// the read must offer both.
+	if !has("decision.recorded") {
+		t.Errorf("%s is legal and must be offered — the probe has to choose an id the question OFFERS, not a guess: %v", "decision.recorded", got)
+	}
+	if !has("contract.cancelled") {
+		t.Errorf("contract.cancelled is legal with the citation and must be offered — the probe has to carry it: %v", got)
+	}
+	// And the machine exit is NOT offered, so the list is not merely
+	// permissive.
+	if has("contract.unblocked") {
+		t.Errorf("contract.unblocked is locked out and must not be offered: %v", got)
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
@@ -181,8 +182,45 @@ func runDecisionRecord(args []string, stdout, stderr io.Writer) int {
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
+	// The answer names the RESOLUTION LATENCY it closes: the charter
+	// requires it tracked, and the chain makes it derivable
+	// (answer.ts - raise.ts) but nothing else surfaces it. Reporting
+	// it here puts the metric where the fact is, needs no new
+	// surface, and keeps the derivation a live read — the raise's ts
+	// comes from the fold, the instant from this client's clock, and
+	// nothing is stored (next/spec/escalation.md).
+	subject := *f.subject
+	waited := waitedSince(ls.ctx, subject, time.Now().UTC())
 	return ls.commit(f, loopAct{verb: escalation.AnswerVerb, payload: payload, derive: derive,
-		resultAt: terse(*f.subject)}, signer, stdout, stderr)
+		resultAt: func(int) map[string]any {
+			out := map[string]any{"subject": subject}
+			if waited >= 0 {
+				out["resolved_after_seconds"] = fmt.Sprintf("%d", waited)
+			}
+			return out
+		}}, signer, stdout, stderr)
+}
+
+// waitedSince is the resolution latency in whole seconds, or -1 when
+// no question stands or its timestamp is unreadable. A negative
+// interval (a clock behind the raise's) reports 0 rather than a
+// nonsense number: the metric is an elapsed wait, never a direction.
+func waitedSince(ctx *admit.Context, subject string, now time.Time) int64 {
+	if ctx.Lifecycle == nil {
+		return -1
+	}
+	s, ok := ctx.Lifecycle.State(subject)
+	if !ok || s.Escalation == nil {
+		return -1
+	}
+	raised, err := time.Parse(time.RFC3339, s.Escalation.TS)
+	if err != nil {
+		return -1
+	}
+	if d := int64(now.Sub(raised).Seconds()); d > 0 {
+		return d
+	}
+	return 0
 }
 
 // decisionPayload derives the citation and refuses where a derivation

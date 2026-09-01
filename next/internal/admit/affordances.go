@@ -37,6 +37,14 @@ type probeView struct {
 	verdict     string
 	packet      string
 	escalation  string
+	// standing is whether a question stands right now: several
+	// synthesizers must carry its citation only then.
+	standing bool
+	// choice is an id the STANDING question actually offers. A guess
+	// would make a legal answer look unavailable: the probe is
+	// judged by the same rule admission enforces, which refuses a
+	// choice outside the set (review finding on #200).
+	choice string
 }
 
 // fenceKV is the optional fence citation: on a held subject the
@@ -98,12 +106,21 @@ var affordanceCatalog = []struct {
 	}},
 	{"contract.blocked", func(v *probeView) string { return `{}` }},
 	{"contract.unblocked", func(v *probeView) string { return `{}` }},
-	{"contract.cancelled", func(v *probeView) string { return `{}` }},
+	{"contract.cancelled", func(v *probeView) string {
+		// Once a question stands, cancelling is legal only WITH the
+		// citation, and it is one of the two documented ways to answer
+		// the gate — so a bare {} would hide it precisely when it
+		// matters (review finding on #200).
+		if v.standing {
+			return `{"escalation": "` + v.escalation + `"}`
+		}
+		return `{}`
+	}},
 	{"escalation.raised", func(v *probeView) string {
 		return `{"packet": ` + v.packet + `, "escalation": ` + probeEscalation + `}`
 	}},
 	{"decision.recorded", func(v *probeView) string {
-		return `{"escalation": "` + v.escalation + `", "choice": "a"}`
+		return `{"escalation": "` + v.escalation + `", "choice": "` + v.choice + `"}`
 	}},
 	{"contract.returned", func(v *probeView) string { return `{"verdict": "` + v.verdict + `"}` }},
 	{"claim.taken", func(v *probeView) string { return `{}` }},
@@ -215,6 +232,10 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 			}
 			if s.Escalation != nil {
 				v.escalation = fmt.Sprintf("%d", s.Escalation.Pos)
+				v.standing = true
+				if len(s.Escalation.Options) > 0 {
+					v.choice = s.Escalation.Options[0].ID
+				}
 			}
 			view := BudgetViewAt(ctx.Records, ctx.Table, subject, s)
 			if len(view.Open) > 0 {

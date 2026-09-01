@@ -73,6 +73,17 @@ func TestEscalationRaiseAndAnswerThroughTheCLI(t *testing.T) {
 	if fmt.Sprint(p["because"]) != "the release branch is frozen" {
 		t.Fatalf("the reasoning rides along: %+v", p)
 	}
+	// The answer names the RESOLUTION LATENCY it closes. The charter
+	// requires it tracked, and the chain makes it derivable, but
+	// nothing else surfaces it: the fold clears the standing question
+	// on the answer, so a later read has no pair to subtract (review
+	// finding on #200).
+	if e.Result["resolved_after_seconds"] == nil {
+		t.Fatalf("the answer reports how long the question waited: %+v", e.Result)
+	}
+	if _, err := strconv.Atoi(fmt.Sprint(e.Result["resolved_after_seconds"])); err != nil {
+		t.Fatalf("the latency is a number of seconds: %v", e.Result["resolved_after_seconds"])
+	}
 	_, s, _ = situationOf(t, "--ledger", ld, "--key", priv)
 	if kindsOf(s.Obligations)["escalation.pending"] {
 		t.Fatalf("the answer discharges it: %+v", s.Obligations)

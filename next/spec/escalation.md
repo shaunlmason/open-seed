@@ -68,6 +68,19 @@ fourth no-fallback row, after `verdict.rendered`, `check.sealed` and
 answer a human gate, which is the exact inversion of §I.3's "humans
 hold gates, not queues".
 
+**One lane cannot raise, and it is the curator.** `next/lanes/curator.json`
+declares `"grants": []` and `"acts_through": []` — in v0 it "proposes
+everything, approves nothing, and holds no ledger-writing grant". So
+the charter's "any lane can raise" does not reach it, and the reason
+is the curator's own posture rather than anything about this channel:
+it cannot append *at all*. Granting it an escalation row would make
+freezing contracts the single write authority of the one lane designed
+to hold none, which is a worse answer than the gap. When the curator
+gains its curation-proposal rights (the row `internal/keyring` already
+anticipates), this row is the one to revisit with it — recorded here
+so the tension is inherited rather than rediscovered
+(review finding on #200).
+
 The residual is recorded rather than hidden: a persuaded lane holding
 any of those capabilities can **freeze** a contract. That is denial of
 progress, not escalation of authority, it is attributable (the raise
@@ -132,6 +145,15 @@ reinvented:
 So age is `now − ts` at the read's instant, and **resolution latency
 is `answer.ts − raise.ts`** — both from the chain, computed by whoever
 reports, stored nowhere.
+
+Derivable is not the same as surfaced, and the answer closes that gap
+itself: `seed decision record` reports `resolved_after_seconds` on the
+act that resolves the question. It has to be there rather than in a
+later read, because answering **clears** the standing fact — a reader
+afterwards has no pair left to subtract without walking the chain. An
+aggregate over many escalations is a reporting surface this card does
+not build (`seed report` is deliberately absent, above); the metric
+each answer needs is emitted where the fact is.
 
 ## Deliberately absent (v0)
 
