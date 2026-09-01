@@ -784,3 +784,24 @@ cannot distinguish them, however carefully it is named. Find the
 observable that changes — an exit code, a call count, an artifact that
 does or does not appear — or accept that the drill covers less than its
 name claims.
+
+## The guard fired; the drill was looking somewhere else
+
+Closing the key-file TOCTOU (os-9a89245c), the interleaving drill failed
+with what looked like the fix not working: the error was the loop's own
+`ErrKeyRotated`, not the signing site's refusal. The obvious reading was
+that `--as` had not taken effect.
+
+It had. The rotated act refused at the seam exactly as designed, the
+loop then ACTED on that refusal, and its next `checkIdentity` produced
+the error the drill happened to inspect. The guard's refusal was real
+and simply not the last thing that happened.
+
+The fix was to capture the result of the very call the rotation landed
+inside — the wrapper already had it in hand — rather than asserting on
+the iteration's final error. What made this worth recording is that the
+failure mode is inverted from the usual one: not a drill passing for the
+wrong reason, but a drill FAILING while the code was right, which is the
+kind that tempts you to "fix" working code. The tell was that the error
+message described a real thing correctly; nothing in it was false, it
+just answered a different question than the one being asked.

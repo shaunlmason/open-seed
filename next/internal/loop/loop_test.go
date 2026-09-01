@@ -22,6 +22,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/lane"
+	"github.com/shaunlmason/open-seed/next/internal/loopverb"
 )
 
 // recorder is the verb seam as a double: it records every invocation
@@ -62,6 +63,17 @@ func verb(args []string) string {
 		return args[0]
 	}
 	return ""
+}
+
+// argsFor returns the recorded argument vector for a verb, so a drill
+// can assert on what an act DECLARED, not merely that it happened.
+func (r *recorder) argsFor(want string) ([]string, bool) {
+	for _, c := range r.calls {
+		if verb(c) == want {
+			return c, true
+		}
+	}
+	return nil, false
 }
 
 func (r *recorder) verbs() []string {
@@ -1473,5 +1485,89 @@ func TestAnIdleDriverStillCatchesARotation(t *testing.T) {
 	}
 	if step.Step != "identity" {
 		t.Errorf("the refusal names the identity check: %+v", step)
+	}
+}
+
+// conformance: every ORDINARY act declares the identity it is acting
+// as, and the last-ditch exit declares none (plans/os-9a89245c.md).
+//
+// The sweep is over the act CATALOG rather than a hand-listed subset,
+// so an act added later without --as fails here rather than shipping
+// a signing site with no declared identity.
+func TestEveryOrdinaryActDeclaresItsIdentity(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeSeededKey(t, keyPath, 3)
+	fp, err := actorOf(keyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := &recorder{answer: offers("c-1", func([]string) (Result, bool) { return Result{}, false })}
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Step(5); err != nil {
+		t.Fatalf("the drill needs a full iteration: %v", err)
+	}
+	// The sweep is over the act CATALOG, not a hand-listed subset: an
+	// act added later without --as fails here rather than shipping a
+	// signing site with no declared identity.
+	checked := 0
+	for _, name := range loopverb.Names() {
+		args, ran := r.argsFor(name)
+		if !ran {
+			continue
+		}
+		checked++
+		if got := flagValue(args, "--as"); got != fp {
+			t.Errorf("%q must declare --as %s, got %q", name, fp, got)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("this drill is vacuous unless catalog acts reached the seam")
+	}
+}
+
+// The last-ditch exit carries NO --as, so it reaches the boundary and
+// refuses there rather than at the seam. Asserted on the same strand
+// path the rotation drill drives.
+func TestTheLastDitchExitDeclaresNoIdentity(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeSeededKey(t, keyPath, 3)
+
+	r := &recorder{answer: offers("c-1", func(args []string) (Result, bool) {
+		if verb(args) == "claim park" {
+			return Result{Exit: 6, OK: false, Code: "fenced_out",
+				Message: "event on c-1 must cite the active fence held by the original actor"}, true
+		}
+		return Result{}, false
+	})}
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) {
+			writeSeededKey(t, keyPath, 9)
+			return 4, nil
+		}), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Step(5); !errors.Is(err, ErrKeyRotated) {
+		t.Fatalf("the drill needs the rotation path: %v", err)
+	}
+	park, ok := r.argsFor("claim park")
+	if !ok {
+		t.Fatal("this drill is vacuous unless the exit was attempted")
+	}
+	if got := flagValue(park, "--as"); got != "" {
+		t.Errorf("the last-ditch exit must declare no identity, got --as %q: passing one would stop it at the SEAM "+
+			"with usage instead of at the boundary with the fence rule's own refusal", got)
+	}
+	// The ordinary act that opened the window did declare one, so the
+	// exemption is scoped rather than a blanket opt-out.
+	if take, ok := r.argsFor("claim take"); ok && flagValue(take, "--as") == "" {
+		t.Error("claim take is an ordinary act and must declare its identity")
 	}
 }
