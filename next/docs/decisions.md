@@ -804,3 +804,28 @@ here. Newest last.
   window is too narrow on fast disks, the store-level one is not —
   pre-fix it reproduces the exact ENOENT at the first contended
   append, post-fix every append succeeds and the chain verifies.
+
+## 2026-08-31 — 8.2 affordance regression class (os-148d3ba1, plan #162)
+
+- The III.I bug class is executable: TestAffordanceRegressionClass
+  sweeps every prefix of the shared walk scenario (the walk's
+  history extracted into walkScript, so the walk's stations and the
+  sweep replay one script) and, for all seven enrolled-lane pairs,
+  asserts sortedness, determinism, and that every listed verb
+  re-admits through the enforcing Check when independently
+  re-drafted at that position; failures name the class (position,
+  lane, subject, verb, refusal). The sweep's probe-view derivation
+  is a deliberate independent copy of the production one:
+  divergence between the two fails the class, which is the drift
+  signal the test exists to raise.
+- The position stamp is pinned end to end at the CLI: success and
+  refusal envelopes alike stamp the tip ordinal of the context
+  their list was computed at (ctx.Count - 1; the plan review caught
+  the off-by-one), and the stamped list equals an independent
+  admit.Affordances recomputation at that context for the signing
+  key on both paths. The drill's refusal half is the keyring
+  preview's malformed-actor-event refusal, because that is the
+  local append path's own refusal: the path runs the preview, not
+  the full admission pipeline, so lane-invalid non-actor payloads
+  append raw there by design and the fold-side validity families
+  keep them inert.
