@@ -150,6 +150,12 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   liveness is an instant-relative read, and the report is
   position-identified.
 
+- **`obligations`** (`obligations.json`): what is OWED on each
+  subject — kind, owed-by, the position it arose at, and the verbs
+  that discharge it, derived from the same fold admission enforces
+  and never a new authority ([`obligations.md`](obligations.md)). The
+  situation read consumes the same derivation at the ledger tip.
+
 - **`cache`** (`cache.db`): the single-machine read-throughput
   surface — one SQLite database mirroring the views (`roster`,
   `contracts`, `offers`, and `reservations` indexed by subject,

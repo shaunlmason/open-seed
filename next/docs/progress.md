@@ -582,6 +582,27 @@ conformance is therefore claimable only once Phase 11 and Phase 13
 both close. This exit record is card os-ef715d17's task PR (an
 administrative card, not a Phase 8 item).
 
+## Phase 9 — Lanes, escalation, maintenance (docs/next-build-plan.md Phase 9; deps: 6, 7, 8 ✓)
+
+- 9.5 the lane-facing surface, parts (a) and (b) — os-52d5da3f —
+  **review** (task PR against plan #170: internal/obligation deriving
+  what is owed from the same fold admission enforces, with
+  discharged_by read from the transition tables and a closed
+  fact-shaped set for the verbs that change no state; the obligations
+  projection registered alongside the others; seed situation
+  rendering one position-stamped envelope whose --since is a complete
+  change report with an explicit discharged list; and the
+  dischargeability sweep over every prefix of the shared walk
+  scenario)
+- 9.5 part (c) loop verbs — os-7e197768 — backlog (split for
+  reviewability; item 5 is one obligation with two landings)
+- 9.1 lane role fragments, dispatcher least-capability, injection
+  corpus, worker-lane loop with exhaustion parking — backlog
+- 9.2 escalation with packet, question and decision — backlog
+- 9.3 unattended maintenance, whose lint list carries the Phase 7
+  exit's unsettled-run detection — backlog
+- 9.4 small-team and fleet fixtures — backlog
+
 ## Frontier
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
@@ -601,6 +622,8 @@ every card closed. Phase 8 is done and closed: every plan (#158,
 the out-of-item ledger writeHead race fix (#161 against plan #159),
 and the exit record above (card os-ef715d17's task PR) are merged
 with every card closed.
+Phase 9 is under way: item 5's derivation and read are in review
+(os-52d5da3f), with its loop verbs split to os-7e197768.
 **Next action: Phase 9 item 1** — the six lane role definitions as
 composable fragments, the dispatcher's least-capability posture, the
 injection conformance suite against dispatcher input handling, and
