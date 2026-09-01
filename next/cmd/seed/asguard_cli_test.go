@@ -166,3 +166,59 @@ func TestTheDeclaredIdentityGuard(t *testing.T) {
 		t.Fatalf("the refused act signs nothing: %d then %d", before, chainCount(t, ld))
 	}
 }
+
+// conformance, criterion 6: the last-ditch exit reaches the ADMISSION
+// BOUNDARY under a rotated key and refuses there — fenced_out, because
+// the new key is not the holder — rather than stopping at the seam with
+// usage.
+//
+// This has to run against the real CLI. internal/loop's version of it
+// runs against the recorder double, which manufactures the refusal
+// without loopSigner or admission running at all, so a regression that
+// rejected the no---as last-ditch invocation would leave that one green
+// (review finding on #202).
+func TestTheLastDitchExitReachesTheBoundaryUnderARotatedKey(t *testing.T) {
+	const subject = "c-1"
+	remote, state, workerKey, _ := remoteWorkLedger(t, subject)
+
+	// Rotate at the settle: the window is open by then, so the strand
+	// path runs and attempts claim park under the NEW key.
+	r := &rotatingVerbs{inner: loopVerbs{}, t: t, path: workerKey, on: "budget settle", seed: 99}
+	d, err := loop.New(implementerManifest(t), r,
+		[]string{"--remote", remote, "--state", state}, workerKey,
+		loop.WorkFunc(func(string, loop.Situation) (int, error) { return 7, nil }),
+		loop.WithBase("abc1234..abc1234"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = d.Step(10)
+	if err == nil {
+		t.Fatal("the iteration must not complete: the key changed under it")
+	}
+	if !r.fired {
+		t.Fatal("this drill is vacuous unless the key was replaced inside the window")
+	}
+	// The error names the stranded window, which is what strand
+	// reports once its exit attempt has failed at the boundary.
+	if !strings.Contains(err.Error(), "left OPEN") || !strings.Contains(err.Error(), "reap") {
+		t.Fatalf("the loop must report the window stranded and needing a reap: %v", err)
+	}
+	// And the exit was refused by the BOUNDARY, not by the seam. That
+	// is the property: a usage refusal would mean --as had been
+	// attached to the last-ditch act and stopped it one layer too
+	// early, never reaching admission at all.
+	//
+	// WHICH boundary rule fires is a fixture detail, not the
+	// conformance point, so it is deliberately not pinned: this
+	// fixture enrols only workerA and a supervisor, so the rotated key
+	// is unenrolled and the actor rule answers first. Rotating to an
+	// enrolled non-holder with claim standing would reach the fence
+	// rule instead. Both are admission; the seam is what must not
+	// answer.
+	if !strings.Contains(err.Error(), "admission refused by rule") {
+		t.Errorf("the last-ditch exit must reach the boundary and carry its refusal: %v", err)
+	}
+	if strings.Contains(err.Error(), "park refused (usage)") {
+		t.Errorf("the exit stopped at the seam instead of the boundary: %v", err)
+	}
+}

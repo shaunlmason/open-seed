@@ -1503,37 +1503,59 @@ func TestEveryOrdinaryActDeclaresItsIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r := &recorder{answer: offers("c-1", func([]string) (Result, bool) { return Result{}, false })}
-	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+	// EVERY declared act is invoked directly, not merely those one
+	// iteration happens to reach. A sweep that skipped unobserved acts
+	// would pass with a future act added without --as, which is the
+	// guarantee criterion 5 actually asks for — and the first version
+	// of this drill did exactly that: a Step exercises four of the
+	// implementer's seven acts, so three were never checked (review
+	// finding on #202).
+	// EVERY act in the CATALOG, performed directly. Two narrower
+	// sweeps were wrong before this one, and both would have shipped
+	// the guarantee criterion 5 asks for while not providing it
+	// (review finding on #202):
+	//
+	//   - sweeping only the acts one Step happens to reach checked
+	//     four of them;
+	//   - sweeping the acts this file's implementer() fixture declares
+	//     checked five, while the SHIPPED manifest declares seven.
+	//
+	// --as is attached in actGated, not by any manifest, so the
+	// property belongs to the catalog: an act added to loopverb later
+	// must fail here whatever lane happens to declare it.
+	all := implementer()
+	all.ActsThrough = loopverb.Names()
+	r := &recorder{}
+	d, err := New(all, r, []string{"--remote", "/repo"}, keyPath,
 		WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithBase("a..a"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.Step(5); err != nil {
-		t.Fatalf("the drill needs a full iteration: %v", err)
+	if len(loopverb.Names()) == 0 {
+		t.Fatal("the catalog must not be empty")
 	}
-	// The sweep is over the act CATALOG, not a hand-listed subset: an
-	// act added later without --as fails here rather than shipping a
-	// signing site with no declared identity.
-	checked := 0
 	for _, name := range loopverb.Names() {
+		if _, err := d.act(name, "c-1"); err != nil {
+			t.Fatalf("%q: %v", name, err)
+		}
 		args, ran := r.argsFor(name)
 		if !ran {
-			continue
+			t.Fatalf("%q did not reach the seam", name)
 		}
-		checked++
 		if got := flagValue(args, "--as"); got != fp {
-			t.Errorf("%q must declare --as %s, got %q", name, fp, got)
+			t.Errorf("%q must declare --as %s, got %q — every catalog act declares the identity it acts as", name, fp, got)
 		}
-	}
-	if checked == 0 {
-		t.Fatal("this drill is vacuous unless catalog acts reached the seam")
 	}
 }
 
-// The last-ditch exit carries NO --as, so it reaches the boundary and
-// refuses there rather than at the seam. Asserted on the same strand
-// path the rotation drill drives.
+// The last-ditch exit carries NO --as on the strand path.
+//
+// This drill runs against the DOUBLE, so it proves only what the loop
+// EMITS. That the omission actually lets the act reach the admission
+// boundary is a different claim, and a double cannot make it: the
+// recorder manufactures the refusal without loopSigner or admission
+// running at all. cmd/seed carries the real-CLI drill for that
+// (review finding on #202), and this one is named for what it covers.
 func TestTheLastDitchExitDeclaresNoIdentity(t *testing.T) {
 	dir := t.TempDir()
 	keyPath := filepath.Join(dir, "id_ed25519")
