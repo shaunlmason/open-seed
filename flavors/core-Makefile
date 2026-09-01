@@ -24,12 +24,20 @@ check-next:
 	@cd next && badfmt="$$(gofmt -l .)" && { test -z "$$badfmt" || { echo "check-next: gofmt failures:"; echo "$$badfmt"; exit 1; }; }
 	@cd next && out="$$(go vet ./... 2>&1)" || { echo "check-next: go vet failed:"; echo "$$out"; exit 1; }
 	@cd next && out="$$(go build ./... 2>&1)" || { echo "check-next: go build failed:"; echo "$$out"; exit 1; }
-	@# -p 1 serializes package test binaries: concurrent binaries under the
-	@# subprocess-heavy drills can collide coverage counter files (same pid
-	@# and second after heavy pid recycling), silently dropping one package
-	@# from the merged profile and misreading coverage far below truth.
-	@cd next && out="$$(go test -p 1 ./... -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/... 2>&1)" || { echo "check-next: go test failed:"; echo "$$out"; exit 1; }
-	@cd next && go tool cover -func=coverage.out | awk '/^total:/ { cov=$$3; sub(/%/,"",cov); if (cov+0.0 < 90.0) { printf "check-next: coverage %s%% is below the 90%% gate (docs/next-build-plan.md §0)\n", cov; exit 1 } printf "check-next: gofmt/vet/build/test ok; coverage %s%% (gate 90%%)\n", cov }'
+	@# The suite and the gate run through next/cmd/covergate, because the
+	@# collection is lossy at a low rate and the rule that saves you -
+	@# re-collect COLD once, then treat a second failure as real - is one
+	@# an unattended agent must otherwise apply against its own instinct.
+	@# cmd/go's mergeCoverProfile drops a package's profile fragment
+	@# SILENTLY when the fragment file is missing or zero-length, with no
+	@# error and `ok` still printed, so the merged total reads far below
+	@# truth on a tree that is fine (card os-cafba959).
+	@#
+	@# The re-collection engages ONLY below the threshold, so a healthy
+	@# tree never pays for it and it cannot false-alarm; and the second
+	@# reading is cold, because go test caches a package's coverage
+	@# contribution and a warm re-run replays the loss at the same number.
+	@cd next && go run ./cmd/covergate -gate 90 -dir .
 
 # End-to-end loop smoke in a temp instantiation (no model, no secrets).
 smoke:
