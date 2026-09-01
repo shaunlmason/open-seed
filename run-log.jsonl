@@ -914,3 +914,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-6a08b166","ts":"2026-09-01T20:40:09Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T21:40:13Z"},"task":"os-6a08b166","ts":"2026-09-01T20:40:13Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-6a08b166","ts":"2026-09-01T20:47:27Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"next: verdict render is local-only, so a verifier lane cannot act against a shared remote"},"task":"os-a00b6950","ts":"2026-09-01T20:47:54Z","verb":"create"}
