@@ -20,6 +20,8 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 // writePacket files a four-part packet, optionally without its base:
@@ -541,5 +543,173 @@ func TestLoopUsageRefusals(t *testing.T) {
 				t.Fatalf("wanted a usage refusal naming %q: %d %+v", tc.want, code, e)
 			}
 		})
+	}
+}
+
+// loopRemote stands up a remote with one claimed subject and the
+// worker enrolled, returning the remote, the state dir, the worker's
+// key path and the resolver for library-side rival appends.
+func loopRemote(t *testing.T) (remote, state, wkey string, resolve ledger.Resolver) {
+	t.Helper()
+	dir, priv, _ := writeKeys(t)
+	remote = bareRemote(t)
+	resolve = seedRemoteGenesis(t, remote)
+	libAppend(t, remote, resolve, "seed/0", ledger.UpgradeVerb, "system", `{"to": "seed/1"}`)
+	state = filepath.Join(dir, "state")
+	var wpub, wfp string
+	wkey, wpub, wfp = writeWorkerKey(t, 41)
+	for _, s := range []struct{ key, verb, subject, payload string }{
+		{priv, "actor.enrolled", wfp, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "worker"}`, wpub)},
+		{priv, "actor.granted", wfp, `{"capability": "claim"}`},
+		{priv, "intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "small", "routing": "core"}`},
+		{priv, "contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`},
+	} {
+		if e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
+			"--key", s.key, "--verb", s.verb, "--subject", s.subject, "--payload", s.payload); code != 0 {
+			t.Fatalf("%s: %d %+v", s.verb, code, e)
+		}
+	}
+	if e, code := runEnv(t, "claim", "take", "--remote", remote, "--state", state,
+		"--key", wkey, "--subject", "c-1"); code != 0 {
+		t.Fatalf("claim take: %d %+v", code, e)
+	}
+	return remote, state, wkey, resolve
+}
+
+// conformance: III.I — a derived argument is re-examined against the
+// refreshed tip inside the optimistic loop. A rival reservation
+// landing mid-flight makes the drafted citation ambiguous rather than
+// merely stale, and the act is REFUSED naming both candidates: the
+// value is never silently replaced, because a different value is a
+// different decision (plans/os-9b3f3ef3.md D1).
+func TestRemoteDerivationDivergenceRefuses(t *testing.T) {
+	remote, state, wkey, resolve := loopRemote(t)
+
+	// One open reservation: the value `budget settle` will derive.
+	if e, code := runEnv(t, "budget", "reserve", "--remote", remote, "--state", state,
+		"--key", wkey, "--subject", "c-1", "--amount", "5"); code != 0 {
+		t.Fatalf("reserve: %d %+v", code, e)
+	}
+	// A SECOND reservation, staged and rewound: the hook lands it when
+	// the settle's first push attempt arrives, so the session drafts
+	// against one reservation and the retry sees two.
+	rival := buildRivalReserve(t, remote, resolve)
+	installRivalHook(t, remote, rival)
+
+	before := remoteTip(t, remote)
+	e, code := runEnv(t, "budget", "settle", "--remote", remote, "--state", state,
+		"--key", wkey, "--subject", "c-1", "--actuals", "2")
+	if code == 0 {
+		t.Fatalf("a settle whose sole reservation stopped being sole must refuse, not close one: %+v", e)
+	}
+	if e.Error == nil || !strings.Contains(e.Error.Message, "open reservations") {
+		t.Fatalf("the refusal must name the ambiguity soleOpenReservation exists to refuse: %d %+v", code, e)
+	}
+	// Both candidates named, and nothing of ours landed: the rival's
+	// own append is the only advance.
+	for _, want := range []string{"position"} {
+		if !strings.Contains(e.Error.Message, want) {
+			t.Fatalf("the refusal must name the candidates: %q", e.Error.Message)
+		}
+	}
+	if after := remoteTip(t, remote); after == before {
+		t.Fatal("fixture: the rival must have landed, or the race never happened")
+	}
+	if settled := chainHasVerb(t, remote, resolve, "budget.settle"); settled {
+		t.Fatal("a refused settle must append nothing")
+	}
+
+	// D3: the refusal is stamped at the view it was COMPUTED at, not
+	// at the tip the session opened against. remoteFailureEnvelope
+	// stamps the refreshed position through refusalAt, and refuse used
+	// to overwrite it with the session's own count.
+	if e.Position == nil {
+		t.Fatal("a remote refusal must carry a position")
+	}
+	fresh := remoteState(t, remote).count - 1
+	if *e.Position != fmt.Sprintf("%d", fresh) {
+		t.Fatalf("the refusal must be stamped at the refreshed tip %d, got %s: a stale stamp is the concurrency signal the field exists for, inverted", fresh, *e.Position)
+	}
+}
+
+// buildRivalReserve stages one further budget.reserve on c-1 and
+// rewinds, returning the commit for the hook to replay.
+func buildRivalReserve(t *testing.T, remote string, resolve ledger.Resolver) []string {
+	t.Helper()
+	base := remoteTip(t, remote)
+	// The operator lane may reserve on a claimed subject, so the
+	// governance root can play the rival without a second worker.
+	libAppend(t, remote, resolve, version.Seed1, transition.BudgetReserveVerb, "c-1",
+		fmt.Sprintf(`{"amount": "3", "fence": "%s"}`, remoteFence(t, remote, resolve)))
+	rival := remoteTip(t, remote)
+	if out, err := exec.Command("git", "--git-dir", remote, "update-ref", remoteRef, base).CombinedOutput(); err != nil {
+		t.Fatalf("rewind: %v %s", err, out)
+	}
+	return []string{rival}
+}
+
+// remoteState materializes the remote ledger and folds it, the read
+// the drills use to ask what the authoritative chain now says.
+func remoteState(t *testing.T, remote string) *verdictState {
+	t.Helper()
+	st, failEnv := loadVerdictState(materializeRemote(t, remote))
+	if failEnv != nil {
+		t.Fatalf("materialized remote does not load: %+v", failEnv)
+	}
+	return st
+}
+
+// remoteFence is the active claim fence on c-1 at the remote tip.
+func remoteFence(t *testing.T, remote string, _ ledger.Resolver) string {
+	t.Helper()
+	st := remoteState(t, remote)
+	s, ok := st.fold.State("c-1")
+	if !ok || s.Claim == nil {
+		t.Fatal("fixture: c-1 holds no claim")
+	}
+	return fmt.Sprintf("%d", s.Claim.Fence)
+}
+
+// chainHasVerb reports whether the remote chain carries the verb.
+func chainHasVerb(t *testing.T, remote string, _ ledger.Resolver, verb string) bool {
+	t.Helper()
+	for _, rec := range remoteState(t, remote).records {
+		if rec.Event.Verb == verb {
+			return true
+		}
+	}
+	return false
+}
+
+// conformance: III.I — a malformed packet is refused with the
+// documented usage envelope and never terminates the CLI. The JSON
+// value null is the case the object-only malformed-packet drills
+// missed: it unmarshals into a nil map with no error, and writing a
+// derived base into a nil map panics.
+func TestLoopPacketRootMustBeAnObject(t *testing.T) {
+	ld, _, base, _, head, _, _, keys, _ := offerLedgerAndSubject(t, "c-1")
+	worker := keys["workerA"]
+	if _, err := admitAppend(t, ld, workerRawKey(22), "claim.taken", "c-1", `{}`); err != nil {
+		t.Fatal(err)
+	}
+	before := chainCount(t, ld)
+	for _, body := range []string{`null`, `[]`, `"x"`, `3`} {
+		path := filepath.Join(t.TempDir(), "packet.json")
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		// With --base is the combination that panicked: the derived
+		// range is written into the map before the shape is checked.
+		for _, extra := range [][]string{{}, {"--base", base + ".." + head}} {
+			args := append([]string{"claim", "release", "--ledger", ld, "--key", worker,
+				"--subject", "c-1", "--packet", path}, extra...)
+			e, code := runEnv(t, args...)
+			if code != envelopeUsageExit || e.Error == nil {
+				t.Fatalf("--packet %s (%v) must refuse with the usage envelope: %d %+v", body, extra, code, e)
+			}
+		}
+	}
+	if after := chainCount(t, ld); after != before {
+		t.Fatalf("no malformed packet may reach the chain: %d then %d", before, after)
 	}
 }
