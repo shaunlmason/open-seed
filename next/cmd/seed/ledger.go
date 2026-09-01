@@ -301,8 +301,17 @@ func runLedgerShow(args []string, stdout, stderr io.Writer) int {
 		return render(stampTip(envelope.OK(result), count), stdout, stderr)
 	}
 	var found *event.Record
+	// The scan already visits every record when the position is
+	// absent, so the count comes out of the iteration already running
+	// (plans/os-fa69345e.md D1): a not_found that read the whole
+	// chain KNOWS the tip, and discarding it would leave the caller
+	// unable to tell "the position does not exist yet" from "the
+	// position never will", which is the one refusal where a race is
+	// most likely.
+	count := 0
 	stop := errors.New("stop")
 	err := store.Records(func(pos int, rec *event.Record) error {
+		count = pos + 1
 		if pos == *position {
 			found = rec
 			return stop
@@ -310,10 +319,15 @@ func runLedgerShow(args []string, stdout, stderr io.Writer) int {
 		return nil
 	})
 	if err != nil && !errors.Is(err, stop) {
+		// A scan that failed partway established nothing: the count it
+		// reached is records read before an error, not a statement
+		// about the chain, so this refusal stays unstamped (D3).
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
 	if found == nil {
-		return render(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no record at position %d", *position)), stdout, stderr)
+		// stampTip declines at zero, so an empty ledger correctly
+		// establishes no position without a branch saying so (D2).
+		return render(stampTip(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no record at position %d", *position)), count), stdout, stderr)
 	}
 	env := envelope.OK(map[string]any{"event": found.Event, "sig": found.Sig})
 	pos := fmt.Sprintf("%d", *position)

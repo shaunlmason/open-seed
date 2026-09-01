@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "task": "os-fa69345e",
+  "merge_base": "da179c27d163aa2bd65ec933a133e9a37fe9d4d7",
+  "head": "bd77676add51e7c47c8677be75d33886e78a2ef7",
+  "plan_path": "plans/os-fa69345e.md",
+  "plan_sha256": "eab852f724fa4aa39f26d6655d71ed827a29657a649fa1285c8ffb3d5454aec8",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/ledger_test.go",
+    "next/docs/decisions.md"
+  ],
+  "diff_sha256": "23f952a8991adf0c5f26b90966c3a221197fc588dac59278c7128659e1fd86d2",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
