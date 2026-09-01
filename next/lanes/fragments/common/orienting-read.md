@@ -3,7 +3,10 @@
 You wake with no memory and no right to assume anything. Your first act
 is the single read your manifest names in `orients_from`:
 
-    seed situation --key <your key> [--since <the position you last saw>]
+    seed situation --ledger <dir> --key <your key> [--since <the position you last saw>]
+
+`--ledger` is required: without it the read exits 64 and you have not
+oriented at all.
 
 That response is the whole world you are entitled to act on: what you
 are owed, which windows you hold with their fences, your budget

@@ -136,20 +136,75 @@ func TestSituationFlagsAgreeWithTheCLI(t *testing.T) {
 	// below is what makes the omission visible.
 	var actual []string
 	fs.VisitAll(func(f *flag.Flag) { actual = append(actual, f.Name) })
-	declared := lane.SituationFlags()
+	var declared []string
+	for _, f := range lane.SituationFlags() {
+		declared = append(declared, f.Name)
+	}
 	slices.Sort(actual)
 	slices.Sort(declared)
 	if !slices.Equal(actual, declared) {
 		t.Fatalf("internal/lane validates orients_from against %v, the situation read takes %v", declared, actual)
 	}
-	// And the flags the shipped manifests cite are all real.
+
+	// Required-ness, DERIVED from the surface rather than read off the
+	// declaration. A drill that only iterates the flags already marked
+	// required is vacuous when the mark is removed — the same failure
+	// shape as the finding that prompted it — so required-ness is
+	// discovered by omitting each flag in turn and asking the surface.
+	// Omitting a required flag refuses as `usage` before the read
+	// begins; omitting an optional one gets past parsing and refuses
+	// on the ledger instead.
+	dir := t.TempDir()
+	keyPath := filepath.Join(t.TempDir(), "key")
+	if err := os.WriteFile(keyPath, []byte("not-a-key\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	value := map[string]string{"ledger": dir, "key": keyPath, "subject": "c-1", "since": "0"}
+	observed := map[string]bool{}
+	for _, f := range lane.SituationFlags() {
+		args := []string{"situation"}
+		for _, other := range lane.SituationFlags() {
+			if other.Name != f.Name {
+				args = append(args, "--"+other.Name, value[other.Name])
+			}
+		}
+		e, _ := runEnv(t, args...)
+		observed[f.Name] = e.Error != nil && e.Error.Code == "usage"
+	}
+	for _, f := range lane.SituationFlags() {
+		if observed[f.Name] != f.Required {
+			t.Errorf("internal/lane declares --%s required=%v, the situation read behaves as required=%v",
+				f.Name, f.Required, observed[f.Name])
+		}
+	}
+	if !observed["ledger"] {
+		t.Fatal("this drill is vacuous unless at least one flag is genuinely required; --ledger was")
+	}
+
+	// And every shipped manifest's read is one the surface accepts in
+	// SHAPE: real flags, and none of the required ones missing.
+	required := map[string]bool{}
+	for _, f := range lane.SituationFlags() {
+		if f.Required {
+			required[f.Name] = true
+		}
+	}
 	for _, m := range mustLoad(t) {
+		cited := map[string]bool{}
 		for _, tok := range strings.Fields(m.OrientsFrom) {
 			if !strings.HasPrefix(tok, "--") {
 				continue
 			}
-			if !slices.Contains(declared, strings.TrimPrefix(tok, "--")) {
+			name := strings.TrimPrefix(tok, "--")
+			cited[name] = true
+			if !slices.Contains(declared, name) {
 				t.Errorf("%s orients from %q, which names an unknown flag", m.Lane, m.OrientsFrom)
+			}
+		}
+		for name := range required {
+			if !cited[name] {
+				t.Errorf("%s orients from %q, which omits the required --%s and would exit 64",
+					m.Lane, m.OrientsFrom, name)
 			}
 		}
 	}
@@ -172,13 +227,25 @@ func TestLoopVerbRegistryDrivesTheCLI(t *testing.T) {
 			t.Fatalf("%s is a registered act, so the dispatch must reach it: %s", act.Name(), e.Error.Message)
 		}
 	}
-	e, code := runEnv(t, "claim", "yeet")
-	if code != 64 || e.Error == nil || !strings.Contains(e.Error.Message, "unknown claim subverb") {
-		t.Fatalf("an unknown subverb refuses: %d %+v", code, e)
-	}
-	for _, sub := range loopverb.Subverbs("claim") {
-		if !strings.Contains(e.Error.Message, sub) {
-			t.Errorf("the refusal names the registry's own alternatives, missing %q: %s", sub, e.Error.Message)
+	// Every group refuses an unknown subverb the same way and names
+	// the registry's own alternatives. Checked per GROUP rather than
+	// once: the submission dispatch compared against a literal "make"
+	// while claim and budget resolved through the registry, and a
+	// single-group drill missed it (review finding on this PR).
+	for _, group := range []string{"claim", "budget", "submission"} {
+		e, code := runEnv(t, group, "yeet")
+		if code != 64 || e.Error == nil {
+			t.Fatalf("%s yeet must refuse as usage: %d %+v", group, code, e)
+		}
+		if !strings.Contains(e.Error.Message, "unknown "+group+" subverb") {
+			t.Errorf("%s must refuse an unknown subverb as unknown, so the registry is the authority: %s",
+				group, e.Error.Message)
+		}
+		for _, sub := range loopverb.Subverbs(group) {
+			if !strings.Contains(e.Error.Message, sub) {
+				t.Errorf("%s: the refusal names the registry's own alternatives, missing %q: %s",
+					group, sub, e.Error.Message)
+			}
 		}
 	}
 }

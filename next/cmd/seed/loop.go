@@ -531,8 +531,17 @@ func runClaimExit(args []string, verb, name string, stdout, stderr io.Writer) in
 // revision, so no other value could ever be legal.
 func runSubmission(args []string, stdout, stderr io.Writer) int {
 	known := loopverb.English(loopverb.Subverbs("submission"))
-	if len(args) == 0 || args[0] != "make" {
+	if len(args) == 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "submission requires the subverb: "+known), stdout, stderr)
+	}
+	// Resolved through the registry like claim and budget, rather than
+	// compared against a literal: a hard-coded "make" would leave the
+	// registry authoritative for the validator and the advertised
+	// alternatives while the CLI quietly disagreed (review finding on
+	// this PR).
+	if _, ok := loopverb.Lookup("submission", args[0]); !ok {
+		return render(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("unknown submission subverb %q — %s", args[0], known)), stdout, stderr)
 	}
 	fs := flag.NewFlagSet("submission make", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

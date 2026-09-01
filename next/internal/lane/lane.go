@@ -92,16 +92,33 @@ const FragmentDir = "fragments"
 // must be stated rather than inferred.
 var dispatcherAllowlist = []string{keyring.CapDispatch}
 
+// SituationFlag is one flag of the orienting read, with whether the
+// surface REQUIRES it. Required-ness is the half that matters: a
+// declaration naming only real flags can still be a command that exits
+// 64, and a validator that passes it has certified prose (review
+// finding on this PR, reproduced — all six shipped manifests declared
+// a read that could not run).
+type SituationFlag struct {
+	Name     string
+	Required bool
+}
+
 // situationFlags is the read surface orients_from is checked against.
 // It lives here rather than in cmd/seed because package main is not
-// importable; cmd/seed carries a drill asserting its own flag set
-// matches this exactly, so the two cannot drift without a red test.
-func situationFlags() []string {
-	return []string{"ledger", "key", "subject", "since"}
+// importable; cmd/seed carries a drill asserting its own flag set and
+// required-ness match this exactly, so the two cannot drift without a
+// red test.
+func situationFlags() []SituationFlag {
+	return []SituationFlag{
+		{Name: "ledger", Required: true},
+		{Name: "key"},
+		{Name: "subject"},
+		{Name: "since"},
+	}
 }
 
 // SituationFlags exposes that set for the CLI's agreement drill.
-func SituationFlags() []string { return situationFlags() }
+func SituationFlags() []SituationFlag { return situationFlags() }
 
 // Load reads every manifest in dir, in lane-name order.
 func Load(dir string) ([]Manifest, error) {
@@ -298,9 +315,12 @@ func checkOrientsFrom(m Manifest, add func(lane, field, msg string)) {
 		return
 	}
 	known := map[string]bool{}
+	var names []string
 	for _, f := range situationFlags() {
-		known[f] = true
+		known[f.Name] = true
+		names = append(names, f.Name)
 	}
+	cited := map[string]bool{}
 	for _, tok := range strings.Fields(read) {
 		if !strings.HasPrefix(tok, "--") {
 			continue
@@ -309,9 +329,22 @@ func checkOrientsFrom(m Manifest, add func(lane, field, msg string)) {
 		if i := strings.Index(name, "="); i >= 0 {
 			name = name[:i]
 		}
+		cited[name] = true
 		if !known[name] {
 			add(m.Lane, "orients_from", fmt.Sprintf("--%s is not a flag `seed situation` takes (%s)",
-				name, "--"+strings.Join(situationFlags(), ", --")))
+				name, "--"+strings.Join(names, ", --")))
+		}
+	}
+	// Naming only real flags is not enough: a command missing a
+	// REQUIRED one exits 64 without ever reaching the ledger, and a
+	// lane following it would fail on its first act. Checking the
+	// surface's requirements is what makes the declaration executable
+	// rather than merely well-spelled.
+	for _, f := range situationFlags() {
+		if f.Required && !cited[f.Name] {
+			add(m.Lane, "orients_from", fmt.Sprintf(
+				"omits --%s, which `seed situation` requires: as written this read exits 64 and the lane "+
+					"never orients", f.Name))
 		}
 	}
 }

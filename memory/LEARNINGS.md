@@ -637,3 +637,11 @@ Fresh sessions read this file instead of rediscovering.
   lane calls its liveness sources; only a running loop can show they
   emit. Writing that down turned a silent overclaim into a named
   obligation on the next card.
+- 2026-09-01 (os-cf1c9688): a flake that repeats is still a flake. The
+  coverage gate reported the same failing number three times running,
+  which is what a real regression looks like and what sent me hunting
+  for the code that caused it — but `go test` caches a package's
+  result INCLUDING its coverage contribution, so a warm re-run replays
+  the same lost counters at the same number forever. Cold-cache runs
+  gave 86.7 / 90.7 / 90.7. When a re-run is the discriminator, make
+  sure the re-run actually re-runs.

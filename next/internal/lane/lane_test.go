@@ -24,7 +24,7 @@ func good() Manifest {
 		Lane:         "implementer",
 		Summary:      "takes a card to a PR",
 		Grants:       []string{keyring.CapClaim},
-		OrientsFrom:  "seed situation --key <key> --since <position>",
+		OrientsFrom:  "seed situation --ledger <dir> --key <key> --since <position>",
 		ActsThrough:  []string{"claim take", "budget settle"},
 		LivenessFrom: []string{"budget settle"},
 		Inbox:        "wakes on push, convinces on the read",
@@ -111,9 +111,17 @@ func TestEachCheckHasItsOwnFinding(t *testing.T) {
 			says:   "is not the situation read",
 		},
 		"a flag the situation read does not take": {
-			mutate: func(m *Manifest) { m.OrientsFrom = "seed situation --key <key> --everything" },
+			mutate: func(m *Manifest) { m.OrientsFrom = "seed situation --ledger <dir> --everything" },
 			field:  "orients_from",
 			says:   "is not a flag",
+		},
+		"an orienting read omitting a flag the surface requires": {
+			// Naming only real flags is not enough: this command
+			// exits 64 without reaching the ledger, so the lane never
+			// orients at all.
+			mutate: func(m *Manifest) { m.OrientsFrom = "seed situation --key <key> --since <position>" },
+			field:  "orients_from",
+			says:   "omits --ledger",
 		},
 		"no inbox declaration": {
 			mutate: func(m *Manifest) { m.Inbox = "" },
