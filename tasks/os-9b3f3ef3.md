@@ -1,10 +1,11 @@
 ---
 id: os-9b3f3ef3
 title: 'next: loop verbs — three post-merge defects on the remote path (Codex review of #173)'
-state: backlog
+state: ready
 priority: P1
 squad: core
 created_at: "2026-09-01T06:12:59Z"
+updated_at: "2026-09-01T06:25:40Z"
 ---
 
 Three findings from the Codex review of #173, all landed on main because the PR merged before the review was worked. All three verified against source; two are on the remote optimistic-retry path and one is a panic. Plan-first (L2).
