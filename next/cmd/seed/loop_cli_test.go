@@ -367,9 +367,11 @@ func clonedRepo(t *testing.T) (dir, want string) {
 	if out, err := exec.Command("git", "init", "-q", "--bare", "-b", "main", origin).CombinedOutput(); err != nil {
 		t.Fatalf("bare: %v %s", err, out)
 	}
+	hardenGitRepo(t, origin)
 	if out, err := exec.Command("git", "init", "-q", "-b", "main", seed).CombinedOutput(); err != nil {
 		t.Fatalf("seed: %v %s", err, out)
 	}
+	hardenGitRepo(t, seed)
 	if err := os.WriteFile(filepath.Join(seed, "a.txt"), []byte("a\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -380,6 +382,7 @@ func clonedRepo(t *testing.T) (dir, want string) {
 	if out, err := exec.Command("git", "clone", "-q", origin, dir).CombinedOutput(); err != nil {
 		t.Fatalf("clone: %v %s", err, out)
 	}
+	hardenGitRepo(t, dir)
 	mb := git(dir, "rev-parse", "HEAD")
 	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b\n"), 0o644); err != nil {
 		t.Fatal(err)

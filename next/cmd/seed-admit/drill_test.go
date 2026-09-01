@@ -38,6 +38,7 @@ func newDeployment(t *testing.T, p posture.Posture) deployment {
 	if out, err := exec.Command("git", "init", "-q", "--bare", remote).CombinedOutput(); err != nil {
 		t.Fatalf("bare init: %v %s", err, out)
 	}
+	hardenGitRepo(t, remote)
 	cfgPath := filepath.Join(host, "seed.json")
 	if err := os.WriteFile(cfgPath, []byte(`{"posture": "`+string(p)+`"}`), 0o644); err != nil {
 		t.Fatal(err)
@@ -172,6 +173,7 @@ func TestDrillKillAndReplace(t *testing.T) {
 	if out, err := exec.Command("git", "clone", "-q", "--mirror", d.remote, replacement).CombinedOutput(); err != nil {
 		t.Fatalf("replace host: %v %s", err, out)
 	}
+	hardenGitRepo(t, replacement)
 	installHook(t, replacement)
 
 	replacementDecisions := refusals(replacement)
