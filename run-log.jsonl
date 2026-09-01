@@ -746,3 +746,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:166","to":"ready"},"task":"os-ef715d17","ts":"2026-09-01T03:29:33Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T04:29:36Z"},"task":"os-ef715d17","ts":"2026-09-01T03:29:36Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-1112caa4","kind":"pr"},"task":"os-ef715d17","ts":"2026-09-01T03:35:09Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-ef715d17","ts":"2026-09-01T03:35:12Z","verb":"transition"}
