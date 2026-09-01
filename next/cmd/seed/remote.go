@@ -141,17 +141,33 @@ func openRemoteSession(remote, refName, stateDir, supported string) (*remoteSess
 // pushDraft rides the optimistic append loop: prev is re-linked and the
 // record re-signed per attempt, with admission re-run against the
 // refreshed tip before every push.
-func (s *remoteSession) pushDraft(verb, subject, payload string, signer ed25519.PrivateKey, fp string) (*event.Record, *gitref.Result, error) {
-	inner := admit.Validate(s.aopts...)
+//
+// recheck, when given, runs FIRST against that same refreshed view. It
+// is how a derived argument is re-examined after the tip moves: the
+// loop verbs derive the fence and the reservation from the view the
+// session opened at, and a rival appending mid-flight can make that
+// value stale without making it inadmissible, which is the one case
+// admission alone cannot catch (plans/os-9b3f3ef3.md D1).
+func (s *remoteSession) pushDraft(verb, subject, payload string, signer ed25519.PrivateKey, fp string,
+	recheck func(*admit.Context) error) (*event.Record, *gitref.Result, error) {
+	// One context per attempt, shared by the recheck and the admission
+	// check: the same view judging both, and one replay rather than two.
 	validate := func(store *ledger.Store, rec *event.Record) error {
-		verr := inner(store, rec)
+		ctx, cerr := admit.ContextAt(store, s.aopts...)
+		if cerr != nil {
+			return cerr
+		}
+		var verr error
+		if recheck != nil {
+			verr = recheck(ctx)
+		}
+		if verr == nil {
+			verr = admit.Check(ctx, rec)
+		}
 		if verr == nil {
 			return nil
 		}
-		if _, n, terr := store.Tip(); terr == nil && n > 0 {
-			return &refusalAt{count: n, err: verr}
-		}
-		return verr
+		return &refusalAt{count: ctx.Count, ctx: ctx, err: verr}
 	}
 	var lastRec *event.Record
 	res, err := s.client.AppendLoop(gitref.Draft{
@@ -179,7 +195,7 @@ func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, su
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
 	}
-	lastRec, res, err := session.pushDraft(verb, subject, payload, signer, fp)
+	lastRec, res, err := session.pushDraft(verb, subject, payload, signer, fp, nil)
 	if err != nil {
 		return render(remoteFailureEnvelope(err), stdout, stderr)
 	}
@@ -216,11 +232,24 @@ func lockStateDir(stateDir string) (func(), error) {
 	}, nil
 }
 
-// refusalAt carries the materialized tip position an admission refusal
-// was computed at, so the envelope can stamp it.
+// refusalAt carries the view a refusal was computed at: the position,
+// so the envelope stamps the tip it was judged against rather than the
+// one the session opened at, and the context, so the affordances
+// answering "then what may I do?" describe that same view.
 type refusalAt struct {
 	count int
+	ctx   *admit.Context
 	err   error
+}
+
+// refusalView returns the context a refusal was computed at, falling
+// back to the caller's own when the failure carries none.
+func refusalView(err error, fallback *admit.Context) *admit.Context {
+	var at *refusalAt
+	if errors.As(err, &at) && at.ctx != nil {
+		return at.ctx
+	}
+	return fallback
 }
 
 func (r *refusalAt) Error() string { return r.err.Error() }
@@ -236,6 +265,10 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	var at *refusalAt
 	if errors.As(err, &at) {
 		return stampTip(remoteFailureEnvelope(at.err), at.count)
+	}
+	var div *derivedDivergence
+	if errors.As(err, &div) {
+		return div.env
 	}
 	var herr *halt.HaltedError
 	if errors.As(err, &herr) {
