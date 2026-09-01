@@ -611,3 +611,37 @@ Fresh sessions read this file instead of rediscovering.
   lines after the event landed prove it evaluated the event and
   declined. Look for an ordering the system already guarantees before
   reaching for a duration.
+- 2026-09-01 (os-cf1c9688): when a plan says "check X against the
+  existing table", verify the table exists before believing it. The
+  first draft pointed a validator at "cmd/seed's loop-verb table";
+  there was none, and the acts were case arms in package main, which
+  nothing can import. The plan would have failed on contact, in the
+  one way it had explicitly forbidden: writing the seven names down a
+  second time. A cited authority is a claim about the tree, and claims
+  about the tree are checkable before they are binding.
+- 2026-09-01 (os-cf1c9688): an OR-set read as an AND-set inverts the
+  check. `AcceptedCapabilities` returns alternatives — any one admits
+  the verb — so requiring a lane to hold all of them would have forced
+  `operator` onto every lane that claims or spends, to make a
+  capability-separation validator pass. When a check's green state
+  requires the posture the system forbids, the check is backwards.
+- 2026-09-01 (os-cf1c9688): state a least-privilege rule as an
+  allowlist. The draft's "holds no authoring, verdict or sealing
+  grant" admitted `operator`, the strongest capability there is,
+  because a blocklist admits by default everything nobody thought to
+  name. On the surface that reads hostile input, "we remembered the
+  dangerous ones" is not a posture.
+- 2026-09-01 (os-cf1c9688): when a validator cannot establish the whole
+  obligation, split it at the seam where the EVIDENCE changes and
+  record who inherits the rest. A manifest can say which work steps a
+  lane calls its liveness sources; only a running loop can show they
+  emit. Writing that down turned a silent overclaim into a named
+  obligation on the next card.
+- 2026-09-01 (os-cf1c9688): a flake that repeats is still a flake. The
+  coverage gate reported the same failing number three times running,
+  which is what a real regression looks like and what sent me hunting
+  for the code that caused it — but `go test` caches a package's
+  result INCLUDING its coverage contribution, so a warm re-run replays
+  the same lost counters at the same number forever. Cold-cache runs
+  gave 86.7 / 90.7 / 90.7. When a re-run is the discriminator, make
+  sure the re-run actually re-runs.

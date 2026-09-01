@@ -21,24 +21,24 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
-	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/loopverb"
 )
 
 func runBudget(args []string, stdout, stderr io.Writer) int {
+	// status is a read and not a loop act, so it is named here rather
+	// than in the registry; the three that APPEND come from
+	// internal/loopverb, which the lane validator reads too.
+	known := loopverb.English(append([]string{"status"}, loopverb.Subverbs("budget")...))
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "budget requires a subverb: status, reserve, settle, or release"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "budget requires a subverb: "+known), stdout, stderr)
 	}
-	switch args[0] {
-	case "status":
-	case "reserve":
-		return runBudgetLoop(args[1:], transition.BudgetReserveVerb, "budget reserve", stdout, stderr)
-	case "settle":
-		return runBudgetLoop(args[1:], transition.BudgetSettleVerb, "budget settle", stdout, stderr)
-	case "release":
-		return runBudgetLoop(args[1:], transition.BudgetReleaseVerb, "budget release", stdout, stderr)
-	default:
-		return render(envelope.Fail(envelope.ExitUsage, "usage",
-			fmt.Sprintf("unknown budget subverb %q — status, reserve, settle, or release", args[0])), stdout, stderr)
+	if args[0] != "status" {
+		act, ok := loopverb.Lookup("budget", args[0])
+		if !ok {
+			return render(envelope.Fail(envelope.ExitUsage, "usage",
+				fmt.Sprintf("unknown budget subverb %q — %s", args[0], known)), stdout, stderr)
+		}
+		return runBudgetLoop(args[1:], act.Verb, act.Name(), stdout, stderr)
 	}
 	fs := flag.NewFlagSet("budget status", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

@@ -34,18 +34,21 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/loopverb"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
-// The lifecycle verbs the loop takes. The budget facts have their
-// constants in the transition package already; these four do not,
-// because until now nothing but the raw seam named them.
+// The lifecycle verbs the loop takes, read from the registry rather
+// than spelled here: internal/loopverb is the one authority for which
+// acts exist and what each appends, and the lane validator is its
+// second consumer (plans/os-cf1c9688.md D3a). A local copy of these
+// names is exactly the drift the registry exists to prevent.
 const (
-	claimTakenVerb     = "claim.taken"
-	claimReleasedVerb  = "claim.released"
-	claimParkedVerb    = "claim.parked"
-	submissionMadeVerb = "submission.made"
+	claimTakenVerb     = loopverb.ClaimTakenVerb
+	claimReleasedVerb  = loopverb.ClaimReleasedVerb
+	claimParkedVerb    = loopverb.ClaimParkedVerb
+	submissionMadeVerb = loopverb.SubmissionMadeVerb
 )
 
 // loopFlags is the transport half every loop verb shares: --ledger
@@ -432,18 +435,18 @@ func gitOut(repo string, args ...string) (string, error) {
 
 // runClaim dispatches the claim lane's three acts.
 func runClaim(args []string, stdout, stderr io.Writer) int {
+	known := loopverb.English(loopverb.Subverbs("claim"))
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "claim requires a subverb: take, release, or park"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "claim requires a subverb: "+known), stdout, stderr)
 	}
-	switch args[0] {
-	case "take":
+	act, ok := loopverb.Lookup("claim", args[0])
+	if !ok {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown claim subverb %q — %s", args[0], known)), stdout, stderr)
+	}
+	if act.Sub == "take" {
 		return runClaimTake(args[1:], stdout, stderr)
-	case "release":
-		return runClaimExit(args[1:], claimReleasedVerb, "claim release", stdout, stderr)
-	case "park":
-		return runClaimExit(args[1:], claimParkedVerb, "claim park", stdout, stderr)
 	}
-	return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown claim subverb %q — take, release, or park", args[0])), stdout, stderr)
+	return runClaimExit(args[1:], act.Verb, act.Name(), stdout, stderr)
 }
 
 // runClaimTake takes the exclusive claim. It is remote-only: the
@@ -527,8 +530,18 @@ func runClaimExit(args []string, verb, name string, stdout, stderr io.Writer) in
 // — the citation is derivable because an approval admits ONE exact
 // revision, so no other value could ever be legal.
 func runSubmission(args []string, stdout, stderr io.Writer) int {
-	if len(args) == 0 || args[0] != "make" {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "submission requires the subverb: make"), stdout, stderr)
+	known := loopverb.English(loopverb.Subverbs("submission"))
+	if len(args) == 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "submission requires the subverb: "+known), stdout, stderr)
+	}
+	// Resolved through the registry like claim and budget, rather than
+	// compared against a literal: a hard-coded "make" would leave the
+	// registry authoritative for the validator and the advertised
+	// alternatives while the CLI quietly disagreed (review finding on
+	// this PR).
+	if _, ok := loopverb.Lookup("submission", args[0]); !ok {
+		return render(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("unknown submission subverb %q — %s", args[0], known)), stdout, stderr)
 	}
 	fs := flag.NewFlagSet("submission make", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

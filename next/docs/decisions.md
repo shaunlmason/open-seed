@@ -1171,3 +1171,59 @@ here. Newest last.
   chain, and stamping it would assert a position the failure
   disproves. A drill pins this so a later "consistency" pass does not
   extend the stamp there.
+
+## 2026-09-01 — the six lane fragments (os-cf1c9688, plan #187)
+
+- A role file is prose, and nothing checks prose. v1 ships four role
+  documents and no validator, which is survivable where a human reads
+  them and not survivable for a promotion criterion that asserts a
+  property OF THE LANE — "runs entirely through Seed verbs, orienting
+  from one position-stamped read" — that only the file's author ever
+  verified. So the four obligations are DECLARED FIELDS, and every
+  field is checked against an authority elsewhere in the tree.
+- The relation between a lane's grants and an act is INTERSECTION, not
+  containment. `AcceptedCapabilities` is an OR-set consumed through
+  `HasAnyCapability`, and most worker verbs return {claim, operator}:
+  requiring every accepted capability would have handed `operator` to
+  five of six lanes to make validation pass, dissolving the separation
+  the check exists to protect.
+- The dispatcher's least-capability posture is an ALLOWLIST checked for
+  exact equality, not a list of exclusions. A blocklist must be
+  extended whenever a capability is added, and one nobody thought to
+  exclude is admitted by default: an earlier draft checked "no
+  authoring, verdict or sealing grant", which admits `operator`, the
+  strongest capability in the keyring, on the lane that reads the most
+  hostile input.
+- `internal/loopverb` was EXTRACTED rather than assumed. The plan's
+  first draft cited "cmd/seed's loop-verb table"; there was none, and
+  the acts were case arms in package main, which nothing can import. A
+  validator would have written the seven names down a second time,
+  violating the plan's own criterion. The registry now has two
+  consumers, the CLI dispatch and the validator, which is this card's
+  thesis applied to itself. The extraction is inert: the existing loop
+  drills pass unchanged.
+- Manifests are JSON, not the YAML the plan named. `next/` carries no
+  YAML parser and a deliberately small dependency set, and every other
+  machine-read file there is JSON. The plan's REASON for separating
+  declarations from prose — data a validator reads versus prose an
+  agent reads — is served identically, so the format was the incidental
+  half of that decision and adding a dependency to the successor's
+  supply chain is the material half.
+- The liveness obligation is conditional on running a loop, because
+  four of the charter's six lanes perform no loop act at all: a
+  verifier acts through verdict.rendered and a dispatcher through
+  intent.filed. Requiring loop acts of all six would have forced four
+  manifests to claim work they never do. It is not dodgeable by
+  declaring no acts, because holding the `claim` capability means the
+  lane claims and claiming IS a loop act, so the grant already
+  declared decides whether the obligation applies.
+- 1a settles the declaration's SHAPE and says so rather than implying
+  more. A subset check compares two labels and cannot show the named
+  step emits, because nothing executes here. 1c inherits the other
+  half, recorded in progress.md so the split is deliberate rather than
+  a gap found later.
+- The lane surface carries no position stamp. A resolved role derives
+  from checked-in files rather than from the ledger, so there is no
+  position it could honestly cite — and nothing is written back, since
+  a resolved role on disk would be the second copy the ordered
+  fragment list exists to prevent.

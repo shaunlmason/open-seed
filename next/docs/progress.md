@@ -615,12 +615,32 @@ administrative card, not a Phase 8 item).
   caller's messages, with "unread" derived from the cited --since
   position rather than stored read-state.
 - 9.1 lane role fragments, dispatcher least-capability, injection
-  corpus, worker-lane loop with exhaustion parking — backlog. Its
-  role-definition text now binds four ergonomic obligations (this
-  card): one position-stamped read named in each fragment, the loop
-  acting through the item 5(c) loop verbs rather than the raw append
-  seam, liveness riding the loop's own steps with no heartbeat verb,
-  and the one-inbox doctrine.
+  corpus, worker-lane loop with exhaustion parking — its
+  role-definition text binds four ergonomic obligations (os-68ea0b2d):
+  one position-stamped read named in each fragment, the loop acting
+  through the item 5(c) loop verbs rather than the raw append seam,
+  liveness riding the loop's own steps with no heartbeat verb, and the
+  one-inbox doctrine. Too large for one plan, so split three ways the
+  way item 5 was:
+  - 1a the six lane fragments — os-cf1c9688 — **review** (task PR
+    against plan #187: next/lanes/** as manifests plus ordered prose
+    fragments, the four obligations as DECLARED FIELDS rather than
+    paragraphs, and internal/lane checking each against an authority
+    elsewhere — capabilities against internal/keyring, acts against the
+    new internal/loopverb registry, and a lane's grants against what
+    keyring.AcceptedCapabilities says each act's verb accepts. Plus
+    `seed lane list|show|validate` and exit 26 lane_invalid)
+  - 1b dispatcher least-capability drilled by the injection
+    conformance suite (hostile corpus) — backlog. 1a makes the standing
+    claim checkable via the allowlist; III.J's second row is half met
+    until the input-handling half lands.
+  - 1c the worker loop made executable with exhaustion parking —
+    backlog. It INHERITS 1a's unfinished half: 1a can check that a
+    lane's declared liveness sources are work steps it performs, but
+    not that running them emits, because nothing executes at 1a. 1c
+    must drill that the declared steps advance the observation stream
+    keyed to the lane's actor and fence, and that the loop reaches no
+    liveness-only surface.
 - 9.2 escalation with packet, question and decision — backlog. An
   escalation answering a refusal carries that refusal's code and
   message, so the human is asked the boundary's own question (this
