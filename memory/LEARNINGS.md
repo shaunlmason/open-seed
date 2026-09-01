@@ -452,3 +452,23 @@ Fresh sessions read this file instead of rediscovering.
   Both times this codebase has reasoned about a stamped position
   across a boundary, the off-by-one appeared; write the +1 with a
   comment naming the ordinal.
+- 2026-09-01 (os-7e197768): a CLI that wraps a protocol seam earns
+  its keep only if it consults the boundary the seam ignores.
+  `ledger append` signs and appends without running admission at all,
+  so wrapping it in nicer flags would have shipped the same
+  after-the-fact refusal in better clothes. The value is the
+  pre-flight: run the SAME check admission runs, refuse before
+  signing, and render what IS legal beside what was not.
+- 2026-09-01 (os-7e197768): when an argument has exactly one legal
+  value, asking for it is an invitation to be wrong. The fence, the
+  sole open reservation and the approved plan anchor are each pinned
+  by a rule that refuses every other value, so a flag could only ever
+  carry a mistake. Derive those; keep flags for judgments (amounts,
+  actuals, prose).
+- 2026-09-01 (os-7e197768): three shapes of underivability want three
+  different owners. A missing fact and an ambiguity refuse in the
+  tool (naming what would establish one, or the candidates it will
+  not choose between); an absent precondition should be left to the
+  boundary, whose refusal names the state and beats anything the
+  derivation could say. Deciding this per shape rather than per verb
+  kept the error surface small.

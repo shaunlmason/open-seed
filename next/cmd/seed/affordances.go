@@ -33,6 +33,19 @@ func stampAffordances(env *envelope.Envelope, dir string, key ed25519.PrivateKey
 	if err != nil {
 		return env
 	}
+	return stampAffordancesFrom(env, ctx, key, subject)
+}
+
+// stampAffordancesFrom stamps from a context already in hand. It is
+// how a refusal computed at a view answers "then what may I do?"
+// against that same view: the loop verbs pre-flight before anything
+// is appended, so the context they refused against is exactly the
+// one the answer belongs to, and the remote posture has no local
+// ledger directory to reopen at all.
+func stampAffordancesFrom(env *envelope.Envelope, ctx *admit.Context, key ed25519.PrivateKey, subject string) *envelope.Envelope {
+	if env == nil || ctx == nil || subject == "" || len(key) != ed25519.PrivateKeySize {
+		return env
+	}
 	env.Affordances = admit.Affordances(ctx, key, subject)
 	if reserved, remaining, ok := admit.BudgetBlock(ctx, subject); ok {
 		env.Budget = &envelope.Budget{Reserved: reserved, Remaining: remaining}
