@@ -764,7 +764,7 @@ the escalation it answers. Waiting escalations surface as
 elapsed time and a position difference is event count wearing a clock's
 clothes.
 
-**Next action: Phase 9 items 3 and 4.** Item 1 is COMPLETE: 1a
+**Next action: Phase 9 item 4, the last in the phase.** Item 1 is COMPLETE: 1a
 merged (#188), 1c merged (#191), 1b merged (#192), with its four review
 findings landing as os-378e44f3. III.J's first row is met; its second is
 **two-thirds met** and the spec says so — intents and tool output are
@@ -780,11 +780,41 @@ as the loop's acts (enforced by 1c's act gate, which refuses anything
 lane's actor and fence), and the one-inbox doctrine (the loop acts on
 its read, never on a wake).
 
-Then Phase 9 items 2 through 4 (escalation with packet,
-question and decision, carrying the refusal it answers; the
-unattended maintenance loop, whose lint list carries the Phase 7
-exit's unsettled-run detection; small-team and fleet fixtures, run
-wakeless and asserting one-retry convergence).
+Item 2 merged (#200): escalation with packet, question and decision,
+carrying the refusal it answers.
+
+Item 3 is THIS card's task PR — `seed maintain run`, one unattended
+pass (reap, lint, file, rebuild, checkpoint) with no scheduler and no
+wake channel. Three things about it are worth carrying forward rather
+than rediscovering:
+
+- **The reap answers an unanswered request, never a timeout.**
+  `observations.md` says Seed holds no lease, so there is no expiry to
+  elapse, and the channel is declared lossy — a dropped stream and dead
+  work look identical from outside. A reap therefore needs the
+  `expired`/`wedged` classification BESIDE an admitted `run.interrupted`
+  on the active fence (or a `wedge.declared`), which is exactly the
+  force path `executors.md` named this loop as the consumer of.
+  `no_data` carries no reap path at all, however old the claim.
+- **The pass consumes the COMPLETE reconcile result.** The
+  evidence-grade checks — attested heads, rewritten targets, receipt
+  retrievability — moved out of `cmd/seed` into `internal/reconcile`,
+  because a pass built on the record-derived half alone reports clean
+  over a rewritten target: green, and omitting the very divergence the
+  charter asks this loop to reconcile.
+- **Checkpoints persist a snapshot a fresh reader starts from**, its
+  hash and location in a versioned payload the boundary validates,
+  the materialization written to the artifact store first. Shape at the
+  door, contents at the read: admission reads the ledger alone, so
+  retrievability is the reader's check, drilled by a round trip.
+
+Item 4 (small-team and fleet fixtures, run wakeless and asserting
+one-retry convergence) is planned in #204, which also records what it
+found: `verdict render` defines no `--remote` flag, so a fleet's
+verifier lane cannot act against the shared ledger. That is carded as
+**os-a00b6950** rather than widened into a fixtures card, and III.J's
+closing row is therefore met for small-team mode and met-to-submission
+for fleet until it lands.
 The III.I remainder rides the phases it was routed to: Phase 11 item
 2 carries claim-time lesson surfacing, and Phase 13 carries the
 machine-protocol surface and platform parity, with III.I on its exit

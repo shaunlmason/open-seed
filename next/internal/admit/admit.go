@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/classify"
 	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -475,6 +476,32 @@ func Default() []Rule {
 				return nil
 			}
 			return checkEscalation(c, rec)
+		}},
+		{Name: "checkpoint", Check: func(c *Context, rec *event.Record) error {
+			// The checkpoint's snapshot citation
+			// (plans/os-8a5f14bb.md D4.5; SEED-NEXT.md §II
+			// checkpoints): the payload names a retrievable
+			// materialization under a versioned format, so a fresh
+			// reader can fetch it, verify it against this signature,
+			// and start without rebuilding the very state the
+			// checkpoint was meant to spare it. Before this rule the
+			// boundary took any payload at all, which let a
+			// checkpoint be signed, admitted, counted in the report,
+			// and useless.
+			//
+			// Shape is all admission can judge: this context carries
+			// no artifact store, so whether the snapshot is really
+			// there is the reader's check, not the door's. Saying
+			// which check lives where is the honest version of
+			// "validated at admission".
+			if !keyring.Applies(c.Active) {
+				return nil
+			}
+			if rec.Event.Verb != checkpoint.Verb {
+				return nil
+			}
+			_, err := checkpoint.Parse(rec.Event.Subject, rec.Event.Payload)
+			return err
 		}},
 		{Name: "plan", Check: func(c *Context, rec *event.Record) error {
 			// The plan gate (plans/os-16c1d142.md): plan.* payloads
@@ -1570,6 +1597,45 @@ func RunSettleValid(records []*event.Record, table *transition.Table, subject st
 func InterruptRequested(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState, fence int) bool {
 	for _, it := range s.Interrupts {
 		if it.Fence == fence && InterruptValid(records, table, subject, it) {
+			return true
+		}
+	}
+	return false
+}
+
+// WedgeDeclared reports whether an admitted wedge.declared stands on
+// this subject's active claim window (plans/os-8a5f14bb.md D4).
+//
+// It is the second half of the maintenance reap's corroboration, and
+// it needs its own derivation for a reason worth stating: unlike
+// run.interrupted, wedge.declared is a FREE verb. It has no
+// transition-table row and folds to no fact, so there is nothing on
+// SubjectState to consume and the records are the only place the
+// declaration exists. Deriving it here rather than in the maintenance
+// loop keeps "did this pass the boundary at its own position" in the
+// one package that answers that question for every other fact.
+//
+// The bar is the InterruptValid posture: the record carries the
+// strict wedge shape, the signer held an accepted lane at that
+// position, and the subject's claim there was the fence in hand. A
+// raw unprivileged declaration corroborates nothing, which is what
+// stops silence plus a forged wedge from reaping live work.
+func WedgeDeclared(records []*event.Record, table *transition.Table, subject string, fence int) bool {
+	for pos, rec := range records {
+		if rec.Event.Verb != transition.WedgeDeclaredVerb || rec.Event.Subject != subject {
+			continue
+		}
+		if err := transition.CheckWedgeShape(subject, rec.Event.Payload); err != nil {
+			continue
+		}
+		prefix := records[:pos]
+		ring, _, err := keyring.StateAt(prefix)
+		if err != nil || ring == nil ||
+			!ring.HasAnyCapability(rec.Event.Actor, keyring.AcceptedCapabilities(transition.WedgeDeclaredVerb)) {
+			continue
+		}
+		prior, ok := table.StateAt(prefix, subject)
+		if ok && prior.Claim != nil && prior.Claim.Fence == fence {
 			return true
 		}
 	}

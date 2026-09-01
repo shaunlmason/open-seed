@@ -805,3 +805,59 @@ The general form: when a passing result and a botched setup produce the
 same output, add an assertion that fails when the setup is wrong. Here
 that was checking the two runs reported different tree paths before
 trusting that their contents matched.
+
+## A drill that reads the report is not a drill that reads the chain (os-8a5f14bb)
+
+The maintenance loop's first reap never landed. `claim.reaped` is a
+claim-scoped event, so the fence rule refuses one whose payload does
+not cite the active window — and the first `ReapPacket` returned the
+bare four-part packet with no `{"fence": "<position>"}` beside it.
+
+What caught it was the drill that **folded the chain back** and looked
+for the `claim.reaped` record. A drill asserting the report's `reaped`
+list would have been just as green either way, because the pass
+genuinely decided to reap; it was the append that the boundary
+refused, and the refusal landed in a `refusals` list nobody was
+reading.
+
+The general form: **when a verb's whole job is to change the ledger,
+the assertion belongs in the ledger.** A report is the actor's account
+of what it meant to do.
+
+## A mutation the boundary refuses is not a mutation (os-8a5f14bb)
+
+Testing "a lint finding must never raise an escalation", the mutation
+was to make the filing path raise one instead. The drill stayed green —
+which looked like a weak assertion. It was not: the fixture's subjects
+were `in_progress` and `done`, and `escalation.raised` admits only from
+`ready` or `review`, so the mutated code path refused at the boundary
+and fell through to the original filing. **The mutation never
+executed.**
+
+The tell is the one already recorded on #202: a mutation that changes
+nothing means the drill never reached the code. Here it meant something
+narrower and worth separating out — the mutation never reached the code
+*either*, so the experiment was void rather than the drill weak.
+
+What settled it was proving the assertion LIVE directly: plant an
+`escalation.raised` signed by the maintenance key into the fixture and
+watch the drill fail. That also improved the assertion, which had been
+scanning for the bare verb and would have fired on another lane's
+escalation; it now names the actor.
+
+**When a mutation cannot be made to execute, prove the assertion fires
+by planting the condition it forbids.**
+
+## A snapshot is one record behind its own checkpoint, by construction (os-8a5f14bb)
+
+The checkpoint round-trip drill compared the fetched snapshot against a
+rebuild from the chain's tip, and two projections differed. Nothing was
+wrong: the snapshot materializes position N, the checkpoint event is
+appended *after* it at N, so the tip is N+1 — and the report projection
+counts that very checkpoint.
+
+This is the failure mode that tempts you to "fix" working code, the
+inverse of the usual one (#202 recorded its sibling: a drill failing
+because the fix worked). The fix was to compare against the prefix the
+snapshot NAMES. **A materialization is evidence about a position, and
+the position it names is the only one it can be checked against.**

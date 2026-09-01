@@ -283,7 +283,8 @@ wrongly.
 Under a rotation, then, the attempt is expected to fail and the window
 is genuinely stranded: the predecessor's fence cannot be cited by the
 successor's key, no key the loop can reach closes it, and recovery is
-the maintenance lane's reap (item 3, unbuilt). The error says exactly
+the maintenance lane's reap ([`maintenance.md`](maintenance.md)). The error
+says exactly
 that — the window is left OPEN and needs a reap — and carries both
 refusals, the one that stopped the work and the one that stopped the
 exit.

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
@@ -171,7 +172,14 @@ func TestHookChecksGrants(t *testing.T) {
 	}
 	if err := craftPush(t, remote, loose, func(dir string, store *ledger.Store) {
 		appendRaw(t, store, loose, signedBy(t, root, version.Seed1, "actor.granted", fpFor(t, worker), `{"capability": "maintenance"}`, tipOf(t, store)))
-		appendRaw(t, store, loose, signedBy(t, worker, version.Seed1, "system.checkpoint", "system", `{"n": 1}`, tipOf(t, store)))
+		// A real snapshot citation: the checkpoint rule refuses an
+		// arbitrary payload (plans/os-8a5f14bb.md D4.5), and this
+		// drill is about the GRANT reaching the pre-receive hook.
+		cp, err := checkpoint.Payload(strings.Repeat("b", 64), 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		appendRaw(t, store, loose, signedBy(t, worker, version.Seed1, checkpoint.Verb, "system", string(cp), tipOf(t, store)))
 	}); err != nil {
 		t.Fatalf("a maintenance checkpoint must admit at the boundary: %v", err)
 	}

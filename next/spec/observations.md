@@ -56,7 +56,10 @@ claim's holder and fence.
   from the last observation, the quantity this classification already
   computes. Seed holds no lease: a claim stands until a deliberate
   exit or a reap, and the stream is the only liveness evidence there
-  is. The worker loop emits its observations from its own steps
+  is. Which is why the automatic reap's rule
+  ([`maintenance.md`](maintenance.md)) is not an age at all: with no
+  lease to elapse and a channel declared lossy, it takes a ledger fact
+  that the holder was ASKED to stop and did not. The worker loop emits its observations from its own steps
   ([`docs/next-build-plan.md`](../../docs/next-build-plan.md) Phase 9
   item 1), which removes forgotten bookkeeping as a cause of silence
   and so makes this classification better evidence than it would
