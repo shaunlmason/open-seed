@@ -3,8 +3,10 @@
 // contract's derived budget — class, capacity, open reservations,
 // settled actuals, remaining — agreeing with the admission
 // computation by construction, since both call the same derivation.
-// Reserve, settle, and release append through seed ledger append and
-// the library admission path like every claim-lane fact.
+// Reserve, settle, and release are loop verbs (loop.go): they derive
+// the fence from the active window and the reservation a close cites
+// from this same view, and pre-flight through admission before
+// anything is signed.
 
 package main
 
@@ -19,11 +21,24 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
 func runBudget(args []string, stdout, stderr io.Writer) int {
-	if len(args) == 0 || args[0] != "status" {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "budget requires the subverb: status"), stdout, stderr)
+	if len(args) == 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "budget requires a subverb: status, reserve, settle, or release"), stdout, stderr)
+	}
+	switch args[0] {
+	case "status":
+	case "reserve":
+		return runBudgetLoop(args[1:], transition.BudgetReserveVerb, "budget reserve", stdout, stderr)
+	case "settle":
+		return runBudgetLoop(args[1:], transition.BudgetSettleVerb, "budget settle", stdout, stderr)
+	case "release":
+		return runBudgetLoop(args[1:], transition.BudgetReleaseVerb, "budget release", stdout, stderr)
+	default:
+		return render(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("unknown budget subverb %q — status, reserve, settle, or release", args[0])), stdout, stderr)
 	}
 	fs := flag.NewFlagSet("budget status", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

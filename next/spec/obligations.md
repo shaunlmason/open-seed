@@ -121,6 +121,11 @@ checks only well-formedness at halted positions.
 ## Deliberately absent (v0)
 
 No priority or ranking, no due-date policy beyond what a caller
-declares, no cross-subject aggregation, and no loop verbs — the acts
-themselves remain the raw seam until Phase 9 item 5's third part
-lands on its own card.
+declares, and no cross-subject aggregation.
+
+The acts that create and discharge these obligations are the loop
+verbs ([`loop-verbs.md`](loop-verbs.md)), Phase 9 item 5's third
+part. The relationship runs one way: a verb never re-derives what
+discharges what — this projection already says it, and the loop
+verbs' drills assert the pairing against it rather than restating
+it.
