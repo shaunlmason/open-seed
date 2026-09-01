@@ -99,15 +99,29 @@ identity and reports the board unfiltered; probes must be signed, so
 affordance stamping needs the key itself.
 
 `--since <position>` makes the response a **complete change report**,
-not a filtered list: obligations that arose after the cited position,
-an explicit `discharged` list naming every obligation that stood at
-it and no longer does, and a count of the unchanged. Applying the
-response to a prior snapshot must reproduce the standing set exactly
-— the property the drills assert. A delta of standing rows alone
-would leave a resuming lane holding a discharged obligation forever,
-and an unchanged *count* cannot say what disappeared. The cited
-position is a tip **ordinal**, so the prefix a lane last saw is
+not a filtered list: obligations that arose **or changed** after the
+cited position, an explicit `discharged` list naming every obligation
+that stood at it and no longer does, and a count of the unchanged.
+Applying the response to a prior snapshot must reproduce the standing
+set exactly — the property the drills assert. A delta of standing rows
+alone would leave a resuming lane holding a discharged obligation
+forever, and an unchanged *count* cannot say what disappeared. The
+cited position is a tip **ordinal**, so the prefix a lane last saw is
 `records[:position+1]`.
+
+**Changed** is content, not position. A row whose `owed_by` moves
+keeps the position it arose at, because the obligation changed hands
+rather than restarting — so a delta keyed on `since` alone would call
+a transfer unchanged, and the removals, derived from the prior set
+filtered to the caller, would not carry it either: the party it moved
+TO would hear nothing at all. That is the standing-aware `budget.open`
+transfer above, and the party it moves to is by construction the only
+one who can act. So the delta compares each standing row against what
+stood at the cited position, on the **unfiltered** prior set, because
+"it was not mine then and is now" is exactly the case a
+caller-filtered comparison cannot see. A row that stood at the cited
+position under no entry at all — `run.unsettled` begins standing at a
+position later than its own `since` — is reported for the same reason.
 
 The read is read-only and idempotent: it opens the ledger read-only,
 mutates nothing, and journals no attempt, because a read is not an

@@ -522,3 +522,13 @@ Fresh sessions read this file instead of rediscovering.
   still holds an open reservation cost two script lines and turned
   ownership attribution from an assertion into a swept class — it
   fails on mutation, which the hand-picked drill alone would not.
+- 2026-09-01 (os-d6963652): changing WHO owes something is a change a
+  position-keyed delta cannot see. `seed situation --since` reported
+  rows whose `Since` advanced, and an ownership transfer deliberately
+  keeps the position it arose at — so the transferred row was
+  "unchanged" for the new owner, while the removals, derived from the
+  prior set filtered to the caller, never held it either. The one
+  party able to act heard nothing, in the mode documented as a
+  complete change report. When a projection gains a field that can
+  move, check every consumer that decides freshness from a different
+  field.

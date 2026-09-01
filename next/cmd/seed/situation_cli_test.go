@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/refusals"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
 type situationEnv struct {
@@ -163,6 +164,83 @@ func TestSituationSinceIsApplicable(t *testing.T) {
 		if !snapshot[kind] {
 			t.Fatalf("applying the delta must reproduce the standing set: applied %v, standing %v", snapshot, standing)
 		}
+	}
+}
+
+// conformance: next/spec/obligations.md — the --since response is a
+// COMPLETE change report, so a row whose OWNER moved must reach the
+// party it moved TO. A budget.open transfers to lane:operator when its
+// reserving signer is suspended (os-d6963652 D4), and the transfer
+// changes no position: keyed on Since alone the operator's delta would
+// call it unchanged, while the removals are derived from the prior set
+// filtered to the caller, where it was never theirs. The debt would be
+// invisible in the one mode a resuming lane is told to trust.
+func TestSituationDeltaCarriesAnOwnerTransfer(t *testing.T) {
+	restore := transition.InjectBudgetClass("ten", 10)
+	defer restore()
+	ld, _, _, specCommit, _, priv, _, keys, fps := offerLedger(t)
+	for _, step := range [][]string{
+		{"intent.filed", `{"intent": "drill", "tier": "trivial", "budget": "ten", "routing": "core"}`},
+		{"contract.specified", fmt.Sprintf(`{"acceptance": {"ref": "accept.md @ %s", "executable": true, "gate": "pr/6 @ %s"}}`, specCommit, specCommit)},
+	} {
+		if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+			"--verb", step[0], "--subject", "c-1", "--payload", step[1]); code != 0 {
+			t.Fatalf("%s: %d %+v", step[0], code, e)
+		}
+	}
+	if _, err := admitAppend(t, ld, workerRawKey(22), "claim.taken", "c-1", `{}`); err != nil {
+		t.Fatal(err)
+	}
+	if e, code := runEnv(t, "budget", "reserve", "--ledger", ld, "--key", keys["workerA"],
+		"--subject", "c-1", "--amount", "4"); code != 0 || !e.OK {
+		t.Fatalf("reserve: %d %+v", code, e)
+	}
+
+	// The operator's snapshot BEFORE the transfer: the reservation is
+	// the signer's debt, so the operator is not carrying it.
+	e, before, code := situationOf(t, "--ledger", ld, "--key", priv)
+	if code != 0 || e.Position == nil {
+		t.Fatalf("snapshot: %d %+v", code, e)
+	}
+	at := *e.Position
+	if kindsOf(before.Obligations)["budget.open"] {
+		t.Fatalf("an active signer's reservation is not the operator's debt: %+v", before.Obligations)
+	}
+
+	// Suspension moves it: every close from that signer now refuses,
+	// and the operator lane is the only party left.
+	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+		"--verb", "actor.suspended", "--subject", fps["workerA"], "--payload", `{"reason": "drill"}`); code != 0 {
+		t.Fatalf("suspend: %d %+v", code, e)
+	}
+
+	_, delta, code := situationOf(t, "--ledger", ld, "--key", priv, "--since", at)
+	if code != 0 {
+		t.Fatalf("delta: %d", code)
+	}
+	var transferred map[string]any
+	for _, row := range delta.Obligations {
+		if fmt.Sprint(row["kind"]) == "budget.open" {
+			transferred = row
+		}
+	}
+	if transferred == nil {
+		t.Fatalf("the transfer must reach the operator's delta: %+v", delta)
+	}
+	if got := fmt.Sprint(transferred["owed_by"]); got != "lane:operator" {
+		t.Fatalf("the transferred row names its new owner: %q", got)
+	}
+	// And it is reported despite arising BEFORE the cited position:
+	// the obligation changed hands, it did not restart.
+	var since, cited int
+	if _, err := fmt.Sscanf(fmt.Sprint(transferred["since"]), "%d", &since); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fmt.Sscanf(at, "%d", &cited); err != nil {
+		t.Fatal(err)
+	}
+	if since > cited {
+		t.Fatalf("the drill is vacuous unless the row predates the cited position: since %d, --since %d", since, cited)
 	}
 }
 
