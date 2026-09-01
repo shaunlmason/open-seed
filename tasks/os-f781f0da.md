@@ -1,11 +1,16 @@
 ---
 id: os-f781f0da
 title: 'next: Phase 9 item 2 — escalation with packet, question and decision'
-state: ready
+state: in_progress
 priority: P1
 squad: core
+claim:
+    actor: seed-next-implementer
+    token: c-37b31ae13df010b0
+    claimed_at: "2026-09-01T18:27:45Z"
+    lease_expires: "2026-09-01T19:27:45Z"
 created_at: "2026-09-01T17:25:06Z"
-updated_at: "2026-09-01T18:27:35Z"
+updated_at: "2026-09-01T18:27:45Z"
 ---
 
 Phase 9 item 2 of docs/next-build-plan.md, the next frontier item after
