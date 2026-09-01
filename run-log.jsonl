@@ -725,3 +725,4 @@
 {"actor":"shaunlmason","data":{"title":"next: Phase 8 exit record — III.I scoped exit with routed remainder"},"task":"os-ef715d17","ts":"2026-09-01T03:04:32Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-ef715d17","ts":"2026-09-01T03:05:12Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T04:05:14Z"},"task":"os-ef715d17","ts":"2026-09-01T03:05:14Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-ef715d17","ts":"2026-09-01T03:07:39Z","verb":"transition"}
