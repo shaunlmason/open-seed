@@ -31,6 +31,7 @@ var specCatalogVerbs = []string{
 	"actor.enrolled", "actor.granted", "actor.suspended", "actor.revoked",
 	"intent.filed", "contract.specified", "contract.blocked",
 	"contract.unblocked", "contract.cancelled", "contract.returned",
+	"escalation.raised", "decision.recorded",
 	"claim.taken", "claim.released", "claim.parked", "claim.reaped",
 	"submission.made", "plan.proposed", "plan.approved",
 	"progress.milestone", "wedge.declared",

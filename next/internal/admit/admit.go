@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/classify"
+	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
@@ -288,6 +289,19 @@ func (e *VerbInactiveError) Error() string {
 }
 
 // Rule is one named admission rule.
+// EscalationError is a refusal from the escalation channel: a
+// malformed question, an answer that cites nothing standing, or an act
+// the standing question forbids. Exit 3 shape, the packet precedent —
+// no new exit code, because an escalation adds no new authority.
+type EscalationError struct {
+	Subject string
+	Reason  string
+}
+
+func (e *EscalationError) Error() string {
+	return fmt.Sprintf("escalation on %s: %s", e.Subject, e.Reason)
+}
+
 type Rule struct {
 	Name  string
 	Check func(*Context, *event.Record) error
@@ -449,6 +463,18 @@ func Default() []Rule {
 			}
 			_, err := packet.FromPayload(rec.Event.Subject, rec.Event.Payload)
 			return err
+		}},
+		{Name: "escalation", Check: func(c *Context, rec *event.Record) error {
+			// The escalation channel (plans/os-f781f0da.md): a question
+			// is shape-checked wherever it may ride, an answer must cite
+			// the standing question and choose from its own option set,
+			// and while a question stands nothing else about the
+			// contract moves — which is the charter's §II.11 made
+			// structural rather than hoped for.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			return checkEscalation(c, rec)
 		}},
 		{Name: "plan", Check: func(c *Context, rec *event.Record) error {
 			// The plan gate (plans/os-16c1d142.md): plan.* payloads
@@ -1565,4 +1591,99 @@ func fenceCitation(payload []byte) (string, bool) {
 		return strings.TrimSpace(string(raw)), true
 	}
 	return s, true
+}
+
+// checkEscalation is the escalation channel's whole rule
+// (plans/os-f781f0da.md). It runs after the fence and before the
+// transition, the packet rule's position: a malformed question refuses
+// before the state moves.
+func checkEscalation(c *Context, rec *event.Record) error {
+	subject := rec.Event.Subject
+	verb := rec.Event.Verb
+	var standing *transition.EscalationFact
+	if s, ok := c.Lifecycle.State(subject); ok {
+		standing = s.Escalation
+	}
+
+	// A question is shape-checked wherever it may ride. On the raise it
+	// is required; on a park it is optional, because most parks ask
+	// nothing.
+	if escalation.CarriesQuestion(verb) {
+		q, present, err := escalation.FromPayload(subject, rec.Event.Payload)
+		if err != nil {
+			return err
+		}
+		if !present && verb == escalation.RaiseVerb {
+			return &EscalationError{Subject: subject, Reason: `no "escalation" — the raise IS the question, and a raise that asks nothing blocks the contract for no one to answer`}
+		}
+		if present && standing != nil {
+			return &EscalationError{Subject: subject, Reason: fmt.Sprintf(
+				"a question already stands at position %d and nothing else moves until it is answered — %s answers it",
+				standing.Pos, escalation.AnswerVerb)}
+		}
+		_ = q
+	}
+
+	switch verb {
+	case escalation.AnswerVerb:
+		if standing == nil {
+			return &EscalationError{Subject: subject, Reason: fmt.Sprintf(
+				"no question stands — %s answers one raised by %s or by a claim.parked that carried one",
+				escalation.AnswerVerb, escalation.RaiseVerb)}
+		}
+		var ans struct {
+			Escalation string `json:"escalation"`
+			Choice     string `json:"choice"`
+			Because    string `json:"because"`
+		}
+		if err := strictJSON(rec.Event.Payload, &ans); err != nil {
+			return &EscalationError{Subject: subject, Reason: fmt.Sprintf("strict shape: %v", err)}
+		}
+		if ans.Escalation != fmt.Sprintf("%d", standing.Pos) {
+			return &EscalationError{Subject: subject, Reason: fmt.Sprintf(
+				"cites escalation %q, but the standing question is at position %d — an answer to a question nobody asked is not an answer",
+				ans.Escalation, standing.Pos)}
+		}
+		q := &escalation.Escalation{Question: standing.Question, Options: standing.Options}
+		if !q.Offers(ans.Choice) {
+			return &EscalationError{Subject: subject, Reason: fmt.Sprintf(
+				"choice %q is not offered — the question at %d offers %s, and answering outside the set is a new decision, not this one",
+				ans.Choice, standing.Pos, strings.Join(q.IDs(), ", "))}
+		}
+	case "contract.unblocked":
+		// The lockout. blocked has exactly two machine-visible exits;
+		// this closes the one a machine holds, so "nothing else about
+		// the contract moves until it is answered" is structural.
+		if standing != nil {
+			return &EscalationError{Subject: subject, Reason: fmt.Sprintf(
+				"a question stands at position %d and only its answer reopens this contract — %s with the chosen option, or contract.cancelled citing it",
+				standing.Pos, escalation.AnswerVerb)}
+		}
+	case "contract.cancelled":
+		// Cancelling stays legal, because refusing it would trap the
+		// contract with no operator path out, which is a worse failure
+		// than the one prevented. But it must cite the question it
+		// answers, or the standing obligation would simply vanish and
+		// take the audit link with it.
+		if standing != nil {
+			var cite struct {
+				Escalation string `json:"escalation"`
+			}
+			_ = json.Unmarshal(rec.Event.Payload, &cite)
+			if cite.Escalation != fmt.Sprintf("%d", standing.Pos) {
+				return &EscalationError{Subject: subject, Reason: fmt.Sprintf(
+					`a question stands at position %d: cancelling answers it and must say so, carrying {"escalation": "%d"} — otherwise the question disappears with no record of what closed it`,
+					standing.Pos, standing.Pos)}
+			}
+		}
+	}
+	return nil
+}
+
+// strictJSON decodes with unknown fields refused, the wire-parsing
+// precedent this tree applies to every payload it shapes.
+func strictJSON(raw []byte, into any) error {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	return dec.Decode(into)
 }

@@ -1415,3 +1415,50 @@ here. Newest last.
   injection precedent `internal/transition` sets. This was the seventh
   instance this cycle of a drill agreeing with a convenient shape, and
   the only one added *in response to* a finding about the same class.
+- **An escalation is a QUESTION carried by an act, and where it may be
+  carried is decided by which state the act can LEAVE** (Phase 9 item
+  2, plans/os-f781f0da.md). `lifecycle.md` pins the four deliberate
+  exits from `in_progress` by self-validation and III.F depends on that
+  set being closed, so nothing new may leave it: from `in_progress` an
+  escalation rides `claim.parked`, which already carries the packet and
+  the fence.
+
+  A verb that **cannot** admit from `in_progress` opens none of that,
+  which is why `escalation.raised` (`ready`, `review` → `blocked`) is
+  not a fifth exit. The plan's first draft conflated the two and
+  shipped the verifier as a known gap against the charter's "any lane
+  can raise"; the review caught it. `packet.ExitVerbs` stays exactly
+  four and is pinned against the table's `in_progress` outgoing set, so
+  that existing drill is now the enforcement of this rule rather than a
+  description of it.
+- **Raising grants nothing; answering is a gate.** `escalation.raised`
+  accepts five capabilities because the charter says any lane may
+  raise, and breadth is safe for the `offer.published` reason: the
+  contract leaves `blocked` only through the operator's
+  `decision.recorded` or a citing cancellation, so a raiser can stop
+  work and hand a human the decision, never move it, and cannot answer
+  its own question. `decision.recorded` is the FOURTH no-fallback row —
+  a `dispatch` fallback would let a machine lane answer a human gate.
+
+  The residual is recorded rather than hidden: a persuaded lane can
+  FREEZE a contract. That is denial of progress, not escalation of
+  authority, and it is in `residuals.json` because the injection sweep
+  refused to let the widening land silently.
+- **Cancelling an escalated contract is an ANSWER and must cite the
+  question.** Refusing the cancel would trap the contract with no
+  operator path out, which is worse than the failure prevented. But an
+  uncited cancel lets the subject reach a terminal state with the
+  question neither cited nor answered: the obligation disappears and
+  takes the audit link with it, so "nothing else moves until it is
+  answered" would hold only by accident. The citation is what records
+  that the decision taken was to cancel.
+- **Age is elapsed time; positions order without measuring.** The
+  plan's first draft said resolution latency was "the answer's position
+  minus the raise's". That is event count wearing a clock's clothes: an
+  escalation untouched for hours has the same position difference as
+  one answered instantly after a burst of unrelated traffic. The
+  `escalation.pending` row therefore carries the raising event's `ts`,
+  and age is `now − ts` at a live read's own instant — `offers.md`'s
+  posture, reused rather than reinvented: admission never reads a wall
+  clock, a live read may. Drilled against both ledgers a position
+  difference gets wrong, idle and busy.

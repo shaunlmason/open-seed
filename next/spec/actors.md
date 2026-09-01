@@ -94,6 +94,8 @@ ending standing is deferred until the catalog grows a verb for it.
 | `claim.parked` | `claim`, `operator` |
 | `submission.made` | `claim`, `operator` |
 | `contract.cancelled` | `operator` (until a real need appears) |
+| `escalation.raised` | `claim`, `dispatch`, `verdict`, `supervise`, `operator` (any lane may raise blocked(needs-you) per the charter, and breadth is safe because raising a question grants nothing: the offer.published argument. A raised contract leaves blocked only through decision.recorded or a citing cancellation, so a raiser can stop work and hand a human the decision, never move it, escalation.md) |
+| `decision.recorded` | `operator` (the fourth no-fallback row: the charter names escalations a gate humans hold, so a dispatch fallback would let a machine lane answer a human gate, escalation.md) |
 | `plan.proposed` | `claim`, `operator` (the claim holder plans; the fence matrix applies) |
 | `plan.approved` | `operator` (an external-fact observation, the merge.observed posture) |
 | `progress.milestone` | `claim`, `operator` (the claim lane's coarse summarization fact; the fence matrix applies) |

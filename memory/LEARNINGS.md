@@ -763,3 +763,24 @@ member of this family, and it costs one command: delete the behavior,
 re-run the drill. If it still passes, the drill is about something else.
 Doing this to the fix is not optional politeness toward the reviewer; it
 is the only evidence that the test tests anything.
+
+## A drill that asserts "it refuses" cannot tell you WHERE it refused
+
+Writing the escalation channel (os-f781f0da), the drill for
+"a malformed question is validated at the door, before a session opens"
+asserted that the CLI refused and that the chain did not grow. Deleting
+the door check left it green: the admission boundary refuses the same
+payload, and appends nothing either, so both readings satisfied every
+assertion the drill made.
+
+The mutation is what surfaced it, and the fix was to assert the
+observable that actually differs — the refusal **code**. A door refusal
+is `usage`; a boundary refusal carries the rule's own code and, on the
+remote path, costs a round-trip the caller never needed to spend.
+
+The general form is worth keeping: when two implementations differ only
+in *where* work happens, a drill written in terms of the *outcome*
+cannot distinguish them, however carefully it is named. Find the
+observable that changes — an exit code, a call count, an artifact that
+does or does not appear — or accept that the drill covers less than its
+name claims.

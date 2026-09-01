@@ -210,3 +210,59 @@ func TestEveryRowCarriesADischarger(t *testing.T) {
 		}
 	}
 }
+
+// conformance: III — "waiting escalations surface with age". The kind
+// arises from the standing question and nothing else, asserted in both
+// directions so it cannot pass by always being emitted
+// (plans/os-f781f0da.md).
+func TestEscalationPendingArisesFromTheStandingQuestion(t *testing.T) {
+	blocked := transition.SubjectState{State: "blocked", Since: 7}
+	if got := kinds(rowsFor(t, blocked, nil)); slices.Contains(got, KindEscalationPending) {
+		t.Fatalf("a plainly blocked subject owes no answer: %v", got)
+	}
+	escalated := transition.SubjectState{
+		State: "blocked", Since: 7,
+		Escalation: &transition.EscalationFact{Pos: 5, TS: "2026-09-01T10:00:00Z", Raiser: "fp", Question: "which base?"},
+	}
+	rows := rowsFor(t, escalated, nil)
+	if !slices.Contains(kinds(rows), KindEscalationPending) {
+		t.Fatalf("a standing question is owed an answer: %v", kinds(rows))
+	}
+	// Both kinds stand together: one says a human owes a decision, the
+	// other that the contract is stopped. They are not alternatives.
+	if !slices.Contains(kinds(rows), KindContractBlocked) {
+		t.Fatalf("an escalated subject is also a blocked one: %v", kinds(rows))
+	}
+	var row Row
+	for _, r := range rows {
+		if r.Kind == KindEscalationPending {
+			row = r
+		}
+	}
+	if row.OwedBy != LaneOperator {
+		t.Errorf("a human gate owes the answer, not an actor: %q", row.OwedBy)
+	}
+	// Since is the RAISE's position, not the state's: a question
+	// carried by a claim.parked arrives with the exit that raised it,
+	// and a reader needs the position that ASKED.
+	if row.Since != 5 {
+		t.Errorf("since is the raise's position (5), got %d — the state's is 7", row.Since)
+	}
+	// And the row carries the raise's ts, which is the whole of "with
+	// age": positions order without measuring, so a reader given only
+	// Since could compute event count and never elapsed time.
+	if row.TS != "2026-09-01T10:00:00Z" {
+		t.Errorf("the row carries the raising event's ts, got %q", row.TS)
+	}
+	if !slices.Contains(row.DischargedBy, "decision.recorded") ||
+		!slices.Contains(row.DischargedBy, "contract.cancelled") {
+		t.Errorf("both answers discharge it: %v", row.DischargedBy)
+	}
+	// No other kind carries a ts: the field is present exactly where
+	// elapsed time is meaningful, never as decoration.
+	for _, r := range rows {
+		if r.Kind != KindEscalationPending && r.TS != "" {
+			t.Errorf("%s carries a ts it has no use for: %q", r.Kind, r.TS)
+		}
+	}
+}

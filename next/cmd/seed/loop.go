@@ -32,6 +32,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/loopverb"
@@ -492,6 +493,12 @@ func runClaimExit(args []string, verb, name string, stdout, stderr io.Writer) in
 	packetPath := fs.String("packet", "", "four-part handoff packet (JSON file)")
 	base := fs.String("base", "", "resume range <merge-base>..<head>, when the packet does not name it")
 	repo := fs.String("repo", "", "repository the range is derived from, when neither the packet nor --base names it")
+	// The park is the ONE exit that may also ask something: from
+	// in_progress an escalation rides it, because nothing new may
+	// leave that state (next/spec/escalation.md). Release refuses the
+	// flags rather than ignoring them, so a question written on the
+	// wrong verb is a refusal, never a silently dropped one.
+	q := bindQuestionFlags(fs)
 	parseErr := fs.Parse(args)
 	missing := ""
 	if *packetPath == "" {
@@ -499,6 +506,18 @@ func runClaimExit(args []string, verb, name string, stdout, stderr io.Writer) in
 	}
 	if env := f.usage(name, parseErr, fs.NArg(), missing); env != nil {
 		return render(env, stdout, stderr)
+	}
+	var question json.RawMessage
+	if q.present() {
+		if verb != claimParkedVerb {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf(
+				"%s cannot carry a question — from in_progress an escalation rides `claim park`, the one exit that may also ask something",
+				name)), stdout, stderr)
+		}
+		var qenv *envelope.Envelope
+		if question, qenv = q.body(*f.subject); qenv != nil {
+			return render(qenv, stdout, stderr)
+		}
 	}
 	signer, env := loopSigner(*f.keyPath)
 	if env != nil {
@@ -514,7 +533,7 @@ func runClaimExit(args []string, verb, name string, stdout, stderr io.Writer) in
 	}
 	defer ls.done()
 	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
-		return exitPayload(ctx, *f.subject, body, false)
+		return exitPayload(ctx, *f.subject, body, false, question)
 	}
 	payload, env := derive(ls.ctx)
 	if env != nil {
@@ -584,8 +603,13 @@ func runSubmission(args []string, stdout, stderr io.Writer) int {
 // exitPayload assembles a deliberate exit's payload: the validated
 // packet, the derived fence where a window is open, and — for the
 // submission — the approved plan anchor where one stands.
-func exitPayload(ctx *admit.Context, subject string, body json.RawMessage, citePlan bool) ([]byte, *envelope.Envelope) {
+func exitPayload(ctx *admit.Context, subject string, body json.RawMessage, citePlan bool, question ...json.RawMessage) ([]byte, *envelope.Envelope) {
 	out := map[string]json.RawMessage{"packet": body}
+	for _, q := range question {
+		if len(q) > 0 {
+			out[escalation.Key] = q
+		}
+	}
 	if fence, ok := activeFence(ctx, subject); ok {
 		out["fence"] = json.RawMessage(strconv.Quote(fence))
 	}
