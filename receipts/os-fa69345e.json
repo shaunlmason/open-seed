@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-fa69345e",
-  "merge_base": "0ebe635f7e311102689543fd59660ac38d693728",
-  "head": "c32dba6dee9c337590dd0d6ac530665a2407bba3",
+  "merge_base": "7f456ed7b3ca233447b21fcf229d8e98e88a9809",
+  "head": "3415e60900e6ec1587399f19dcc86794546e31df",
   "plan_path": "plans/os-fa69345e.md",
   "plan_sha256": "eab852f724fa4aa39f26d6655d71ed827a29657a649fa1285c8ffb3d5454aec8",
   "diff_files": [
@@ -11,7 +11,7 @@
     "next/cmd/seed/ledger_test.go",
     "next/docs/decisions.md"
   ],
-  "diff_sha256": "8caa8d299270c25425ff65c96b111c850b8ed7a0e3e6915bf9055a6e9102fcbb",
+  "diff_sha256": "10f57ff6a439695de790929ba36e276763306d7f8b5de113f7fe187c9e5fe366",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
