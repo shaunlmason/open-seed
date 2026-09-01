@@ -63,7 +63,7 @@ func TestTheDecisionTable(t *testing.T) {
 		{"at the gate passes on one collection", []covergate.Reading{reading(90.0)}, covergate.Pass, 1, "coverage 90.0% (gate 90%)"},
 		{"above the gate passes on one collection", []covergate.Reading{reading(91.2)}, covergate.Pass, 1, "coverage 91.2% (gate 90%)"},
 		{"low then good passes, naming both", []covergate.Reading{reading(61.5), reading(91.1)}, covergate.Pass, 2, "os-cafba959"},
-		{"low twice fails, printing both", []covergate.Reading{reading(87.8), reading(87.9)}, covergate.Fail, 2, "87.8% and 87.9%"},
+		{"low twice fails, printing both", []covergate.Reading{reading(87.8), reading(87.9)}, covergate.Fail, 2, "87.8%, then 87.9% on a cold re-collection"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &recorder{readings: tc.readings}
@@ -163,6 +163,38 @@ func TestNeverAThirdCollection(t *testing.T) {
 	}
 	if r.calls != 2 {
 		t.Fatalf("%d collections, want exactly 2: %v", r.calls, r.order)
+	}
+}
+
+// Each reading is described as what it WAS. Only the second is cold —
+// nothing cleans the cache before the first — so calling both cold
+// would overstate the evidence to an unattended agent deciding whether
+// a regression was independently reproduced (review finding on #201).
+// This gate exists to stop exactly that kind of overstatement, so its
+// own diagnostics must not commit one.
+func TestOnlyTheRetryIsDescribedAsCold(t *testing.T) {
+	r := &recorder{readings: []covergate.Reading{reading(61.5), reading(62.0)}}
+	_, _, err := covergate.Run(90.0, r.deps())
+	if err == nil {
+		t.Fatal("two low readings fail")
+	}
+	if strings.Contains(err.Error(), "two cold") {
+		t.Errorf("the first reading is not cold and must not be called so: %v", err)
+	}
+	if !strings.Contains(err.Error(), "cold re-collection") {
+		t.Errorf("the second reading IS cold and the message says which: %v", err)
+	}
+	// The pass-after-loss line has the same obligation.
+	r2 := &recorder{readings: []covergate.Reading{reading(61.5), reading(91.1)}}
+	_, msg, err := covergate.Run(90.0, r2.deps())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(msg, "two cold") {
+		t.Errorf("the pass-after-loss line must not overstate either: %q", msg)
+	}
+	if !strings.Contains(msg, "cold re-collection") {
+		t.Errorf("it names which reading was cold: %q", msg)
 	}
 }
 

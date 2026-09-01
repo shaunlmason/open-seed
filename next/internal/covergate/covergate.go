@@ -110,8 +110,14 @@ func Run(gate float64, d Deps) (Verdict, string, error) {
 				"check-next: a collection that loses a package's profile fragment reads low and says nothing (card os-cafba959); taking the second.\n"+
 				"%s", first.Raw, second.Raw, okLine(second.Raw, gate)), nil
 	}
+	// Each reading is described as what it actually was. Only the
+	// SECOND is cold: nothing cleans the cache before the first, which
+	// therefore reuses whatever the caller's cache held. Calling both
+	// cold would overstate the evidence to the one reader this gate
+	// exists to protect — an unattended agent deciding whether a
+	// regression was independently reproduced (review finding on #201).
 	return Fail, "", fmt.Errorf(
-		"coverage %s and %s on two cold collections, both below the %g%% gate (docs/next-build-plan.md §0)",
+		"coverage %s, then %s on a cold re-collection: both below the %g%% gate (docs/next-build-plan.md §0)",
 		first.Raw, second.Raw, gate)
 }
 
