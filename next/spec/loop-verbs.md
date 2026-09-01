@@ -252,6 +252,33 @@ rather than prevent it, so stopping is correct; and rotation being a
 real operational event, the refusal names it and says to restart the
 loop.
 
+**A refusal from inside an open window still attempts the exit.**
+Refusing is not returning. An error raised *after* the window opened
+leaves a claim and its reservation standing, and returning it directly
+would be the silent abandonment those exits exist to prevent — so the
+loop attempts `claim park` anyway, carrying the cause as the packet's
+findings, and reports only then.
+
+That attempt is the one act **exempt from the identity gate**. Refusing
+it there would guarantee the abandonment the gate exists to prevent, and
+nothing is weakened by letting it through: the fence rule is the actual
+protection, admitting holder-signed events only from the holder, so a
+rotated key's exit refuses **at the boundary** rather than succeeding
+wrongly.
+
+Under a rotation, then, the attempt is expected to fail and the window
+is genuinely stranded: the predecessor's fence cannot be cited by the
+successor's key, no key the loop can reach closes it, and recovery is
+the maintenance lane's reap (item 3, unbuilt). The error says exactly
+that — the window is left OPEN and needs a reap — and carries both
+refusals, the one that stopped the work and the one that stopped the
+exit.
+
+This is the bound on *every involuntary exit leaves a packet*: what the
+loop owes is the **attempt**, which it always makes, and not the
+landing, which is not always in its gift. Where the exit does land the
+packet carries the cause, exactly as an ordinary park would.
+
 ### Contention is ordinary
 
 A lost `claim take` is not an error. In fleet mode two workers racing it
