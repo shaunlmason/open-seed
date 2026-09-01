@@ -472,6 +472,27 @@ Fresh sessions read this file instead of rediscovering.
   boundary, whose refusal names the state and beats anything the
   derivation could say. Deciding this per shape rather than per verb
   kept the error surface small.
+- 2026-09-01 (os-68ea0b2d): shipping a surface and obliging its use are
+  two different pieces of work, and the second is the one that gets
+  forgotten. Phase 9 item 5 built the lane-facing surface; nothing said
+  the lanes had to call it, so a conforming-on-paper worker could still
+  hand-assemble protocol arguments. When a phase delivers a capability
+  another phase is supposed to consume, name the obligation in the
+  CONSUMING item's own text, or the capability has no customer.
+- 2026-09-01 (os-68ea0b2d): before transferring an obligation from an
+  older system, check the mechanism still exists. "Lease renewal rides
+  every holder-signed verb" was v1 vocabulary; Seed has no lease at
+  all, and liveness is classified from an observation stream. The
+  transferable obligation was sharper than the original once restated
+  in the target's own terms, and would have been nonsense if carried
+  over literally.
+- 2026-09-01 (os-68ea0b2d): prefer enforcement by vocabulary over
+  enforcement by detection when the signal has no discriminator. A lint
+  for "heartbeat-shaped" observation streams cannot work, because a
+  legitimate long-running step emits the same shape; but a loop whose
+  verb set contains nothing whose only purpose is liveness cannot emit
+  a heartbeat at all. Ask what the system can be UNABLE to do before
+  asking what it can detect.
 - 2026-09-01 (os-d6963652): when a gate is written against a verb
   FAMILY, check whether the family shares the reason. Admission gated
   reserve, settle and release on `in_progress` in one line, but only
