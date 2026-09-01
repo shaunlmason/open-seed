@@ -987,3 +987,42 @@ here. Newest last.
   deliberate absence rather than left implicit; giving the remote
   posture its own journal home is a client-state decision no card has
   made yet.
+
+## 2026-09-01 — agent-ergonomics obligations for Phase 9 lanes (os-68ea0b2d, plan #174)
+
+- A surface with no obligated consumer is a surface that may never be
+  used. Item 5 landed the lane-facing surface; item 1 never said the
+  lanes must USE it, so a worker written against the raw append seam,
+  waking on a trusted event stream, emitting remembered heartbeats and
+  retrying blind would have satisfied every word of item 1 and failed
+  promotion criterion 1 on inspection rather than on a check. Each
+  obligation is stated so a fixture or a validation check can fail on
+  it, and each is a new consumer of an existing table rather than a
+  new authority.
+- Seed has no lease, so the card's "lease renewal rides every
+  holder-signed verb" does not transfer as written. The transferable
+  obligation is sharper: the observations liveness is classified from
+  are emitted by the loop's own steps, so a working lane is a live
+  lane by construction and an expired classification is true
+  information rather than forgotten bookkeeping.
+- That obligation is enforced by VOCABULARY, not by detection. The
+  first draft asked for a lint flagging claim windows whose only
+  observations are non-advancing; observations.md already classifies
+  that stream as live then wedged, and a legitimate long-running step
+  emits exactly it, so with no heartbeat discriminator the lint would
+  either flag valid work or never fire. Withdrawn: the loop's verb set
+  contains nothing whose only purpose is liveness, which a role
+  fragment and a fixture can both be checked against.
+- Item 5(b) is recorded PARTIALLY MET rather than the single-read
+  contract being relaxed. The read is specified to carry unread
+  messages and does not, so a lane told to orient from one read
+  cannot learn it has mail without either a second read or trusting
+  the pushed message, and the one-inbox doctrine forbids the latter.
+  The remainder is named in item 5's own text, on the #157/#169
+  precedent that a routing binds only where the phasing authority
+  says it.
+- "Unread" needs no stored read-state and gets no `message.read`
+  verb: the position a lane carries forward IS its read cursor, so
+  the messages new to it are those arisen after the cited `--since`
+  position, which is the identity `--since` already has for
+  obligations. The surface gains a section, not a concept.
