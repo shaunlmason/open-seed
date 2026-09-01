@@ -77,6 +77,20 @@ func TestEscalationRaiseAndAnswerThroughTheCLI(t *testing.T) {
 	if kindsOf(s.Obligations)["escalation.pending"] {
 		t.Fatalf("the answer discharges it: %+v", s.Obligations)
 	}
+	// The delta form reports the removal by (subject, kind), which is
+	// the pair the situation read's identity is defined on: a resuming
+	// lane matches rows it already holds against it, so a removal list
+	// naming anything else would be unusable.
+	_, d, _ := situationOf(t, "--ledger", ld, "--key", priv, "--since", pos)
+	found := false
+	for _, r := range d.Discharged {
+		if fmt.Sprint(r["subject"]) == "c-1" && fmt.Sprint(r["kind"]) == "escalation.pending" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("the delta reports the discharge by (subject, kind): %+v", d.Discharged)
+	}
 }
 
 // The derivation refusals: absence names what would establish the

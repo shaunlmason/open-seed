@@ -258,3 +258,70 @@ func itoa(n int) string {
 	}
 	return string(b)
 }
+
+// D1's other half, and the one the plan's first draft got wrong: a
+// VERIFIER holding a review subject can raise. The charter says any
+// lane can raise blocked(needs-you), and the route the first draft
+// left it — render a fail verdict to reach contract.returned, then
+// escalate from ready — would launder an environmental problem into a
+// judgement about the submission.
+func TestAVerifierCanRaiseOnAReviewSubject(t *testing.T) {
+	ctx, signer, worker, maintainer, step := escalationFixture(t)
+	verifier := fixtureKey(t, 7)
+	ctx = step(signer, version.Seed1, keyring.VerbEnrolled, fpOf(t, verifier), enrollBody(t, verifier, "agent", "v7"))
+	ctx = step(signer, version.Seed1, keyring.VerbGranted, fpOf(t, verifier), `{"capability": "`+keyring.CapVerdict+`"}`)
+	ctx = step(worker, version.Seed1, "claim.taken", "c-1", `{}`)
+	s, _ := ctx.Lifecycle.State("c-1")
+	submit := `{"fence": "` + itoa(s.Claim.Fence) + `", "packet": ` + goodPacket + `}`
+	ctx = step(worker, version.Seed1, "submission.made", "c-1", submit)
+	if s, _ := ctx.Lifecycle.State("c-1"); s.State != "review" {
+		t.Fatalf("the drill needs a subject in review: %q", s.State)
+	}
+	if err := Check(ctx, draftV(t, verifier, version.Seed1, "escalation.raised", "c-1", raiseBody, ctx.Tip)); err != nil {
+		t.Fatalf("a verifier holding a review subject must be able to raise: %v", err)
+	}
+	// The boundary's own answer above IS the conformance point. The
+	// fold half below is driven by the dispatch key instead, because
+	// grantFixture's resolver knows only its three keys and cannot
+	// APPEND as a fourth — a fixture limit, not a rule. Both keys hold
+	// a capability the row accepts, so the record is the same shape
+	// either signs.
+	ctx = step(maintainer, version.Seed1, "escalation.raised", "c-1", raiseBody)
+	after, _ := ctx.Lifecycle.State("c-1")
+	if after.State != "blocked" || after.Escalation == nil {
+		t.Fatalf("the raise blocks and stands: %q %+v", after.State, after.Escalation)
+	}
+	// And the answer returns it to ready, exactly as contract.returned
+	// does from review, with prior facts persisting as history.
+	answer := `{"escalation": "` + itoa(after.Escalation.Pos) + `", "choice": "a"}`
+	ctx = step(signer, version.Seed1, "decision.recorded", "c-1", answer)
+	final, _ := ctx.Lifecycle.State("c-1")
+	if final.State != "ready" {
+		t.Fatalf("answering re-queues the contract: %q", final.State)
+	}
+	if final.Submission == nil {
+		t.Error("prior facts persist as history: the submission is not erased")
+	}
+}
+
+// The raise carries no fence, because outside in_progress there is no
+// active fence and citing one refuses — the landed rule holding rather
+// than a new one. The packet obligation is the charter's, and the
+// zero-length base range is how a raise with no work to hand off
+// spells that honestly.
+func TestTheRaiseCarriesAPacketAndNoFence(t *testing.T) {
+	ctx, _, _, maintainer, _ := escalationFixture(t)
+	fenced := `{"fence": "3", "packet": ` + goodPacket + `, "escalation": ` + question + `}`
+	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "escalation.raised", "c-1", fenced, ctx.Tip)); err == nil {
+		t.Fatal("a fence outside in_progress must refuse: a fence dies with its claim window")
+	}
+	// goodPacket IS the zero-length range, so the happy path above
+	// already asserts it is accepted; this pins that it is the shape a
+	// raise with no work to hand off uses.
+	if !strings.Contains(goodPacket, "0000000000000000000000000000000000000000..0000000000000000000000000000000000000000") {
+		t.Fatal("the drill's packet must use the zero-length base range")
+	}
+	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "escalation.raised", "c-1", raiseBody, ctx.Tip)); err != nil {
+		t.Fatalf("the zero-length range is legal on a raise: %v", err)
+	}
+}
