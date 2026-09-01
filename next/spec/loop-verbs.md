@@ -31,6 +31,15 @@ offered — it is an invitation to be wrong.
 What stays caller-supplied is what is a **judgment**, not a lookup:
 `--amount`, `--actuals`, and the packet's own prose.
 
+On the remote path a derived value is **re-examined against every
+refreshed tip** inside the optimistic loop, and the act is refused if
+the derivation no longer yields what was drafted. It is never
+silently replaced: a value derived from a view that has since moved
+is not a better argument, it is a **different decision**. A second
+reservation appearing makes the act ambiguous, and refusing to choose
+is the whole point of deriving it; a window reaped and re-taken is an
+authorization the lane never gave.
+
 Where a derivation cannot be made, the shape of the failure decides
 who explains it:
 
@@ -54,6 +63,21 @@ admission enforces, and on refusal renders the boundary's own typed
 error **beside the caller's current affordances on that subject**,
 computed from the same view the refusal was computed at. Nothing is
 appended and nothing enters the chain.
+
+**"Before signing" is about the chain, not about `event.Sign`.** The
+boundary cannot judge an unsigned record at all: the actor rule
+verifies the signature, so signing is how a caller ASKS the boundary
+a question. `admit.Affordances` signs one probe per catalog verb for
+exactly that reason, and every verb here signs its draft before
+checking it. What the phrase forbids is a record reaching the chain
+before the rule set has judged it. A signature over a record that
+never leaves memory costs nothing, leaves no trace, and is the only
+way to get an answer.
+
+On the remote path the same holds across retries: the optimistic loop
+re-links, re-signs and re-judges per attempt, and pushes only after
+the judgement passes, so a draft the boundary refuses never reaches
+the remote however many times it was signed along the way.
 
 This is Phase 8's principle — one rule set, enforcement and
 advertisement — carried from legality to construction. It is also why

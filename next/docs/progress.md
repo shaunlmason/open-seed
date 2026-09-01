@@ -679,12 +679,15 @@ shape — `seed situation` says what is true and what is owed, and the
 loop verbs are how a lane acts on it without hand-assembling protocol
 arguments. Two things qualify that. Part (b) is **partially met**: it
 carries no unread messages, which item 5's text now names as the
-remainder. And #173's post-merge review found three defects that are
-live on main, carded as **os-9b3f3ef3** — derived arguments not
-re-derived across the optimistic retry (a rival reservation landing
-mid-flight is silently closed, the exact choice `soleOpenReservation`
-exists to refuse), a remote refusal stamped from the stale view, and
-a JSON null packet panicking the CLI.
+remainder. And #173's post-merge review found three defects, carded
+as **os-9b3f3ef3** and fixed by this card's own task PR — derived
+arguments not re-derived across the optimistic retry (a rival
+reservation landing mid-flight was silently closed, the exact choice
+`soleOpenReservation` exists to refuse), a remote refusal stamped from
+the stale view, and a JSON null packet panicking the CLI — which also
+records in `next/spec/loop-verbs.md` that a derived value is
+re-examined against the refreshed tip and refused rather than
+replaced.
 **Next action: Phase 9 item 1** — the six lane role definitions as
 composable fragments, the dispatcher's least-capability posture, the
 injection conformance suite against dispatcher input handling, and

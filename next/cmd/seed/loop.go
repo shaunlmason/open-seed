@@ -16,6 +16,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
@@ -147,8 +148,25 @@ func contextEnvelope(err error) *envelope.Envelope {
 // is the whole reason these verbs are not sugar over the raw seam
 // (D4). Nothing was appended, so the position is the view's own tip.
 func (ls *loopSession) refuse(env *envelope.Envelope, subject, verb string, signer ed25519.PrivateKey) *envelope.Envelope {
-	env = stampAffordancesFrom(env, ls.ctx, signer, subject)
-	return journalAttempt(stampTip(env, ls.ctx.Count), ls.dir, signer, verb, subject)
+	return ls.refuseAt(env, ls.ctx, subject, verb, signer)
+}
+
+// refuseAt is refuse against a named view. On the remote path the
+// refusal may have been computed several positions after the session
+// opened, and remoteFailureEnvelope has ALREADY stamped that position:
+// re-stamping would overwrite a correct answer with a stale one, so an
+// envelope that carries a position keeps it, and the affordances come
+// from the view it was computed at rather than from the session's
+// opening tip (plans/os-9b3f3ef3.md D3).
+func (ls *loopSession) refuseAt(env *envelope.Envelope, view *admit.Context, subject, verb string, signer ed25519.PrivateKey) *envelope.Envelope {
+	if view == nil {
+		view = ls.ctx
+	}
+	env = stampAffordancesFrom(env, view, signer, subject)
+	if env.Position == nil {
+		env = stampTip(env, view.Count)
+	}
+	return journalAttempt(env, ls.dir, signer, verb, subject)
 }
 
 // loopAct is one act ready for the boundary: the verb and the
@@ -156,9 +174,48 @@ func (ls *loopSession) refuse(env *envelope.Envelope, subject, verb string, sign
 // envelope reports, which may name the position the act lands at
 // (a claim's fence, a reservation's id).
 type loopAct struct {
-	verb     string
-	payload  []byte
+	verb    string
+	payload []byte
+	// derive recomputes this payload against a view. The remote path
+	// re-runs it inside the optimistic loop, because the tip can move
+	// between the session opening and the push: a nil derive means the
+	// payload holds nothing view-dependent and nothing can diverge.
+	derive   func(ctx *admit.Context) ([]byte, *envelope.Envelope)
 	resultAt func(pos int) map[string]any
+}
+
+// derivedDivergence is a refusal raised because the view a derived
+// argument came from has moved. It carries the envelope to render:
+// a re-derivation that now refuses says so in its own words (two open
+// reservations name both candidates), and a value that merely moved
+// gets the contention refusal below.
+type derivedDivergence struct{ env *envelope.Envelope }
+
+func (d *derivedDivergence) Error() string { return d.env.Error.Message }
+
+// recheckDerivation is the guard pushDraft runs against each refreshed
+// view. It never SUBSTITUTES the fresh value: a value derived from a
+// view that has since moved is not a better argument, it is a
+// different decision — a second reservation makes the act ambiguous,
+// and a re-taken window is an authorization the lane never gave. So it
+// refuses, naming what changed, and the lane re-orients
+// (plans/os-9b3f3ef3.md D1).
+func recheckDerivation(act loopAct, subject string) func(*admit.Context) error {
+	if act.derive == nil {
+		return nil
+	}
+	return func(ctx *admit.Context) error {
+		fresh, failEnv := act.derive(ctx)
+		if failEnv != nil {
+			return &derivedDivergence{env: failEnv}
+		}
+		if bytes.Equal(fresh, act.payload) {
+			return nil
+		}
+		return &derivedDivergence{env: envelope.Fail(envelope.ExitContention, "contention",
+			fmt.Sprintf("the view this act was derived from moved before it landed: %s on %s was drafted against %s and the refreshed tip yields %s — nothing was appended, and the derived value is not silently replaced because a different value is a different decision. Re-read the situation and act again",
+				act.verb, subject, string(act.payload), string(fresh)))}
+	}
 }
 
 // commit is the shared pre-flight and append. It signs a draft at
@@ -190,9 +247,11 @@ func (ls *loopSession) commit(f *loopFlags, act loopAct, signer ed25519.PrivateK
 		return render(ls.refuse(remoteFailureEnvelope(err), subject, act.verb, signer), stdout, stderr)
 	}
 	if ls.remote != nil {
-		landed, res, err := ls.remote.pushDraft(act.verb, subject, string(act.payload), signer, fp)
+		landed, res, err := ls.remote.pushDraft(act.verb, subject, string(act.payload), signer, fp,
+			recheckDerivation(act, subject))
 		if err != nil {
-			return render(ls.refuse(remoteFailureEnvelope(err), subject, act.verb, signer), stdout, stderr)
+			return render(ls.refuseAt(remoteFailureEnvelope(err), refusalView(err, ls.ctx),
+				subject, act.verb, signer), stdout, stderr)
 		}
 		hash, err := landed.Event.Hash()
 		if err != nil {
@@ -292,6 +351,15 @@ func loopPacket(path, baseFlag, repo, subject string) (json.RawMessage, *envelop
 	var parts map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &parts); err != nil {
 		return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--packet is not a JSON object: %v", err))
+	}
+	// The JSON value null unmarshals into a map with NO error, leaving
+	// it nil, and writing a derived base into a nil map panics. An
+	// array or a string errors above; only null reaches here, which is
+	// why the malformed-packet drills missed it: every bad packet they
+	// tried was an object.
+	if parts == nil {
+		return nil, envelope.Fail(envelope.ExitUsage, "usage",
+			"--packet is the JSON value null, not an object: a packet carries four named parts (next/spec/packets.md)")
 	}
 	filed := ""
 	if b, ok := parts["base"]; ok {
@@ -442,11 +510,15 @@ func runClaimExit(args []string, verb, name string, stdout, stderr io.Writer) in
 		return render(env, stdout, stderr)
 	}
 	defer ls.done()
-	payload, env := exitPayload(ls.ctx, *f.subject, body, false)
+	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
+		return exitPayload(ctx, *f.subject, body, false)
+	}
+	payload, env := derive(ls.ctx)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
-	return ls.commit(f, loopAct{verb: verb, payload: payload, resultAt: terse(*f.subject)}, signer, stdout, stderr)
+	return ls.commit(f, loopAct{verb: verb, payload: payload, derive: derive,
+		resultAt: terse(*f.subject)}, signer, stdout, stderr)
 }
 
 // runSubmission makes the submission: the deliberate exit that hands
@@ -485,11 +557,15 @@ func runSubmission(args []string, stdout, stderr io.Writer) int {
 		return render(env, stdout, stderr)
 	}
 	defer ls.done()
-	payload, env := exitPayload(ls.ctx, *f.subject, body, true)
+	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
+		return exitPayload(ctx, *f.subject, body, true)
+	}
+	payload, env := derive(ls.ctx)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
-	return ls.commit(f, loopAct{verb: submissionMadeVerb, payload: payload, resultAt: terse(*f.subject)}, signer, stdout, stderr)
+	return ls.commit(f, loopAct{verb: submissionMadeVerb, payload: payload, derive: derive,
+		resultAt: terse(*f.subject)}, signer, stdout, stderr)
 }
 
 // exitPayload assembles a deliberate exit's payload: the validated
@@ -555,27 +631,39 @@ func runBudgetLoop(args []string, verb, name string, stdout, stderr io.Writer) i
 	}
 	defer ls.done()
 	subject := *f.subject
-	out := map[string]json.RawMessage{}
-	if fence, ok := activeFence(ls.ctx, subject); ok {
-		out["fence"] = json.RawMessage(strconv.Quote(fence))
-	}
 	cited := -1
-	if verb == transition.BudgetReserveVerb {
-		out["amount"] = json.RawMessage(strconv.Quote(*amount))
-	} else {
-		pos, refusal := soleOpenReservation(ls.ctx, subject)
-		if refusal != nil {
-			return render(ls.refuse(refusal, subject, verb, signer), stdout, stderr)
+	// The whole payload is a derivation of the view, so it is expressed
+	// once and re-run against the refreshed tip inside the optimistic
+	// loop: the fence from the active window, and for a close the sole
+	// open reservation, which is exactly the value a rival can change
+	// underneath the act.
+	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
+		out := map[string]json.RawMessage{}
+		if fence, ok := activeFence(ctx, subject); ok {
+			out["fence"] = json.RawMessage(strconv.Quote(fence))
 		}
-		cited = pos
-		out["reservation"] = json.RawMessage(strconv.Quote(fmt.Sprintf("%d", pos)))
-		if verb == transition.BudgetSettleVerb {
-			out["actuals"] = json.RawMessage(strconv.Quote(*actuals))
+		if verb == transition.BudgetReserveVerb {
+			out["amount"] = json.RawMessage(strconv.Quote(*amount))
+		} else {
+			pos, refusal := soleOpenReservation(ctx, subject)
+			if refusal != nil {
+				return nil, refusal
+			}
+			cited = pos
+			out["reservation"] = json.RawMessage(strconv.Quote(fmt.Sprintf("%d", pos)))
+			if verb == transition.BudgetSettleVerb {
+				out["actuals"] = json.RawMessage(strconv.Quote(*actuals))
+			}
 		}
+		b, mErr := json.Marshal(out)
+		if mErr != nil {
+			return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", mErr.Error())
+		}
+		return b, nil
 	}
-	payload, err := json.Marshal(out)
-	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	payload, refusal := derive(ls.ctx)
+	if refusal != nil {
+		return render(ls.refuse(refusal, subject, verb, signer), stdout, stderr)
 	}
 	// A reserve's landed position IS its reservation id, so the
 	// response names it and the closing act needs no lookup at all.
@@ -586,7 +674,8 @@ func runBudgetLoop(args []string, verb, name string, stdout, stderr io.Writer) i
 		}
 		return map[string]any{"subject": subject, "reservation": fmt.Sprintf("%d", id)}
 	}
-	return ls.commit(f, loopAct{verb: verb, payload: payload, resultAt: resultAt}, signer, stdout, stderr)
+	return ls.commit(f, loopAct{verb: verb, payload: payload, derive: derive,
+		resultAt: resultAt}, signer, stdout, stderr)
 }
 
 // loopSigner reads the acting lane's key.
