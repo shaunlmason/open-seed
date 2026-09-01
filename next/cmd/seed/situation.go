@@ -57,12 +57,12 @@ func owedToMe(row obligation.Row, fp string, lanes map[string]bool) bool {
 func runSituation(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("situation", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	dir := fs.String("ledger", "", "ledger directory")
+	posture := bindReadPosture(fs)
 	keyPath := fs.String("key", "", "OpenSSH ed25519 private key: the actor the situation is read for")
 	subject := fs.String("subject", "", "restrict to one contract")
 	since := fs.String("since", "", "report only what changed at or after this position")
-	if err := fs.Parse(args); err != nil || *dir == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "situation requires --ledger <dir> [--key <path>] [--subject <id>] [--since <position>]"), stdout, stderr)
+	if err := fs.Parse(args); err != nil || !posture.resolved() || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "situation requires --ledger <dir> or --remote <repo> (not both) [--key <path>] [--subject <id>] [--since <position>]"), stdout, stderr)
 	}
 	var sincePos int
 	haveSince := *since != ""
@@ -74,7 +74,8 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 		}
 		sincePos = n
 	}
-	st, failEnv := loadVerdictState(*dir)
+	st, admitCtx, closePosture, failEnv := posture.open()
+	defer closePosture()
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
@@ -228,7 +229,7 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 	}
 	env := envelope.OK(result)
 	if signer != nil && *subject != "" {
-		env = stampAffordances(env, *dir, signer, *subject)
+		env = stampAffordancesFrom(env, admitCtx, signer, *subject)
 	}
 	return render(stampTip(env, st.count), stdout, stderr)
 }

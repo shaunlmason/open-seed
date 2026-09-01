@@ -69,10 +69,23 @@ func loadVerdictState(dir string) (*verdictState, *envelope.Envelope) {
 	if err != nil {
 		return nil, envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
 	}
+	return verdictStateAt(store, resolve)
+}
+
+// verdictStateAt builds the read model from an ALREADY-OPEN store, so
+// the local and remote postures share one derivation rather than
+// growing a second copy that can disagree with this one. The remote
+// caller passes the session's own resolver and verify options: the
+// view a lane orients from must be the view its acts are judged
+// against, which is the whole reason the read learned the posture
+// (plans/os-abb206c8.md D3).
+func verdictStateAt(store *ledger.Store, resolve ledger.Resolver, vopts ...ledger.VerifyOption) (*verdictState, *envelope.Envelope) {
 	var records []*event.Record
-	rep, err := store.VerifyFromGenesis(resolve, ledger.WithObserver(func(pos int, r *event.Record) {
+	opts := append([]ledger.VerifyOption{}, vopts...)
+	opts = append(opts, ledger.WithObserver(func(pos int, r *event.Record) {
 		records = append(records, r)
 	}))
+	rep, err := store.VerifyFromGenesis(resolve, opts...)
 	if err != nil {
 		var fail *ledger.Failure
 		if errors.As(err, &fail) {

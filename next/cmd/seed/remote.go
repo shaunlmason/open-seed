@@ -10,6 +10,7 @@ package main
 import (
 	"crypto/ed25519"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -327,4 +328,91 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 		return envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
 	}
 	return envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
+}
+
+// readPosture is the transport half a position-stamped READ shares:
+// `--ledger` xor `--remote`, the same shape the loop verbs already
+// take. A lane orients and acts in ONE posture or it orients against a
+// copy nothing refreshes, and `claim take` is remote-only because only
+// the push round-trip can order two rivals: a read that could not
+// follow it there would leave the loop calling a stale position
+// authoritative (plans/os-abb206c8.md D3).
+type readPosture struct {
+	dir       *string
+	remote    *string
+	refName   *string
+	stateDir  *string
+	supported *string
+}
+
+func bindReadPosture(fs *flag.FlagSet) *readPosture {
+	return &readPosture{
+		dir:       fs.String("ledger", "", "ledger directory"),
+		remote:    fs.String("remote", "", "remote ledger repository: the posture a lane works in"),
+		refName:   fs.String("ref", "refs/seed/ledger", "remote ledger ref"),
+		stateDir:  fs.String("state", "", "client state dir for the persisted verified head (default: user cache)"),
+		supported: fs.String("supported", "", "comma-separated supported protocol versions (default: this build's)"),
+	}
+}
+
+// resolved reports whether exactly one posture was named. Neither is
+// as wrong as both: a read with no ledger has nothing to derive from,
+// and a read naming two has no answer to which one it stamped.
+func (r *readPosture) resolved() bool { return (*r.dir == "") != (*r.remote == "") }
+
+// open builds the read model in whichever posture was named, plus the
+// admission context the affordance stamp derives from. Both come from
+// the SAME store: a read that stamped affordances from one view and
+// reported obligations from another would be two reads wearing one
+// position.
+//
+// The returned closer is always safe to call and releases the remote
+// session's lock and workdir on that path; on the local path it is a
+// no-op, so callers defer it unconditionally.
+func (r *readPosture) open() (*verdictState, *admit.Context, func(), *envelope.Envelope) {
+	noop := func() {}
+	var aopts []admit.Option
+	if *r.supported != "" {
+		aopts = append(aopts, admit.WithSupportedVersions(strings.Split(*r.supported, ",")...))
+	}
+	if *r.remote == "" {
+		store, failEnv := openStoreReadOnly(*r.dir)
+		if failEnv != nil {
+			return nil, nil, noop, failEnv
+		}
+		resolve, _, err := genesis.Bootstrap(store)
+		if err != nil {
+			return nil, nil, noop, envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
+		}
+		var vopts []ledger.VerifyOption
+		if *r.supported != "" {
+			vopts = append(vopts, ledger.WithSupportedVersions(strings.Split(*r.supported, ",")...))
+		}
+		st, failEnv := verdictStateAt(store, resolve, vopts...)
+		if failEnv != nil {
+			return nil, nil, noop, failEnv
+		}
+		// A context the boundary refuses to build is not fatal to a
+		// READ: the obligations and windows above are still honest, and
+		// the affordance block is the part that goes missing.
+		ctx, err := admit.ContextAt(store, aopts...)
+		if err != nil {
+			ctx = nil
+		}
+		return st, ctx, noop, nil
+	}
+	rs, failEnv := openRemoteSession(*r.remote, *r.refName, *r.stateDir, *r.supported)
+	if failEnv != nil {
+		return nil, nil, noop, failEnv
+	}
+	st, failEnv := verdictStateAt(rs.store, rs.resolve, rs.vopts...)
+	if failEnv != nil {
+		rs.close()
+		return nil, nil, noop, failEnv
+	}
+	ctx, err := admit.ContextAt(rs.store, rs.aopts...)
+	if err != nil {
+		ctx = nil
+	}
+	return st, ctx, rs.close, nil
 }

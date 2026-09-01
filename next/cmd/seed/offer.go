@@ -138,11 +138,11 @@ type offerRow struct {
 func runOfferList(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("offer list", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	dir := fs.String("ledger", "", "ledger directory")
+	posture := bindReadPosture(fs)
 	actor := fs.String("actor", "", "polling worker's fingerprint")
 	nowFlag := fs.String("now", "", "RFC3339 liveness instant (default: now)")
-	if err := fs.Parse(args); err != nil || *dir == "" || *actor == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer list requires --ledger <dir> --actor <fingerprint> [--now <RFC3339>]"), stdout, stderr)
+	if err := fs.Parse(args); err != nil || !posture.resolved() || *actor == "" || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer list requires --ledger <dir> or --remote <repo> (not both), --actor <fingerprint> [--now <RFC3339>]"), stdout, stderr)
 	}
 	now := time.Now().UTC()
 	if *nowFlag != "" {
@@ -152,7 +152,8 @@ func runOfferList(args []string, stdout, stderr io.Writer) int {
 		}
 		now = parsed
 	}
-	st, failEnv := loadVerdictState(*dir)
+	st, _, closePosture, failEnv := posture.open()
+	defer closePosture()
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
