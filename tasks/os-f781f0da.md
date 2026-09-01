@@ -1,12 +1,17 @@
 ---
 id: os-f781f0da
 title: 'next: Phase 9 item 2 — escalation with packet, question and decision'
-state: review
+state: done
 priority: P1
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-01T19:38:40Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/200
 created_at: "2026-09-01T17:25:06Z"
-updated_at: "2026-09-01T19:03:24Z"
+updated_at: "2026-09-01T19:38:40Z"
 ---
 
 Phase 9 item 2 of docs/next-build-plan.md, the next frontier item after

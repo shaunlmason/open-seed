@@ -903,3 +903,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-f523fd94","kind":"pr"},"task":"os-cafba959","ts":"2026-09-01T19:37:51Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-cafba959","ts":"2026-09-01T19:37:54Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T20:38:23Z"},"task":"os-9a89245c","ts":"2026-09-01T19:38:23Z","verb":"claim"}
+{"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-f781f0da","ts":"2026-09-01T19:38:40Z","verb":"close"}
