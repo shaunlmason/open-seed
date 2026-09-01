@@ -46,7 +46,11 @@ Every verb response is exactly one JSON line:
   regression-class harness generalizes them). Every append-path response
   stamps the list for its signing actor and subject at the stamped
   position, refusals included: the refusal plus what IS legal is the
-  envelope's point, and a computation failure degrades to the empty
+  envelope's point, and the loop verbs
+  ([`loop-verbs.md`](loop-verbs.md)) are where that point does the
+  most work, pre-flighting an act through the same rule set and
+  answering "not that" and "then what may I do?" in one envelope. A
+  computation failure degrades to the empty
   list, never to a failed verb. Responses lacking a ledger, signing
   key, or subject (e.g. `version`, `doctor`, keyless read surfaces:
   probes must be signed, so a fingerprint alone cannot compute) carry
