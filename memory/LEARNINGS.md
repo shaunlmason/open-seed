@@ -517,7 +517,6 @@ Fresh sessions read this file instead of rediscovering.
   error — walked past them into a panic. When a decoder is tolerant of
   a whole VALUE class, test the class, not the variations within one
   member of it.
-
 - 2026-09-01 (os-c4e8b57a): a fixture sweep that lists the fixtures
   misses the repositories production code creates. The repository that
   actually lost this race in CI was `<stateDir>/gitdir`, which
