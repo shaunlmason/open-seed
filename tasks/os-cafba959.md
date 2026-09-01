@@ -1,12 +1,17 @@
 ---
 id: os-cafba959
 title: 'next: the coverage gate fails nondeterministically, reporting far below truth'
-state: review
+state: done
 priority: P2
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-01T20:48:29Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/201
 created_at: "2026-09-01T10:34:01Z"
-updated_at: "2026-09-01T19:37:54Z"
+updated_at: "2026-09-01T20:48:29Z"
 ---
 
 The coverage gate in `make check` (check-next) fails nondeterministically, reporting a total far below truth on a tree that is fine. Observed repeatedly on 2026-09-01 while merging main into several branches:
