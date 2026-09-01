@@ -123,6 +123,25 @@ func TestProjectionsCarryPayloadsVerbatimIncludingHostileText(t *testing.T) {
 	}
 
 	out := t.TempDir()
+	t.Cleanup(func() {
+		// Published trees are locked (0555 directories, 0444 files);
+		// unlock before testing's own TempDir cleanup so RemoveAll
+		// succeeds on an unprivileged runner. Registered AFTER TempDir
+		// so it runs first, cleanups being LIFO. Following the pattern
+		// project_cli_test.go already established, which this test
+		// should have used from the start: it passed locally only
+		// because the container runs as root, and root ignores the
+		// permission bits the runner does not.
+		_ = filepath.WalkDir(out, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				_ = os.Chmod(p, 0o755)
+			}
+			return nil
+		})
+	})
 	if e, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out); code != 0 {
 		t.Fatalf("project rebuild: %d %+v", code, e)
 	}

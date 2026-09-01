@@ -23,6 +23,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -183,6 +184,22 @@ func dispatchWalk(t *testing.T, ctx *Context, root, dispatcher ed25519.PrivateKe
 	return ctx
 }
 
+// probeSubjectFor is the subject a verb belongs on: system verbs act on
+// "system", actor verbs on a fingerprint, everything else on the
+// contract. Probing a verb on the wrong subject refuses on shape before
+// the capability check runs, which is a refusal that proves nothing
+// about capability.
+func probeSubjectFor(verb, contract, actorFP string) string {
+	switch {
+	case strings.HasPrefix(verb, "system."):
+		return "system"
+	case strings.HasPrefix(verb, "actor."):
+		return actorFP
+	default:
+		return contract
+	}
+}
+
 // conformance: III.J row 2, the reachability half. The dispatcher's
 // reachable act set is derived from the BOUNDARY — admit.Affordances
 // drafts one signed probe per catalog verb and runs the same Check
@@ -265,28 +282,73 @@ func TestNoHostileTextWidensTheDispatcherSet(t *testing.T) {
 		`{"acceptance": {"ref": "accept.md @ abc1234", "executable": false}}`)
 	positions = append(positions, ctx)
 
-	checked := 0
+	checked, byGrant := 0, 0
 	for _, c := range positions {
 		reachable := map[string]bool{}
 		for _, v := range Affordances(c, dispatcher, "c-1") {
 			reachable[v] = true
 		}
+		view := probeViewAt(c, "c-1")
 		for _, p := range affordanceCatalog {
 			if reachable[p.verb] {
 				continue
 			}
-			for name, payload := range corpus {
-				rec := draftV(t, dispatcher, version.Seed1, p.verb, "c-1", payload, c.Tip)
-				if err := Check(c, rec); err == nil {
+			// Each verb is probed on the subject it BELONGS to. A
+			// system verb aimed at a contract trips the shape rule
+			// before the grant rule ever runs, which would let a
+			// removed capability check pass unnoticed — the same
+			// vacuity the valid payload above exists to avoid, one
+			// field over.
+			subject := probeSubjectFor(p.verb, "c-1", fpOf(t, dispatcher))
+			// The probe carries the verb's OWN valid payload, from the
+			// catalog's synthesizer. Firing an intent-shaped body at
+			// every verb would have proven nothing: actor.granted needs
+			// a capability field and a deliberate exit needs a fence and
+			// a packet, so the refusal could come from the shape rule
+			// while the capability check was gone entirely (review
+			// finding on this PR). A drill for the capability invariant
+			// has to reach the capability check.
+			payloads := map[string]string{"the verb's own valid payload": p.synth(view)}
+			for name, hostile := range corpus {
+				payloads[name] = hostile
+			}
+			for name, payload := range payloads {
+				rec := draftV(t, dispatcher, version.Seed1, p.verb, subject, payload, c.Tip)
+				err := Check(c, rec)
+				if err == nil {
 					t.Errorf("%s admitted for a dispatch-only key carrying %s: the capability bound is the "+
 						"invariant, and no payload text may widen it", p.verb, name)
+					continue
 				}
 				checked++
+				// And where the verb IS capability-gated and this key
+				// holds none of what it accepts, the refusal must be the
+				// capability one by type. That is the charter's claim
+				// stated exactly: not "something refused" but "the
+				// capability bound refused".
+				if name != "the verb's own valid payload" {
+					continue
+				}
+				accepted := keyring.AcceptedCapabilities(p.verb)
+				if len(accepted) == 0 || slices.Contains(accepted, keyring.CapDispatch) {
+					continue
+				}
+				var oog *OutOfGrantError
+				if !errors.As(err, &oog) {
+					t.Errorf("%s refused for a dispatch-only key, but not on capability: %v. The sweep "+
+						"must reach the grant rule, or removing it could leave this green", p.verb, err)
+					continue
+				}
+				byGrant++
 			}
 		}
 	}
 	if checked == 0 {
 		t.Fatal("this drill is vacuous unless something outside the reachable set was actually attempted")
+	}
+	if byGrant == 0 {
+		t.Fatal("this drill is vacuous unless at least one refusal was the CAPABILITY refusal: " +
+			"otherwise it proves the payload rules work, not that the grant rule does")
 	}
 	// And the reachable set is genuinely a strict subset: a walk where
 	// everything was reachable would make the sweep above meaningless.
