@@ -296,10 +296,16 @@ adapter), and the doctor reports which Phase 13 criteria remain open until then.
 6. Machine-protocol surface exposing the CLI's verbs with identical semantics, and
    platform parity (including Windows) documented and tested (III.I — the row the
    Phase 8 exit routes here; the CLI stays the complete interface, so this adds a
-   second surface over the same rule set, never a second semantics).
+   second surface over the same rule set, never a second semantics). The surface
+   ships **with** the per-verb policy that governs it — allow / deny /
+   require-approval by actor and risk class, with approvals attributable to the
+   identity that gave them (III.L's machine-protocol row, scheduled nowhere else in
+   this plan; a protocol surface exposed without its policy would widen reach while
+   leaving a required control unbuilt).
 
-*Exit:* the named III.F/III.H/III.I/III.N criteria green; the conformance report shows
-Part III complete at the enforced self-hosted posture.
+*Exit:* the named III.F/III.H/III.I/III.N criteria plus III.L's machine-protocol
+policy row green; the conformance report shows Part III complete at the enforced
+self-hosted posture.
 
 ## 3. Backlog (true extras, not conformance-blocking)
 

@@ -557,9 +557,17 @@ must be signed, so a fingerprint alone cannot compute a list) lists
 the empty set, which is the honest answer where no such set exists;
 actor.enrolled is listed only where the prober could supply the
 subject's public key, which no fingerprint-holder can derive; and a
-refusal that never opened a ledger carries a null position rather
-than inventing one, which the spec sentence corrected in this PR now
-states. Row 2 (one rule set for computation and enforcement;
+response that never established a position carries null rather than
+inventing one, which the spec sentence corrected in this PR now
+states as the rule: stamp wherever a position was established, never
+fabricate. One surface deviates from that rule today and is recorded
+here rather than glossed — ledger show --position <missing> scans
+successfully, so it HAS established a count, yet returns not_found
+without the stamp, costing a caller the ability to tell whether the
+position asked for appeared concurrently (review finding on this
+PR). It is a defect against the stated rule, not a permitted
+variant, and card os-fa69345e discharges it; the row is otherwise
+met. Row 2 (one rule set for computation and enforcement;
 listed-then-refused at the same position a bug class with a
 regression test): met by #160's computation plus #163's sweep. Row 4
 (refusal rates tracked as an affordance-gap metric): met by #165's
