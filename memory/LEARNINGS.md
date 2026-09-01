@@ -763,3 +763,24 @@ member of this family, and it costs one command: delete the behavior,
 re-run the drill. If it still passes, the drill is about something else.
 Doing this to the fix is not optional politeness toward the reviewer; it
 is the only evidence that the test tests anything.
+
+## Diff the two things you actually mean to compare
+
+Proving the coverage gate's output was unchanged (os-cafba959) took
+three attempts, and the first two compared main against itself. Running
+`make check` in one directory, then `cd`-ing and running it again, does
+not switch trees when the second `cd` silently fails or when the shell's
+working directory has already moved — both runs then measure the same
+tree and the diff is empty for the wrong reason.
+
+An empty diff is the result you WANT when proving byte-identity, which
+is exactly why it deserves suspicion: the happy answer and the broken
+experiment look identical. The fix was `make -C <tree>` for each side,
+naming both trees explicitly so the comparison cannot quietly collapse
+into one, plus normalizing the paths `make` prints so the real
+difference stands out from the directory noise.
+
+The general form: when a passing result and a botched setup produce the
+same output, add an assertion that fails when the setup is wrong. Here
+that was checking the two runs reported different tree paths before
+trusting that their contents matched.

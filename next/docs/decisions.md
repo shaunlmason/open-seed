@@ -1415,3 +1415,49 @@ here. Newest last.
   injection precedent `internal/transition` sets. This was the seventh
   instance this cycle of a drill agreeing with a convenient shape, and
   the only one added *in response to* a finding about the same class.
+- **The coverage gate verifies the NUMBER, not the collection**
+  (os-cafba959). `cmd/go`'s `mergeCoverProfile` drops a package's
+  profile fragment silently — twice over, when the fragment file is
+  missing (*"Test did not create profile, which is OK"*) and when it is
+  zero-length — with no error, no message, and `ok` still printed for
+  every package. The merged total then reads far below truth on a tree
+  that is fine, which presents as exactly what a real regression looks
+  like.
+
+  So the gate re-collects **only when the reading is below the
+  threshold**, and decides from two readings. That is chosen over every
+  structural alternative for one reason: **it cannot false-alarm**,
+  because it engages only where the gate would already have failed. A
+  healthy tree never pays for it and never trips over it.
+
+  Rejected, and recorded so it is not re-litigated: counting
+  contributions. Collecting into a pod directory (`-args
+  -test.gocoverdir`) yields the identical number and a countable
+  artifact — but stably 27 counter files for 28 test packages, because
+  `internal/version`'s own binary emits none. An expectation with an
+  unexplained exemption in it is a false-alarm generator, and a gate
+  that cries wolf is worse than the bug.
+
+  What it gives up, stated: a loss that still leaves the total ABOVE
+  the gate goes unnoticed. That is the right thing to give up — the
+  gate's job is the threshold, and a number understated but above the
+  bar costs nothing.
+- **The second reading must be COLD, and that is load-bearing.** `go
+  test` caches a package's coverage contribution, so a warm re-run
+  replays the lost profile **at the same number** (card os-4eaf8b13,
+  folded in here and closed with it). A retry without the cache clean
+  would make the gate MORE confident of a false regression than it is
+  today. The drill asserts the effect ORDER — collect, clean, collect —
+  rather than that a clean occurred, because a clean before the first
+  reading or after the second would satisfy occurrence and protect
+  nothing.
+- **A refuted comment is deleted with the fix, not left beside it.**
+  The Makefile blamed concurrent binaries colliding coverage counter
+  files "at the same pid and second". The names carry **nanoseconds**,
+  and a re-exec'd helper child cannot collide with its parent at all:
+  `testing`'s `coverTearDown` gives a child with no `-test.gocoverdir`
+  its own temp directory and deletes it — confirmed by experiment, for
+  a child that exits cleanly and one that is killed. `-p 1` is kept and
+  the reason restated honestly: serialized runs are what the measured
+  behavior was established against, not evidence for the mechanism the
+  old comment claimed.
