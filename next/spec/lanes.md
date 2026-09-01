@@ -128,9 +128,88 @@ default. That is not hypothetical — an earlier draft checked "holds no
 authoring, verdict or sealing grant", which admits `operator`, the
 strongest capability in the keyring.
 
-III.J's second row is **half met** by this: the standing claim is
-checkable here, and the hostile-corpus suite proving the dispatcher's
-*input handling* is Phase 9 item 1b's.
+That is the **standing** half of III.J's second row. The input-handling
+half is below.
+
+## The injection conformance suite
+
+III.J's second row asks that "embedded instructions in intents, mirrors,
+and tool output are quoted as data, never obeyed". Phase 9 item 1b
+(`plans/os-b779b4c7.md`) answers it, and the first thing to say is what
+it does **not** do.
+
+**It does not test that hostile text is disbelieved.** There is no model
+under `next/`; "never obeyed" is a claim about an agent's behavior, and
+a corpus of `IGNORE PREVIOUS INSTRUCTIONS` strings fed to code that
+never had instructions would test the corpus rather than the system. The
+charter names the way out in the same paragraph that lists the controls:
+
+> a model can still be persuaded by adversarial text it reads — which is
+> why capability bounds, not fencing, carry the invariant.
+
+So the suite asserts that **believing the text changes nothing**, and
+names exactly where that is false.
+
+### Reachability is derived from the boundary
+
+The dispatcher's reachable act set comes from `admit.Affordances`, which
+drafts one signed probe per catalog verb and runs the same `Check`
+pipeline admission enforces. Every member must appear in
+`internal/admit/testdata/injection/residuals.json` with why it is
+admitted and what a persuaded lane could inflict; an unnamed one fails,
+and a named one the walk cannot reach fails as stale.
+
+**Not** from `keyring.AcceptedCapabilities`. That table is a capability
+index, not a reachability oracle: its switch falls through to `nil` for
+the standing-only class, so a capability filter silently omits
+`message.sent` — the one dispatcher-reachable act that relays. The
+distinction is the difference between a suite that finds the sharpest
+residual and one that cannot see it.
+
+### The residuals, named
+
+| act | what a persuaded dispatcher can inflict |
+| --- | --- |
+| `intent.filed` | the filed `tier` is presence-only data, and the single string `"trivial"` exempts **both** the plan gate and the sealed-checks lint. Every other value fails safe, so the residual is exactly one string wide. Owner: Phase 10's tier system |
+| `claim.reaped` | admitted on a live claim with no liveness evidence consulted at all. Its two preconditions are freshness and attribution, not authorization: the fence citation (readable from any position-stamped read) and a packet. Owner: Phase 9 item 3 |
+| `message.sent` | **no capability at all** — standing-only, so any enrolled active actor appends it. This is the one that RELAYS. Bounded by the classification lint at 512 bytes per string, which is a SIZE bound: the sixty-byte instruction that matters sails through |
+
+Each is pinned by a characterization drill asserting the behavior in the
+residual's own words, so closing one fails the suite and forces this
+passage to be updated with what replaced it.
+
+### What the suite establishes, and what it does not
+
+**Tool output cannot inject.** This is a structural proof rather than a
+drill of behavior: `verdict.Transcript` holds `Cmd`, `Exit`,
+`OutputSHA256` and `OutputBytes`, so output bytes are hashed at the
+boundary and dropped. No adversarial text can traverse a channel that
+does not exist. The command string itself is carried verbatim, and the
+drill says so: what is proven is that *output* is not carried, not that
+the transcript is text-free.
+
+**Worker-facing reads carry no intent prose.** `situation` and `offer
+list` are swept by marker, in their serialized form so a field added
+later is covered.
+
+**The projections carry every payload verbatim, by design** — a
+projection that could not show what was appended would not be an audit
+view. This is where the mirror arm lands: the projections are what a
+dashboard or mirror renders, so whichever card lands `request.*`
+inherits an input that already carries hostile text verbatim. Pinned by
+its own drill rather than left implicit.
+
+**The mirror arm cannot be met at all.** `request.*` — the protocol's
+inbound-proposal family for mirror edits and dashboard actions — has
+**zero rows** in `next/spec/transitions.json`. There is nothing to fire
+a corpus at. III.J's second row is therefore **two-thirds met**, not
+closed: intents and tool output are covered, mirrors are not.
+
+**The vocabulary has an honest edge.** The sweep covers
+`admit.affordanceCatalog`, whose completeness against the spec table is
+enforced in both directions. `message.acked`, `request.*` and
+`curation.*` are named in [`protocol.md`](protocol.md) but appear in
+neither, being unimplemented, so the suite cannot speak about them.
 
 ## The loop-verb registry
 
@@ -171,6 +250,9 @@ ordered fragment list prevents.
   conventions, composable from ordered fragments, resolved and checked
   by validation" — `next/lanes/**`, `lane.Resolve`, `lane.Validate`,
   and the drill asserting the shipped set validates clean.
-- III.J "The dispatcher runs with least standing capability" — the
-  allowlist above, drilled against `operator` explicitly. The paired
-  injection-conformance half is Phase 9 item 1b.
+- III.J "The dispatcher runs with least standing capability and passes
+  the injection conformance suite" — the allowlist above for the
+  standing half, drilled against `operator` explicitly; the suite above
+  for the input-handling half, **two-thirds met**: intents and tool
+  output are covered and mirrors are not, because `request.*` is
+  unlanded. Three residuals are named and pinned rather than closed.

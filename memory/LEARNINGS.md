@@ -645,3 +645,29 @@ Fresh sessions read this file instead of rediscovering.
   the same lost counters at the same number forever. Cold-cache runs
   gave 86.7 / 90.7 / 90.7. When a re-run is the discriminator, make
   sure the re-run actually re-runs.
+
+## Characterization drills correct the prose that motivated them (os-b779b4c7)
+
+The residual table asserted that `claim.reaped` "carries no precondition
+beyond the capability check". The boundary refused the drill twice
+before it passed: the reap must cite the active fence, and must carry a
+four-part packet. Both survive as residuals — they are freshness and
+attribution checks, not authorization, and a persuaded lane satisfies
+them by reading and writing — but the claim as first written was simply
+false, twice over.
+
+The lesson is not "write more careful prose". It is that a residual
+recorded only in prose is unverified prose, and the drill that pins it
+is also the thing that finds out what it actually says.
+
+## Sweep for a marker across serialized output, not across struct fields
+
+The containment drill searches the JSON-serialized envelope of every
+agent-facing read for a marker string, rather than inspecting the types
+that build it. A field added later is covered automatically; a drill
+that read `packet.Packet`'s definition would have gone on passing while
+a new field carried the text.
+
+The same sweep, applied to the projections, is what found that they
+carry every payload verbatim — which no reading of the worker-facing
+types would ever have surfaced.

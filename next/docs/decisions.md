@@ -1227,3 +1227,44 @@ here. Newest last.
   position it could honestly cite — and nothing is written back, since
   a resolved role on disk would be the second copy the ordered
   fragment list exists to prevent.
+
+## Phase 9 item 1b — the dispatcher's injection conformance suite (os-b779b4c7)
+
+- **The suite does not test that hostile text is disbelieved**, and says
+  so first. There is no model under `next/`, so "never obeyed" is not
+  directly testable, and a corpus fed to code with no instructions would
+  test the corpus rather than the system. It asserts that BELIEVING the
+  text changes nothing, and names where that is false.
+- **Reachability is derived from `admit.Affordances`, not from
+  `keyring.AcceptedCapabilities`.** The latter is a capability index
+  whose switch returns nil for the standing-only class, so filtering it
+  omits `message.sent` — the one dispatcher-reachable act that relays.
+  `Affordances` drafts a signed probe per catalog verb through the same
+  `Check` pipeline admission enforces, so the answer comes from the
+  boundary. Its catalog's completeness is enforced against the spec
+  table in both directions, which is what makes "a verb added later
+  fails this drill" true rather than hoped.
+- **Residuals live in checked-in data with a reason and a consequence
+  each**, and the drill fails both ways: an unnamed reachable verb fails,
+  and a named verb the walk cannot reach fails as stale. A residual
+  without a reason fails too — a list entry is not a finding.
+- **The walk was extended rather than the table trimmed.** Three named
+  residuals were unreachable by the first short walk, and shortening the
+  list to match would have been a shorter list rather than a safer
+  system. The walk now enrolls a verifier and carries a subject to a red
+  verdict so `contract.returned` is genuinely probed.
+- **Two residual descriptions were corrected BY the drills.**
+  `claim.reaped` was described as having no precondition; the boundary
+  refused twice, revealing a fence citation and a packet requirement.
+  Both are freshness and attribution rather than authorization, and a
+  persuaded dispatcher satisfies them by reading and writing, so the
+  residual stands — but at its true shape, not the one prose asserted.
+- **The projections carry every payload verbatim, and that is pinned
+  rather than treated as a leak.** A projection that could not show what
+  was appended would not be an audit view. It is recorded because the
+  projections are what a mirror renders, so the unlanded `request.*`
+  card inherits an input already carrying hostile text.
+- **III.J's second row is reported two-thirds met.** Intents and tool
+  output are covered; mirrors cannot be, because `request.*` has zero
+  rows. Reporting the row closed would have been the easiest sentence in
+  the spec and the least true.

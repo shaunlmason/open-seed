@@ -631,9 +631,28 @@ administrative card, not a Phase 8 item).
     keyring.AcceptedCapabilities says each act's verb accepts. Plus
     `seed lane list|show|validate` and exit 26 lane_invalid)
   - 1b dispatcher least-capability drilled by the injection
-    conformance suite (hostile corpus) — backlog. 1a makes the standing
-    claim checkable via the allowlist; III.J's second row is half met
-    until the input-handling half lands.
+    conformance suite (hostile corpus) — os-b779b4c7 — **review**
+    (task PR against plan #190). III.J's second row is now
+    **two-thirds met**, and the spec says so rather than reporting it
+    closed: intents and tool output are covered, mirrors are not,
+    because request.* has zero rows in the transition table.
+    - Reachability is derived from admit.Affordances, which drafts a
+      signed probe per catalog verb through the same Check pipeline
+      admission enforces. NOT from keyring.AcceptedCapabilities: that
+      table returns nil for the standing-only class, so a capability
+      filter silently omits message.sent.
+    - Three residuals named and pinned by characterization drills:
+      the filed tier's "trivial" exempting both the plan gate and the
+      sealed-checks lint (carded os-be12ac16 for Phase 10's tier
+      system); claim.reaped consulting no liveness evidence, its two
+      preconditions being freshness and attribution rather than
+      authorization; and message.sent needing NO capability at all,
+      which is the one that relays.
+    - Tool output cannot inject, structurally: verdict.Transcript
+      hashes output bytes at the boundary and drops them.
+    - The projections carry every payload verbatim by design, which is
+      where the unlanded mirror arm will land: whichever card adds
+      request.* inherits an input already carrying hostile text.
   - 1c the worker loop made executable with exhaustion parking —
     backlog. It INHERITS 1a's unfinished half: 1a can check that a
     lane's declared liveness sources are work steps it performs, but
