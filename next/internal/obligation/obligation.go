@@ -48,6 +48,13 @@ const (
 	// KindContractBlocked is a blocked subject awaiting whoever the
 	// block named.
 	KindContractBlocked = "contract.blocked"
+	// KindEscalationPending is a standing blocked(needs-you): a
+	// question addressed to a human gate that nothing else about the
+	// contract moves past (plans/os-f781f0da.md). It is the narrower
+	// sibling of KindContractBlocked, and both are emitted on an
+	// escalated subject: the first says a human owes a decision, the
+	// second that the contract is stopped.
+	KindEscalationPending = "escalation.pending"
 )
 
 // Lane names used where an obligation is owed by a role rather than
@@ -72,6 +79,10 @@ var factDischargers = map[string][]string{
 	KindBudgetOpen: {"budget.settle", "budget.release"},
 	// next/spec/verdicts.md: the verdict is a fact, not a transition.
 	KindSubmissionPending: {"verdict.rendered"},
+	// next/spec/escalation.md: both answers close the question, and
+	// cancelling counts because it must cite the escalation it
+	// closes — an answer of "this work should not happen".
+	KindEscalationPending: {"contract.cancelled", "decision.recorded"},
 }
 
 // mergeRequestVerb discharges a standing pass verdict that no merge
@@ -98,6 +109,15 @@ type Row struct {
 	// obligation, so a kind with no reachable discharger is not
 	// emitted at all.
 	DischargedBy []string `json:"discharged_by"`
+	// TS is the raising event's own timestamp, present only where the
+	// obligation's age is meaningful in elapsed time. Positions order
+	// without measuring: an escalation untouched for hours has the
+	// same position difference as one answered instantly after a burst
+	// of unrelated traffic, so latency derived from Since would be
+	// event count wearing a clock's clothes. The reading surface
+	// computes now minus TS at its own instant, never at admission
+	// (next/spec/offers.md's live-read posture).
+	TS string `json:"ts,omitempty"`
 }
 
 // stateDischargers reads the verbs that leave a state from the
@@ -161,24 +181,37 @@ func Derive(records []*event.Record, table *transition.Table, deps Deps) []Row {
 
 func subjectRows(subject string, s transition.SubjectState, table *transition.Table, deps Deps) []Row {
 	var rows []Row
-	add := func(kind, owedBy string, since int, dischargers []string) {
+	// ts is empty except where an obligation's age is meaningful in
+	// elapsed time; it is a parameter rather than a returned pointer
+	// because a pointer into rows would dangle the moment the next
+	// append reallocated.
+	add := func(kind, owedBy string, since int, ts string, dischargers []string) {
 		// Never advertise an empty discharging set: the sweep asserts
 		// this, and emitting one would make the drift class pass
 		// vacuously (review finding on the plan PR).
 		if len(dischargers) == 0 {
 			return
 		}
-		rows = append(rows, Row{Subject: subject, Kind: kind, OwedBy: owedBy, Since: since, DischargedBy: dischargers})
+		rows = append(rows, Row{Subject: subject, Kind: kind, OwedBy: owedBy, Since: since, TS: ts, DischargedBy: dischargers})
 	}
 
 	if s.Claim != nil {
-		add(KindClaimHeld, s.Claim.Holder, s.Since, stateDischargers(table, s.State))
+		add(KindClaimHeld, s.Claim.Holder, s.Since, "", stateDischargers(table, s.State))
 	}
 	if s.State == "blocked" {
-		add(KindContractBlocked, LaneOperator, s.Since, stateDischargers(table, s.State))
+		add(KindContractBlocked, LaneOperator, s.Since, "", stateDischargers(table, s.State))
+	}
+	if s.Escalation != nil {
+		// Since is the RAISE's position, not the state's: a question
+		// carried by a claim.parked arrives with the exit that raised
+		// it, and a later reader needs the position that asked, not
+		// the one that blocked. The row also carries the raise's TS,
+		// because age is elapsed time and a position measures nothing
+		// (next/spec/escalation.md).
+		add(KindEscalationPending, LaneOperator, s.Escalation.Pos, s.Escalation.TS, factDischargers[KindEscalationPending])
 	}
 	if s.Submission != nil && (s.Verdict == nil || s.Verdict.Submission != s.Submission.Pos) {
-		add(KindSubmissionPending, LaneVerifier, s.Submission.Pos, factDischargers[KindSubmissionPending])
+		add(KindSubmissionPending, LaneVerifier, s.Submission.Pos, "", factDischargers[KindSubmissionPending])
 	}
 	if s.Verdict != nil && s.Verdict.Verdict == "pass" && s.Merged == nil {
 		// One kind, two shapes, because the merge chain is two
@@ -186,9 +219,9 @@ func subjectRows(subject string, s transition.SubjectState, table *transition.Ta
 		// operator's and merge.requested pays it; after that the
 		// forge fact is the observer's to record.
 		if s.Requested == nil {
-			add(KindVerdictUnmerged, LaneOperator, s.Verdict.Pos, []string{mergeRequestVerb})
+			add(KindVerdictUnmerged, LaneOperator, s.Verdict.Pos, "", []string{mergeRequestVerb})
 		} else {
-			add(KindVerdictUnmerged, LaneObserver, s.Requested.Pos, []string{"merge.observed"})
+			add(KindVerdictUnmerged, LaneObserver, s.Requested.Pos, "", []string{"merge.observed"})
 		}
 	}
 	// An open reservation is owed WHEREVER it stands (os-d6963652):
@@ -216,7 +249,7 @@ func subjectRows(subject string, s transition.SubjectState, table *transition.Ta
 			if !deps.able(owner, factDischargers[KindBudgetOpen]) {
 				owner = LaneOperator
 			}
-			add(KindBudgetOpen, owner, r.Pos, factDischargers[KindBudgetOpen])
+			add(KindBudgetOpen, owner, r.Pos, "", factDischargers[KindBudgetOpen])
 			break
 		}
 	}
@@ -224,7 +257,7 @@ func subjectRows(subject string, s transition.SubjectState, table *transition.Ta
 		if settled(s, start.Fence) || !runFlaggable(s, start.Fence) {
 			continue
 		}
-		add(KindRunUnsettled, LaneSupervisor, start.Pos, factDischargers[KindRunUnsettled])
+		add(KindRunUnsettled, LaneSupervisor, start.Pos, "", factDischargers[KindRunUnsettled])
 		break
 	}
 	return rows

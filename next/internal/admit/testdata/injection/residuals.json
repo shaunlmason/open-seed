@@ -35,6 +35,11 @@
       "verb": "message.sent",
       "why_admitted": "NO CAPABILITY AT ALL - it is in the standing-only class, so any enrolled active actor appends it",
       "consequence": "SHARP: this is the one that RELAYS. A dispatcher persuaded by hostile text can put text of its own on the ledger addressed to another lane. The classify lint bounds it at 512 bytes per string and the append is attributable and position-stamped, but neither makes it not a channel. Owner: unassigned; see next/spec/lanes.md."
+    },
+    {
+      "verb": "escalation.raised",
+      "why_admitted": "the charter says ANY lane can raise blocked(needs-you) (SEED-NEXT.md II.11), so the capability row is deliberately broad: claim, dispatch, verdict, supervise, operator",
+      "consequence": "a persuaded dispatcher can FREEZE a contract: while a question stands, contract.unblocked refuses and only the operator's decision.recorded or a citing contract.cancelled reopens it. That is denial of progress, not escalation of authority - raising GRANTS nothing (the offer.published argument), and the raiser cannot answer its own question, because decision.recorded is operator-only with no fallback. It is bounded further by being attributable: the raise carries the raiser's fingerprint and its question verbatim, so a persuaded raise is visible as one rather than as silence. Owner: Phase 9 item 3's maintenance lints, which is where a contract frozen without a plausible question should surface."
     }
   ],
   "_vocabulary": "The vocabulary swept is admit.affordanceCatalog, whose completeness against the spec table is TestAffordanceCatalogCompleteness's job (both directions: a catalog verb needs a spec row and a spec verb needs a catalog entry). The honest limit: message.acked, request.* and curation.* are named in next/spec/protocol.md but are in neither, being unimplemented, so this suite cannot speak about them. Whichever card lands them inherits their classification."

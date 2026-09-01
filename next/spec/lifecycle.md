@@ -40,7 +40,9 @@ later phase's machinery):
     {"verb": "contract.returned", "from": ["review"], "to": "ready"},
     {"verb": "contract.blocked", "from": ["ready"], "to": "blocked"},
     {"verb": "contract.unblocked", "from": ["blocked"], "to": "ready"},
-    {"verb": "contract.cancelled", "from": ["backlog", "ready", "blocked", "review"], "to": "cancelled"}
+    {"verb": "contract.cancelled", "from": ["backlog", "ready", "blocked", "review"], "to": "cancelled"},
+    {"verb": "escalation.raised", "from": ["ready", "review"], "to": "blocked"},
+    {"verb": "decision.recorded", "from": ["blocked"], "to": "ready"}
   ]
 }
 ```

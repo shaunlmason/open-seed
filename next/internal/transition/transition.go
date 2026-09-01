@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/version"
@@ -382,6 +383,14 @@ type SubjectState struct {
 	// seals outside it stay anomalies, never facts
 	// (plans/os-3128535a.md).
 	Sealed *SealedFact
+	// Escalation is the standing blocked(needs-you): the question a
+	// human gate is being asked and the closed set it may answer with
+	// (plans/os-f781f0da.md). Set by an applied escalation.raised or
+	// by a claim.parked carrying a question; cleared when
+	// decision.recorded or contract.cancelled applies, because both
+	// ARE answers. Nothing else about the contract moves meanwhile:
+	// the escalation rule refuses contract.unblocked while it stands.
+	Escalation *EscalationFact
 	// SubmissionFails collects every fail verdict citing the current
 	// submission window (cleared on each submission.made): the
 	// red-verdict lockout scans the whole window, so a raw-pushed
@@ -517,6 +526,22 @@ type SealedFact struct {
 	Pos        int
 	Commitment string
 	Signer     string
+}
+
+// EscalationFact is a standing blocked(needs-you) (plans/os-f781f0da.md).
+// TS is the raising event's own timestamp and it is load-bearing: age
+// is ELAPSED TIME, and Pos is an ordinal that orders without measuring
+// — an escalation untouched for hours has the same position difference
+// as one answered instantly after a burst of unrelated traffic. The
+// reading surface computes now minus TS at its own instant, the offer
+// liveness posture (next/spec/offers.md): admission never reads a wall
+// clock, a live read may.
+type EscalationFact struct {
+	Pos      int
+	TS       string
+	Raiser   string
+	Question string
+	Options  []escalation.Option
 }
 
 // OfferFact is one folded offer.published (plans/os-c61c3392.md): its
@@ -1077,6 +1102,33 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			if !passChain && !overrideChain {
 				s.Anomalies++
 			}
+		}
+		// The escalation channel (plans/os-f781f0da.md). A raise sets
+		// the standing question; the two answers clear it. Cancelling
+		// counts as an answer because it IS one: the admission rule
+		// makes it cite the escalation it closes, so the chain shows
+		// which question the cancellation answered.
+		if escalation.CarriesQuestion(e.Verb) {
+			if q, present, qerr := escalation.FromPayload(e.Subject, e.Payload); present {
+				if qerr != nil {
+					// Tolerant fold: a raw-pushed malformed question is
+					// an anomaly, never a fact. The transition still
+					// applied above, so the subject is blocked with no
+					// standing question, which the reap lint surfaces.
+					s.Anomalies++
+				} else {
+					s.Escalation = &EscalationFact{
+						Pos: pos, TS: e.TS, Raiser: e.Actor,
+						Question: q.Question, Options: q.Options,
+					}
+				}
+			} else if e.Verb == escalation.RaiseVerb {
+				// A raise with no question at all: same tolerance.
+				s.Anomalies++
+			}
+		}
+		if e.Verb == escalation.AnswerVerb || e.Verb == "contract.cancelled" {
+			s.Escalation = nil
 		}
 		if t.exclusive[e.Verb] {
 			s.Claim = &Claim{Holder: e.Actor, Fence: pos}
