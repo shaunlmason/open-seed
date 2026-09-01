@@ -898,3 +898,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:198","to":"ready"},"task":"os-cafba959","ts":"2026-09-01T18:56:50Z","verb":"plan-unblock"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:199","to":"ready"},"task":"os-9a89245c","ts":"2026-09-01T18:56:54Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-086a6940","kind":"pr"},"task":"os-f781f0da","ts":"2026-09-01T19:03:21Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-f781f0da","ts":"2026-09-01T19:03:24Z","verb":"transition"}
