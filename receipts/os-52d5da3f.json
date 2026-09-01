@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "task": "os-52d5da3f",
+  "merge_base": "2524fa629e53378fcd55cf4a2223b326fa1385d0",
+  "head": "2ca670eb8e35f66377a75d978f7cc6c825ed28e8",
+  "plan_path": "plans/os-52d5da3f.md",
+  "plan_sha256": "e4e94939f692ea38e428d8346c32d11aba1b183163df354478853897ef743e21",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/project_cli_test.go",
+    "next/cmd/seed/situation.go",
+    "next/cmd/seed/situation_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/obligation_sweep_test.go",
+    "next/internal/obligation/obligation.go",
+    "next/internal/obligation/obligation_test.go",
+    "next/internal/project/obligations.go",
+    "next/internal/project/obligations_test.go",
+    "next/internal/project/project.go",
+    "next/internal/project/project_test.go",
+    "next/spec/obligations.md",
+    "next/spec/projections.md"
+  ],
+  "diff_sha256": "ad8993bc9d4ac154d11c7f92a0b84f490f42d24d3228d4b821c4cda4c3899d42",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/obligation/ ./internal/project/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
