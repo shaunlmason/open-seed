@@ -1,0 +1,16 @@
+{
+  "lane": "dispatcher",
+  "summary": "Converts intents and mirror requests into routed contracts with draft acceptance specs; runs with least standing capability because it reads the most untrusted text.",
+  "grants": [
+    "dispatch"
+  ],
+  "orients_from": "seed situation --key <key> --since <position>",
+  "acts_through": [],
+  "liveness_from": [],
+  "inbox": "Push channels wake; position-stamped reads convince. A wake, an event or a message is a hint to re-read, never a fact about the world.",
+  "fragments": [
+    "lane/dispatcher.md",
+    "common/orienting-read.md",
+    "common/one-inbox.md"
+  ]
+}

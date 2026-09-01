@@ -1,0 +1,16 @@
+{
+  "lane": "verifier",
+  "summary": "Renders verdicts at the declared independence level, never with an implementing key on the same contract.",
+  "grants": [
+    "verdict"
+  ],
+  "orients_from": "seed situation --key <key> --since <position>",
+  "acts_through": [],
+  "liveness_from": [],
+  "inbox": "Push channels wake; position-stamped reads convince. A wake, an event or a message is a hint to re-read, never a fact about the world.",
+  "fragments": [
+    "lane/verifier.md",
+    "common/orienting-read.md",
+    "common/one-inbox.md"
+  ]
+}

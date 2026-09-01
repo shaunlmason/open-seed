@@ -85,6 +85,27 @@ const (
 	CapSupervise = "supervise"
 )
 
+// Capabilities is the whole vocabulary, in declaration order: the one
+// place a consumer asks "is this a real capability" rather than
+// writing the list down again (plans/os-cf1c9688.md D3). Pinned by
+// test against the constants above.
+func Capabilities() []string {
+	return []string{
+		CapOperator, CapMaintenance, CapDispatch, CapObserver,
+		CapVerdict, CapClaim, CapSealer, CapSupervise,
+	}
+}
+
+// Known reports whether the name is a capability in the vocabulary.
+func Known(capability string) bool {
+	for _, c := range Capabilities() {
+		if c == capability {
+			return true
+		}
+	}
+	return false
+}
+
 // AcceptedCapabilities returns the set of capabilities any one of which
 // admits the verb, mirroring the normative table in
 // next/spec/actors.md "Capabilities" (pinned by test). A nil result

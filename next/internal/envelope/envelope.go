@@ -49,9 +49,17 @@ const (
 	// The red-verdict lockout (plans/os-d2497eb7.md): rendering pass
 	// over a submission an authenticated fail already judged refuses
 	// until a new submission.
-	ExitRedLocked  = 25
-	ExitUsage      = 64
-	ExitUnreadable = 66
+	ExitRedLocked = 25
+	// The lane-validation refusal (plans/os-cf1c9688.md;
+	// next/spec/lanes.md): a checked-in lane manifest makes a claim
+	// the tables refuse — a grant outside the vocabulary, an act whose
+	// accepted capabilities the lane does not hold, a liveness source
+	// that is not a work step, a missing fragment. Distinct from
+	// posture_invalid, which judges the deployment's posture
+	// declaration rather than a role definition.
+	ExitLaneInvalid = 26
+	ExitUsage       = 64
+	ExitUnreadable  = 66
 )
 
 // Error is the machine-branchable half of a refusal: a stable code to
