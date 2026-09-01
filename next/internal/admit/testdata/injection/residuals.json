@@ -1,0 +1,41 @@
+{
+  "_comment": "Acts a dispatch-only key can perform, each with why it is admitted and what a persuaded lane can inflict with it. The reachability drill (plans/os-b779b4c7.md D1) derives the reachable set from admit.Affordances - the boundary itself, over a catalog whose completeness is pinned against the spec table - and fails on any verb not listed here. A verb added later, of any capability class including one needing no capability at all, therefore lands here as a red test rather than as a silent widening.",
+  "residuals": [
+    {
+      "verb": "intent.filed",
+      "why_admitted": "queue management is the dispatcher's job",
+      "consequence": "SHARP: the filed tier is presence-only data, and the single value \"trivial\" exempts BOTH the plan gate (Fold.CheckPlanGate) and the sealed-checks lint (internal/reconcile). Every other value fails safe, since both sites test against the constant, so the residual is exactly one string wide. Owner: Phase 10's tier system."
+    },
+    {
+      "verb": "contract.specified",
+      "why_admitted": "routing a contract with a draft acceptance spec is the dispatcher's job",
+      "consequence": "bounded by the acceptance gate: executable content requires review-gate evidence at every tier, so text cannot become an executed command without a gate between (internal/transition/acceptance.go)"
+    },
+    {
+      "verb": "contract.blocked",
+      "why_admitted": "queue management",
+      "consequence": "stalls a contract; visible, attributable, and reversible by contract.unblocked"
+    },
+    {
+      "verb": "contract.unblocked",
+      "why_admitted": "queue management",
+      "consequence": "releases a block; visible and attributable"
+    },
+    {
+      "verb": "contract.returned",
+      "why_admitted": "returning a fail-verdicted contract to the queue is queue management",
+      "consequence": "requires a red verdict to cite, so it cannot be used to return work nobody judged"
+    },
+    {
+      "verb": "claim.reaped",
+      "why_admitted": "queue management",
+      "consequence": "SHARP, and narrower than it first looks. Two preconditions exist, neither an authorization check: the reap must cite the ACTIVE FENCE, which makes it current rather than aimed at a window already closed (the fence is readable from any position-stamped read, so this is freshness, not authorization); and it must carry a four-part PACKET, because a reap is a deliberate exit, which makes it attributable and hands the next claimant a resume point without asking whether the reap was warranted. A persuaded dispatcher satisfies both by reading and writing. No expiry, no wedge classification and no observation-stream evidence is consulted at all, by design: the reap is a judgment, not an inference. Owner: Phase 9 item 3's maintenance lane, where reap corroboration lives."
+    },
+    {
+      "verb": "message.sent",
+      "why_admitted": "NO CAPABILITY AT ALL - it is in the standing-only class, so any enrolled active actor appends it",
+      "consequence": "SHARP: this is the one that RELAYS. A dispatcher persuaded by hostile text can put text of its own on the ledger addressed to another lane. The classify lint bounds it at 512 bytes per string and the append is attributable and position-stamped, but neither makes it not a channel. Owner: unassigned; see next/spec/lanes.md."
+    }
+  ],
+  "_vocabulary": "The vocabulary swept is admit.affordanceCatalog, whose completeness against the spec table is TestAffordanceCatalogCompleteness's job (both directions: a catalog verb needs a spec row and a spec verb needs a catalog entry). The honest limit: message.acked, request.* and curation.* are named in next/spec/protocol.md but are in neither, being unimplemented, so this suite cannot speak about them. Whichever card lands them inherits their classification."
+}
