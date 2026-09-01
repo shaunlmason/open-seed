@@ -824,3 +824,4 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-a95db3f5","ts":"2026-09-01T08:43:00Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"title":"next: the client's private git dir arms auto-gc in production"},"task":"os-711b3028","ts":"2026-09-01T08:50:23Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: ledger show's chain_invalid does not stamp its failing position, unlike verify"},"task":"os-37fcf7c6","ts":"2026-09-01T08:55:25Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 9 item 1a — the six lane role fragments and the four ergonomic obligations"},"task":"os-4f095d25","ts":"2026-09-01T09:00:06Z","verb":"create"}
