@@ -729,3 +729,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-c1dbf7bc","ts":"2026-09-01T03:12:28Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"to":"cancelled","transitioned":true},"task":"os-c1dbf7bc","ts":"2026-09-01T03:12:31Z","verb":"cancel"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-5ff33bc9","ts":"2026-09-01T03:12:34Z","verb":"promote"}
+{"actor":"shaunlmason","data":{"to":"cancelled","transitioned":true},"task":"os-5ff33bc9","ts":"2026-09-01T03:12:37Z","verb":"cancel"}
