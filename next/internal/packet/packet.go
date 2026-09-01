@@ -43,9 +43,27 @@ const (
 // executor resumes from. Pinned against the transition table by test.
 var ExitVerbs = []string{"claim.parked", "claim.released", "claim.reaped", "submission.made"}
 
+// EscalationVerbs also carry a packet without being exits. The
+// charter's §II.7 says an escalation carries "the packet, the
+// question, and the minimal decision", and packets.md anticipated
+// exactly this reuse. They are a SEPARATE list because ExitVerbs is
+// pinned against the transition table's in_progress outgoing set:
+// folding a non-exit into it would break the invariant that pinning
+// exists to hold (plans/os-f781f0da.md).
+//
+// A raise from ready or review has no work to hand off, which the
+// schema already spells: base is the zero-length range, refs and
+// findings may be empty, and acceptance is the contract's own anchor.
+var EscalationVerbs = []string{"escalation.raised"}
+
 // Required reports whether the verb's payload must carry a packet.
 func Required(verb string) bool {
 	for _, v := range ExitVerbs {
+		if v == verb {
+			return true
+		}
+	}
+	for _, v := range EscalationVerbs {
 		if v == verb {
 			return true
 		}

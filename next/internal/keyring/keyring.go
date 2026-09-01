@@ -138,6 +138,20 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapClaim, CapOperator}
 	case "contract.cancelled":
 		return []string{CapOperator}
+	// The escalation channel (plans/os-f781f0da.md). Raising is broad
+	// because the charter says ANY lane can raise blocked(needs-you),
+	// and it is safe to be broad because raising a question GRANTS
+	// nothing: the offer.published argument. A raised contract leaves
+	// blocked only through the operator's decision.recorded or a
+	// citing cancellation, so a raiser can stop work and hand a human
+	// the decision, never move it. Answering is operator and nothing
+	// else, the FOURTH no-fallback row: the charter names the act
+	// attributable human judgement (§I.3, humans hold gates), and a
+	// dispatch fallback would let a machine lane answer a human gate.
+	case "escalation.raised":
+		return []string{CapClaim, CapDispatch, CapVerdict, CapSupervise, CapOperator}
+	case "decision.recorded":
+		return []string{CapOperator}
 	// The reconciliation chain (plans/os-6cdc15be.md): asking for the
 	// merge is the work lane's act; observing the forge fact is the
 	// observer lane's.

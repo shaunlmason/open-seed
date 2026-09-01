@@ -36,6 +36,15 @@ type probeView struct {
 	submission  string
 	verdict     string
 	packet      string
+	escalation  string
+	// standing is whether a question stands right now: several
+	// synthesizers must carry its citation only then.
+	standing bool
+	// choice is an id the STANDING question actually offers. A guess
+	// would make a legal answer look unavailable: the probe is
+	// judged by the same rule admission enforces, which refuses a
+	// choice outside the set (review finding on #200).
+	choice string
 }
 
 // fenceKV is the optional fence citation: on a held subject the
@@ -54,6 +63,11 @@ func (v *probeView) fenceKV() string {
 // acceptance, marked decisions (none), the zero-length base range,
 // and honestly empty refs and findings (next/spec/packets.md).
 const probePacket = `{"acceptance": ["probe"], "decisions": [], "base": "0000000000000000000000000000000000000000..0000000000000000000000000000000000000000", "refs": [], "findings": []}`
+
+// probeEscalation is the minimal shape-valid question: one sentence
+// and the two-option floor a minimal decision needs
+// (next/spec/escalation.md).
+const probeEscalation = `{"question": "probe?", "options": [{"id": "a", "choice": "probe a"}, {"id": "b", "choice": "probe b"}]}`
 
 // affordanceCatalog is every verb the envelope can list, each with
 // its payload synthesizer. Completeness is pinned by test: a catalog
@@ -92,7 +106,22 @@ var affordanceCatalog = []struct {
 	}},
 	{"contract.blocked", func(v *probeView) string { return `{}` }},
 	{"contract.unblocked", func(v *probeView) string { return `{}` }},
-	{"contract.cancelled", func(v *probeView) string { return `{}` }},
+	{"contract.cancelled", func(v *probeView) string {
+		// Once a question stands, cancelling is legal only WITH the
+		// citation, and it is one of the two documented ways to answer
+		// the gate — so a bare {} would hide it precisely when it
+		// matters (review finding on #200).
+		if v.standing {
+			return `{"escalation": "` + v.escalation + `"}`
+		}
+		return `{}`
+	}},
+	{"escalation.raised", func(v *probeView) string {
+		return `{"packet": ` + v.packet + `, "escalation": ` + probeEscalation + `}`
+	}},
+	{"decision.recorded", func(v *probeView) string {
+		return `{"escalation": "` + v.escalation + `", "choice": "` + v.choice + `"}`
+	}},
 	{"contract.returned", func(v *probeView) string { return `{"verdict": "` + v.verdict + `"}` }},
 	{"claim.taken", func(v *probeView) string { return `{}` }},
 	{"claim.released", func(v *probeView) string {
@@ -187,6 +216,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		submission:  "0",
 		verdict:     "0",
 		packet:      probePacket,
+		escalation:  "0",
 	}
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {
@@ -199,6 +229,13 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 			}
 			if s.Verdict != nil {
 				v.verdict = fmt.Sprintf("%d", s.Verdict.Pos)
+			}
+			if s.Escalation != nil {
+				v.escalation = fmt.Sprintf("%d", s.Escalation.Pos)
+				v.standing = true
+				if len(s.Escalation.Options) > 0 {
+					v.choice = s.Escalation.Options[0].ID
+				}
 			}
 			view := BudgetViewAt(ctx.Records, ctx.Table, subject, s)
 			if len(view.Open) > 0 {

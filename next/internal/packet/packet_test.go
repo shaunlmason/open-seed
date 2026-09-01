@@ -140,6 +140,23 @@ func TestExitVerbsMatchTheTable(t *testing.T) {
 		t.Fatalf("packet.ExitVerbs %v drifted from the table's deliberate exits %v", pinned, fromTable)
 	}
 	if packet.Required("message.sent") || !packet.Required("submission.made") {
-		t.Fatal("Required must gate exactly the exit verbs")
+		t.Fatal("Required must gate the exit verbs")
+	}
+	// A packet-carrying verb that is NOT an exit: the escalation.
+	// Asserted from both sides, because the two lists mean different
+	// things and folding one into the other would break the pinning
+	// above rather than extend it (plans/os-f781f0da.md).
+	for _, v := range packet.EscalationVerbs {
+		if !packet.Required(v) {
+			t.Fatalf("%s carries a packet: the charter says an escalation carries one", v)
+		}
+		if tab.Allows("in_progress", v) {
+			t.Fatalf("%s must not leave in_progress: the deliberate exits are exactly four", v)
+		}
+		for _, e := range packet.ExitVerbs {
+			if e == v {
+				t.Fatalf("%s is not an exit and must stay out of ExitVerbs", v)
+			}
+		}
 	}
 }

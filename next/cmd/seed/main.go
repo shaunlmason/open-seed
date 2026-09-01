@@ -65,6 +65,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runBudget(args[1:], stdout, stderr)
 	case "claim":
 		return runClaim(args[1:], stdout, stderr)
+	case "escalation":
+		return runEscalation(args[1:], stdout, stderr)
+	case "decision":
+		return runDecision(args[1:], stdout, stderr)
 	case "submission":
 		return runSubmission(args[1:], stdout, stderr)
 	case "reconcile":

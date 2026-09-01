@@ -46,6 +46,7 @@ with its fact:
 | `budget.open` | `budget.settle`, `budget.release` | [`budgets.md`](budgets.md) |
 | `submission.pending` | `verdict.rendered` | [`verdicts.md`](verdicts.md) |
 | `verdict.unmerged` (unrequested) | `merge.requested` | [`reconciliation.md`](reconciliation.md) |
+| `escalation.pending` | `decision.recorded`, `contract.cancelled` | [`escalation.md`](escalation.md) |
 
 ## The kinds
 
@@ -64,6 +65,17 @@ with its fact:
   state, because post-close settlement is a valid intermediate state
   and a closed-without-settle predicate would file spurious findings
   mid park or reap flow (the Phase 7 exit's routing).
+- **`escalation.pending`** — a standing `blocked(needs-you)`: a
+  question addressed to a human gate that nothing else about the
+  contract moves past ([`escalation.md`](escalation.md)). `since` is
+  the **raise's** position, not the state's, because a question
+  carried by a `claim.parked` arrives with the exit that raised it.
+  The row also carries the raising event's `ts`, the only kind that
+  does: age here is **elapsed time**, and a position difference is
+  event count wearing a clock's clothes — an escalation untouched for
+  hours has the same one as an answer given instantly after a burst of
+  unrelated traffic. Computing it stays a live read
+  ([`offers.md`](offers.md)), never an admission concern.
 - **`budget.open`** — an open valid reservation, **wherever it
   stands**: from the reserve until a settle or a release closes it,
   inside the window that opened it and after. Admission gates only

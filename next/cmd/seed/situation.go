@@ -25,6 +25,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
@@ -61,6 +62,11 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 	keyPath := fs.String("key", "", "OpenSSH ed25519 private key: the actor the situation is read for")
 	subject := fs.String("subject", "", "restrict to one contract")
 	since := fs.String("since", "", "report only what changed at or after this position")
+	// Age is a LIVE read, the offer-liveness posture: admission never
+	// reads a wall clock, but listing may (next/spec/offers.md). --now
+	// makes the instant explicit so a drill can advance it without
+	// waiting (next/spec/escalation.md).
+	nowFlag := fs.String("now", "", "RFC3339 instant ages are measured against (default: now)")
 	if err := fs.Parse(args); err != nil || !posture.resolved() || fs.NArg() != 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "situation requires --ledger <dir> or --remote <repo> (not both) [--key <path>] [--subject <id>] [--since <position>]"), stdout, stderr)
 	}
@@ -207,15 +213,39 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 		obligations = changed
 	}
 
+	now := time.Now().UTC()
+	if *nowFlag != "" {
+		parsed, err := time.Parse(time.RFC3339, *nowFlag)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--now %q is not an RFC3339 timestamp", *nowFlag)), stdout, stderr)
+		}
+		now = parsed
+	}
 	out := []map[string]any{}
 	for _, row := range obligations {
-		out = append(out, map[string]any{
+		r := map[string]any{
 			"subject":       row.Subject,
 			"kind":          row.Kind,
 			"owed_by":       row.OwedBy,
 			"since":         fmt.Sprintf("%d", row.Since),
 			"discharged_by": row.DischargedBy,
-		})
+		}
+		// Where the obligation carries a timestamp, its age is
+		// reported in ELAPSED SECONDS. A position difference would be
+		// event count wearing a clock's clothes: an escalation
+		// untouched for hours has the same one as an answer given
+		// instantly after a burst of unrelated traffic.
+		if row.TS != "" {
+			r["ts"] = row.TS
+			if raised, err := time.Parse(time.RFC3339, row.TS); err == nil {
+				age := int64(now.Sub(raised).Seconds())
+				if age < 0 {
+					age = 0
+				}
+				r["age_seconds"] = fmt.Sprintf("%d", age)
+			}
+		}
+		out = append(out, r)
 	}
 	result := map[string]any{
 		"actor":       fp,
