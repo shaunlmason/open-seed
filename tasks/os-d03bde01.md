@@ -1,16 +1,13 @@
 ---
 id: os-d03bde01
 title: 'next: budget exhaustion refuses as chain_invalid; no budget exit code exists'
-state: in_progress
+state: blocked
 priority: P2
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-7ec10fb709ca6d5e
-    claimed_at: "2026-09-01T21:36:25Z"
-    lease_expires: "2026-09-01T22:36:25Z"
+blocked_on:
+    - plan:206
 created_at: "2026-09-01T14:19:51Z"
-updated_at: "2026-09-01T21:36:25Z"
+updated_at: "2026-09-01T21:39:57Z"
 ---
 
 Found while implementing the worker loop (os-abb206c8): budget
