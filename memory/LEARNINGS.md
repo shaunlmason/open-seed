@@ -414,3 +414,23 @@ Fresh sessions read this file instead of rediscovering.
   count, so any check comparing them must use `Count - 1`; the
   distinction is easy to get wrong in exactly the drill meant to
   prove the stamp trustworthy.
+- 2026-09-01 (os-768361cc): when a document you are writing reaches
+  a conclusion that serves the goal you were just handed, re-derive
+  it from the authority text adversarially before shipping it. Three
+  independent review findings on one plan turned out to be a single
+  failure — motivated reading — and each would have been caught by
+  quoting the source instead of paraphrasing it. Two specific
+  shapes: reading a collective claim distributively ("Phases 0-12
+  deliver core conformance" so any subset suffices), and splitting a
+  defined term so an existing escalation lands only on the step you
+  were not proposing.
+- 2026-09-01 (os-768361cc): place security gates by WHEN AUTHORITY
+  MOVES, not by when visibility increases. Publishing feels like the
+  bigger exposure than an internal cutover, and is not: the cutover
+  is when a stolen key starts reaching real state, so the drill that
+  proves the ceiling belongs before it.
+- 2026-09-01 (os-768361cc): machine-checkable declarations outrank
+  narrative shortcuts. A phase's `deps: all` and an exit line's
+  named criteria are facts about sequencing; check them before
+  amending order, because prose elsewhere can read as permission
+  they do not grant.

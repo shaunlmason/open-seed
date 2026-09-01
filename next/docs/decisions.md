@@ -871,3 +871,39 @@ here. Newest last.
   observation precedent, not the reconciliation one, is the
   operative analogy: reconciliation is record-derived,
   refusals input-derived.
+
+## 2026-09-01 — promotion (spin-out) defined (os-768361cc, plan #167)
+
+- Promotion is two steps, self-hosting then distribution, and
+  NEITHER cutover is autonomously decidable: the ground rules make
+  v1 the entry point "until spin-out", so spin-out is the
+  entry-point switch itself and the self-hosting cutover is the
+  reserved escalation. The plan defines criteria and mechanics for
+  both and authorizes neither.
+- Promotion requires Phases 0 through 12; Phase 13 alone follows.
+  The first draft of this amendment claimed Phases 10 and 11 were
+  not blockers by reading "Phases 0-12 deliver core conformance" as
+  permission to skip two of them. That is a misreading, recorded
+  here rather than quietly corrected: the phrase describes what
+  those phases deliver collectively, Phase 10's exit owns III.E and
+  III.G and the III.O eval items, Phase 11's owns III.K, the
+  core-conformance criterion demands every pillar's mechanisms, and
+  Phase 12 declares deps: all. Promoting without them would hand
+  real coordination to a system whose verdicts carry no calibration
+  and whose grants carry no runtime qualification.
+- The compromised-actor drill gates the SELF-HOSTING cutover, not
+  distribution. The cutover is when real authority moves, so the
+  drill proving the ceiling against a valid stolen key must precede
+  it; nothing is at risk while Seed coordinates nothing. The first
+  draft had this backwards, reasoning from visibility rather than
+  from authority.
+- Phase 9 gains item 5, the lane-facing surface: an obligations
+  projection (what is owed, by whom, since when, discharged by which
+  verbs, derived from the same tables admission enforces), a
+  situation read with --since so a resuming lane pays for the delta
+  rather than the world, and loop verbs that derive every derivable
+  argument and refuse before signing what the tables would refuse
+  after. The gap it closes is that Seed represents permission
+  (affordances) but not obligation, so nothing answers what a lane
+  owes; every fact needed is already folded, so this is a projection
+  and never a new authority.

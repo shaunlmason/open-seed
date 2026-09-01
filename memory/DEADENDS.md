@@ -51,3 +51,11 @@ reason, so the next agent doesn't burn a session rediscovering why.
   metric would have measured unrelated ledger traffic rather than an
   affordance gap. Journal ATTEMPTS, both outcomes, at the same seams:
   numerator and denominator must come from one population.
+- 2026-09-01 (os-768361cc): promoting at "core conformance" while
+  skipping Phases 10 and 11. Contradicted by those phases' own exits
+  (III.E, III.G, III.O; III.K), by the criterion demanding every
+  pillar's mechanisms, and by Phase 12's `deps: all` — and it would
+  have handed real coordination to a system with uncalibrated
+  verdicts and unqualified grants. If an earlier supervised step is
+  ever wanted it is a distinct milestone that names what it trades
+  away, not a reinterpretation of the existing phasing.

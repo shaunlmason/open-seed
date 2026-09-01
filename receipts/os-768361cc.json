@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task": "os-768361cc",
+  "merge_base": "ca0e278b60ab23f10801f19efb51e2dd1fb3461e",
+  "head": "6cc530d08e68871ebb6f4a9a5b13f4ad1a123a17",
+  "plan_path": "plans/os-768361cc.md",
+  "plan_sha256": "306e89bf3e048b43c35d07e4dbd55cfbe3ae4c8a6680617c9dc8823f0c21723d",
+  "diff_files": [
+    "docs/next-build-plan.md",
+    "memory/DEADENDS.md",
+    "memory/LEARNINGS.md",
+    "next/docs/decisions.md"
+  ],
+  "diff_sha256": "999b7b89d370931218d44f68c53e4489eb5ff304176b66313656f0373e6ea13f",
+  "validation": [
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
