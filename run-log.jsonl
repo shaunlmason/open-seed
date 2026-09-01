@@ -723,3 +723,4 @@
 {"actor":"shaunlmason","data":{"title":"next: build-plan amendment — agent-ergonomics obligations for Phase 9 lanes"},"task":"os-68ea0b2d","ts":"2026-09-01T03:01:39Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-edf73d66","ts":"2026-09-01T03:03:35Z","verb":"close"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 8 exit record — III.I scoped exit with routed remainder"},"task":"os-ef715d17","ts":"2026-09-01T03:04:32Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-ef715d17","ts":"2026-09-01T03:05:12Z","verb":"promote"}
