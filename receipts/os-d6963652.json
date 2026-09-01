@@ -2,13 +2,15 @@
   "schema_version": "1.0",
   "task": "os-d6963652",
   "merge_base": "0ebe635f7e311102689543fd59660ac38d693728",
-  "head": "8ded0954a3f36afdcae8eef220e34ed4b86c3be8",
+  "head": "9f54b98dc872d2aa04e772a2ad0445bc8e5cf871",
   "plan_path": "plans/os-d6963652.md",
   "plan_sha256": "ac3d66ac4a80c19f6167479628d1cd6471d94718d57354942445ee52d1241255",
   "diff_files": [
     "memory/DEADENDS.md",
     "memory/LEARNINGS.md",
     "next/cmd/seed/budget_cli_test.go",
+    "next/cmd/seed/situation.go",
+    "next/cmd/seed/situation_cli_test.go",
     "next/docs/decisions.md",
     "next/docs/progress.md",
     "next/internal/admit/admit.go",
@@ -24,7 +26,7 @@
     "next/spec/loop-verbs.md",
     "next/spec/obligations.md"
   ],
-  "diff_sha256": "6a8729830f1c8c88ff9b5f676a5042112b9c1e2796ef5d727a3b0f41b3cd0184",
+  "diff_sha256": "a263555952bee95283da014cc129cf4f175ceef0180d30f389bb5cd87d57e28a",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
