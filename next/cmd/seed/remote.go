@@ -32,55 +32,71 @@ import (
 // remoteMaxAttempts bounds the optimistic loop's races per invocation.
 const remoteMaxAttempts = 5
 
-func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, supported string, signer ed25519.PrivateKey, stdout, stderr io.Writer) int {
+// remoteSession is one prepared view of the remote ledger: the client,
+// the materialized and verified tip, and the records the loop verbs
+// derive their arguments from. Callers must call close when done.
+type remoteSession struct {
+	client  *gitref.Client
+	tip     string
+	store   *ledger.Store
+	resolve ledger.Resolver
+	rep     *ledger.Report
+	vopts   []ledger.VerifyOption
+	aopts   []admit.Option
+	close   func()
+}
+
+// openRemoteSession fetches, materializes and verifies the remote tip,
+// persisting the verified head before any caller runs a loop against
+// it. Sharing this prologue is what lets an argument be derived from
+// the SAME view admission will judge the draft against: a fence read
+// from a stale local copy would be wrong under exactly the contention
+// that makes claiming online-only (plans/os-7e197768.md D3).
+func openRemoteSession(remote, refName, stateDir, supported string) (*remoteSession, *envelope.Envelope) {
 	if stateDir == "" {
 		cache, err := os.UserCacheDir()
 		if err != nil {
-			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("no --state and no user cache dir: %v", err)), stdout, stderr)
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("no --state and no user cache dir: %v", err))
 		}
 		stateDir = filepath.Join(cache, "seed", "gitref")
 	}
-	// One invocation owns the state dir at a time: the git dir, tracking
-	// ref, and persisted-head cache inside it are not safe under
-	// concurrent writers, and serializing here keeps a slow writer from
-	// regressing a newer verified head (#93 review). Racing appenders
-	// use distinct --state dirs; the remote race is theirs to lose.
 	unlock, err := lockStateDir(stateDir)
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot lock client state: %v", err)), stdout, stderr)
+		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot lock client state: %v", err))
 	}
-	defer unlock()
+	done := []func(){unlock}
+	fail := func(env *envelope.Envelope) (*remoteSession, *envelope.Envelope) {
+		for i := len(done) - 1; i >= 0; i-- {
+			done[i]()
+		}
+		return nil, env
+	}
 	client, err := gitref.NewClient(stateDir, remote, refName)
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot prepare client state: %v", err)), stdout, stderr)
+		return fail(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot prepare client state: %v", err)))
 	}
-
-	// Pre-flight: fetch and verify the remote stream once to learn the
-	// resolver and the active protocol version the draft must carry (the
-	// #85 review discipline, applied to the remote tip).
 	tip, err := client.Fetch()
 	if err != nil {
-		return render(remoteFailureEnvelope(err), stdout, stderr)
+		return fail(remoteFailureEnvelope(err))
 	}
 	if tip == "" {
-		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid",
-			"remote ledger ref is empty: no genesis to append onto"), stdout, stderr)
+		return fail(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", "remote ledger ref is empty: no genesis to append onto"))
 	}
 	workDir, err := os.MkdirTemp("", "seed-remote-append-*")
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		return fail(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()))
 	}
-	defer os.RemoveAll(workDir)
+	done = append(done, func() { os.RemoveAll(workDir) })
 	if err := client.Materialize(tip, workDir); err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot materialize remote tip: %v", err)), stdout, stderr)
+		return fail(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot materialize remote tip: %v", err)))
 	}
 	store, err := ledger.Open(workDir)
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		return fail(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()))
 	}
 	resolve, _, err := genesis.Bootstrap(store)
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		return fail(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()))
 	}
 	supportedSet := map[string]bool{}
 	for _, v := range version.Supported() {
@@ -99,34 +115,34 @@ func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, su
 	}
 	rep, err := store.VerifyFromGenesis(resolve, vopts...)
 	if err != nil {
-		var fail *ledger.Failure
-		if errors.As(err, &fail) {
-			return render(failureEnvelope(fail), stdout, stderr)
+		var f *ledger.Failure
+		if errors.As(err, &f) {
+			return fail(failureEnvelope(f))
 		}
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		return fail(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()))
 	}
-	// Persist the verified tip before the loop: without it, a rollback
-	// landing between this pre-flight and the loop's own fetch would be
-	// accepted by a fresh client (#91 review).
 	if err := client.RecordVerifiedHead(tip); err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		return fail(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()))
 	}
 	if !supportedSet[rep.ActiveVersion] {
 		env := envelope.Fail(envelope.ExitVersionMismatch, ledger.ReasonVersionUnsupported,
 			fmt.Sprintf("the version active at the remote tip is %q; this build appends only %s", rep.ActiveVersion, supportedList(supportedSet)))
-		return render(stampTip(env, rep.Count), stdout, stderr)
+		return fail(stampTip(env, rep.Count))
 	}
-	fp, err := event.Fingerprint(signer.Public().(ed25519.PublicKey))
-	if err != nil {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
-	}
+	return &remoteSession{client: client, tip: tip, store: store,
+		resolve: resolve, rep: rep, vopts: vopts, aopts: aopts,
+		close: func() {
+			for i := len(done) - 1; i >= 0; i-- {
+				done[i]()
+			}
+		}}, nil
+}
 
-	// The loop re-links prev and re-signs per attempt; admission runs
-	// against the refreshed tip before every push. The signing closure
-	// keeps the last record so the envelope can report the landed hash,
-	// and the validate wrapper records the tip position each refusal was
-	// computed at so the envelope stamps it (#93 review).
-	inner := admit.Validate(aopts...)
+// pushDraft rides the optimistic append loop: prev is re-linked and the
+// record re-signed per attempt, with admission re-run against the
+// refreshed tip before every push.
+func (s *remoteSession) pushDraft(verb, subject, payload string, signer ed25519.PrivateKey, fp string) (*event.Record, *gitref.Result, error) {
+	inner := admit.Validate(s.aopts...)
 	validate := func(store *ledger.Store, rec *event.Record) error {
 		verr := inner(store, rec)
 		if verr == nil {
@@ -138,8 +154,8 @@ func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, su
 		return verr
 	}
 	var lastRec *event.Record
-	res, err := client.AppendLoop(gitref.Draft{
-		V:       rep.ActiveVersion,
+	res, err := s.client.AppendLoop(gitref.Draft{
+		V:       s.rep.ActiveVersion,
 		TS:      time.Now().UTC().Format(time.RFC3339),
 		Actor:   fp,
 		Verb:    verb,
@@ -149,7 +165,21 @@ func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, su
 		rec, serr := event.Sign(e, signer)
 		lastRec = rec
 		return rec, serr
-	}, resolve, validate, remoteMaxAttempts, vopts...)
+	}, s.resolve, validate, remoteMaxAttempts, s.vopts...)
+	return lastRec, res, err
+}
+
+func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, supported string, signer ed25519.PrivateKey, stdout, stderr io.Writer) int {
+	session, failEnv := openRemoteSession(remote, refName, stateDir, supported)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	defer session.close()
+	fp, err := event.Fingerprint(signer.Public().(ed25519.PublicKey))
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
+	}
+	lastRec, res, err := session.pushDraft(verb, subject, payload, signer, fp)
 	if err != nil {
 		return render(remoteFailureEnvelope(err), stdout, stderr)
 	}

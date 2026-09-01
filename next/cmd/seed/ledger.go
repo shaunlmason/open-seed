@@ -174,8 +174,7 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 	// have not claimed anything. The boundary enforces this regardless;
 	// refusing here keeps the dev tool from drafting doomed work.
 	if table, terr := transition.Default(); terr == nil && table.Exclusive(*verb) {
-		return render(envelope.Fail(envelope.ExitContention, "contention",
-			fmt.Sprintf("%s is an exclusive verb and claiming is online-only — exclusivity is granted at admission, so it needs --remote: two offline actors claiming the same contract have not claimed anything", *verb)), stdout, stderr)
+		return render(exclusiveOnlineOnly(*verb), stdout, stderr)
 	}
 	store, failEnv := openStore(*dir)
 	if failEnv != nil {
@@ -264,6 +263,14 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 	}
 	env := envelope.OK(map[string]any{"appended": hash, "verb": *verb})
 	return render(journalAttempt(stampTip(stampAffordances(env, *dir, signer, *subject), pos+1), *dir, signer, *verb, *subject), stdout, stderr)
+}
+
+// exclusiveOnlineOnly is the one account of why an exclusive verb
+// needs the remote, shared by the raw seam and by the loop verbs so
+// a lane never meets two explanations of one rule.
+func exclusiveOnlineOnly(verb string) *envelope.Envelope {
+	return envelope.Fail(envelope.ExitContention, "contention",
+		fmt.Sprintf("%s is an exclusive verb and claiming is online-only — exclusivity is granted at admission, so it needs --remote: two offline actors claiming the same contract have not claimed anything", verb))
 }
 
 func runLedgerShow(args []string, stdout, stderr io.Writer) int {

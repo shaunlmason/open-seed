@@ -941,3 +941,49 @@ here. Newest last.
   off-by-one the envelope's position stamp turns on.
 - Part (c), the loop verbs, is split to os-7e197768 for
   reviewability; item 5 stays one obligation with two landings.
+
+## 2026-09-01 — loop verbs (os-7e197768, plan #172)
+
+- The verbs are not sugar over `seed ledger append`, and the
+  distinction is structural rather than stylistic: the raw seam
+  consults the admission boundary NOT AT ALL, so a lane acting
+  through it learns its act was illegal from a chain-level refusal
+  after signing. Every loop verb runs the same `admit.Check`
+  admission enforces before anything is signed into the chain, and
+  renders the boundary's own error beside the caller's affordances.
+  That is Phase 8's one-rule-set principle carried from legality to
+  construction.
+- An argument the system can compute is never asked for, because a
+  value the boundary would refuse is not a choice being offered. The
+  fence comes from the active window, the reservation from the shared
+  budget view, the plan anchor from the approval (an approval admits
+  ONE exact revision, so no other citation could be legal), and the
+  resume range from the repository. What stays caller-supplied is
+  what is a judgment: `--amount`, `--actuals`, and the packet's prose.
+- Three failure shapes, three owners, and the split is the design:
+  a MISSING fact refuses in the CLI naming what would establish it; an
+  AMBIGUITY refuses in the CLI naming the candidates, because two open
+  reservations are a spend decision the lane owns and a silent choice
+  would make it for them; an ABSENT WINDOW is not a derivation failure
+  at all — the key is omitted and the boundary refuses with its own
+  account of the state, which is better than anything a derivation
+  could say.
+- On the remote path the derivation and the pre-flight read one
+  materialized remote tip. A fence or reservation read from a stale
+  local copy would be wrong under exactly the contention that makes
+  claiming online-only, so `openRemoteSession` was extracted from
+  `runLedgerAppendRemote` to share that single view rather than
+  reconstruct it per verb.
+- `claim take` refuses `--ledger` with the raw seam's own account of
+  online-only claiming, extracted to one function: a lane must never
+  meet two explanations of one rule.
+- Derivation refusals are journaled like admission refusals. A lane
+  that could not act is exactly the affordance gap the metric
+  measures, and `by_code` keeps `usage` and `not_found`
+  distinguishable from the boundary's codes.
+- Remote successes carry no affordances and journal nothing: there is
+  no local ledger to reopen at the landed tip or journal beside. That
+  is the standing shape of every remote append, recorded as a
+  deliberate absence rather than left implicit; giving the remote
+  posture its own journal home is a client-state decision no card has
+  made yet.

@@ -585,17 +585,24 @@ administrative card, not a Phase 8 item).
 ## Phase 9 — Lanes, escalation, maintenance (docs/next-build-plan.md Phase 9; deps: 6, 7, 8 ✓)
 
 - 9.5 the lane-facing surface, parts (a) and (b) — os-52d5da3f —
-  **review** (task PR against plan #170: internal/obligation deriving
-  what is owed from the same fold admission enforces, with
+  **done** (merged #171 against plan #170: internal/obligation
+  deriving what is owed from the same fold admission enforces, with
   discharged_by read from the transition tables and a closed
   fact-shaped set for the verbs that change no state; the obligations
   projection registered alongside the others; seed situation
   rendering one position-stamped envelope whose --since is a complete
   change report with an explicit discharged list; and the
   dischargeability sweep over every prefix of the shared walk
-  scenario)
-- 9.5 part (c) loop verbs — os-7e197768 — backlog (split for
-  reviewability; item 5 is one obligation with two landings)
+  scenario, which caught a real modeling error on its first run)
+- 9.5 part (c) loop verbs — os-7e197768 — **review** (task PR
+  against plan #172: the seven acts that close poll → claim → work →
+  meter → submit → exit, each deriving the fence from the active
+  window, the reservation from the shared budget view, the plan
+  anchor from the approval, and the resume range from the
+  repository, and each pre-flighting through the same admit.Check
+  admission enforces so a refusal carries the boundary's own error
+  beside the caller's affordances; claim take remote-only; the
+  packet validated at the door; new next/spec/loop-verbs.md)
 - 9.1 lane role fragments, dispatcher least-capability, injection
   corpus, worker-lane loop with exhaustion parking — backlog
 - 9.2 escalation with packet, question and decision — backlog
@@ -622,27 +629,33 @@ every card closed. Phase 8 is done and closed: every plan (#158,
 the out-of-item ledger writeHead race fix (#161 against plan #159),
 and the exit record above (card os-ef715d17's task PR) are merged
 with every card closed.
-Phase 9 is under way: item 5's derivation and read are in review
-(os-52d5da3f), with its loop verbs split to os-7e197768.
+Phase 9 is under way: item 5 is complete once the loop verbs land —
+its derivation and read merged (#171), and its acts are in review
+(os-7e197768). The lane-facing surface is therefore whole in shape:
+`seed situation` says what is true and what is owed, and the loop
+verbs are how a lane acts on it without hand-assembling protocol
+arguments.
 **Next action: Phase 9 item 1** — the six lane role definitions as
 composable fragments, the dispatcher's least-capability posture, the
 injection conformance suite against dispatcher input handling, and
 the worker-lane loop carrying the exhaustion-park obligation the
-Phase 7 exit routes to it — a new card, plan-first, per the loop;
-then Phase 9 items 2 through 4 (escalation with packet, question and
-decision; the unattended maintenance loop, whose lint list carries
-the Phase 7 exit's unsettled-run detection; small-team and fleet
-fixtures).
+Phase 7 exit routes to it — a new card, plan-first, per the loop.
+That loop now has verbs to call rather than a raw seam to assemble,
+which is what item 5 part (c) exists to give it. Then Phase 9 items
+2 through 4 (escalation with packet, question and decision; the
+unattended maintenance loop, whose lint list carries the Phase 7
+exit's unsettled-run detection; small-team and fleet fixtures).
 The III.I remainder rides the phases it was routed to: Phase 11 item
 2 carries claim-time lesson surfacing, and Phase 13 carries the
 machine-protocol surface and platform parity, with III.I on its exit
 line — full III.I conformance closes only when both do.
-**The destination is promotion (spin-out)**: Seed coordinating this
-repository's own development, and then becoming what new users
-clone. What promotion requires — and a lane-facing surface proposed
-as a further Phase 9 item — is card os-768361cc's plan-gated
-build-plan amendment, still open at this writing. No promotion
-criteria are asserted here, and none should be read from this file:
-the amendment is the authority once it merges.
+**The destination is promotion (spin-out)**, now defined:
+`docs/next-build-plan.md` §5 (merged #169, card os-768361cc) makes
+it two steps — Seed coordinating this repository's own development,
+then becoming what new users clone — with seven criteria, Phases 0
+through 12 required and Phase 13 alone following, and **neither
+cutover autonomously decidable**: spin-out IS the entry-point
+switch, so both are escalations. That section is the authority; no
+promotion criteria are restated here.
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
