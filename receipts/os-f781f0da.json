@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-f781f0da",
   "merge_base": "e0ba1565dc7c83405da1c80ffb07fa2d42b0a25a",
-  "head": "b8d7c29233473706b8a64560a920b2c16beefecc",
+  "head": "4af95e61ee8b87c41ca12c1749fe4fdb3b6a48f9",
   "plan_path": "plans/os-f781f0da.md",
   "plan_sha256": "6ef9deeadd43df316b5189a6f8ac9d70729ae802ecceaa8ae88d75d93e109e39",
   "diff_files": [
@@ -36,7 +36,7 @@
     "next/spec/packets.md",
     "next/spec/transitions.json"
   ],
-  "diff_sha256": "edeffce4677ca0654f4c994eec62564ca384ec46e499998510871f5f547cc11e",
+  "diff_sha256": "6c2daa2785594bcd49b308a0a598f0f7e21f35a1ced1bcdf32e77be385f4e252",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
