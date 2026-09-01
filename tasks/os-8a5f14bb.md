@@ -1,16 +1,12 @@
 ---
 id: os-8a5f14bb
 title: 'next: Phase 9 item 3 — the unattended maintenance loop'
-state: in_progress
+state: review
 priority: P1
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-f23bf73bd73d637b
-    claimed_at: "2026-09-01T20:49:29Z"
-    lease_expires: "2026-09-01T22:18:58Z"
+author: seed-next-implementer
 created_at: "2026-09-01T20:22:10Z"
-updated_at: "2026-09-01T21:22:34Z"
+updated_at: "2026-09-01T21:22:38Z"
 ---
 
 Phase 9 item 3 of docs/next-build-plan.md. Above L1: plan first at
