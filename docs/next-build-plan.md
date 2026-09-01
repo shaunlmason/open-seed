@@ -241,19 +241,34 @@ versioned.
    `run.started` whose `run.settled` is still missing once the subject has taken a
    subsequent claim window or reached a terminal state is flagged (the Phase 7 exit's
    metering-detection obligation; post-close settlement is a valid intermediate
-   state, so the condition is position-anchored, never mid park/reap flow). The
-   reaper may act on an `expired` classification BECAUSE item 1's loop emits its
-   observations from its own steps: absence of observation is therefore absence of
-   work, not absence of bookkeeping. No further predicate is added for it, and in
-   particular non-advancing observations are NOT a heartbeat signature: a legitimate
-   long-running step emits exactly that shape, which the existing expiry/wedge
-   classification already distinguishes.
+   state, so the condition is position-anchored, never mid park/reap flow). Item 1's
+   loop emitting its observations from its own steps makes an `expired`
+   classification BETTER EVIDENCE, because it removes forgotten bookkeeping as a
+   cause of silence: a lane that is working is a lane that is observing. It does
+   NOT make silence proof, and the reap stays a judgment rather than an inference.
+   The channel is ephemeral and lossy by declaration (charter §II.3,
+   `next/spec/observations.md`), so a dropped stream and dead work look identical
+   from the outside, and `no_data` — the stream that holds nothing at all —
+   carries no reap path whatever. Reaping therefore requires corroboration beyond
+   silence, which the maintenance lane's design must supply; what this obligation
+   buys is that the silence it corroborates is not an artifact of a worker
+   forgetting to speak. No heartbeat predicate is added either: non-advancing
+   observations are NOT a heartbeat signature, since a legitimate long-running step
+   emits exactly that shape, which the existing expiry/wedge classification already
+   distinguishes.
 4. Small-team mode and fleet mode end-to-end fixtures. Both run with **no wake
    channel at all** (the one-inbox doctrine asserted rather than asserted about),
-   and every refusal a lane meets in them is followed either by an admitting act on
-   its next attempt or by an escalation carrying that refusal: one-retry
-   convergence, in the only form a fixture can fail on. A refusal a correct lane
-   cannot act on is a bug here, exactly as a listed-but-refused verb is one in
+   and every refusal a lane meets in them converges within one retry, in one of
+   three ways: an admitting act on its next attempt, a refreshed position-stamped
+   read showing the act is no longer owed, or an escalation carrying that
+   refusal's `code` and `message`. The middle arm is not a loophole but the
+   common case: in fleet mode two workers racing `claim take` means the loser
+   legitimately re-orients and takes different work, and a fence invalidated by a
+   concurrent reap says the same thing — requiring admission or escalation there
+   would either reject correct lane behavior or manufacture an escalation storm
+   out of ordinary contention. What is forbidden is the fourth outcome: a blind
+   retry, a silent loop, or a bare "failed". A refusal a correct lane can do
+   nothing with is a bug here, exactly as a listed-but-refused verb is one in
    Phase 8.
 5. **The lane-facing surface.** Lanes are defined here but nothing defines the
    surface they act through: today the CLI is the raw protocol seam (`ledger append
