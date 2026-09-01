@@ -123,14 +123,21 @@ var affordanceCatalog = []struct {
 	{"offer.published", func(v *probeView) string {
 		return `{"eligibility": {"capabilities": ["claim"], "tiers": []}, "expires": "` + v.expires + `"}`
 	}},
+	// The budget facts cite the fence CONDITIONALLY
+	// (plans/os-d6963652.md D5): a reservation outlives its claim
+	// window and closes wherever it stands, so an unconditional
+	// citation would have the fence rule refuse the probe outside a
+	// window and hide a legal close. Reserve joins them although its
+	// own rule still refuses it there: refused by the right rule, so
+	// the envelope answers "why not" honestly.
 	{"budget.reserve", func(v *probeView) string {
-		return `{"amount": "1", "fence": "` + v.fence + `"}`
+		return `{` + v.fenceKV() + `"amount": "1"}`
 	}},
 	{"budget.settle", func(v *probeView) string {
-		return `{"reservation": "` + v.reservation + `", "actuals": "1", "fence": "` + v.fence + `"}`
+		return `{` + v.fenceKV() + `"reservation": "` + v.reservation + `", "actuals": "1"}`
 	}},
 	{"budget.release", func(v *probeView) string {
-		return `{"reservation": "` + v.reservation + `", "fence": "` + v.fence + `"}`
+		return `{` + v.fenceKV() + `"reservation": "` + v.reservation + `"}`
 	}},
 	{"run.started", func(v *probeView) string {
 		return `{"fence": "` + v.fence + `", "reservation": "` + v.reservation + `"}`

@@ -609,6 +609,18 @@ administrative card, not a Phase 8 item).
 - 9.3 unattended maintenance, whose lint list carries the Phase 7
   exit's unsettled-run detection — backlog
 - 9.4 small-team and fleet fixtures — backlog
+- out-of-item: a reservation outlives its window — os-d6963652 —
+  **review** (task PR against plan #175: admission gated all three
+  budget verbs on `in_progress`, so a reservation whose claim window
+  ended could never be settled or released while `BudgetViewAt` kept
+  counting it against capacity; the gate moves to `budget.reserve`
+  alone, the `budget.open` obligation drops the live-window
+  restriction its reason no longer supports and is attributed
+  standing-awarely to whoever can still close it, and the three budget
+  affordance probes move to the conditional fence citation without
+  which the dischargeability sweep could not go green at the very
+  prefixes the fix is for; the shared walk now ends by suspending and
+  revoking the lane holding an open reservation)
 
 ## Frontier
 

@@ -64,11 +64,24 @@ with its fact:
   state, because post-close settlement is a valid intermediate state
   and a closed-without-settle predicate would file spurious findings
   mid park or reap flow (the Phase 7 exit's routing).
-- **`budget.open`** — an open valid reservation **while the subject
-  is `in_progress`**. Outside that window admission gates every
-  budget verb, so both closing verbs refuse and the reservation is a
-  maintenance concern rather than an obligation; the stranded-capacity
-  gap is tracked on its own card, not papered over here.
+- **`budget.open`** — an open valid reservation, **wherever it
+  stands**: from the reserve until a settle or a release closes it,
+  inside the window that opened it and after. Admission gates only
+  the reserve on `in_progress` ([`budgets.md`](budgets.md)), so both
+  closing verbs stay reachable once the window ends and the debt is
+  a debt rather than a maintenance concern. This matters most on the
+  failed-verdict retry, where the next claimant is a different worker
+  and an unclosed hold would come out of their remaining.
+
+  Owed by **whoever can still discharge it**, which is not always
+  whoever opened it and is never merely whoever holds the window: a
+  close admits for the reservation's own reserving signer or the
+  operator lane and for nobody else, so the row names that signer
+  while their standing lets them close, and `lane:operator` once
+  suspension or revocation means every close from them refuses.
+  Attributing a debt to a fingerprint nobody can sign for would hide
+  it from the one actor able to pay it, on exactly the
+  revocation-recovery path the charter cares about.
 - **`contract.blocked`** — a blocked subject; owed by the operator
   lane; discharged by the verbs leaving `blocked`.
 
@@ -117,6 +130,13 @@ One global exception: under a declared halt nothing admits but the
 lift, so every obligation still *stands* while none is dischargeable.
 That is the halt working, not an obligation defect, and the sweep
 checks only well-formedness at halted positions.
+
+The sweep walks the shared scenario's every prefix, and the scenario
+ends by **suspending and then revoking** a lane that still holds an
+open reservation: a walk of only active actors can never reach the
+positions where an obligation's usual owner has lost the power to
+discharge it, which are the positions standing-aware attribution
+exists for.
 
 ## Deliberately absent (v0)
 

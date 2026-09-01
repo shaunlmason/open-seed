@@ -200,8 +200,9 @@ verdict (`reconciliation.md`), and `check.sealed` admits only on
 `merge.overridden` admits only on `review` subjects over a validated
 fail (`reconciliation.md`), and `offer.published` admits only on
 `ready` subjects with an unexpired-at-admission expiry (`offers.md`),
-and the `budget.*` facts admit only on `in_progress` subjects inside
-the claim window they spend under (`budgets.md`), and `run.started`
+and `budget.reserve` admits only on `in_progress` subjects inside the
+claim window it spends under while its two closes admit wherever the
+reservation they cite stands open (`budgets.md`), and `run.started`
 admits only inside the active claim window against an open
 reservation while `run.settled` cites any applied claim fence that
 carries a start (`executors.md`) — the §8 chain is

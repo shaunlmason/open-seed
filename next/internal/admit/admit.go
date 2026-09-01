@@ -668,12 +668,22 @@ func Default() []Rule {
 				}
 				return nil
 			}
-			if s.State != "in_progress" {
-				return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
-			}
 			operatorNow := c.Keyring != nil && c.Keyring.HasAnyCapability(rec.Event.Actor, []string{keyring.CapOperator})
 			switch verb {
 			case transition.BudgetReserveVerb:
+				// Reserving is the one budget act a claim window gates
+				// (plans/os-d6963652.md D1): capacity is committed for
+				// the window that will spend it, so a reserve outside
+				// one has nothing to spend under, and the
+				// holder-or-operator check below says the same thing
+				// about WHOSE window. The two closes carry no state
+				// gate: a reservation outlives its window, closing one
+				// honestly is wrong in no state, and a gate on the
+				// verb FAMILY stranded the capacity of every attempt
+				// that ended in a fail verdict.
+				if s.State != "in_progress" {
+					return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
+				}
 				var p struct {
 					Amount string `json:"amount"`
 					Fence  string `json:"fence"`

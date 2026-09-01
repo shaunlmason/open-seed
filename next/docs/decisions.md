@@ -987,3 +987,67 @@ here. Newest last.
   deliberate absence rather than left implicit; giving the remote
   posture its own journal home is a client-state decision no card has
   made yet.
+
+## 2026-09-01 — a reservation outlives its window (os-d6963652, plan #175)
+
+- The `in_progress` gate moved from the budget verb FAMILY to
+  `budget.reserve` alone. Reserving capacity for a window you do not
+  hold is what that gate exists to prevent; closing a reservation
+  honestly is wrong in no state, and the derivation half
+  (`BudgetCloseValid`, landed in Phase 7) already validated a close by
+  identity alone and asked nothing about a window. Admission was the
+  accidental over-restriction, not the derivation.
+- The harm was not "capacity leaks on done contracts". Windows end
+  four ways, and one is a failing verdict returning the contract to
+  the queue: the next claimant is a DIFFERENT worker, neither the
+  reservation's signer nor the operator, so no party could close the
+  hold and their own reserves came out of a remaining the previous
+  attempt had silently reduced. A retry after a failed verdict was
+  quietly poorer than a first attempt.
+- Auto-closing a stranded reservation when its window ends was
+  rejected: it would record zero spend for work that may have spent
+  plenty, which is what the budget rule already refuses to do for
+  unknown classes, and it would destroy the distinction between "we
+  spent nothing" and "nobody said".
+- The card's alternative — detect it in maintenance and reap it — was
+  unimplementable on its own. With the gate in place NO act freed the
+  capacity, for anyone, the maintenance lane included (it is audited
+  as an ordinary actor precisely so it has no private powers).
+  Detection without an admissible remedy is a report nobody can act
+  on.
+- The `budget.open` obligation drops its live-window restriction,
+  because the restriction's reason is gone: the advertised
+  dischargers are reachable again. Detection lands through the
+  projection that already exists — no new lint, no build-plan change,
+  and `seed situation` surfaces it to the party who can act.
+- That party is **whoever can still discharge it**, never merely
+  whoever holds the window. Admission closes a reservation for its own
+  reserving signer or the operator lane and nobody else, so
+  attributing the row to the current holder named a party admission
+  refuses on any reservation the holder did not sign. And because
+  `HasAnyCapability` is standing-aware, a suspended or revoked signer
+  can no longer close: the row hands off to `lane:operator` there, or
+  a keyed `seed situation` would filter the debt away from the one
+  actor able to pay it, on exactly the revocation-recovery path the
+  charter cares about.
+- The three budget AFFORDANCE PROBES cited `"fence"` unconditionally,
+  unlike every fence-optional verb's conditional `fenceKV()`. Outside
+  a window that citation is refused by the FENCE rule, so removing the
+  budget state gate alone would have left `admit.Affordances` hiding a
+  now-legal close and the dischargeability sweep red at exactly the
+  prefixes this card exists to fix. `budget.reserve` moved with them
+  although it stays gated: its out-of-window probe was refused by the
+  wrong rule, which is the drift class Phase 8 built the probes to
+  expose.
+- The proof is the CLASS, not a hand-picked case: the sweep walks
+  every prefix of the shared scenario and now necessarily reaches
+  positions where the window has ended. The walk was extended by
+  SUSPENDING and then REVOKING the lane holding the open reservation,
+  because a walk of only active actors can never reach the positions
+  standing-aware ownership exists for. Both mutations — restoring the
+  family-wide gate, and dropping the standing-aware owner — turn the
+  sweep red.
+- Supersedes one clause of the loop-verb decision above: an absent
+  window is still not a derivation failure, but the boundary does not
+  always REFUSE there. A close outside a window is legal and cites no
+  fence, which is precisely why omitting the key beats inventing one.

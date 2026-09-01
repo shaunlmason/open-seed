@@ -11,6 +11,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
@@ -38,10 +39,30 @@ func DeriveObligations(records []*event.Record) ([]obligation.Row, error) {
 	if err != nil {
 		return nil, err
 	}
-	open := func(subject string, s transition.SubjectState) []transition.ReservationFact {
-		return admit.BudgetViewAt(records, table, subject, s).Open
+	ring, _, err := keyring.StateAt(records)
+	if err != nil {
+		return nil, err
 	}
-	return obligation.Derive(records, table, open), nil
+	deps := obligation.Deps{
+		BudgetOpen: func(subject string, s transition.SubjectState) []transition.ReservationFact {
+			return admit.BudgetViewAt(records, table, subject, s).Open
+		},
+		// The same capability question the grant rule asks at
+		// admission, asked of the party a row would be owed by: an
+		// obligation belongs to whoever can still discharge it, and
+		// standing is the keyring's answer to give. Still a pure
+		// function of the verified prefix, so the projection stays
+		// input-free.
+		CanDischarge: func(actor string, verbs []string) bool {
+			for _, verb := range verbs {
+				if ring.HasAnyCapability(actor, keyring.AcceptedCapabilities(verb)) {
+					return true
+				}
+			}
+			return false
+		},
+	}
+	return obligation.Derive(records, table, deps), nil
 }
 
 func buildObligations(records []*event.Record, _ Inputs) (map[string][]byte, error) {

@@ -41,8 +41,11 @@ who explains it:
   declining to pick: two open reservations are a spend decision the
   lane owns, and a silent choice would make it for them.
 - **An absent window** is not a derivation failure at all: the key is
-  simply omitted, and the boundary refuses with its own account of
-  the state, which is better than anything a derivation could say.
+  simply omitted, and the boundary decides on its own account of the
+  state, which is better than anything a derivation could say. It
+  does not always refuse: a budget close outside a window is legal
+  and cites no fence ([`budgets.md`](budgets.md)), which is precisely
+  why omitting the key beats inventing one.
 
 ## Refuse before signing, and say what IS legal
 

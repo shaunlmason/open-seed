@@ -472,3 +472,32 @@ Fresh sessions read this file instead of rediscovering.
   boundary, whose refusal names the state and beats anything the
   derivation could say. Deciding this per shape rather than per verb
   kept the error surface small.
+- 2026-09-01 (os-d6963652): when a gate is written against a verb
+  FAMILY, check whether the family shares the reason. Admission gated
+  reserve, settle and release on `in_progress` in one line, but only
+  the reserve has a claim on the window: closing a reservation
+  honestly is wrong in no state. The derivation half had said so all
+  along — `BudgetCloseValid` validates a close by identity alone —
+  which is the tell for an over-broad admission gate generally: when
+  the derivation asks less than admission does, one of them is guessing.
+- 2026-09-01 (os-d6963652): "detect it and let maintenance reap it" is
+  not an alternative to fixing an admission rule when the rule is why
+  nothing can reap it. The maintenance lane is audited as an ordinary
+  actor precisely so it has no private powers, so with the gate in
+  place NO act freed the capacity, for anyone. Detection without an
+  admissible remedy is a report nobody can act on.
+- 2026-09-01 (os-d6963652): an obligation is owed by whoever can
+  discharge it, which is only usually whoever opened it. The
+  `budget.open` row was attributed to the claim holder, and admission
+  closes a reservation for its own signer or the operator lane and
+  nobody else — so on any reservation the holder had not signed, the
+  row named a party admission refuses. Standing widens it further:
+  `HasAnyCapability` is standing-aware, so a suspended signer can no
+  longer pay a debt keyed to their fingerprint, and a keyed read then
+  hides it from the operator who can.
+- 2026-09-01 (os-d6963652): a conformance walk of only ACTIVE actors
+  cannot reach the positions where standing decides anything. Ending
+  the shared scenario by suspending and then revoking a lane that
+  still holds an open reservation cost two script lines and turned
+  ownership attribution from an assertion into a swept class — it
+  fails on mutation, which the hand-picked drill alone would not.
