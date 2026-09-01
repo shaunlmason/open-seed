@@ -114,6 +114,20 @@ catch a regression cannot catch that regression.
   still map to `chain_invalid`**, table-driven over the real boundary.
   Narrowness enforced, not asserted.
 
+  **And the matrix lives in `cmd/seed`, not `internal/admit`** (review
+  finding on #206). `BudgetError` becomes an envelope in exactly one
+  place: the **unexported** `remoteFailureEnvelope` in
+  `cmd/seed/remote.go`. A table in `internal/admit` can assert which
+  refusals set the flag and nothing whatever about which code they
+  come back as — so the mapper-wide regression D3 exists to prevent
+  would sit outside every assertion, and the drill would read as
+  though it covered it.
+
+  This is #202's lesson arriving in my own planning: a drill placed in
+  the package that owns the TYPE rather than the package that owns the
+  CONVERSION proves the wrong half. The first draft made exactly that
+  mistake one card after recording it.
+
 - **D4 — the characterization pin is REMOVED, not inverted in place.**
   `loop_e2e_test.go`'s pin exists to fail when this lands. Deleting it
   and asserting the new code in the same drill is the honest move: the
@@ -137,20 +151,32 @@ catch a regression cannot catch that regression.
 4. `next/internal/admit/admit.go` — `BudgetError.Exhausted`, set at the
    capacity site only.
 5. `next/cmd/seed/remote.go` — the mapping, before the catch-all.
-6. `next/internal/admit/budget_test.go` — the thirteen-refusal
-   narrowness table (D3).
+6. `next/cmd/seed/budget_cli_test.go` — the thirteen-refusal
+   narrowness matrix, driven through the CLI so it exercises the
+   mapper rather than the flag (D3).
 7. `next/cmd/seed/loop_e2e_test.go` — the pin removed, the new code
    asserted in the packet (D4).
 8. `next/spec/budgets.md` — the "no new exit codes" sentence replaced
    by what is now true, and the structured-refusal claim made good.
+8b. `next/spec/loop-verbs.md` — its **"A residual, recorded"** passage
+   (the one that says exhaustion refuses under `chain_invalid` and that
+   closing the residual "forces this passage to be updated with it")
+   replaced by the exhaustion contract as it then stands. The passage
+   named itself as the thing that must change and the first draft
+   still missed it (review finding on #206): a residual that names its
+   own retirement condition is a promise, and leaving it stale would
+   leave the documented worker-loop protocol false.
 9. `next/docs/decisions.md`, `memory/LEARNINGS.md`; receipt; evidence;
    review.
 
 ## File Scope
 
 - `next/internal/envelope/**`, `next/internal/admit/**`,
-  `next/cmd/seed/remote.go`, `next/cmd/seed/loop_e2e_test.go`
-- `next/spec/envelope.md`, `next/spec/budgets.md`
+  `next/cmd/seed/remote.go`, `next/cmd/seed/budget_cli_test.go` (the
+  narrowness matrix, where the conversion is), and
+  `next/cmd/seed/loop_e2e_test.go`
+- `next/spec/envelope.md`, `next/spec/budgets.md`,
+  `next/spec/loop-verbs.md`
 - `next/docs/decisions.md`, `memory/*`
 - `receipts/os-d03bde01.json`
 
@@ -161,9 +187,12 @@ Nothing outside `next/**` except the work-product files above.
 1. Exhaustion at `budget.reserve` refuses with code `budget_exhausted`
    and exit 27, asserted through the **real boundary** rather than by
    constructing the error.
-2. **All thirteen** other `BudgetError` refusals still map to
-   `chain_invalid`, table-driven. This is D3 enforced: the drill fails
-   if the mapping widens to the whole rule.
+2. **All thirteen** other `BudgetError` refusals still come back as
+   `chain_invalid`, table-driven **through the CLI**, so the assertion
+   is about the envelope the caller receives rather than about the
+   flag the error carries. This is D3 enforced: the drill fails if the
+   mapping widens to the whole rule, and it can only do that from the
+   package where the conversion lives.
 3. The parity drill **parses** `envelope.md` and fails in **both**
    directions — a constant with no row, and a row with no constant.
    Both are drilled by planting each, because a parity drill that has
@@ -174,7 +203,9 @@ Nothing outside `next/**` except the work-product files above.
    only guarding a hypothetical one.
 5. The loop's exhaustion park carries `budget_exhausted` **verbatim**
    into the packet's findings, read back from the ledger; the old
-   characterization pin is gone.
+   characterization pin is gone, and `loop-verbs.md`'s residual passage
+   describes the contract that then holds rather than the one it
+   replaced.
 6. **Mutation evidence.** Each must fail a drill: mapping every
    `BudgetError` to the new code; leaving the capacity site's flag
    unset; removing one row from the spec table; adding a row for a code
@@ -213,6 +244,17 @@ The second risk is that the parity drill is written to pass. Criterion
 where five codes have no rows. A drill that has only ever seen the
 fixed table has not been shown to detect anything.
 
-Both risks name something checkable: `git grep -c 'BudgetError{'
-next/internal/admit` is 14, and `envelope.md`'s table ends at 21 while
-`internal/envelope` defines 26.
+A third, now that the review has named it twice: **the drill in the
+wrong place.** Both findings on #206 were that — a matrix in
+`internal/admit` that could not see the mapping, and a spec update that
+skipped the passage naming itself as the one to change. Neither would
+have failed anything; both would have read as coverage. The standing
+check is "does this assertion live where the thing it asserts
+happens?", and for prose, "which files say the old thing?" —
+`git grep -ln chain_invalid next/spec/` answers the second in one
+command.
+
+All of it names something checkable: `git grep -c 'BudgetError{'
+next/internal/admit` is 14, `envelope.md`'s table ends at 21 while
+`internal/envelope` defines 26, and `remoteFailureEnvelope` is
+unexported in `cmd/seed/remote.go`.
