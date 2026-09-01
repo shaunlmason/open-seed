@@ -59,3 +59,12 @@ reason, so the next agent doesn't burn a session rediscovering why.
   verdicts and unqualified grants. If an earlier supervised step is
   ever wanted it is a distinct milestone that names what it trades
   away, not a reinterpretation of the existing phasing.
+- 2026-09-01 (os-7e197768): deriving a fence or reservation from a
+  locally cached view before pushing to a remote. It reads correctly
+  in every uncontended test and is wrong in exactly the case that
+  makes claiming online-only: under contention the local copy is
+  stale, so the derived citation names a window someone else closed.
+  The fix was structural, not defensive — extract the remote session
+  so the derivation and the admission pre-flight read one
+  materialized remote tip, rather than reconstructing a view per
+  verb and hoping they agree.
