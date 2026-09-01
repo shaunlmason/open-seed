@@ -37,6 +37,26 @@ fixture can fail on it.
   criterion 1's "orienting from one position-stamped read rather than
   hand-assembling ledger payloads and hand-computing fences" made a
   property of the role file rather than of the agent writing it.
+
+  **The read is not yet complete, and this amendment says so.** Build
+  plan item 5(b) specifies the situation read as "standing obligations
+  with clocks, active windows and fences, **unread messages**, budget
+  headroom". #171 landed everything but the messages: `seed situation`
+  returns `actor`, `obligations` and `windows`, and no projection over
+  `message.sent` exists at all (review finding on this PR — a lane
+  told to orient from one read cannot learn it has mail, so it would
+  have to take a second read or treat the pushed message as
+  authoritative, and D5 forbids the second of those). So this
+  amendment records item 5(b) as **partially met** and routes the
+  remainder, rather than writing a single-read contract the surface
+  cannot honour.
+
+  **"Unread" needs no stored read-state.** There is no `message.read`
+  verb and there should not be one: the position a lane carries
+  forward IS its read cursor, so the messages new to a lane are
+  exactly those arisen after the `--since` position the delta already
+  computes. That is the identity `--since` already has for
+  obligations, so the surface gains a section, not a concept.
 - **D2 — the loop acts through the loop verbs, never the raw seam.**
   Item 1's worker-loop text names the acts as `claim take|release|park`,
   `submission make`, `budget reserve|settle|release` — the surface item
@@ -67,6 +87,20 @@ fixture can fail on it.
   classification is true information the reaper may act on rather than
   an artifact of forgotten bookkeeping. A heartbeat verb that reports
   only "still here" is forbidden by this item, not merely undesirable.
+
+  **Forbidden by construction, not by detection** (review finding on
+  this PR). The first draft asked Phase 9 item 3 to lint "a claim
+  window whose only observations are non-advancing". That predicate
+  cannot work: `next/spec/observations.md` already classifies a
+  non-advancing stream as live until `wedge_after` and wedged after
+  it, and a legitimate long-running step emits exactly that shape.
+  With no heartbeat discriminator in the observation schema the lint
+  would either flag valid long-running work or never fire — either way
+  it stops unattended maintenance from staying green. The obligation
+  is enforced where it is decidable: the worker loop's **vocabulary**
+  contains no verb whose only purpose is liveness, which a role
+  fragment and a fixture can both be checked against. Detection stays
+  with the expiry/wedge classification that already does it.
 - **D5 — the one-inbox doctrine.** Push channels **wake**;
   position-stamped reads **convince**. No lane treats a wake, an
   event, or a message as a fact about the world: it is a hint to read.
@@ -81,7 +115,7 @@ fixture can fail on it.
   a table, projection or surface that already exists; none adds a
   verb, a state, or a place where truth can live.
 - **D7 — no phase, dependency or exit-line changes.** The amendment is
-  sentence-level extension inside Phase 9 items 1, 3 and 4. The exit
+  sentence-level extension inside Phase 9 items 1 through 5. The exit
   line already carries III.J and promotion's lanes-operable and
   loop-completeness gates; these obligations tell it what to check,
   they do not add a gate.
@@ -100,11 +134,20 @@ fixture can fail on it.
    an escalation raised in answer to a refusal carries that refusal's
    `code` and `message` in its packet, so the question a human is asked
    is the boundary's own account rather than a lane's paraphrase.
-3. **Extend Phase 9 item 3's lint list** with D4's enforcement half:
-   the maintenance lane's reaper may act on an `expired` classification
-   **because** the loop's steps emit the observations, so a lint flags
-   any claim window whose only observations are non-advancing — the
-   heartbeat shape the item forbids — rather than reaping it silently.
+3. **Extend Phase 9 item 3's text** with D4's enforcement half, stated
+   as the reason the existing classification is trustworthy rather
+   than as a new lint: the maintenance lane's reaper may act on an
+   `expired` classification **because** the loop's own steps emit the
+   observations, so absence of observation means absence of work. No
+   new predicate is added: the first draft's "flag non-advancing
+   streams" lint is withdrawn as undecidable against a legitimate
+   long-running step.
+3b. **Record item 5(b)'s unmet remainder in the build plan** (D1): the
+   situation read carries the messages addressed to the caller, with
+   "unread" derived from the cited `--since` position rather than from
+   stored read-state, and item 5(b) is complete only when it does.
+   Named in item 5's own text, on the #157/#169 precedent, so the
+   routing binds.
 4. **Extend Phase 9 item 4's fixture text** with D3 and D5's assertions:
    both mode fixtures run with **no wake channel**, and every refusal a
    lane meets in them is followed by an admitting act or by an
@@ -125,7 +168,7 @@ fixture can fail on it.
 ## File Scope
 
 - `docs/next-build-plan.md` (sentence-level extensions to Phase 9
-  items 1, 2, 3 and 4; no phase, dependency or exit-line changes)
+  items 1, 2, 3, 4 and 5; no phase, dependency or exit-line changes)
 - `next/spec/observations.md` (the one reap-heuristic sentence)
 - `next/docs/progress.md`
 - `receipts/os-68ea0b2d.json`
@@ -134,7 +177,12 @@ fixture can fail on it.
 
 1. Phase 9 item 1 carries D1, D2, D4 and D5 in its own words, each
    stated so a fixture or a validation check can fail on it, and none
-   of them adding a verb, a state, or a source of truth.
+   of them adding a verb, a state, or a source of truth. D4 is stated
+   as a property of the loop's vocabulary (no liveness-only verb),
+   never as a lint over observation streams.
+1b. Phase 9 item 5 records (b) as partially met: the situation read
+   must carry the caller's messages, with "unread" derived from the
+   cited position, and no `message.read` verb is introduced.
 2. Phase 9 item 2 carries D3's escalation half; item 3 carries D4's
    lint half; item 4 carries the wakeless-fixture and
    one-retry-convergence assertions.
@@ -142,7 +190,7 @@ fixture can fail on it.
    assigns Seed a lease it does not have, and the build plan and the
    spec tell one story about how liveness is established.
 4. No phase heading, `deps:` line or `*Exit:*` line changes anywhere
-   in the file; the diff is additive sentences inside four items plus
+   in the file; the diff is additive sentences inside five items plus
    the one spec sentence.
 5. The frontier records the amendment against the Phase 9 rows.
 6. `make check` green (docs-only, so unchanged code surfaces).
@@ -156,6 +204,6 @@ make check
 ## Expected diff shape
 
 Three files: `docs/next-build-plan.md` (additive sentences inside
-Phase 9 items 1 through 4), `next/spec/observations.md` (one
+Phase 9 items 1 through 5), `next/spec/observations.md` (one
 corrected sentence), and `next/docs/progress.md` (the Phase 9 rows) —
-plus the receipt. Roughly +45/-6 lines. No code surfaces.
+plus the receipt. Roughly +55/-8 lines. No code surfaces.
