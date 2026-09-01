@@ -748,7 +748,23 @@ the stale view, and a JSON null packet panicking the CLI — which also
 records in `next/spec/loop-verbs.md` that a derived value is
 re-examined against the refreshed tip and refused rather than
 replaced.
-**Next action: Phase 9 items 2 through 4.** Item 1 is COMPLETE: 1a
+**Phase 9 item 2 is done**: escalation with packet, question and
+minimal decision, planned in #197 and implemented by this card's task
+PR. `escalation.raised` (`ready`, `review` -> `blocked`) and
+`decision.recorded` (`blocked` -> `ready`) are the two new rows; from
+`in_progress` an escalation rides `claim.parked`, because what
+`lifecycle.md` pins is the set of verbs that may LEAVE that state, so
+the four deliberate exits stay exactly four and their existing pinning
+test is now the enforcement of that rule. `next/spec/escalation.md`
+carries the design. Raising is broad because raising grants nothing;
+answering is the fourth no-fallback operator row. While a question
+stands, `contract.unblocked` refuses and `contract.cancelled` must cite
+the escalation it answers. Waiting escalations surface as
+`escalation.pending` with the raising event's `ts`, because age is
+elapsed time and a position difference is event count wearing a clock's
+clothes.
+
+**Next action: Phase 9 items 3 and 4.** Item 1 is COMPLETE: 1a
 merged (#188), 1c merged (#191), 1b merged (#192), with its four review
 findings landing as os-378e44f3. III.J's first row is met; its second is
 **two-thirds met** and the spec says so — intents and tool output are

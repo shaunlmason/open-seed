@@ -94,7 +94,7 @@ submit → deliberate exit:
 | --- | --- | --- | --- |
 | `claim take` | `claim.taken` | — | — |
 | `claim release` | `claim.released` | fence | `--packet` |
-| `claim park` | `claim.parked` | fence | `--packet` |
+| `claim park` | `claim.parked` | fence | `--packet`, `--question`/`--option` |
 | `submission make` | `submission.made` | fence, plan anchor | `--packet` |
 | `budget reserve` | `budget.reserve` | fence | `--amount` |
 | `budget settle` | `budget.settle` | fence, reservation | `--actuals` |
@@ -113,6 +113,20 @@ online-only.
 and two offline actors claiming one contract have claimed nothing.
 The verb refuses `--ledger` with the one account the raw seam already
 gives, never a second explanation of one rule.
+
+### The question a park may also ask
+
+`claim park` alone takes `--question` and repeatable `--option
+<id>=<text>`, because from `in_progress` an escalation rides the park:
+nothing new may leave that state, and the park already carries the
+packet and the fence ([`escalation.md`](escalation.md)). `claim
+release` **refuses** those flags rather than ignoring them, so a
+question written on the wrong verb is a refusal and never a silently
+dropped one. Elsewhere the raise is its own verb, `escalation raise`.
+
+Like the packet, the question is validated **at the door** — a
+malformed one refuses `usage` before a session opens, rather than
+costing a remote round-trip to be told the same thing by the boundary.
 
 ### The packet
 
