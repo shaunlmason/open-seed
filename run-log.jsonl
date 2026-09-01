@@ -908,3 +908,4 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-9a89245c","ts":"2026-09-01T19:52:46Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 9 item 3 — the unattended maintenance loop"},"task":"os-8a5f14bb","ts":"2026-09-01T20:22:11Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 9 item 4 — small-team and fleet end-to-end fixtures"},"task":"os-6a08b166","ts":"2026-09-01T20:22:36Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-8a5f14bb","ts":"2026-09-01T20:22:48Z","verb":"promote"}

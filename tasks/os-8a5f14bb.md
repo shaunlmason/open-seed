@@ -1,10 +1,11 @@
 ---
 id: os-8a5f14bb
 title: 'next: Phase 9 item 3 — the unattended maintenance loop'
-state: backlog
+state: ready
 priority: P1
 squad: core
 created_at: "2026-09-01T20:22:10Z"
+updated_at: "2026-09-01T20:22:48Z"
 ---
 
 Phase 9 item 3 of docs/next-build-plan.md. Above L1: plan first at
