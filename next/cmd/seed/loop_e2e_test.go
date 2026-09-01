@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -90,7 +91,7 @@ func TestWorkerLoopRunsEndToEndAgainstARealLedger(t *testing.T) {
 
 	worked := 0
 	d, err := loop.New(implementerManifest(t), loopVerbs{},
-		[]string{"--remote", remote, "--state", state}, workerKey, workerFP,
+		[]string{"--remote", remote, "--state", state}, workerKey,
 		loop.WorkFunc(func(s string, sit loop.Situation) (int, error) {
 			// The work step is a deterministic function: there is no
 			// model here, and the drill says so (D6).
@@ -137,12 +138,25 @@ func TestWorkerLoopRunsEndToEndAgainstARealLedger(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("exactly one per-fence stream under this actor, found %v", entries)
 	}
+	// Exactly the acts the SHIPPED manifest declares emitted, derived
+	// from that manifest rather than restated here. The earlier version
+	// of this assertion hard-coded a shorter list copied from a unit
+	// fixture, and passed only because a fence bug meant claim take
+	// never emitted at all: a drill agreeing with the wrong list is how
+	// the bug survived its own test (review finding on #191).
 	body := streamFile(t, entries[0])
-	if !strings.Contains(body, `"step":"budget settle"`) {
-		t.Errorf("the declared liveness source must be what emitted: %s", body)
+	m := implementerManifest(t)
+	for _, act := range m.ActsThrough {
+		want := slices.Contains(m.LivenessFrom, act)
+		got := strings.Contains(body, `"step":"`+act+`"`)
+		if got != want {
+			t.Errorf("act %q: the manifest's liveness_from says emits=%v, the stream says %v: %s",
+				act, want, got, body)
+		}
 	}
-	if strings.Contains(body, `"step":"claim take"`) {
-		t.Errorf("an act that is not a declared liveness source must not emit: %s", body)
+	if !strings.Contains(body, `"step":"claim take"`) {
+		t.Error("the claim is a declared liveness source and must be observable under the fence it " +
+			"opened: a worker is most likely to stall between taking work and starting it")
 	}
 }
 
@@ -151,10 +165,10 @@ func TestWorkerLoopRunsEndToEndAgainstARealLedger(t *testing.T) {
 // packet it lands with carries that refusal's own account.
 func TestWorkerLoopParksOnRealBudgetExhaustion(t *testing.T) {
 	const subject = "c-2"
-	remote, state, workerKey, workerFP := remoteWorkLedger(t, subject)
+	remote, state, workerKey, _ := remoteWorkLedger(t, subject)
 
 	d, err := loop.New(implementerManifest(t), loopVerbs{},
-		[]string{"--remote", remote, "--state", state}, workerKey, workerFP,
+		[]string{"--remote", remote, "--state", state}, workerKey,
 		loop.WorkFunc(func(string, loop.Situation) (int, error) {
 			return 0, fmt.Errorf("the work step must not run: the reserve refused before it")
 		}),

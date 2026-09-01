@@ -1334,3 +1334,45 @@ here. Newest last.
   output are covered; mirrors cannot be, because `request.*` has zero
   rows. Reporting the row closed would have been the easiest sentence in
   the spec and the least true.
+
+## Phase 9 item 1c follow-up — four review fixes (os-378e44f3)
+
+- **The actor is DERIVED from the key, and the parameter is gone.** The
+  obvious repair was to cross-check a supplied actor and refuse a
+  mismatch; that keeps a parameter whose only correct value is
+  computable, so every caller gets a chance to be wrong and the check
+  exists to catch them. Deriving removes the class.
+- **Deriving once is still not enough**, and the plan's first draft
+  claimed otherwise. The loop passes `--key <path>` and the CLI signs
+  with what the path holds now, so a rotated key reopens the mismatch
+  through the filesystem. The fingerprint is re-derived each iteration
+  and a change **refuses** rather than being adopted. Rejected:
+  pinning key material for the Driver's lifetime, which would require
+  copying a private key to a second place on disk — a worse trade than
+  refusing.
+- **A claim reaped before the post-claim read is IDLE, not a park.**
+  The window is gone, so there is nothing to exit; the reserve would
+  refuse and the park after it would refuse for want of an active
+  claim, turning ordinary contention into an error.
+- **The fence comes from the act that opened it.** `claim take` returns
+  the admitted position as its fence, and the loop adopts a fence any
+  act's result names before observing. Generalized rather than
+  special-cased, so it stays true if a second window-opening act
+  appears. The gap it closes is the stall window: a worker that claims
+  and then hangs before reserving is exactly what the expiry
+  classification exists to catch, and its claim previously emitted
+  nothing the classifier could see.
+- **A packet file never outlives its purpose**, on all three paths: the
+  verb consumed it, the write or close failed after creation
+  (`writePacket` unlinks; no verb will run and no caller holds a path),
+  or `CreateTemp` failed and there is nothing to remove. The second is
+  the low-storage case, where leaking leaks when the host can least
+  afford it.
+- **Two drills were wrong and are corrected here.** The e2e liveness
+  assertion hard-coded a `liveness_from` copied from a unit fixture and
+  passed only because the fence defect meant `claim take` never
+  emitted — a drill agreeing with the bug it should have caught. The
+  fence drill's pre-claim read returned a window a pre-claim read
+  cannot have, so reverting the fix did not fail it. The second was
+  found ONLY because its mutation did not fail, which is the argument
+  for mutation-testing every fix rather than trusting a green run.

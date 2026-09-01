@@ -227,9 +227,39 @@ rather than the budget spent. The current behavior is pinned by a
 characterization assertion in `cmd/seed/loop_e2e_test.go`, so closing it
 fails that drill and forces this passage to be updated with it.
 
+### The lane's identity is its key's
+
+The loop derives its actor by fingerprinting the key it signs with;
+there is no parameter to supply one. A loop told to poll as one actor
+while signing as another would select work under one identity's
+eligibility, act under a second, and write liveness under a third —
+and the classifier, which keys the observation stream by the holder,
+would read silence from a worker that was working.
+
+Deriving once is not enough. The loop passes `--key <path>` and the CLI
+signs with whatever that path holds **now**, so a key rotated under a
+running loop reopens the same mismatch through the filesystem. The
+fingerprint is therefore re-derived and compared at the top of every
+iteration, and a change **refuses**: adopting it silently would leave a
+window held by one actor and worked by another, which is worse than
+stopping. Rotation is a real operational event, so the refusal names it
+and says to restart the loop.
+
 ### Contention is ordinary
 
 A lost `claim take` is not an error. In fleet mode two workers racing it
 means the loser re-orients and takes different work, and treating that
 as a failure would manufacture an escalation storm out of ordinary
 contention. The iteration ends idle, with no window owed an exit.
+
+The same holds one step later. A claim **reaped between its own push
+and the loop's next read** leaves a window that is already gone: the
+refreshed position-stamped read shows no window, which is the build
+plan's middle convergence arm reached exactly as written — *the act is
+no longer owed*. The iteration ends idle rather than reserving against
+a claim it does not hold and then failing to park what it never had.
+
+This does not weaken the rule that every path out of an **open** window
+is a deliberate exit. The read is what establishes the window is not
+open, and acting on a refreshed authoritative read is the opposite of
+abandoning a claim.

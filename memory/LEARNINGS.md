@@ -721,3 +721,30 @@ a new field carried the text.
 The same sweep, applied to the projections, is what found that they
 carry every payload verbatim — which no reading of the worker-facing
 types would ever have surfaced.
+
+## Green locally meant green as root (os-b779b4c7)
+
+Three CI failures on one PR traced to validating against the wrong
+thing. `TestProjectionsCarryPayloadsVerbatimIncludingHostileText` passed
+here and failed in CI because published projection trees are locked
+0555/0444 and `t.TempDir()` cleanup cannot remove them as a non-root
+user — this container runs as root, the runner does not, and root
+ignores the bits that break the runner.
+
+`project_cli_test.go` had already hit this and carried a comment saying
+so. The lesson is not "read more comments": it is that a test touching
+anything the tree locks, or anything permission-dependent at all, is
+worth running under `setpriv --reuid=65534` before pushing. That is a
+ten-second check that would have saved two red builds.
+
+## A receipt is stale the moment another commit lands (os-b779b4c7)
+
+`verify` failed with "receipt mismatch — the committed copy is forged or
+stale". It was stale: generated at the first content tip, then a merge
+of main and a CI fix landed on top, leaving the receipt describing a
+tree two commits behind.
+
+The rule is receipt-after-content with head == content tip, and it means
+the LAST content commit, not the first. Any later push — a merge, a
+review fix, a lint correction — invalidates it and it must be
+regenerated before the branch is green.

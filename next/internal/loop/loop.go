@@ -20,6 +20,7 @@
 package loop
 
 import (
+	"crypto/ed25519"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/lane"
 	"github.com/shaunlmason/open-seed/next/internal/loopverb"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
@@ -179,7 +181,7 @@ func WithObservations(dir string) Option { return func(d *Driver) { d.obsDir = d
 // posture is the transport pair the reads and acts share, e.g.
 // {"--remote", repo, "--state", dir}: the loop orients and acts in ONE
 // posture or it reads a view it is not judged against.
-func New(m lane.Manifest, v Verbs, posture []string, keyPath, actor string, w Work, opts ...Option) (*Driver, error) {
+func New(m lane.Manifest, v Verbs, posture []string, keyPath string, w Work, opts ...Option) (*Driver, error) {
 	if v == nil {
 		return nil, errors.New("a loop with no verb seam can perform no act")
 	}
@@ -189,8 +191,19 @@ func New(m lane.Manifest, v Verbs, posture []string, keyPath, actor string, w Wo
 	if len(posture) == 0 {
 		return nil, errors.New("a loop with no posture has no ledger to orient against")
 	}
-	if keyPath == "" || actor == "" {
-		return nil, errors.New("a loop signs with one key and polls as its own actor")
+	if keyPath == "" {
+		return nil, errors.New("a loop signs with one key")
+	}
+	// The actor is DERIVED from the signing key, never supplied beside
+	// it (review finding on #191). A loop told to poll as one actor
+	// while signing as another would select work under one identity's
+	// eligibility, act under a second, and write its liveness under a
+	// third — and the classifier, which keys the stream by the holder,
+	// would see silence from a worker that was working. One key, one
+	// identity, no way to pass two.
+	actor, err := actorOf(keyPath)
+	if err != nil {
+		return nil, err
 	}
 	if len(m.LivenessFrom) == 0 {
 		return nil, fmt.Errorf("lane %q declares no liveness_from: a loop whose steps emit nothing is "+
@@ -208,6 +221,49 @@ func New(m lane.Manifest, v Verbs, posture []string, keyPath, actor string, w Wo
 			"every deliberate exit carries a packet, and a packet without a resume coordinate is not one")
 	}
 	return d, nil
+}
+
+// actorOf derives the lane's identity from the key it signs with. It
+// is the only way a Driver learns its actor, so poll, act and observe
+// cannot disagree about who is working.
+func actorOf(keyPath string) (string, error) {
+	b, err := os.ReadFile(keyPath)
+	if err != nil {
+		return "", fmt.Errorf("cannot read the lane's key: %w", err)
+	}
+	key, err := event.ParsePrivateKey(b)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse the lane's key: %w", err)
+	}
+	fp, err := event.Fingerprint(key.Public().(ed25519.PublicKey))
+	if err != nil {
+		return "", fmt.Errorf("cannot fingerprint the lane's key: %w", err)
+	}
+	return fp, nil
+}
+
+// ErrKeyRotated is the refusal when the signing key changes under a
+// running Driver. Adopting the new identity silently would leave a
+// window held by one actor and worked by another, which is worse than
+// stopping: the loop refuses and the operator restarts it, that being
+// the only safe way to pick up a new key (review finding on #193).
+var ErrKeyRotated = errors.New("the signing key changed under a running loop")
+
+// checkIdentity re-derives the fingerprint and compares it to the one
+// the loop polls and observes under. Deriving once at construction
+// closes the mismatch a parameter could carry; it does not close the
+// one the FILESYSTEM can, because the loop passes --key <path> and the
+// CLI signs with whatever that path holds now.
+func (d *Driver) checkIdentity() error {
+	now, err := actorOf(d.keyPath)
+	if err != nil {
+		return err
+	}
+	if now != d.actor {
+		return fmt.Errorf("%w: polling and observing as %s, but %s now signs as %s — restart the loop "+
+			"to pick up the new key", ErrKeyRotated, d.actor, d.keyPath, now)
+	}
+	return nil
 }
 
 // Declares reports whether the lane's manifest names the act.
@@ -232,6 +288,16 @@ func (d *Driver) act(name, subject string, extra ...string) (Result, error) {
 	args = append(args, "--key", d.keyPath, "--subject", subject)
 	res := d.verbs.Run(append(args, extra...)...)
 	if !res.Refused() {
+		// An act that opens a window NAMES the fence it opened, and the
+		// loop adopts it before emitting: claim take is a declared
+		// liveness source, so observing it under the previous window's
+		// fence (or dropping it for want of one) would leave the claim's
+		// own liveness invisible to the classifier exactly when a worker
+		// is most likely to stall — between taking work and starting it
+		// (review finding on #191).
+		if fence, ok := res.Result["fence"].(string); ok && fence != "" {
+			d.fence = fence
+		}
 		d.observe(name, subject)
 	}
 	return res, nil
@@ -268,8 +334,13 @@ func (d *Driver) observe(act, subject string) {
 }
 
 // Act performs one declared act, for a caller driving the steps itself.
-// The gate applies here exactly as it does inside Step.
+// The act gate and the identity check both apply here exactly as they
+// do inside Step: a caller stepping the loop by hand is not a caller
+// entitled to sign under a key the loop never derived from.
 func (d *Driver) Act(name, subject string, extra ...string) (Result, error) {
+	if err := d.checkIdentity(); err != nil {
+		return Result{}, err
+	}
 	return d.act(name, subject, extra...)
 }
 
@@ -380,6 +451,12 @@ type StepResult struct {
 // makes exhaustion parking reachable, since the reserve is where a
 // worker learns it cannot spend.
 func (d *Driver) Step(amount int) (StepResult, error) {
+	// Before anything else: the key must still be the key this loop
+	// derived its identity from. A rotation between iterations would
+	// otherwise poll under the old fingerprint and sign under the new.
+	if err := d.checkIdentity(); err != nil {
+		return StepResult{Outcome: Idle, Step: "identity"}, err
+	}
 	subjects, res := d.Poll()
 	if res.Refused() {
 		return StepResult{Outcome: Idle, Cause: res, Step: "poll"},
@@ -413,6 +490,16 @@ func (d *Driver) Step(amount int) (StepResult, error) {
 	if res.Refused() {
 		return d.park(subject, "orient", res)
 	}
+	// Unless the refreshed read says it is not. A concurrent reap
+	// between the claim's push and this read leaves nothing to exit,
+	// and the build plan's middle convergence arm is exactly this: a
+	// refreshed position-stamped read showing the act is no longer
+	// owed. Reserving anyway would refuse, and the park after it would
+	// refuse too for want of an active claim, turning ordinary fleet
+	// contention into an error (review finding on #191).
+	if !s.Holds(subject) {
+		return StepResult{Outcome: Idle, Subject: subject, Step: "orient"}, nil
+	}
 
 	reserve, err := d.act("budget reserve", subject, "--amount", fmt.Sprintf("%d", amount))
 	if err != nil {
@@ -442,10 +529,11 @@ func (d *Driver) Step(amount int) (StepResult, error) {
 		return d.park(subject, "work", Result{Code: "work_failed", Message: workErr.Error()})
 	}
 
-	handoff, err := d.successPacket()
+	handoff, cleanup, err := d.successPacket()
 	if err != nil {
 		return StepResult{Outcome: Idle, Subject: subject, Step: "submission make"}, err
 	}
+	defer cleanup()
 	submit, err := d.act("submission make", subject, handoff...)
 	if err != nil {
 		return StepResult{Outcome: Idle, Subject: subject, Step: "submission make"}, err
@@ -463,10 +551,11 @@ func (d *Driver) Step(amount int) (StepResult, error) {
 // lane's paraphrase of it.
 func (d *Driver) park(subject, step string, cause Result) (StepResult, error) {
 	out := StepResult{Outcome: Parked, Subject: subject, Cause: cause, Step: step}
-	extra, err := d.packetFor(step, cause)
+	extra, cleanup, err := d.packetFor(step, cause)
 	if err != nil {
 		return out, err
 	}
+	defer cleanup()
 	res, err := d.act("claim park", subject, extra...)
 	if err != nil {
 		return out, err
@@ -488,7 +577,7 @@ func (d *Driver) park(subject, step string, cause Result) (StepResult, error) {
 // The findings carry the refusal's code and message VERBATIM: a lane
 // that paraphrased a boundary's account would hand its successor a
 // worse version of the only thing that explains the stop.
-func (d *Driver) packetFor(step string, cause Result) ([]string, error) {
+func (d *Driver) packetFor(step string, cause Result) ([]string, func(), error) {
 	outcome := cause.Message
 	if cause.Code != "" {
 		outcome = cause.Code + ": " + cause.Message
@@ -522,7 +611,7 @@ func (d *Driver) acceptanceParts() []string {
 // successPacket is the submission's handoff: no findings, because
 // nothing was tried and abandoned. It states what the work claims to
 // have satisfied, which is the verifier's starting point.
-func (d *Driver) successPacket() ([]string, error) {
+func (d *Driver) successPacket() ([]string, func(), error) {
 	return d.writePacket(map[string]any{
 		"acceptance": d.acceptanceParts(),
 		"decisions":  []any{},
@@ -531,25 +620,39 @@ func (d *Driver) successPacket() ([]string, error) {
 	})
 }
 
-func (d *Driver) writePacket(p map[string]any) ([]string, error) {
+// writePacket writes the packet and returns the arguments naming it
+// plus a cleanup that removes the file. An unattended lane runs
+// indefinitely, so a packet left behind per iteration is a slow leak of
+// the host's temporary storage — and of the packets themselves, which
+// are work-product content rather than scratch (review finding on
+// #191). Cleanup runs on every path, refusals included.
+func (d *Driver) writePacket(p map[string]any) ([]string, func(), error) {
+	noop := func() {}
 	if d.base != "" {
 		p["base"] = d.base
 	}
 	body, err := json.Marshal(p)
 	if err != nil {
-		return nil, err
+		return nil, noop, err
 	}
 	f, err := os.CreateTemp("", "seed-loop-packet-*.json")
 	if err != nil {
-		return nil, err
+		return nil, noop, err
 	}
-	defer f.Close()
+	name := f.Name()
+	remove := func() { _ = os.Remove(name) }
 	if _, err := f.Write(body); err != nil {
-		return nil, err
+		f.Close()
+		remove()
+		return nil, noop, err
 	}
-	args := []string{"--packet", f.Name()}
+	if err := f.Close(); err != nil {
+		remove()
+		return nil, noop, err
+	}
+	args := []string{"--packet", name}
 	if d.base == "" {
 		args = append(args, "--repo", d.repo)
 	}
-	return args, nil
+	return args, remove, nil
 }
