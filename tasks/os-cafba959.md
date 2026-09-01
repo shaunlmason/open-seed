@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-01T19:03:54Z"
     lease_expires: "2026-09-01T20:03:54Z"
 created_at: "2026-09-01T10:34:01Z"
-updated_at: "2026-09-01T19:03:54Z"
+updated_at: "2026-09-01T19:37:51Z"
 ---
 
 The coverage gate in `make check` (check-next) fails nondeterministically, reporting a total far below truth on a tree that is fine. Observed repeatedly on 2026-09-01 while merging main into several branches:
@@ -37,3 +37,7 @@ It also makes CI's verdict on any PR probabilistic, since the same gate runs the
 LIKELY FIX. Go 1.20+ supports GOCOVERDIR-based coverage collection (go test -cover with -args, or `go build -cover`), which writes per-process counter files into a directory instead of merging via the legacy -coverprofile path, and does not have the pid-collision failure mode. Alternatives: give each package's profile a distinct output path and merge explicitly with `go tool covdata`, or set GOCOVERDIR for the subprocess-spawning drills. Worth measuring the collision rate before and after so the fix is evidenced rather than assumed.
 
 Scope: the Makefile's check-next target, possibly a small helper script, and whatever the drills need so subprocess re-execs do not collide. No production code.
+
+## Evidence ev-f523fd94 (pr, seed-next-implementer, 2026-09-01T19:37:51Z)
+
+https://github.com/shaunlmason/open-seed/pull/201
