@@ -1,10 +1,11 @@
 ---
 id: os-d03bde01
 title: 'next: budget exhaustion refuses as chain_invalid; no budget exit code exists'
-state: backlog
+state: ready
 priority: P2
 squad: core
 created_at: "2026-09-01T14:19:51Z"
+updated_at: "2026-09-01T21:36:22Z"
 ---
 
 Found while implementing the worker loop (os-abb206c8): budget
