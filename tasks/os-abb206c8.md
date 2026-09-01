@@ -1,10 +1,11 @@
 ---
 id: os-abb206c8
 title: 'next: Phase 9 item 1c — the worker loop made executable, with exhaustion parking'
-state: backlog
+state: ready
 priority: P2
 squad: core
 created_at: "2026-09-01T13:28:53Z"
+updated_at: "2026-09-01T13:29:05Z"
 ---
 
 Phase 9 item 1, third of three cards (1a landed as #188; 1b is the dispatcher's injection conformance suite, still uncarded).
