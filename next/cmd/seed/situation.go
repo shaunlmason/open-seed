@@ -250,11 +250,20 @@ func windowsHeld(st *verdictState, fp, only string) []map[string]any {
 		if !ok || s.Claim == nil || s.Claim.Holder != fp {
 			continue
 		}
-		out = append(out, map[string]any{
+		w := map[string]any{
 			"subject": subject,
 			"fence":   fmt.Sprintf("%d", s.Claim.Fence),
 			"state":   s.State,
-		})
+		}
+		// The acceptance anchor the holder is judged against. A lane's
+		// deliberate exit carries a packet, and a packet's acceptance
+		// part is what a successor is judged against — so a read that
+		// withheld it left the lane unable to write its own exit
+		// (plans/os-abb206c8.md, found by the loop's first real park).
+		if s.Acceptance != nil && s.Acceptance.Ref != "" {
+			w["acceptance"] = s.Acceptance.Ref
+		}
+		out = append(out, w)
 	}
 	return out
 }
