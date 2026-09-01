@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "task": "os-edf73d66",
+  "merge_base": "881c00860e4b9d1e73e8fa83d03b63d19f6d86b3",
+  "head": "570b5ad76448bf354e8d77c3ee1a6bbb3db029f4",
+  "plan_path": "plans/os-edf73d66.md",
+  "plan_sha256": "484056cc7793bad8f54059df6f26d6a7a50c76da5ffaf91f37ea12610a40747d",
+  "diff_files": [
+    "next/cmd/seed/attempts.go",
+    "next/cmd/seed/attempts_cli_test.go",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/offer.go",
+    "next/cmd/seed/project.go",
+    "next/cmd/seed/seal.go",
+    "next/cmd/seed/verdict.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/project/project.go",
+    "next/internal/project/refusals_report_test.go",
+    "next/internal/project/report.go",
+    "next/internal/refusals/refusals.go",
+    "next/internal/refusals/refusals_test.go",
+    "next/spec/envelope.md",
+    "next/spec/projections.md",
+    "next/spec/refusals.md"
+  ],
+  "diff_sha256": "19fbff5583b313ea9820e7556c48517ca4176d603830d3fe9f7156240e03643f",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/refusals/ ./internal/project/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

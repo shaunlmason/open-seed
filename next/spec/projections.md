@@ -137,7 +137,12 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   (Version "2"; `observations.md`): null on an input-free build, else
   the declared inputs echoed (`as_of`, digest, thresholds) plus one
   expiry-vs-wedge classification per active claim, read only from the
-  claim's own fence-keyed stream. The report is the one
+  claim's own fence-keyed stream, and `refusals` (report version
+  "10"; [`refusals.md`](refusals.md)): null unless a rebuild declares
+  an attempts journal, else the affordance-gap metric — outcome
+  counts over the journal's one population, refusal breakdowns, the
+  stamped-position span as context, and the four-decimal rate. The
+  report is the one
   input-consuming projection; a remaining section needing later facts
   (budgets) stays a named extension point, not emitted empty. Offer
   facts land in the contracts view and the cache's `offers` table

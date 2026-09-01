@@ -8,6 +8,8 @@ package project
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -15,6 +17,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
+	"github.com/shaunlmason/open-seed/next/internal/refusals"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -77,9 +80,41 @@ type ReportObservation struct {
 	Claims map[string]obs.Classification `json:"claims"`
 }
 
+// ReportRefusalsInputs echoes the declared attempts journal a
+// refusals section was computed from: its digest and how many
+// attempt lines it carried.
+type ReportRefusalsInputs struct {
+	Digest  string `json:"digest"`
+	Entries int    `json:"entries"`
+}
+
+// ReportRefusalsSpan is the journal's position context: the min and
+// max tip-ordinal positions its attempts were stamped at. Context
+// only — the rate never reads the chain (next/spec/refusals.md).
+type ReportRefusalsSpan struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
+// ReportRefusals is the affordance-gap section (charter III.I row
+// 4): outcome counts over the declared attempts journal — one
+// population for numerator and denominator — refusal breakdowns by
+// code and by verb, the position span as context, and the rate as a
+// fixed four-decimal string. Span is null on an empty journal.
+type ReportRefusals struct {
+	Inputs   ReportRefusalsInputs `json:"inputs"`
+	Refused  int                  `json:"refused"`
+	Admitted int                  `json:"admitted"`
+	ByCode   map[string]int       `json:"by_code"`
+	ByVerb   map[string]int       `json:"by_verb"`
+	Span     *ReportRefusalsSpan  `json:"span"`
+	Rate     string               `json:"rate"`
+}
+
 // ReportView is the report.json shape. Observation is null when the
-// rebuild declared no observation inputs: absence of data is stated,
-// never fabricated (next/spec/observations.md).
+// rebuild declared no observation inputs, and Refusals when it
+// declared no attempts journal: absence of data is stated, never
+// fabricated (next/spec/observations.md; next/spec/refusals.md).
 type ReportView struct {
 	Chain          ReportChain           `json:"chain"`
 	Actors         ReportActors          `json:"actors"`
@@ -88,6 +123,7 @@ type ReportView struct {
 	Contracts      ReportContracts       `json:"contracts"`
 	Reconciliation *ReportReconciliation `json:"reconciliation"`
 	Observation    *ReportObservation    `json:"observation"`
+	Refusals       *ReportRefusals       `json:"refusals"`
 }
 
 // ReportReconciliation is the record-derivable half of divergence
@@ -118,11 +154,14 @@ type ReportReconciliation struct {
 // risk-limit surface arrives with 7.3's adapters; Version "8"
 // republishes over the run-fact fold (plans/os-1dad487d.md), the
 // same posture; Version "9" over the interrupt fold
-// (plans/os-0f718b4e.md) likewise. Inputs marks it as
+// (plans/os-0f718b4e.md) likewise; Version "10" adds the refusals
+// section from the declared attempts journal (plans/os-edf73d66.md),
+// null on builds that declare none, so version, not content, is
+// what republishes existing input-free prefixes. Inputs marks it as
 // the one input-consuming projection, everything else staying
 // byte-identical with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "9", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "10", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -208,6 +247,13 @@ func buildReport(records []*event.Record, in Inputs) (map[string][]byte, error) 
 		}
 		view.Observation = section
 	}
+	if in.Refusals != nil {
+		section, err := refusalsSection(in.Refusals)
+		if err != nil {
+			return nil, err
+		}
+		view.Refusals = section
+	}
 	b, err := json.MarshalIndent(view, "", "  ")
 	if err != nil {
 		return nil, err
@@ -220,6 +266,55 @@ func buildReport(records []*event.Record, in Inputs) (map[string][]byte, error) 
 // missing classifies no_data; a predecessor's stream under a dead
 // fence can neither revive nor wedge the current claim, because
 // StreamFor keys on (holder, fence) exactly.
+// refusalsSection derives the affordance-gap metric from the
+// declared attempts journal alone: outcome counts over one
+// population, refusal breakdowns by code and verb, the
+// stamped-position span as context, and refused/(refused+admitted)
+// as a fixed four-decimal string. The chain is never the
+// denominator (next/spec/refusals.md; review finding on the plan
+// PR: a chain denominator over a refusal-bounded span measures
+// ledger traffic, not affordance gaps).
+func refusalsSection(j *refusals.Journal) (*ReportRefusals, error) {
+	digest, err := j.Digest()
+	if err != nil {
+		return nil, err
+	}
+	section := &ReportRefusals{
+		Inputs: ReportRefusalsInputs{Digest: digest, Entries: len(j.Entries)},
+		ByCode: map[string]int{},
+		ByVerb: map[string]int{},
+		Rate:   "0.0000",
+	}
+	for _, e := range j.Entries {
+		pos, err := strconv.Atoi(e.Position)
+		if err != nil {
+			return nil, fmt.Errorf("attempt position %q is not numeric", e.Position)
+		}
+		if section.Span == nil {
+			section.Span = &ReportRefusalsSpan{From: pos, To: pos}
+		} else {
+			if pos < section.Span.From {
+				section.Span.From = pos
+			}
+			if pos > section.Span.To {
+				section.Span.To = pos
+			}
+		}
+		switch e.Outcome {
+		case refusals.OutcomeAdmitted:
+			section.Admitted++
+		case refusals.OutcomeRefused:
+			section.Refused++
+			section.ByCode[e.Code]++
+			section.ByVerb[e.Verb]++
+		}
+	}
+	if total := section.Refused + section.Admitted; total > 0 {
+		section.Rate = fmt.Sprintf("%.4f", float64(section.Refused)/float64(total))
+	}
+	return section, nil
+}
+
 func observationSection(records []*event.Record, in Inputs) (*ReportObservation, error) {
 	table, err := transition.Default()
 	if err != nil {

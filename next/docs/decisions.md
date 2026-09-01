@@ -829,3 +829,45 @@ here. Newest last.
   the full admission pipeline, so lane-invalid non-actor payloads
   append raw there by design and the fold-side validity families
   keep them inert.
+
+## 2026-09-01 — 8.3 refusal-rate metric (os-edf73d66, plan #164)
+
+- The metric's source is the attempts journal, attempts.jsonl beside
+  the ledger: one strict JSONL line per admission-boundary attempt,
+  BOTH outcomes, journaled best-effort (never failing the verb, the
+  stamping posture) at every CLI seam that renders a
+  position-stamped, signed envelope — ledger append's preview and
+  chain-invalid refusals and its success (the lifecycle and budget
+  verbs ride this seam), offer publish, verdict render, seal create,
+  remote-refusal renders included. Responses without a stamped
+  position are not boundary attempts; read surfaces never journal;
+  the remote server-side boundary stays a named spec extension
+  point. One population for the rate's numerator and denominator
+  (the plan review's finding): the chain is never the denominator,
+  and the section's span is positional context only.
+- The journal enters the report as a declared input on the
+  observations pattern: project rebuild --refusals, composing
+  freely with --obs; Inputs.Digest now spans every declared family,
+  each contributing its keys only when declared, so obs-only
+  digests are unchanged; malformed journal lines refuse the build
+  naming the line. Report v10 adds the nullable refusals section
+  {inputs, refused, admitted, by_code, by_verb, span, rate}, rate
+  fixed to four decimals ("0.0000" on an empty journal); the
+  section echoes the journal's own digest while the stamp carries
+  the full declared-inputs digest.
+- The journal's durability posture (review finding on the task PR):
+  a short write restores the previous length when the fragment is
+  provably the file's tail (an ambiguous size under concurrent
+  O_APPEND writers is left alone rather than risking a rival's
+  line), and Load treats the terminating newline as the commit
+  marker, ignoring a final unterminated fragment: a best-effort
+  writer must never be able to poison the strict reader forever.
+  Terminated malformed lines still refuse.
+- Plan correction, recorded per D5: the plan's D3 guessed a cache
+  generation bump with a conditional refusals key, but the cache
+  mirrors the INPUT-FREE report (it builds from reportView, exactly
+  why it never carries the observation section), so the refusals
+  section never reaches it and no cache change ships. The
+  observation precedent, not the reconciliation one, is the
+  operative analogy: reconciliation is record-derived,
+  refusals input-derived.

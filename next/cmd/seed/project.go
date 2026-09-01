@@ -22,6 +22,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/project"
+	"github.com/shaunlmason/open-seed/next/internal/refusals"
 )
 
 func runProject(args []string, stdout, stderr io.Writer) int {
@@ -130,8 +131,9 @@ func runProjectRebuild(args []string, stdout, stderr io.Writer) int {
 	asOf := fs.String("as-of", "", "classification instant (RFC3339; required with --obs)")
 	expiryAfter := fs.Int("expiry-after", 900, "expiry threshold in seconds")
 	wedgeAfter := fs.Int("wedge-after", 1800, "wedge threshold in seconds")
+	refusalsPath := fs.String("refusals", "", "attempts journal file (declares the refusal-rate input)")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || *dir == "" {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "project rebuild --ledger <dir> [--out <dir>] [--obs <dir> --as-of <rfc3339> [--expiry-after <s>] [--wedge-after <s>]]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "project rebuild --ledger <dir> [--out <dir>] [--obs <dir> --as-of <rfc3339> [--expiry-after <s>] [--wedge-after <s>]] [--refusals <file>]"), stdout, stderr)
 	}
 	// Inputs are declared, never ambient: an observation directory
 	// without a declared as_of would smuggle the wall clock into a
@@ -152,6 +154,16 @@ func runProjectRebuild(args []string, stdout, stderr io.Writer) int {
 		}}
 	} else if *asOf != "" {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "--as-of declares observation inputs and needs --obs beside it"), stdout, stderr)
+	}
+	// The attempts journal declares independently of the observation
+	// pair: a declared input that does not parse is the declarer's
+	// error, refused before anything builds (next/spec/refusals.md).
+	if *refusalsPath != "" {
+		journal, err := refusals.Load(*refusalsPath)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--refusals %s: %v", *refusalsPath, err)), stdout, stderr)
+		}
+		in.Refusals = journal
 	}
 	if err := project.CheckOverlap(*dir, *out); err != nil {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)

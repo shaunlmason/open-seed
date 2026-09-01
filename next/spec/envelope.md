@@ -26,7 +26,10 @@ Every verb response is exactly one JSON line:
 
 - `result` and `error` are mutually exclusive: a refusal replaces `result`
   with `error` (`{code, message}`: a stable machine-branchable code and a
-  human message) and a distinct exit code.
+  human message) and a distinct exit code. These codes are also what the
+  attempts journal records per refused attempt for the report's
+  refusal-rate metric ([`refusals.md`](refusals.md)); the envelope
+  schema itself is unchanged by that metric.
 - `position` is the ledger position the response was computed at, so a
   concurrent change is detectable rather than mysterious (charter §II.10).
   It is `null` until the ledger lands (Phase 1); from then on every response
