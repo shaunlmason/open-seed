@@ -748,3 +748,18 @@ The rule is receipt-after-content with head == content tip, and it means
 the LAST content commit, not the first. Any later push — a merge, a
 review fix, a lint correction — invalidates it and it must be
 regenerated before the branch is green.
+
+## A drill named for a failure path must enter it (os-378e44f3)
+
+The packet-unlink drill was added because a review pointed out the
+behavior was unasserted. It called `writePacket` successfully, checked
+the file existed, called the success-path cleanup, and passed — while
+both error-branch unlinks could be deleted with no effect. It asserted
+the wrong thing, under the right name, in direct response to being told
+that thing was unasserted.
+
+The check that would have caught it is the same one that catches every
+member of this family, and it costs one command: delete the behavior,
+re-run the drill. If it still passes, the drill is about something else.
+Doing this to the fix is not optional politeness toward the reviewer; it
+is the only evidence that the test tests anything.
