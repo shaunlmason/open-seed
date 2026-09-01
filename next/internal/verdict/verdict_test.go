@@ -18,6 +18,34 @@ import (
 // repo builds a real source repository: a base commit, an acceptance
 // spec commit, and a head commit changing a file. Returns the repo dir
 // and the three full SHAs.
+// hardenGitRepo disables every path that can spawn a git process
+// outliving the test that created the repository
+// (plans/os-c4e8b57a.md D1, D2). `t.TempDir` removes its tree
+// recursively at cleanup, and a detached auto-gc still writing under
+// it fails the removal AFTER the assertions passed: the worst shape of
+// flake for an unattended loop, because the signal says "your change
+// is broken" when the change is fine.
+//
+// The three settings are three different spawners, and are WRITTEN
+// into the repository rather than passed as `git -c` flags: `-c`
+// scopes a value to one invocation and writes nothing, so the later
+// commits, and above all a bare remote's own receive-pack, would still
+// run under stock auto-gc. `init` and `clone --bare` produce no
+// objects of their own, so a config write on the next line is still
+// before the first object and there is no window to lose.
+func hardenGitRepo(t testing.TB, repo string) {
+	t.Helper()
+	for _, kv := range [][2]string{
+		{"gc.auto", "0"},            // the heuristic itself
+		{"gc.autoDetach", "false"},  // any gc that runs stays in the foreground
+		{"receive.autoGC", "false"}, // the push path, which is the one that bit
+	} {
+		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
+			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
+		}
+	}
+}
+
 func repo(t *testing.T) (dir, base, spec, head string) {
 	t.Helper()
 	dir = t.TempDir()
@@ -26,6 +54,7 @@ func repo(t *testing.T) (dir, base, spec, head string) {
 		return gitOut(t, dir, args...)
 	}
 	run("init", "--quiet", "-b", "main")
+	hardenGitRepo(t, dir)
 	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hello\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

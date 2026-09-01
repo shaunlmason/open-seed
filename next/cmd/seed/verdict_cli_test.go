@@ -48,6 +48,7 @@ func verdictRepo(t *testing.T) (dir, base, specCommit, head string) {
 		}
 	}
 	git("init", "--quiet", "-b", "main")
+	hardenGitRepo(t, dir)
 	write("hello.txt", "hello\n")
 	git("add", ".")
 	git("commit", "--quiet", "-m", "base")

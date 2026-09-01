@@ -29,6 +29,34 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/packet"
 )
 
+// hardenGitRepo disables every path that can spawn a git process
+// outliving the test that created the repository
+// (plans/os-c4e8b57a.md D1, D2). `t.TempDir` removes its tree
+// recursively at cleanup, and a detached auto-gc still writing under
+// it fails the removal AFTER the assertions passed: the worst shape of
+// flake for an unattended loop, because the signal says "your change
+// is broken" when the change is fine.
+//
+// The three settings are three different spawners, and are WRITTEN
+// into the repository rather than passed as `git -c` flags: `-c`
+// scopes a value to one invocation and writes nothing, so the later
+// commits, and above all a bare remote's own receive-pack, would still
+// run under stock auto-gc. `init` and `clone --bare` produce no
+// objects of their own, so a config write on the next line is still
+// before the first object and there is no window to lose.
+func hardenGitRepo(t testing.TB, repo string) {
+	t.Helper()
+	for _, kv := range [][2]string{
+		{"gc.auto", "0"},            // the heuristic itself
+		{"gc.autoDetach", "false"},  // any gc that runs stays in the foreground
+		{"receive.autoGC", "false"}, // the push path, which is the one that bit
+	} {
+		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
+			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
+		}
+	}
+}
+
 func git(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", args...)
@@ -110,6 +138,7 @@ func executorB(t *testing.T, configPath string, p *packet.Packet) ([]resumeActio
 	}
 	clone := t.TempDir()
 	git(t, ".", "clone", "-q", cfg.Remote, clone)
+	hardenGitRepo(t, clone)
 	_, head, ok := strings.Cut(p.Base, "..")
 	if !ok {
 		t.Fatalf("packet base is not a range: %s", p.Base)
@@ -201,6 +230,7 @@ func TestPacketResumeDrill(t *testing.T) {
 	// the instantiation's durable config naming it: both outlive A.
 	remote := t.TempDir()
 	git(t, ".", "init", "-q", "--bare", remote)
+	hardenGitRepo(t, remote)
 	configDir := t.TempDir()
 	configPath := filepath.Join(configDir, "instantiation.json")
 	cfg, err := json.Marshal(instantiationConfig{Remote: remote})
@@ -213,6 +243,7 @@ func TestPacketResumeDrill(t *testing.T) {
 
 	workA := t.TempDir()
 	git(t, ".", "clone", "-q", remote, workA)
+	hardenGitRepo(t, workA)
 
 	// Executor A: the base commit (the merge-base), then the work
 	// commit, which both adds the artifact and CHANGES README.md so a
