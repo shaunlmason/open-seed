@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-01T13:59:29Z"
     lease_expires: "2026-09-01T15:20:57Z"
 created_at: "2026-09-01T13:28:53Z"
-updated_at: "2026-09-01T14:20:57Z"
+updated_at: "2026-09-01T14:41:54Z"
 ---
 
 Phase 9 item 1, third of three cards (1a landed as #188; 1b is the dispatcher's injection conformance suite, still uncarded).
@@ -37,3 +37,7 @@ OPEN QUESTIONS FOR THE PLAN:
 - How the loop is drilled without a model. The preemption drills already re-exec the test binary as a helper worker (next/cmd/seed/preempt_cli_test.go), which is the established pattern and probably the right one.
 - What exhaustion parking does with the packet's acceptance and findings when the refusal is the only thing known.
 - Whether the loop asserts its own manifest (read internal/lane, act only through the declared acts) or merely happens to agree with it. Asserting it is stronger and is the natural close of 1a's loop.
+
+## Evidence ev-70588c6f (pr, seed-next-implementer, 2026-09-01T14:41:54Z)
+
+https://github.com/shaunlmason/open-seed/pull/191
