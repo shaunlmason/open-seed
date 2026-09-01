@@ -493,3 +493,24 @@ Fresh sessions read this file instead of rediscovering.
   verb set contains nothing whose only purpose is liveness cannot emit
   a heartbeat at all. Ask what the system can be UNABLE to do before
   asking what it can detect.
+- 2026-09-01 (os-c4e8b57a): a fixture sweep that lists the fixtures
+  misses the repositories production code creates. The repository that
+  actually lost this race in CI was `<stateDir>/gitdir`, which
+  `gitref.NewClient` inits under a `t.TempDir` the test hands it: no
+  fixture line exists to harden, so per-repo writes alone would have
+  shipped a fix that did not fix the observed failure. `GIT_CONFIG_GLOBAL`
+  in TestMain covers every git process the binary spawns, whoever spawns
+  it, and needs no production change. When hardening a test environment,
+  ask who ELSE creates the resource, not only which fixture does.
+- 2026-09-01 (os-c4e8b57a): a cleanup flake fails AFTER the assertions
+  pass, which is the worst shape for an unattended loop: the signal says
+  "your change is broken" when the change is fine, and the correct
+  response — re-run once, then treat a second failure as real — is a
+  rule an agent has to apply against its instinct to hunt a bug it did
+  not write. Removing the race is cheaper than paying that cost on
+  every future red.
+- 2026-09-01 (os-c4e8b57a): give a source-walking guard a floor on what
+  it found. A regex over a tree fails silently in the direction that
+  looks like success: match nothing, pass everything. Asserting a
+  minimum number of detected sites turns "the pattern rotted" from a
+  green build into a red one.

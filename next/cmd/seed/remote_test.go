@@ -30,12 +30,86 @@ func fixturePriv(t testing.TB) ed25519.PrivateKey {
 	return ed25519.NewKeyFromSeed(seed)
 }
 
+// hardenGitRepo disables every path that can spawn a git process
+// outliving the test that created the repository
+// (plans/os-c4e8b57a.md D1, D2). `t.TempDir` removes its tree
+// recursively at cleanup, and a detached auto-gc still writing under
+// it fails the removal AFTER the assertions passed: the worst shape of
+// flake for an unattended loop, because the signal says "your change
+// is broken" when the change is fine.
+//
+// The three settings are three different spawners, and are WRITTEN
+// into the repository rather than passed as `git -c` flags: `-c`
+// scopes a value to one invocation and writes nothing, so the later
+// commits, and above all a bare remote's own receive-pack, would still
+// run under stock auto-gc. `init` and `clone --bare` produce no
+// objects of their own, so a config write on the next line is still
+// before the first object and there is no window to lose.
+func hardenGitRepo(t testing.TB, repo string) {
+	t.Helper()
+	for _, kv := range [][2]string{
+		{"gc.auto", "0"},            // the heuristic itself
+		{"gc.autoDetach", "false"},  // any gc that runs stays in the foreground
+		{"receive.autoGC", "false"}, // the push path, which is the one that bit
+	} {
+		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
+			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
+		}
+	}
+}
+
+// hardenGitEnv points GIT_CONFIG_GLOBAL at a config disabling the same
+// three auto-gc paths for EVERY git process this test binary spawns,
+// whoever spawns it (plans/os-c4e8b57a.md D1, D5).
+//
+// hardenGitRepo covers the repositories the fixtures create. It cannot
+// cover the one that actually lost this race in CI: `gitref.NewClient`
+// inits a private bare git dir at <stateDir>/gitdir, and the tests hand
+// it a t.TempDir, so the repository is created by PRODUCTION code with
+// no fixture line to harden. `git -c` is not an option there either, for
+// the same reason it was not one for the fixtures: it writes nothing.
+// The environment reaches it without one line of production change (D4),
+// because gc.auto and receive.autoGC are read from every config scope.
+//
+// Both belts are kept. This one is process-scoped and a future test that
+// clears the environment would drop it; the repo-local writes survive
+// that, and each one is verifiable with `git -C <repo> config --get`.
+func hardenGitEnv() (func(), error) {
+	dir, err := os.MkdirTemp("", "seed-gitconfig-*")
+	if err != nil {
+		return nil, err
+	}
+	path := filepath.Join(dir, "config")
+	body := "[gc]\n\tauto = 0\n\tautoDetach = false\n[receive]\n\tautoGC = false\n"
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		os.RemoveAll(dir)
+		return nil, err
+	}
+	if err := os.Setenv("GIT_CONFIG_GLOBAL", path); err != nil {
+		os.RemoveAll(dir)
+		return nil, err
+	}
+	return func() { os.RemoveAll(dir) }, nil
+}
+
+func TestMain(m *testing.M) {
+	cleanup, err := hardenGitEnv()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	code := m.Run()
+	cleanup()
+	os.Exit(code)
+}
+
 func bareRemote(t *testing.T) string {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "remote.git")
 	if out, err := exec.Command("git", "init", "-q", "--bare", dir).CombinedOutput(); err != nil {
 		t.Fatalf("bare init: %v %s", err, out)
 	}
+	hardenGitRepo(t, dir)
 	return dir
 }
 
