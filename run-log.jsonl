@@ -717,3 +717,4 @@
 {"actor":"shaunlmason","data":{"title":"engine: seed situation — one-envelope resume packet for an actor"},"task":"os-c1dbf7bc","ts":"2026-09-01T03:01:22Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"engine: task-verb affordances and teaching refusals"},"task":"os-5ff33bc9","ts":"2026-09-01T03:01:25Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"seed: hooks — commit-trailer and receipt-discipline backpressure"},"task":"os-3411036e","ts":"2026-09-01T03:01:28Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"seed: untrack the next/seed build artifact"},"task":"os-a487b3b5","ts":"2026-09-01T03:01:31Z","verb":"create"}
