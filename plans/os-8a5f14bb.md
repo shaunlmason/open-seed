@@ -24,6 +24,15 @@ Measured against the tree, not assumed:
   `VerifySeals`, `VerifyOverrides`, `Classify`. One of its own detail
   strings forward-references this card: *"pending or diverged is an age
   judgment for maintenance, not this classifier."*
+- **But that is only the record-derived half.** The **evidence-grade**
+  checks — attested-head reconciliation against the cited receipt,
+  target-rewrite detection, receipt retrievability — live in the
+  **unexported** `evidenceFindings` in `cmd/seed/reconcile.go`, and
+  they are the ones that see divergence visible only through the
+  repository or the artifact store. A maintenance pass built on
+  `internal/reconcile` alone would pass while omitting exactly the
+  divergence reconciliation the charter asks it for (review finding on
+  #203).
 - **`internal/obs.Classify`** gives `expired` / `wedged` / `no_data`
   against `Thresholds`, as `observations.md` defines them.
 - **`internal/obligation`** already emits `run.unsettled`
@@ -74,6 +83,22 @@ declares none, and the maintenance lane holds `maintenance` and
   `obligations.md`. An open-ended lint list would make this loop a
   policy surface, which is what "audited as an ordinary actor" denies.
 
+- **D2.5 — the evidence-grade checks move into `internal/reconcile`,
+  and both callers consume one implementation.** `evidenceFindings`
+  already returns `reconcile.Finding`; it lives in `cmd/seed` only
+  because that is where the artifact store and repository handles were
+  wired. Moving it (taking `*artifact.Store` and the repo path as
+  parameters, as it already does) gives `seed reconcile` and `seed
+  maintain run` **one** divergence surface rather than two that can
+  drift.
+
+  This is the same principle `obligations.md` states for its own
+  derivations: a second copy of one derivation is the failure the
+  projection exists to prevent. A drill asserts the maintenance pass
+  reports an evidence-grade finding — a rewritten target — that
+  `internal/reconcile.Classify` alone cannot see, so "consumes the
+  complete result" is enforced rather than asserted.
+
 - **D3 — a lint finding becomes a FILED DEFECT CONTRACT, never an
   escalation.** The charter says maintenance "files defect contracts",
   and the distinction is real: an escalation **freezes** a contract and
@@ -86,18 +111,44 @@ declares none, and the maintenance lane holds `maintenance` and
   its own lane) and by filing nothing but contracts — it cannot claim
   them, because it does not hold `CapClaim`.
 
-- **D4 — a reap requires corroboration beyond silence, and `no_data`
-  never reaps.** This is the plan's sharpest constraint and comes
-  straight from `observations.md`: the channel is ephemeral and lossy
-  **by declaration**, so a dropped stream and dead work look identical
-  from outside.
+- **D4 — a reap answers an UNANSWERED REQUEST, never a timeout.** This
+  is the plan's sharpest constraint, and its first draft got the second
+  half wrong in the worst available way (review finding on #203).
+
+  The premise is right: `observations.md` declares the channel
+  ephemeral and lossy, so a dropped stream and dead work look identical
+  from outside, and silence alone can never reap. The first draft then
+  named "the claim's own lease elapsed" as the corroborating fact.
+  **There is no lease.** The word appears exactly once in the whole
+  `next/` spec tree, in the sentence that denies it: *"Seed holds no
+  lease: a claim stands until a deliberate exit or a reap"*
+  (`observations.md`). Implementing that conjunct would have meant
+  inventing lease semantics or picking an undeclared threshold — and
+  the risk section worried the two facts might be *correlated* when one
+  of them was not a fact at all.
+
+  The corroboration that does exist is better, and
+  [`executors.md`](../next/spec/executors.md) names this card as its
+  consumer: *"B-style automatic timeout reaping is the Phase 9
+  maintenance loop's job; it presupposes exactly these semantics."* The
+  semantics are the force path: a worker that **ignores its interrupt**
+  is killed and reaped, with the findings recording the ignored
+  interrupt.
 
   So a reap requires **both**:
   1. an `expired` or `wedged` classification from `obs.Classify`, and
-  2. an independent position-anchored fact — the claim's own lease
-     elapsed, measured against the claim event's `ts` at the read's
-     `--now`, the live-read posture `offers.md` sets and
-     `escalation.md` reuses.
+  2. a ledger fact that the holder **was asked to stop and did not** —
+     an admitted `run.interrupted` on the active fence with no
+     deliberate exit after it (`admit.InterruptRequested` already
+     counts only interrupts that passed the boundary at their own
+     position, so a raw unprivileged interrupt corroborates nothing),
+     or an admitted `wedge.declared`.
+
+  That is genuinely independent of the observation stream: one is an
+  obs-channel classification, the other a chain fact at a known
+  position. And it changes what a reap MEANS — not "long enough has
+  passed" but "someone asked, and nothing happened", which is the only
+  form of corroboration a lossy channel can support.
 
   `no_data` carries **no reap path whatever**, however old. A drill
   asserts that directly, because it is the case where the instinct to
@@ -107,6 +158,27 @@ declares none, and the maintenance lane holds `maintenance` and
   not a heartbeat signature: a legitimate long-running step emits
   exactly that shape, and the existing expiry/wedge classification
   already distinguishes it.
+
+- **D4.5 — a checkpoint persists a snapshot a fresh reader can
+  actually start from.** The first draft said "checkpoint (signed)" and
+  stopped there, which would let every acceptance criterion pass with
+  an **unusable** checkpoint (review finding on #203).
+
+  The charter is specific: the checkpointed snapshot is stored
+  retrievably, *"the checkpoint event carries its hash and location, so
+  a fresh reader fetches the snapshot, verifies it against the signed
+  checkpoint, and starts — without first rebuilding"*. So the
+  checkpoint step must (a) write the canonical projection
+  materialization to the artifact store (`internal/artifact`, which
+  already exists and is already content-addressed), (b) carry that
+  hash and location in the `system.checkpoint` payload under a
+  **versioned** format, and (c) validate that payload at admission —
+  today the boundary accepts an arbitrary checkpoint payload.
+
+  Drilled by a **reader round trip**: fetch the snapshot named by a
+  checkpoint, verify it against the signature, and start from it
+  without replaying the chain. A checkpoint nobody has ever started
+  from is a claim, not a capability.
 
 - **D5 — "runnable unattended" is drilled WAKELESS.** No scheduler, no
   wake channel: the drill runs one pass against a real ledger and
@@ -135,22 +207,29 @@ declares none, and the maintenance lane holds `maintenance` and
    including `no_data` refusing to reap and the operator-less key
    refusing.
 3. `next/internal/reconcile` — the unsettled-run class, consumed from
-   `internal/obligation`.
-4. `next/cmd/seed` — `maintain run`, its envelope, and the affordance
+   `internal/obligation`; and `evidenceFindings` moved here from
+   `cmd/seed` so both callers share one divergence surface (D2.5).
+4. `next/internal/artifact` + the checkpoint payload — the snapshot
+   written retrievably, its hash and location carried in a versioned
+   payload, validated at admission (D4.5).
+5. `next/cmd/seed` — `maintain run`, its envelope, and the affordance
    catalog entries for any act it performs.
-5. `next/spec/maintenance.md` (new) — the loop, the reap's corroboration
-   rule, the closed lint set, and what a finding becomes.
-6. `next/lanes/maintenance.json` — `acts_through` stays empty (it acts
+6. `next/spec/maintenance.md` (new) — the loop, the reap's corroboration
+   rule, the closed lint set, what a finding becomes, and the
+   checkpoint's snapshot contract.
+7. `next/lanes/maintenance.json` — `acts_through` stays empty (it acts
    on the raw seam); the summary gains what the loop actually does.
-7. `next/docs/decisions.md`, `memory/LEARNINGS.md`; receipt; evidence;
+8. `next/docs/decisions.md`, `memory/LEARNINGS.md`; receipt; evidence;
    review.
 
 ## File Scope
 
 - `next/internal/maintain/**` (new), `next/internal/reconcile/**`
+- `next/internal/admit/**` (the checkpoint payload rule, D4.5)
 - `next/cmd/seed/**`
-- `next/spec/maintenance.md` (new), `next/spec/observations.md` (the
-  reap's corroboration rule, cross-referenced)
+- `next/spec/maintenance.md` (new), `next/spec/observations.md` and
+  `next/spec/executors.md` (the reap's corroboration rule,
+  cross-referenced)
 - `next/lanes/maintenance.json`
 - `next/docs/decisions.md`, `next/docs/progress.md`, `memory/*`
 - `receipts/os-8a5f14bb.json`
@@ -165,22 +244,37 @@ Nothing outside `next/**` except the work-product files above.
 2. **A `no_data` stream is never reaped**, however old the claim, and
    the refusal says why. Drilled directly, because this is where the
    instinct to reap is strongest and the evidence weakest.
-3. An `expired` classification **without** the independent lease fact
-   does not reap either — the corroboration is a conjunction, and a
-   drill plants each half alone.
+3. An `expired` classification **without** an unanswered request does
+   not reap either, and an unanswered request without the
+   classification does not reap: the corroboration is a conjunction,
+   and a drill plants **each half alone**. A raw, boundary-refused
+   `run.interrupted` corroborates nothing, asserted separately, because
+   `admit.InterruptRequested` counting only admitted interrupts is what
+   makes the conjunct meaningful.
+3b. The maintenance pass reports an **evidence-grade** finding — a
+   rewritten merge target — that `internal/reconcile.Classify` alone
+   cannot see. That is D2.5 enforced: a pass built on the
+   record-derived half only would be green here and wrong.
 4. The unsettled-run lint fires only once the subject has taken a
    subsequent claim window or reached a terminal state, and **not**
    mid park or reap flow. Both directions asserted, so it cannot pass
    by never firing.
 5. A lint finding files a defect contract, and the filed contract cites
    the finding's class and subject. No lint raises an escalation.
+5b. A checkpoint's snapshot is **fetched and verified by a fresh
+   reader**, which starts from it without replaying the chain. A
+   checkpoint whose payload names no retrievable snapshot, or whose
+   snapshot does not match the signed hash, refuses at admission.
 6. **The loop holds no private powers**: run with a `maintenance`-only
    key, the acts needing `operator` refuse `out_of_grant` at the
    boundary. That is D6 enforced rather than described.
 7. **Mutation evidence, per fix.** Each must fail a drill: allowing
-   `no_data` to reap; dropping the lease conjunct; re-deriving the
-   unsettled-run anchoring instead of consuming it; turning a lint
-   finding into an escalation.
+   `no_data` to reap; dropping the unanswered-request conjunct;
+   accepting a raw (boundary-refused) interrupt as corroboration;
+   re-deriving the unsettled-run anchoring instead of consuming it;
+   turning a lint finding into an escalation; dropping the
+   evidence-grade findings from the pass; and accepting a checkpoint
+   whose snapshot hash does not match.
 8. `make check` green with coverage measured **cold**, at least three
    readings above the gate, and the suites pass unprivileged.
 
@@ -195,22 +289,30 @@ make check
 
 ## Expected diff shape
 
-One new package with its drills, one new lint class, one CLI verb, one
-new spec and two amended, plus the work-product files. Roughly
-+900/-40 lines, all under `next/**`.
+One new package with its drills, one new lint class, one moved
+function, one checkpoint payload rule, one CLI verb, one new spec and
+three amended, plus the work-product files. Roughly +1200/-80 lines,
+all under `next/**`.
 
 ## A risk worth naming now
 
-D4's corroboration rule is the decision most likely to be wrong, and it
-is wrong in the direction that is hard to see: if the lease fact and the
-expiry classification are **correlated** — both ultimately derived from
-the same silence — then requiring both is theatre, not corroboration,
-and the loop would reap on one piece of evidence while appearing to
-require two.
+D4's corroboration rule is still the decision most likely to be wrong,
+and the first draft's version of this section is itself the warning.
 
-They are not correlated as specified: the lease elapses against the
-claim event's own `ts`, which is in the chain and independent of
-whether any observation was ever emitted. But that independence is the
-property to check, so the drill for criterion 3 plants each half alone
-rather than only testing the conjunction — a test that only ever sees
-both cannot tell a conjunction from a coincidence.
+It asked whether the two conjuncts might be **correlated** — both
+derived from the same silence — and concluded they were not, reasoning
+carefully about a fact that **did not exist**. The independence
+argument was sound and the premise was invented. A risk section that
+reasons well about the wrong thing reads exactly like one that reasons
+well.
+
+So the standing check is not "are these independent?" but "does each
+conjunct name something the tree actually has?" For the current pair:
+`obs.Classify` is in `internal/obs`, and `admit.InterruptRequested` is
+in `internal/admit`, both with their own drills. The plan cites the
+function, not the concept, precisely so the next reader can check the
+premise in one grep rather than trusting the prose.
+
+The independence question still stands and criterion 3 still plants
+each half alone: a test that only ever sees both cannot tell a
+conjunction from a coincidence.
