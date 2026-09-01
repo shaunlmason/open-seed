@@ -854,3 +854,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T14:59:29Z"},"task":"os-abb206c8","ts":"2026-09-01T13:59:29Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"title":"next: budget exhaustion refuses as chain_invalid; no budget exit code exists"},"task":"os-d03bde01","ts":"2026-09-01T14:19:53Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T15:20:57Z"},"task":"os-abb206c8","ts":"2026-09-01T14:20:57Z","verb":"lease-renew"}
+{"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:190","to":"ready"},"task":"os-b779b4c7","ts":"2026-09-01T14:28:42Z","verb":"plan-unblock"}
