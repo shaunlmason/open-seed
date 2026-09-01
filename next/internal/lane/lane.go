@@ -92,25 +92,39 @@ const FragmentDir = "fragments"
 // must be stated rather than inferred.
 var dispatcherAllowlist = []string{keyring.CapDispatch}
 
-// SituationFlag is one flag of the orienting read, with whether the
-// surface REQUIRES it. Required-ness is the half that matters: a
+// SituationFlag is one flag of the orienting read, with what the
+// surface demands of it. Demand is the half that matters: a
 // declaration naming only real flags can still be a command that exits
 // 64, and a validator that passes it has certified prose (review
-// finding on this PR, reproduced — all six shipped manifests declared
-// a read that could not run).
+// finding on #188, reproduced — all six shipped manifests declared a
+// read that could not run).
+//
+// Two kinds of demand exist. Required is unconditional. Posture marks
+// membership of the `--ledger` xor `--remote` pair: exactly one must be
+// named, because a read with neither has nothing to derive from and a
+// read with both has no answer to which view it stamped.
 type SituationFlag struct {
 	Name     string
 	Required bool
+	Posture  bool
 }
 
 // situationFlags is the read surface orients_from is checked against.
 // It lives here rather than in cmd/seed because package main is not
 // importable; cmd/seed carries a drill asserting its own flag set and
-// required-ness match this exactly, so the two cannot drift without a
+// its demands match this exactly, so the two cannot drift without a
 // red test.
+//
+// The posture pair arrived with the loop (plans/os-abb206c8.md D3):
+// `claim take` is remote-only, so a lane that could only orient locally
+// would read one view and act against another.
 func situationFlags() []SituationFlag {
 	return []SituationFlag{
-		{Name: "ledger", Required: true},
+		{Name: "ledger", Posture: true},
+		{Name: "remote", Posture: true},
+		{Name: "ref"},
+		{Name: "state"},
+		{Name: "supported"},
 		{Name: "key"},
 		{Name: "subject"},
 		{Name: "since"},
@@ -338,7 +352,7 @@ func checkOrientsFrom(m Manifest, add func(lane, field, msg string)) {
 	// Naming only real flags is not enough: a command missing a
 	// REQUIRED one exits 64 without ever reaching the ledger, and a
 	// lane following it would fail on its first act. Checking the
-	// surface's requirements is what makes the declaration executable
+	// surface's demands is what makes the declaration executable
 	// rather than merely well-spelled.
 	for _, f := range situationFlags() {
 		if f.Required && !cited[f.Name] {
@@ -346,6 +360,32 @@ func checkOrientsFrom(m Manifest, add func(lane, field, msg string)) {
 				"omits --%s, which `seed situation` requires: as written this read exits 64 and the lane "+
 					"never orients", f.Name))
 		}
+	}
+	// The posture pair is an exclusive-or, so both arms fail for the
+	// same reason the surface refuses them: a read naming neither has
+	// no ledger to derive from, and one naming both cannot say which
+	// view its position stamps.
+	var posture []string
+	var namedPosture []string
+	for _, f := range situationFlags() {
+		if !f.Posture {
+			continue
+		}
+		posture = append(posture, "--"+f.Name)
+		if cited[f.Name] {
+			namedPosture = append(namedPosture, "--"+f.Name)
+		}
+	}
+	switch len(namedPosture) {
+	case 1:
+	case 0:
+		add(m.Lane, "orients_from", fmt.Sprintf(
+			"names no posture: `seed situation` takes exactly one of %s, and as written this read exits 64 "+
+				"and the lane never orients", strings.Join(posture, " or ")))
+	default:
+		add(m.Lane, "orients_from", fmt.Sprintf(
+			"names %s: `seed situation` takes exactly one of %s, since a read citing both cannot say which "+
+				"view its position stamps", strings.Join(namedPosture, " and "), strings.Join(posture, " or ")))
 	}
 }
 

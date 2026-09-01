@@ -57,12 +57,12 @@ func owedToMe(row obligation.Row, fp string, lanes map[string]bool) bool {
 func runSituation(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("situation", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	dir := fs.String("ledger", "", "ledger directory")
+	posture := bindReadPosture(fs)
 	keyPath := fs.String("key", "", "OpenSSH ed25519 private key: the actor the situation is read for")
 	subject := fs.String("subject", "", "restrict to one contract")
 	since := fs.String("since", "", "report only what changed at or after this position")
-	if err := fs.Parse(args); err != nil || *dir == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "situation requires --ledger <dir> [--key <path>] [--subject <id>] [--since <position>]"), stdout, stderr)
+	if err := fs.Parse(args); err != nil || !posture.resolved() || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "situation requires --ledger <dir> or --remote <repo> (not both) [--key <path>] [--subject <id>] [--since <position>]"), stdout, stderr)
 	}
 	var sincePos int
 	haveSince := *since != ""
@@ -74,7 +74,8 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 		}
 		sincePos = n
 	}
-	st, failEnv := loadVerdictState(*dir)
+	st, admitCtx, closePosture, failEnv := posture.open()
+	defer closePosture()
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
@@ -228,7 +229,7 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 	}
 	env := envelope.OK(result)
 	if signer != nil && *subject != "" {
-		env = stampAffordances(env, *dir, signer, *subject)
+		env = stampAffordancesFrom(env, admitCtx, signer, *subject)
 	}
 	return render(stampTip(env, st.count), stdout, stderr)
 }
@@ -249,11 +250,20 @@ func windowsHeld(st *verdictState, fp, only string) []map[string]any {
 		if !ok || s.Claim == nil || s.Claim.Holder != fp {
 			continue
 		}
-		out = append(out, map[string]any{
+		w := map[string]any{
 			"subject": subject,
 			"fence":   fmt.Sprintf("%d", s.Claim.Fence),
 			"state":   s.State,
-		})
+		}
+		// The acceptance anchor the holder is judged against. A lane's
+		// deliberate exit carries a packet, and a packet's acceptance
+		// part is what a successor is judged against — so a read that
+		// withheld it left the lane unable to write its own exit
+		// (plans/os-abb206c8.md, found by the loop's first real park).
+		if s.Acceptance != nil && s.Acceptance.Ref != "" {
+			w["acceptance"] = s.Acceptance.Ref
+		}
+		out = append(out, w)
 	}
 	return out
 }

@@ -126,14 +126,15 @@ func TestLaneValidateRefusesWithFindings(t *testing.T) {
 // telling the validator fails HERE, which is the whole reason the
 // duplication is tolerable.
 func TestSituationFlagsAgreeWithTheCLI(t *testing.T) {
+	// The real surface, bound the way runSituation binds it: the
+	// posture pair comes from bindReadPosture, so calling it here is
+	// what keeps this drill honest rather than restating its flags in
+	// a literal that can drift from it.
 	fs := flag.NewFlagSet("situation", flag.ContinueOnError)
-	fs.String("ledger", "", "")
+	bindReadPosture(fs)
 	fs.String("key", "", "")
 	fs.String("subject", "", "")
 	fs.String("since", "", "")
-	// The real surface, bound the way runSituation binds it: if that
-	// list changes, this literal must change with it, and the compare
-	// below is what makes the omission visible.
 	var actual []string
 	fs.VisitAll(func(f *flag.Flag) { actual = append(actual, f.Name) })
 	var declared []string
@@ -146,43 +147,101 @@ func TestSituationFlagsAgreeWithTheCLI(t *testing.T) {
 		t.Fatalf("internal/lane validates orients_from against %v, the situation read takes %v", declared, actual)
 	}
 
-	// Required-ness, DERIVED from the surface rather than read off the
-	// declaration. A drill that only iterates the flags already marked
-	// required is vacuous when the mark is removed — the same failure
-	// shape as the finding that prompted it — so required-ness is
-	// discovered by omitting each flag in turn and asking the surface.
-	// Omitting a required flag refuses as `usage` before the read
-	// begins; omitting an optional one gets past parsing and refuses
-	// on the ledger instead.
+	// The surface's DEMANDS, derived by asking it rather than read off
+	// the declaration. A drill that only iterates the flags already
+	// marked required is vacuous when the mark is removed — the same
+	// failure shape as the finding that prompted it — so each demand is
+	// discovered by building an invocation that breaks it and observing
+	// whether the surface refuses as `usage` before the read begins.
 	dir := t.TempDir()
 	keyPath := filepath.Join(t.TempDir(), "key")
 	if err := os.WriteFile(keyPath, []byte("not-a-key\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	value := map[string]string{"ledger": dir, "key": keyPath, "subject": "c-1", "since": "0"}
-	observed := map[string]bool{}
-	for _, f := range lane.SituationFlags() {
+	value := map[string]string{
+		"ledger": dir, "remote": dir, "ref": "refs/seed/ledger", "state": t.TempDir(),
+		"supported": "seed/1", "key": keyPath, "subject": "c-1", "since": "0",
+	}
+	// A baseline that parses: one posture arm and every optional flag.
+	// Each case below perturbs exactly one thing about it.
+	baseline := func(skip map[string]bool, add ...string) []string {
 		args := []string{"situation"}
-		for _, other := range lane.SituationFlags() {
-			if other.Name != f.Name {
-				args = append(args, "--"+other.Name, value[other.Name])
+		for _, f := range lane.SituationFlags() {
+			if skip[f.Name] || (f.Posture && f.Name != "ledger") {
+				continue
+			}
+			args = append(args, "--"+f.Name, value[f.Name])
+		}
+		return append(args, add...)
+	}
+	refusesAsUsage := func(args []string) bool {
+		e, _ := runEnv(t, args...)
+		return e.Error != nil && e.Error.Code == "usage"
+	}
+
+	// Unconditional requirements: omit one at a time.
+	for _, f := range lane.SituationFlags() {
+		if f.Posture {
+			continue
+		}
+		if got := refusesAsUsage(baseline(map[string]bool{f.Name: true})); got != f.Required {
+			t.Errorf("internal/lane declares --%s required=%v, the situation read behaves as required=%v",
+				f.Name, f.Required, got)
+		}
+	}
+
+	// The posture pair is an exclusive-or, and BOTH arms are checked:
+	// naming neither and naming both must each refuse, while naming
+	// exactly one must get past parsing. A model with a single required
+	// flag cannot express this, which is why it is derived here rather
+	// than asserted from the declaration.
+	var postureNames []string
+	for _, f := range lane.SituationFlags() {
+		if f.Posture {
+			postureNames = append(postureNames, f.Name)
+		}
+	}
+	if len(postureNames) < 2 {
+		t.Fatalf("this drill needs the posture pair, internal/lane declares %v", postureNames)
+	}
+	neither := map[string]bool{}
+	for _, name := range postureNames {
+		neither[name] = true
+	}
+	if !refusesAsUsage(baseline(neither)) {
+		t.Error("naming no posture must refuse as usage: the read would have no ledger to derive from")
+	}
+	both := baseline(nil)
+	for _, name := range postureNames {
+		if name != "ledger" {
+			both = append(both, "--"+name, value[name])
+		}
+	}
+	if !refusesAsUsage(both) {
+		t.Error("naming both postures must refuse as usage: the read could not say which view it stamped")
+	}
+	for _, name := range postureNames {
+		skip := map[string]bool{}
+		for _, other := range postureNames {
+			if other != name {
+				skip[other] = true
 			}
 		}
-		e, _ := runEnv(t, args...)
-		observed[f.Name] = e.Error != nil && e.Error.Code == "usage"
-	}
-	for _, f := range lane.SituationFlags() {
-		if observed[f.Name] != f.Required {
-			t.Errorf("internal/lane declares --%s required=%v, the situation read behaves as required=%v",
-				f.Name, f.Required, observed[f.Name])
+		args := []string{"situation"}
+		for _, f := range lane.SituationFlags() {
+			if f.Posture && f.Name != name {
+				continue
+			}
+			args = append(args, "--"+f.Name, value[f.Name])
 		}
-	}
-	if !observed["ledger"] {
-		t.Fatal("this drill is vacuous unless at least one flag is genuinely required; --ledger was")
+		if refusesAsUsage(args) {
+			t.Errorf("naming exactly --%s must get past parsing: it is one arm of the posture pair", name)
+		}
 	}
 
 	// And every shipped manifest's read is one the surface accepts in
-	// SHAPE: real flags, and none of the required ones missing.
+	// SHAPE: real flags, no missing unconditional requirement, and
+	// exactly one posture arm.
 	required := map[string]bool{}
 	for _, f := range lane.SituationFlags() {
 		if f.Required {
@@ -206,6 +265,16 @@ func TestSituationFlagsAgreeWithTheCLI(t *testing.T) {
 				t.Errorf("%s orients from %q, which omits the required --%s and would exit 64",
 					m.Lane, m.OrientsFrom, name)
 			}
+		}
+		named := 0
+		for _, name := range postureNames {
+			if cited[name] {
+				named++
+			}
+		}
+		if named != 1 {
+			t.Errorf("%s orients from %q, which names %d of the posture pair %v: the surface takes exactly one",
+				m.Lane, m.OrientsFrom, named, postureNames)
 		}
 	}
 }

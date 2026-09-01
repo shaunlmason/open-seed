@@ -4,7 +4,7 @@
   "grants": [
     "claim"
   ],
-  "orients_from": "seed situation --ledger <dir> --key <key> --since <position>",
+  "orients_from": "seed situation --remote <repo> --key <key> --since <position>",
   "acts_through": [
     "claim take",
     "budget reserve",
