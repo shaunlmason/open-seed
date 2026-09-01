@@ -594,7 +594,7 @@ administrative card, not a Phase 8 item).
   change report with an explicit discharged list; and the
   dischargeability sweep over every prefix of the shared walk
   scenario, which caught a real modeling error on its first run)
-- 9.5 part (c) loop verbs — os-7e197768 — **review** (task PR
+- 9.5 part (c) loop verbs — os-7e197768 — **done** (merged #173
   against plan #172: the seven acts that close poll → claim → work →
   meter → submit → exit, each deriving the fence from the active
   window, the reservation from the shared budget view, the plan
@@ -602,13 +602,45 @@ administrative card, not a Phase 8 item).
   repository, and each pre-flighting through the same admit.Check
   admission enforces so a refusal carries the boundary's own error
   beside the caller's affordances; claim take remote-only; the
-  packet validated at the door; new next/spec/loop-verbs.md)
+  packet validated at the door; new next/spec/loop-verbs.md). The
+  post-merge review found three defects, all live on main and carded
+  as os-9b3f3ef3: derived arguments not re-derived across the
+  optimistic retry, a remote refusal stamped from the stale view, and
+  a JSON null packet panicking the CLI.
+- **9.5 part (b) is PARTIALLY MET**: the obligations, windows and
+  budget block landed; the unread messages item 5(b) specifies did
+  not, so the read a lane is told to orient from cannot yet tell it
+  that it has mail. The remainder is now named in the build plan's
+  own item 5 text (this card): the situation read carries the
+  caller's messages, with "unread" derived from the cited --since
+  position rather than stored read-state.
 - 9.1 lane role fragments, dispatcher least-capability, injection
-  corpus, worker-lane loop with exhaustion parking — backlog
-- 9.2 escalation with packet, question and decision — backlog
+  corpus, worker-lane loop with exhaustion parking — backlog. Its
+  role-definition text now binds four ergonomic obligations (this
+  card): one position-stamped read named in each fragment, the loop
+  acting through the item 5(c) loop verbs rather than the raw append
+  seam, liveness riding the loop's own steps with no heartbeat verb,
+  and the one-inbox doctrine.
+- 9.2 escalation with packet, question and decision — backlog. An
+  escalation answering a refusal carries that refusal's code and
+  message, so the human is asked the boundary's own question (this
+  card).
 - 9.3 unattended maintenance, whose lint list carries the Phase 7
-  exit's unsettled-run detection — backlog
-- 9.4 small-team and fleet fixtures — backlog
+  exit's unsettled-run detection — backlog. 9.1's loop emitting
+  observations from its own steps makes an expired classification
+  better evidence, by removing forgotten bookkeeping as a cause of
+  silence; it does NOT make silence proof, because the channel is
+  lossy by declaration, so the reap stays a judgment needing
+  corroboration and no_data carries no reap path at all. No heartbeat
+  predicate is added either, because non-advancing observations are a
+  legitimate long-running step (this card).
+- 9.4 small-team and fleet fixtures — backlog. Both run with no wake
+  channel, and every refusal converges within one retry in one of
+  three ways: an admitting act, a refreshed read showing the act is no
+  longer owed, or an escalation carrying the refusal. The middle arm
+  is the common case (a fleet-mode claim race means the loser
+  re-orients), and what is forbidden is the fourth outcome: a blind
+  retry or a silent loop (this card).
 
 ## Frontier
 
@@ -629,22 +661,33 @@ every card closed. Phase 8 is done and closed: every plan (#158,
 the out-of-item ledger writeHead race fix (#161 against plan #159),
 and the exit record above (card os-ef715d17's task PR) are merged
 with every card closed.
-Phase 9 is under way: item 5 is complete once the loop verbs land —
-its derivation and read merged (#171), and its acts are in review
-(os-7e197768). The lane-facing surface is therefore whole in shape:
-`seed situation` says what is true and what is owed, and the loop
-verbs are how a lane acts on it without hand-assembling protocol
-arguments.
+Phase 9 is under way: item 5's derivation and read merged (#171) and
+its loop verbs merged (#173), so the lane-facing surface is whole in
+shape — `seed situation` says what is true and what is owed, and the
+loop verbs are how a lane acts on it without hand-assembling protocol
+arguments. Two things qualify that. Part (b) is **partially met**: it
+carries no unread messages, which item 5's text now names as the
+remainder. And #173's post-merge review found three defects that are
+live on main, carded as **os-9b3f3ef3** — derived arguments not
+re-derived across the optimistic retry (a rival reservation landing
+mid-flight is silently closed, the exact choice `soleOpenReservation`
+exists to refuse), a remote refusal stamped from the stale view, and
+a JSON null packet panicking the CLI.
 **Next action: Phase 9 item 1** — the six lane role definitions as
 composable fragments, the dispatcher's least-capability posture, the
 injection conformance suite against dispatcher input handling, and
 the worker-lane loop carrying the exhaustion-park obligation the
 Phase 7 exit routes to it — a new card, plan-first, per the loop.
 That loop now has verbs to call rather than a raw seam to assemble,
-which is what item 5 part (c) exists to give it. Then Phase 9 items
-2 through 4 (escalation with packet, question and decision; the
+which is what item 5 part (c) exists to give it, and item 1's text
+now binds four ergonomic obligations besides (this card): the one
+position-stamped read each fragment names, the loop verbs as the
+loop's acts, liveness riding the loop's own steps, and the one-inbox
+doctrine. Then Phase 9 items 2 through 4 (escalation with packet,
+question and decision, carrying the refusal it answers; the
 unattended maintenance loop, whose lint list carries the Phase 7
-exit's unsettled-run detection; small-team and fleet fixtures).
+exit's unsettled-run detection; small-team and fleet fixtures, run
+wakeless and asserting one-retry convergence).
 The III.I remainder rides the phases it was routed to: Phase 11 item
 2 carries claim-time lesson surfacing, and Phase 13 carries the
 machine-protocol surface and platform parity, with III.I on its exit
