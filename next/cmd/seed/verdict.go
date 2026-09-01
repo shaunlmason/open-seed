@@ -349,7 +349,7 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
 	if err := admit.Check(ctx, rec); err != nil {
-		return render(stampTip(stampAffordances(remoteFailureEnvelope(err), *dir, signer, *subject), ctx.Count), stdout, stderr)
+		return render(journalAttempt(stampTip(stampAffordances(remoteFailureEnvelope(err), *dir, signer, *subject), ctx.Count), *dir, signer, "verdict.rendered", *subject), stdout, stderr)
 	}
 	pos, err := store.Append(rec, ctx.Resolve)
 	if err != nil {
@@ -363,7 +363,7 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	result["appended"] = hash
 	result["verdict"] = *verdictFlag
 	result["submission"] = strconv.Itoa(s.Submission.Pos)
-	return render(stampTip(stampAffordances(envelope.OK(result), *dir, signer, *subject), pos+1), stdout, stderr)
+	return render(journalAttempt(stampTip(stampAffordances(envelope.OK(result), *dir, signer, *subject), pos+1), *dir, signer, "verdict.rendered", *subject), stdout, stderr)
 }
 
 func runVerdictCheck(args []string, stdout, stderr io.Writer) int {

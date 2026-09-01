@@ -510,14 +510,21 @@ task PR (an administrative card, not a Phase 7 item).
   plus budget status --key, the lifecycle-walk and CLI stamp
   drills)
 - 8.2 regression class: affordance-listed verb refused for legality
-  at the same position = bug — os-148d3ba1 — **review** (task PR
-  against plan #162: the walk's history extracted into the shared
+  at the same position = bug — os-148d3ba1 — **done** (#163 merged,
+  card closed; plan #162: the walk's history extracted into the shared
   walkScript, the prefix-sweeping TestAffordanceRegressionClass
   re-drafting every listed verb through the enforcing Check for all
   seven enrolled-lane pairs at every position, and the CLI drill
   pinning that stamped position and stamped list agree with
   independent recomputation on success and refusal envelopes)
-- 8.3 refusal-rate metric in the report — backlog (next card)
+- 8.3 refusal-rate metric in the report — os-edf73d66 — **review**
+  (task PR against plan #164 as amended: the attempts journal
+  journaling both outcomes best-effort at every stamped
+  admission-boundary seam, the journal as a declared digest-covered
+  report input via --refusals, the nullable refusals section with
+  one-population counts and the four-decimal rate, report v10,
+  next/spec/refusals.md, and the D4 drills including the
+  1-refusal-beside-100-admissions=0.0099 fixture)
 - (out of item) ledger writeHead race fix — os-c6fb95ee — **done**
   (#161 merged, card closed: per-writer unique temps preserving the
   established HEAD mode, with the store-level contention regression
@@ -537,14 +544,16 @@ merged with every card closed. Phase 7 is done and closed: every
 plan (#144/#146, #147/#148, #150, #153), every implementation (7.1
 #145, 7.2 #149, 7.3 #151 with follow-up #152, 7.4 #154), and the
 exit record above (card os-c9e24032's task PR) are merged with
-every card closed. 8.1 (os-f5551001,
-affordance envelope, #160) and the out-of-item ledger writeHead
-race fix (os-c6fb95ee, #161) are merged with their cards closed.
-**Next action: land 8.2** (os-148d3ba1, the
-affordance-listed-verb-refused-equals-bug regression class — plan
-#162 merged, task PR in review), then 8.3 (the refusal-rate report
-metric, a new card, plan-first) closes the phase against the III.I
-exit. Phase 9's worker-lane loop carries the
+every card closed. 8.1 (#160), the
+out-of-item ledger writeHead race fix (#161), and 8.2 (#163, the
+regression class over the shared walk scenario) are merged with
+their cards closed.
+**Next action: land 8.3** (os-edf73d66, the refusal-rate report
+metric — plan #164 merged, task PR in review), then the Phase 8
+exit record (a new card, plan-first, per the Phase 5-7 exit
+precedent) against the build-plan exit line: charter III.I's
+same-rule-set property test (8.2) and the envelope schema stable
+and versioned. Phase 9's worker-lane loop carries the
 exhaustion-park obligation the Phase 7 exit routes to it.
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

@@ -30,37 +30,60 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
+	"github.com/shaunlmason/open-seed/next/internal/refusals"
 )
 
 // Inputs is the declared non-chain input a rebuild may carry
-// (next/spec/observations.md): the loaded observation snapshot, the
-// as_of instant classification is computed at, and the classification
-// thresholds. Everything here is declared by the caller, never read
-// from a wall clock or an ambient path, so an input-bearing build
-// stays a pure function of (records, inputs).
+// (next/spec/observations.md; next/spec/refusals.md): the loaded
+// observation snapshot with the as_of instant classification is
+// computed at and the classification thresholds, and the attempts
+// journal behind the report's refusal-rate section. Everything here
+// is declared by the caller, never read from a wall clock or an
+// ambient path, so an input-bearing build stays a pure function of
+// (records, inputs). The families declare independently: either,
+// both, or neither may be present.
 type Inputs struct {
 	Obs        *obs.Snapshot
 	AsOf       time.Time
 	Thresholds obs.Thresholds
+	Refusals   *refusals.Journal
+}
+
+// Declared reports whether any input family is present; only then do
+// the digest, the stamp's inputs field, and the build id's input
+// segment apply.
+func (in Inputs) Declared() bool {
+	return in.Obs != nil || in.Refusals != nil
 }
 
 // Digest is the declared-inputs identity: the RFC 8785 digest over
-// EVERY declared input (the snapshot, as_of, and both thresholds),
-// because any of them changes the classification bytes, and an
-// identity covering only the snapshot would let a rebuild at a later
-// as_of be discarded as a same-id duplicate, leaving a silent worker
-// permanently live in the published view.
+// EVERY declared input (the snapshot with as_of and both thresholds,
+// and the attempts journal), because any of them changes the
+// section bytes, and an identity covering only part would let a
+// rebuild with different inputs be discarded as a same-id duplicate,
+// leaving stale sections permanently live in the published view.
+// Each family contributes its keys only when declared, so an
+// obs-only digest is unchanged by this field existing.
 func (in Inputs) Digest() (string, error) {
-	snapDigest, err := in.Obs.Digest()
-	if err != nil {
-		return "", err
+	fields := map[string]any{}
+	if in.Obs != nil {
+		snapDigest, err := in.Obs.Digest()
+		if err != nil {
+			return "", err
+		}
+		fields["obs"] = snapDigest
+		fields["as_of"] = in.AsOf.UTC().Format(time.RFC3339)
+		fields["expiry_after_seconds"] = int(in.Thresholds.ExpiryAfter / time.Second)
+		fields["wedge_after_seconds"] = int(in.Thresholds.WedgeAfter / time.Second)
 	}
-	b, err := json.Marshal(map[string]any{
-		"obs":                  snapDigest,
-		"as_of":                in.AsOf.UTC().Format(time.RFC3339),
-		"expiry_after_seconds": int(in.Thresholds.ExpiryAfter / time.Second),
-		"wedge_after_seconds":  int(in.Thresholds.WedgeAfter / time.Second),
-	})
+	if in.Refusals != nil {
+		journalDigest, err := in.Refusals.Digest()
+		if err != nil {
+			return "", err
+		}
+		fields["refusals"] = journalDigest
+	}
+	b, err := json.Marshal(fields)
 	if err != nil {
 		return "", err
 	}
@@ -245,7 +268,7 @@ func RebuildWith(ledgerDir, outDir string, projections []Projection, resolve led
 		buildID := fmt.Sprintf("%08d-%.12s-v%s", rep.Count, rep.Tip, ver)
 		bin := Inputs{}
 		digest := ""
-		if p.Inputs && in.Obs != nil {
+		if p.Inputs && in.Declared() {
 			bin = in
 			digest, err = in.Digest()
 			if err != nil {

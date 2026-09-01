@@ -246,7 +246,7 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 		if err := ring.Preview(rec); err != nil {
 			env := envelope.Fail(envelope.ExitChainInvalid, "chain_invalid",
 				fmt.Sprintf("actor event would fail verification: %v", err))
-			return render(stampTip(stampAffordances(env, *dir, signer, *subject), rep.Count), stdout, stderr)
+			return render(journalAttempt(stampTip(stampAffordances(env, *dir, signer, *subject), rep.Count), *dir, signer, *verb, *subject), stdout, stderr)
 		}
 	}
 	pos, err := store.Append(rec, appendResolve)
@@ -263,7 +263,7 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
 	env := envelope.OK(map[string]any{"appended": hash, "verb": *verb})
-	return render(stampTip(stampAffordances(env, *dir, signer, *subject), pos+1), stdout, stderr)
+	return render(journalAttempt(stampTip(stampAffordances(env, *dir, signer, *subject), pos+1), *dir, signer, *verb, *subject), stdout, stderr)
 }
 
 func runLedgerShow(args []string, stdout, stderr io.Writer) int {
