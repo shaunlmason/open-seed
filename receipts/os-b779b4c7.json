@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "task": "os-b779b4c7",
+  "merge_base": "b3277fcd199eb5f92cf9e537bb17443aab759edc",
+  "head": "63d1a8488cd7019ae94aeda169ba665327c36be6",
+  "plan_path": "plans/os-b779b4c7.md",
+  "plan_sha256": "ed8424d7fb1cd9d0edd9739cf9c129c15ac5f26df1761e775fb4cdafbafc14d1",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/injection_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/injection_test.go",
+    "next/internal/admit/testdata/injection/README.md",
+    "next/internal/admit/testdata/injection/command-injection.json",
+    "next/internal/admit/testdata/injection/fake-system-preamble.json",
+    "next/internal/admit/testdata/injection/ignore-previous.json",
+    "next/internal/admit/testdata/injection/reap-persuasion.json",
+    "next/internal/admit/testdata/injection/relay-request.json",
+    "next/internal/admit/testdata/injection/residuals.json",
+    "next/internal/admit/testdata/injection/roleplay-framing.json",
+    "next/internal/admit/testdata/injection/tier-persuasion.json",
+    "next/internal/verdict/injection_test.go",
+    "next/spec/lanes.md"
+  ],
+  "diff_sha256": "c3848af3c9db542cd2a94778a851742ce13d01421a8ad92dfac3394535a6963f",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/verdict/ ./internal/lane/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
