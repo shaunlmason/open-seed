@@ -808,3 +808,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-c60b6e24","kind":""},"task":"os-9b3f3ef3","ts":"2026-09-01T07:24:32Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-9b3f3ef3","ts":"2026-09-01T07:24:34Z","verb":"transition"}
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:176","to":"ready"},"task":"os-fa69345e","ts":"2026-09-01T07:30:09Z","verb":"plan-unblock"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T08:36:20Z"},"task":"os-d6963652","ts":"2026-09-01T07:36:20Z","verb":"claim"}
