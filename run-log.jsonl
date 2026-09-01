@@ -872,3 +872,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-1d33f12d","kind":"pr"},"task":"os-378e44f3","ts":"2026-09-01T15:55:37Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-378e44f3","ts":"2026-09-01T15:55:40Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-378e44f3","ts":"2026-09-01T16:11:10Z","verb":"close"}
+{"actor":"shaunlmason","data":{"title":"next: check loop identity before every act; make the packet drill enter its failure branch"},"task":"os-eb35672a","ts":"2026-09-01T16:11:39Z","verb":"create"}
