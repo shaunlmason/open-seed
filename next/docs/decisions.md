@@ -855,6 +855,14 @@ here. Newest last.
   fixed to four decimals ("0.0000" on an empty journal); the
   section echoes the journal's own digest while the stamp carries
   the full declared-inputs digest.
+- The journal's durability posture (review finding on the task PR):
+  a short write restores the previous length when the fragment is
+  provably the file's tail (an ambiguous size under concurrent
+  O_APPEND writers is left alone rather than risking a rival's
+  line), and Load treats the terminating newline as the commit
+  marker, ignoring a final unterminated fragment: a best-effort
+  writer must never be able to poison the strict reader forever.
+  Terminated malformed lines still refuse.
 - Plan correction, recorded per D5: the plan's D3 guessed a cache
   generation bump with a conditional refusals key, but the cache
   mirrors the INPUT-FREE report (it builds from reportView, exactly

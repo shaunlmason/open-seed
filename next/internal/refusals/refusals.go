@@ -11,7 +11,6 @@
 package refusals
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -52,7 +51,14 @@ type Entry struct {
 // Note appends one attempt line to the journal in dir, best-effort:
 // journaling must never fail or slow the verb it rides, so every
 // error — an unwritable directory, a full disk, a marshal failure —
-// is swallowed, exactly the affordance-stamping posture.
+// is swallowed, exactly the affordance-stamping posture. A failure
+// must also never poison the journal for later builds (review
+// finding on the task PR): a short write (quota, full disk) would
+// leave a truncated fragment for the next append to glue onto, so
+// Note restores the previous length when the fragment is provably
+// the file's tail — with O_APPEND a rival process's line may land
+// around ours, and truncating an ambiguous size would destroy it,
+// so anything else is left for Load's torn-tail rule.
 func Note(dir string, e Entry) {
 	if dir == "" {
 		return
@@ -61,12 +67,23 @@ func Note(dir string, e Entry) {
 	if err != nil {
 		return
 	}
+	line := append(b, '\n')
 	f, err := os.OpenFile(filepath.Join(dir, File), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return
 	}
-	_, _ = f.Write(append(b, '\n'))
-	_ = f.Close()
+	defer f.Close()
+	pre, err := f.Stat()
+	if err != nil {
+		return
+	}
+	n, err := f.Write(line)
+	if err == nil && n == len(line) {
+		return
+	}
+	if now, statErr := f.Stat(); statErr == nil && now.Size() == pre.Size()+int64(n) {
+		_ = f.Truncate(pre.Size())
+	}
 }
 
 // Journal is a loaded attempts journal.
@@ -79,19 +96,26 @@ type Journal struct {
 // line must decode strictly to the entry shape, carry a known
 // outcome and a numeric position, and pair code with outcome
 // (refusals carry one, admissions never do). Errors name the line.
+// The one exception is the commit-marker rule (review finding on
+// the task PR): the terminating newline is what commits a line, so
+// a final unterminated fragment — a torn short write or a crash
+// mid-append — is an uncommitted attempt, ignored rather than
+// allowed to poison every future build of a journal whose writer
+// is best-effort by design. Terminated lines stay strict.
 func Load(path string) (*Journal, error) {
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 	j := &Journal{Entries: []Entry{}}
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-	line := 0
-	for sc.Scan() {
-		line++
-		raw := strings.TrimSpace(sc.Text())
+	lines := strings.Split(string(data), "\n")
+	for i, raw := range lines {
+		if i == len(lines)-1 {
+			// Empty when the file is newline-terminated; a torn
+			// uncommitted fragment otherwise. Skipped either way.
+			break
+		}
+		raw = strings.TrimSpace(raw)
 		if raw == "" {
 			continue
 		}
@@ -99,18 +123,15 @@ func Load(path string) (*Journal, error) {
 		dec := json.NewDecoder(bytes.NewReader([]byte(raw)))
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&e); err != nil {
-			return nil, fmt.Errorf("line %d does not parse as an attempt: %v", line, err)
+			return nil, fmt.Errorf("line %d does not parse as an attempt: %v", i+1, err)
 		}
 		if dec.More() {
-			return nil, fmt.Errorf("line %d carries trailing data", line)
+			return nil, fmt.Errorf("line %d carries trailing data", i+1)
 		}
 		if err := e.check(); err != nil {
-			return nil, fmt.Errorf("line %d: %v", line, err)
+			return nil, fmt.Errorf("line %d: %v", i+1, err)
 		}
 		j.Entries = append(j.Entries, e)
-	}
-	if err := sc.Err(); err != nil {
-		return nil, err
 	}
 	return j, nil
 }

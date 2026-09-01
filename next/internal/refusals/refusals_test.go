@@ -68,6 +68,38 @@ func TestLoadRefusesMalformedLines(t *testing.T) {
 	}
 }
 
+// conformance: the commit-marker rule (review finding on the task
+// PR) — a final unterminated fragment is an uncommitted attempt
+// (torn short write, crash mid-append) and never poisons the
+// journal; a terminated malformed line still refuses.
+func TestLoadSkipsTornTail(t *testing.T) {
+	dir := t.TempDir()
+	Note(dir, entry(OutcomeAdmitted, ""))
+	path := filepath.Join(dir, File)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Write([]byte(`{"ts": "torn`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	j, err := Load(path)
+	if err != nil || len(j.Entries) != 1 {
+		t.Fatalf("the torn tail is uncommitted, the committed line survives: %v %+v", err, j)
+	}
+	// The same bytes followed by a newline are a committed line and
+	// refuse as declarer garbage.
+	if err := os.WriteFile(path, []byte(`{"ts": "torn`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "line 1") {
+		t.Fatalf("a terminated malformed line still refuses: %v", err)
+	}
+}
+
 func TestDigestKeyedByContent(t *testing.T) {
 	a := &Journal{Entries: []Entry{entry(OutcomeAdmitted, "")}}
 	b := &Journal{Entries: []Entry{entry(OutcomeRefused, "fenced")}}

@@ -34,10 +34,18 @@ admissions pollute an operator-local numerator).
 - `code`: the envelope's machine code — present exactly on refusals.
 
 Writes are best-effort and never fail or slow the verb they ride
-(the affordance-stamping posture): any error is swallowed. Reads are
+(the affordance-stamping posture): any error is swallowed, and a
+short write restores the previous file length when the fragment is
+provably the tail, so a full disk cannot leave a fragment for the
+next append to glue onto. Reads are
 strict: the journal is a *declared input*, so a malformed line
 refuses the build that declares it, naming the line — garbage is the
-declarer's error, never silently skipped telemetry.
+declarer's error, never silently skipped telemetry. The one carve-out
+is the commit-marker rule: the terminating newline is what commits a
+line, so a final unterminated fragment (a torn short write, a crash
+mid-append) is an uncommitted attempt and is ignored, never counted
+and never fatal — a best-effort writer must not be able to poison
+every future build of the journal it feeds.
 
 ## The seams
 
