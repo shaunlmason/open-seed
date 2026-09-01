@@ -153,6 +153,108 @@ func TestBudgetAdmissionMatrix(t *testing.T) {
 	}
 }
 
+// conformance: III.H — a reservation outlives the window that opened
+// it, so its close does too (plans/os-d6963652.md D1, D2). The gate
+// is on the RESERVE alone: outside a window a close cites no fence
+// and admits from the reservation's own signer or the operator, a
+// close inside a LATER window cites that window's fence, capacity
+// returns either way, and neither a foreign closer nor a reserve
+// outside a window gains anything by it. The scenario is the one the
+// defect taxed: a first attempt fails review and a different worker
+// retries.
+func TestBudgetClosesOutliveTheClaimWindow(t *testing.T) {
+	ctx, k, step := budgetFixture(t)
+	// The fixture's grantless key becomes the verifier: it never
+	// claimed c-1, so the independence rule is satisfied. The
+	// operator lane returns the contract, its own row on the verb.
+	ctx = step(k.signer, version.Seed1, keyring.VerbGranted, fpOf(t, k.plain), `{"capability": "`+keyring.CapVerdict+`"}`)
+
+	// The first attempt reserves inside its window, then submits: the
+	// window ends with the reservation still open.
+	first := fenceOf(t, ctx, "c-1")
+	ctx = step(k.holder, version.Seed1, "budget.reserve", "c-1", reserveBody("60", first))
+	resPos := fmt.Sprintf("%d", ctx.Count-1)
+	ctx = step(k.holder, version.Seed1, "submission.made", "c-1", `{"fence": "`+first+`", "packet": `+minPacket+`}`)
+	if s, _ := ctx.Lifecycle.State("c-1"); s.State != "review" || s.Claim != nil {
+		t.Fatalf("the window must have ended: state %q, claim %v", s.State, s.Claim)
+	}
+
+	noFence := `{"reservation": "` + resPos + `", "actuals": "50"}`
+	// Out of the window, citing no fence: the signer closes, and so
+	// does the operator lane.
+	if err := Check(ctx, draftV(t, k.holder, version.Seed1, "budget.settle", "c-1", noFence, ctx.Tip)); err != nil {
+		t.Fatalf("the reservation's signer settles after the window ends: %v", err)
+	}
+	if err := Check(ctx, draftV(t, k.signer, version.Seed1, "budget.release", "c-1", `{"reservation": "`+resPos+`"}`, ctx.Tip)); err != nil {
+		t.Fatalf("the operator lane releases after the window ends: %v", err)
+	}
+	// Nobody else does, in or out of a window: ownership is unchanged.
+	if err := Check(ctx, draftV(t, k.other, version.Seed1, "budget.settle", "c-1", noFence, ctx.Tip)); err == nil || !strings.Contains(err.Error(), "belongs to") {
+		t.Fatalf("a foreign close still refuses by name outside the window: %v", err)
+	}
+	// A citation outside a window still refuses, at the fence rule:
+	// the fence died with the claim, and D1 changed nothing there.
+	stale := `{"reservation": "` + resPos + `", "actuals": "50", "fence": "` + first + `"}`
+	if err := Check(ctx, draftV(t, k.holder, version.Seed1, "budget.settle", "c-1", stale, ctx.Tip)); err == nil || !strings.Contains(err.Error(), "no claim is active") {
+		t.Fatalf("citing a dead fence refuses at the fence rule: %v", err)
+	}
+	// And the reserve keeps its own gate, with its own message.
+	if err := Check(ctx, draftV(t, k.holder, version.Seed1, "budget.reserve", "c-1", `{"amount": "5"}`, ctx.Tip)); err == nil ||
+		!strings.Contains(err.Error(), "is illegal for subject c-1 in state review") {
+		t.Fatalf("a reserve outside a window still refuses as an illegal transition: %v", err)
+	}
+
+	// Capacity returns: settling 50 of the 60 reserved leaves the
+	// class's 100 less the actuals, for whoever claims next.
+	settled := step(k.holder, version.Seed1, "budget.settle", "c-1", noFence)
+	s, _ := settled.Lifecycle.State("c-1")
+	view := BudgetViewAt(settled.Records, settled.Table, "c-1", s)
+	if len(view.Open) != 0 || view.Settled != 50 || view.Remaining != 50 {
+		t.Fatalf("after the out-of-window settle: open %d, settled %d, remaining %d, want 0/50/50",
+			len(view.Open), view.Settled, view.Remaining)
+	}
+
+	// The retry: a fail verdict returns the contract, a DIFFERENT
+	// worker claims it, and its own reserve sees the capacity the
+	// class grants rather than the previous attempt's stranded hold.
+	sub := fmt.Sprintf("%d", subPos(t, settled, "c-1"))
+	ctx = step(k.plain, version.Seed1, "verdict.rendered", "c-1",
+		`{"verdict": "fail", "receipt": "`+zeros64+`", "submission": "`+sub+`", "independence": "L1"}`)
+	ctx = step(k.signer, version.Seed1, "contract.returned", "c-1", `{"verdict": "fail"}`)
+	ctx = step(k.other, version.Seed1, "claim.taken", "c-1", `{}`)
+	second := fenceOf(t, ctx, "c-1")
+	if err := Check(ctx, draftV(t, k.other, version.Seed1, "budget.reserve", "c-1", reserveBody("50", second), ctx.Tip)); err != nil {
+		t.Fatalf("the retry reserves the full remaining, untaxed by the first attempt: %v", err)
+	}
+
+	// A close inside a LATER window cites THAT window's fence: the
+	// fence rule's active-citation semantics, unchanged.
+	ctx = step(k.other, version.Seed1, "budget.reserve", "c-1", reserveBody("50", second))
+	pos2 := fmt.Sprintf("%d", ctx.Count-1)
+	if err := Check(ctx, draftV(t, k.other, version.Seed1, "budget.release", "c-1", `{"reservation": "`+pos2+`", "fence": "`+second+`"}`, ctx.Tip)); err != nil {
+		t.Fatalf("a close inside a window cites that window's fence: %v", err)
+	}
+	// The first attempt's holder is a prior claimant now, so the
+	// fence rule REQUIRES the citation of them; the operator, who is
+	// neither holder nor prior claimant, may omit it.
+	if err := Check(ctx, draftV(t, k.holder, version.Seed1, "budget.release", "c-1", `{"reservation": "`+pos2+`"}`, ctx.Tip)); err == nil || !strings.Contains(err.Error(), "must cite") {
+		t.Fatalf("a prior claimant omitting the active fence refuses: %v", err)
+	}
+	if err := Check(ctx, draftV(t, k.signer, version.Seed1, "budget.release", "c-1", `{"reservation": "`+pos2+`"}`, ctx.Tip)); err != nil {
+		t.Fatalf("the operator lane closes inside another's window without citing: %v", err)
+	}
+}
+
+// subPos is the bound submission's position.
+func subPos(t *testing.T, ctx *Context, subject string) int {
+	t.Helper()
+	s, ok := ctx.Lifecycle.State(subject)
+	if !ok || s.Submission == nil {
+		t.Fatalf("no submission on %s", subject)
+	}
+	return s.Submission.Pos
+}
+
 // conformance: III.H — a raw foreign reserve consumes no capacity, a
 // raw foreign release frees none, a raw foreign settle neither closes
 // nor locks the owner out, and a released prior claimant cannot

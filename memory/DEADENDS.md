@@ -68,3 +68,19 @@ reason, so the next agent doesn't burn a session rediscovering why.
   so the derivation and the admission pre-flight read one
   materialized remote tip, rather than reconstructing a view per
   verb and hoping they agree.
+- 2026-09-01 (os-d6963652): auto-closing a reservation when its claim
+  window ends, as a derivation rather than an act. It would free the
+  stranded capacity with no new verb and no admission change, and it
+  is exactly the fabrication the budget rule already refuses for
+  unknown classes: it records ZERO spend for work that may have spent
+  plenty, and destroys the distinction between "we spent nothing" and
+  "nobody said". Capacity is returned by someone stating what was
+  spent, or not at all.
+- 2026-09-01 (os-d6963652): fixing the admission gate alone and
+  expecting the affordance sweep to go green. The three budget probe
+  synthesizers interpolated `"fence": "<v.fence>"` unconditionally,
+  so outside a window they cite fence "0" and the FENCE rule refuses
+  them before the budget rule is ever consulted — the sweep stayed red
+  at precisely the prefixes the fix was for. A probe that invents a
+  citation does not test the rule you think it tests; it tests the
+  citation.

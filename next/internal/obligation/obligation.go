@@ -41,8 +41,9 @@ const (
 	// settle it (position-anchored; the Phase 7 exit's
 	// metering-detection obligation).
 	KindRunUnsettled = "run.unsettled"
-	// KindBudgetOpen is an open valid reservation inside the live
-	// claim window, where its closing verbs admit.
+	// KindBudgetOpen is an open valid reservation: it stands from the
+	// reserve until a settle or a release closes it, inside the window
+	// that opened it and after (plans/os-d6963652.md D3).
 	KindBudgetOpen = "budget.open"
 	// KindContractBlocked is a blocked subject awaiting whoever the
 	// block named.
@@ -112,11 +113,31 @@ func stateDischargers(table *transition.Table, state string) []string {
 	return out
 }
 
+// Deps are the derivations this projection READS rather than
+// recomputing, so it stays a projection over one fold and never a
+// second opinion.
+type Deps struct {
+	// BudgetOpen supplies the open valid reservations for a subject:
+	// the caller passes the one shared budget derivation rather than
+	// this package re-deriving validity.
+	BudgetOpen func(subject string, s transition.SubjectState) []transition.ReservationFact
+	// CanDischarge reports whether an actor may still perform ANY of
+	// the named verbs. Standing is the keyring's authority, not this
+	// package's, and ownership of a fact-shaped obligation follows who
+	// can pay it (plans/os-d6963652.md D4). A nil predicate is "no
+	// standing projection was supplied", which cannot establish that
+	// anyone is unable, so the usual owner stands.
+	CanDischarge func(actor string, verbs []string) bool
+}
+
+// able is the standing question with the nil case named once.
+func (d Deps) able(actor string, verbs []string) bool {
+	return d.CanDischarge == nil || d.CanDischarge(actor, verbs)
+}
+
 // Derive folds the records and returns every standing obligation, in
-// a stable order (subject, then kind). budgetOpen supplies the open
-// valid reservations for a subject: the caller passes the one shared
-// budget derivation rather than this package re-deriving validity.
-func Derive(records []*event.Record, table *transition.Table, budgetOpen func(string, transition.SubjectState) []transition.ReservationFact) []Row {
+// a stable order (subject, then kind).
+func Derive(records []*event.Record, table *transition.Table, deps Deps) []Row {
 	fold := table.FoldRecords(records)
 	var rows []Row
 	for _, subject := range fold.Subjects() {
@@ -124,7 +145,7 @@ func Derive(records []*event.Record, table *transition.Table, budgetOpen func(st
 		if !ok {
 			continue
 		}
-		rows = append(rows, subjectRows(subject, s, table, budgetOpen)...)
+		rows = append(rows, subjectRows(subject, s, table, deps)...)
 	}
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].Subject != rows[j].Subject {
@@ -138,7 +159,7 @@ func Derive(records []*event.Record, table *transition.Table, budgetOpen func(st
 	return rows
 }
 
-func subjectRows(subject string, s transition.SubjectState, table *transition.Table, budgetOpen func(string, transition.SubjectState) []transition.ReservationFact) []Row {
+func subjectRows(subject string, s transition.SubjectState, table *transition.Table, deps Deps) []Row {
 	var rows []Row
 	add := func(kind, owedBy string, since int, dischargers []string) {
 		// Never advertise an empty discharging set: the sweep asserts
@@ -170,16 +191,30 @@ func subjectRows(subject string, s transition.SubjectState, table *transition.Ta
 			add(KindVerdictUnmerged, LaneObserver, s.Requested.Pos, []string{"merge.observed"})
 		}
 	}
-	// The budget window restriction is a finding, not a preference:
-	// admission gates every budget verb on in_progress, so outside the
-	// live window both closing verbs refuse and the reservation is a
-	// maintenance concern rather than an obligation (card
-	// os-d6963652).
-	if s.State == "in_progress" && budgetOpen != nil {
-		for _, r := range budgetOpen(subject, s) {
+	// An open reservation is owed WHEREVER it stands (os-d6963652):
+	// the earlier in_progress restriction existed only because
+	// admission gated the closing verbs on the same state, so outside
+	// the window the advertised dischargers were unreachable and the
+	// row would have been an anomaly. Admission now gates only the
+	// reserve, so the closes are reachable and the debt is an
+	// obligation again — which matters most on the failed-verdict
+	// retry, where the next claimant is a different worker and the
+	// previous attempt's unclosed hold would silently tax them.
+	//
+	// The owner is whoever can still pay it, never whoever holds the
+	// window: admission closes a reservation for its own reserving
+	// signer or the operator lane and nobody else, so attributing the
+	// row to the current holder named a party admission refuses on any
+	// reservation the holder did not sign. The signer keeps it until
+	// suspension or revocation means every close from them refuses,
+	// and then the operator lane is the only party left; keying the
+	// row to a fingerprint nobody can sign for would hide it from the
+	// one actor able to act on it.
+	if deps.BudgetOpen != nil {
+		for _, r := range deps.BudgetOpen(subject, s) {
 			owner := r.Signer
-			if s.Claim != nil {
-				owner = s.Claim.Holder
+			if !deps.able(owner, factDischargers[KindBudgetOpen]) {
+				owner = LaneOperator
 			}
 			add(KindBudgetOpen, owner, r.Pos, factDischargers[KindBudgetOpen])
 			break

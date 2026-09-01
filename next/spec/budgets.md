@@ -35,9 +35,23 @@ fudged into spendable units.
 
 ## The verbs
 
-All three are facts on the contract subject, admitted only while the
-subject is `in_progress` (spend happens inside a claim window), from
-the {`claim`, `operator`} capability rows ([`actors.md`](actors.md)).
+All three are facts on the contract subject, from the {`claim`,
+`operator`} capability rows ([`actors.md`](actors.md)). The claim
+window gates the **reserve** alone: capacity is committed for the
+window that will spend it, so a reserve outside `in_progress`
+refuses. A reservation **outlives** that window, and so does its
+close: settling or releasing one is legal wherever it stands open,
+in the window that opened it, in a later one, or in none.
+
+This is not a permissiveness. Windows end four ways, and one of them
+is a failing verdict returning the contract to the queue: the next
+claimant is a **different** worker, who is neither the reservation's
+signer nor the operator, and a hold nobody could close would come
+out of their remaining. A gate on the verb family made a retry after
+a failed attempt quietly poorer than the first attempt. Nothing else
+about a close changes: the identity check below has always asked
+only whose reservation it is, never which state the subject was in.
+
 Strict payloads (unknown fields refuse; the `fence` field rides the
 fence rule):
 
@@ -55,6 +69,14 @@ fence rule):
   closes with zero actuals. Both closes must cite a valid, not yet
   effectively closed reservation, and the drafting signer must be
   that reservation's own reserving signer or the operator lane.
+
+The fence citation follows the ordinary rule and needs no exception:
+inside a claim window a close cites that window's active fence
+(required of the holder and of any prior claimant, legal for anyone
+else); outside one, no fence exists, so a close cites none and a
+citation refuses. A close in a LATER window cites the later fence,
+not the one the reservation was opened under: a fence dies with its
+claim.
 
 ## Derivation, not mutation
 

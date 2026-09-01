@@ -163,6 +163,14 @@ func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
 		walkStep{"root", version.Seed1, "contract.blocked", "c-3", static(`{}`), "blocked-c3"},
 		walkStep{"root", version.Seed1, "system.halt.declared", "system", static(`{"reason": "walk"}`), "halted"},
 		walkStep{"root", version.Seed1, "system.halt.lifted", "system", static(`{}`), "lifted"},
+		// Standing ends last, on the lane whose reservation on c-1 is
+		// still open (plans/os-d6963652.md D6): a walk of only active
+		// actors can never reach the positions where an obligation's
+		// usual owner has lost the power to discharge it, and those
+		// are exactly the positions the standing-aware attribution
+		// exists for.
+		walkStep{"root", version.Seed1, keyring.VerbSuspended, fpOf(t, lanes["holder"]), static(`{"reason": "walk"}`), "suspended"},
+		walkStep{"root", version.Seed1, keyring.VerbRevoked, fpOf(t, lanes["holder"]), static(`{"reason": "walk"}`), "revoked"},
 	)
 }
 
@@ -357,6 +365,28 @@ func TestAffordancesWalk(t *testing.T) {
 			}
 		},
 		"lifted": func() {},
+		"suspended": func() {
+			// A suspended lane holds nothing: HasAnyCapability is
+			// standing-aware, so the grant rule refuses every verb and
+			// the list empties.
+			if l := Affordances(ctxAt(), keys["holder"], "c-1"); len(l) != 0 {
+				t.Fatalf("a suspended actor lists nothing: %v", l)
+			}
+			// And the reservation it left open is still closeable, by
+			// the one lane that can: outside any claim window, citing
+			// no fence.
+			if l := list(signer, "c-1"); !has(l, "budget.settle") || !has(l, "budget.release") {
+				t.Fatalf("the operator lists the closes over the suspended lane's open reservation: %v", l)
+			}
+		},
+		"revoked": func() {
+			if l := Affordances(ctxAt(), keys["holder"], "c-1"); len(l) != 0 {
+				t.Fatalf("a revoked actor lists nothing: %v", l)
+			}
+			if l := list(signer, "c-1"); !has(l, "budget.settle") {
+				t.Fatalf("revocation is terminal for the actor, not for the reservation: %v", l)
+			}
+		},
 	}
 	for _, s := range walkScript(t, lanes) {
 		runWalkStep(t, store, loose, keys, s)

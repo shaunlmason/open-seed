@@ -26,7 +26,17 @@ func table(t *testing.T) *transition.Table {
 // correctness is its package's business.
 func rowsFor(t *testing.T, s transition.SubjectState, open []transition.ReservationFact) []Row {
 	t.Helper()
-	return subjectRows("c-1", s, table(t), func(string, transition.SubjectState) []transition.ReservationFact { return open })
+	return rowsWith(t, s, open, nil)
+}
+
+// rowsWith is rowsFor with an explicit standing predicate, for the
+// drills that turn a reservation signer's standing off.
+func rowsWith(t *testing.T, s transition.SubjectState, open []transition.ReservationFact, canDischarge func(string, []string) bool) []Row {
+	t.Helper()
+	return subjectRows("c-1", s, table(t), Deps{
+		BudgetOpen:   func(string, transition.SubjectState) []transition.ReservationFact { return open },
+		CanDischarge: canDischarge,
+	})
 }
 
 func kinds(rows []Row) []string {
@@ -70,19 +80,24 @@ func TestKindsAriseFromTheirFacts(t *testing.T) {
 			state: transition.SubjectState{State: "blocked", Since: 4},
 			want:  []string{KindContractBlocked},
 		},
-		"an open reservation inside the window is owed by the holder": {
+		"an open reservation inside the window is owed by its signer": {
 			state: transition.SubjectState{State: "in_progress", Since: 5, Claim: &transition.Claim{Holder: "aa", Fence: 5}},
 			open:  []transition.ReservationFact{{Pos: 6, Signer: "aa", Amount: 2}},
 			want:  []string{KindBudgetOpen, KindClaimHeld},
 		},
-		"an open reservation outside the window is no obligation": {
-			// admission gates every budget verb on in_progress, so
-			// outside the window nothing can discharge it: an
-			// obligation nobody can discharge is an anomaly (card
-			// os-d6963652).
+		"an open reservation outside the window is still owed": {
+			// The window gates the RESERVE alone (os-d6963652 D1), so
+			// both closes stay reachable after it ends and the debt
+			// stays a debt: this is the failed-verdict retry, where
+			// the hold would otherwise tax the next claimant.
 			state: transition.SubjectState{State: "review", Since: 8, Submission: &transition.SubmissionFact{Pos: 8, Signer: "aa"}},
 			open:  []transition.ReservationFact{{Pos: 6, Signer: "aa", Amount: 2}},
-			want:  []string{KindSubmissionPending},
+			want:  []string{KindBudgetOpen, KindSubmissionPending},
+		},
+		"an open reservation on a done subject is still owed": {
+			state: transition.SubjectState{State: "done", Since: 12},
+			open:  []transition.ReservationFact{{Pos: 6, Signer: "aa", Amount: 2}},
+			want:  []string{KindBudgetOpen},
 		},
 	} {
 		got := kinds(rowsFor(t, tc.state, tc.open))
@@ -90,6 +105,55 @@ func TestKindsAriseFromTheirFacts(t *testing.T) {
 			t.Errorf("%s: kinds %v, want %v", name, got, tc.want)
 		}
 	}
+}
+
+// conformance: an obligation is owed by whoever can still discharge
+// it (os-d6963652 D4). The reservation's signer keeps the row while
+// they can close it; once suspension or revocation means every close
+// from them refuses, the operator lane is the only party left and the
+// row must say so, or a keyed situation read hides the debt from the
+// one actor able to pay it.
+func TestBudgetOwnerFollowsStanding(t *testing.T) {
+	held := transition.SubjectState{State: "in_progress", Since: 5, Claim: &transition.Claim{Holder: "bb", Fence: 5}}
+	open := []transition.ReservationFact{{Pos: 6, Signer: "aa", Amount: 2}}
+	closes := factDischargers[KindBudgetOpen]
+
+	active := func(actor string, verbs []string) bool {
+		if !slices.Equal(verbs, closes) {
+			t.Fatalf("the standing question asks about the discharging verbs, got %v", verbs)
+		}
+		return actor == "aa"
+	}
+	if owner := ownerOf(t, rowsWith(t, held, open, active)); owner != "aa" {
+		t.Errorf("an active signer keeps the row: owed by %q, want aa", owner)
+	}
+
+	// Even inside a window someone else holds: admission closes a
+	// reservation for its own signer or the operator and nobody else,
+	// so the holder is never the answer merely for holding.
+	none := func(string, []string) bool { return false }
+	if owner := ownerOf(t, rowsWith(t, held, open, none)); owner != LaneOperator {
+		t.Errorf("a signer who can no longer close hands the row to the operator lane: owed by %q", owner)
+	}
+
+	// And with no standing projection at all, nothing establishes
+	// that the signer is unable, so the usual owner stands.
+	if owner := ownerOf(t, rowsWith(t, held, open, nil)); owner != "aa" {
+		t.Errorf("absent a standing predicate the signer stands: owed by %q, want aa", owner)
+	}
+}
+
+// ownerOf returns the budget.open row's owed-by, failing if no such
+// row stands.
+func ownerOf(t *testing.T, rows []Row) string {
+	t.Helper()
+	for _, r := range rows {
+		if r.Kind == KindBudgetOpen {
+			return r.OwedBy
+		}
+	}
+	t.Fatalf("no %s row in %v", KindBudgetOpen, rows)
+	return ""
 }
 
 // conformance: the Phase 7 exit's metering-detection obligation is
