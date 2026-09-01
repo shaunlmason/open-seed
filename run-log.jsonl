@@ -805,3 +805,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:178","to":"ready"},"task":"os-a95db3f5","ts":"2026-09-01T07:14:01Z","verb":"plan-unblock"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:179","to":"ready"},"task":"os-9b3f3ef3","ts":"2026-09-01T07:14:04Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T08:14:41Z"},"task":"os-9b3f3ef3","ts":"2026-09-01T07:14:41Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-c60b6e24","kind":""},"task":"os-9b3f3ef3","ts":"2026-09-01T07:24:32Z","verb":"attach-evidence"}

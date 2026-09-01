@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-01T07:14:41Z"
     lease_expires: "2026-09-01T08:14:41Z"
 created_at: "2026-09-01T06:12:59Z"
-updated_at: "2026-09-01T07:14:41Z"
+updated_at: "2026-09-01T07:24:32Z"
 ---
 
 Three findings from the Codex review of #173, all landed on main because the PR merged before the review was worked. All three verified against source; two are on the remote optimistic-retry path and one is a panic. Plan-first (L2).
@@ -22,3 +22,7 @@ Three findings from the Codex review of #173, all landed on main because the PR 
 (3) P2 — A JSON null PACKET PANICS THE CLI. loopPacket unmarshals --packet into map[string]json.RawMessage. The valid JSON value null unmarshals with no error and leaves the map NIL; if --base or a usable --repo then supplies a range, `parts["base"] = b` panics with "assignment to entry in nil map" (reproduced: assignment to entry in nil map). Without --base/--repo it refuses cleanly, which is why the drills missed it. A malformed packet must produce the documented usage envelope, never terminate the CLI. Fix: verify the root value is an object before mutating, and drill null alongside the existing malformed-packet cases.
 
 Scope guard: no surface change. The verbs, flags, envelope and journal contracts stay exactly as they are; this is three correctness fixes plus their drills. The drills should include a remote contention case that proves re-derivation (a rival reservation landing between session open and push must refuse naming both candidates, not silently close one).
+
+## Evidence ev-c60b6e24 (, seed-next-implementer, 2026-09-01T07:24:32Z)
+
+receipts/os-9b3f3ef3.json
