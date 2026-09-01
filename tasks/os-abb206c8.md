@@ -1,16 +1,13 @@
 ---
 id: os-abb206c8
 title: 'next: Phase 9 item 1c — the worker loop made executable, with exhaustion parking'
-state: in_progress
+state: blocked
 priority: P2
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-2176a9e5c0dcdf72
-    claimed_at: "2026-09-01T13:29:08Z"
-    lease_expires: "2026-09-01T14:29:08Z"
+blocked_on:
+    - plan:189
 created_at: "2026-09-01T13:28:53Z"
-updated_at: "2026-09-01T13:29:08Z"
+updated_at: "2026-09-01T13:31:37Z"
 ---
 
 Phase 9 item 1, third of three cards (1a landed as #188; 1b is the dispatcher's injection conformance suite, still uncarded).
