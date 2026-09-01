@@ -758,3 +758,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T05:03:26Z"},"task":"os-52d5da3f","ts":"2026-09-01T04:03:26Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-52d5da3f","ts":"2026-09-01T04:05:35Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: an open reservation outside a live claim window has no closing path"},"task":"os-d6963652","ts":"2026-09-01T04:12:21Z","verb":"create"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:170","to":"ready"},"task":"os-52d5da3f","ts":"2026-09-01T04:34:40Z","verb":"plan-unblock"}
