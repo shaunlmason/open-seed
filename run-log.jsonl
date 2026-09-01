@@ -720,3 +720,4 @@
 {"actor":"shaunlmason","data":{"title":"seed: untrack the next/seed build artifact"},"task":"os-a487b3b5","ts":"2026-09-01T03:01:31Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"seed: machine-checkable frontier block in progress.md"},"task":"os-b759347b","ts":"2026-09-01T03:01:33Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"seed: claim-time learnings surfacing (applies-when tags)"},"task":"os-ef34577c","ts":"2026-09-01T03:01:36Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"next: build-plan amendment — agent-ergonomics obligations for Phase 9 lanes"},"task":"os-68ea0b2d","ts":"2026-09-01T03:01:39Z","verb":"create"}
