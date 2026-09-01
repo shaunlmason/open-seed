@@ -1,10 +1,11 @@
 ---
 id: os-4eaf8b13
 title: 'next: the coverage flake looks deterministic because go test caches the bad profile'
-state: backlog
+state: ready
 priority: P3
 squad: core
 created_at: "2026-09-01T13:12:43Z"
+updated_at: "2026-09-01T20:48:38Z"
 ---
 
 The nondeterministic coverage-counter loss (os-cafba959) LOOKS DETERMINISTIC when go test's result cache is warm, and that is what makes it dangerous rather than merely annoying.
