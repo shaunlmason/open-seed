@@ -800,3 +800,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T08:07:49Z"},"task":"os-68ea0b2d","ts":"2026-09-01T07:07:49Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-b152a1b0","kind":""},"task":"os-68ea0b2d","ts":"2026-09-01T07:13:11Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-68ea0b2d","ts":"2026-09-01T07:13:14Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:175","to":"ready"},"task":"os-d6963652","ts":"2026-09-01T07:13:55Z","verb":"plan-unblock"}
