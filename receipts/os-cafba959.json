@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-cafba959",
   "merge_base": "989e1c6ee68024a8519ab81e95153c3c41e5ef56",
-  "head": "a644637984b710cce48565cfdb2e96a5f7e5bd5e",
+  "head": "39264b65170c1705c9898d11bc5ddc72fc1f0cce",
   "plan_path": "plans/os-cafba959.md",
   "plan_sha256": "8403bcea885528e55cd8b50b1f1fff7b27b06e22d88ba456ee303ff26d427cda",
   "diff_files": [
@@ -14,7 +14,7 @@
     "next/internal/covergate/covergate.go",
     "next/internal/covergate/covergate_test.go"
   ],
-  "diff_sha256": "874e9f3a3f5e5cb24c56252dc0b4a9ab3d3448edd6cb613dd29c775d6e54b154",
+  "diff_sha256": "10ea4f8860a9c5f7f57d88e11f9ec9f959379778d59806ea7f4ff60f588a0126",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
