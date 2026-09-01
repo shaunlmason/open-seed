@@ -7,6 +7,8 @@ package loop
 // the loop actually invoked rather than against a spelling.
 
 import (
+	"crypto/ed25519"
+	"encoding/pem"
 	"errors"
 	"strings"
 	"testing"
@@ -15,6 +17,9 @@ import (
 	"path/filepath"
 	"slices"
 
+	"golang.org/x/crypto/ssh"
+
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/lane"
 )
@@ -25,10 +30,23 @@ import (
 type recorder struct {
 	calls  [][]string
 	answer func(args []string) Result
+	// packets holds each invocation's packet body, read WHILE the call
+	// is in flight. The loop removes the file as soon as the verb has
+	// consumed it, so a drill that read the path afterwards would be
+	// asserting against the leak rather than against the packet.
+	packets map[string]string
 }
 
 func (r *recorder) Run(args ...string) Result {
 	r.calls = append(r.calls, args)
+	if path := flagValue(args, "--packet"); path != "" {
+		if b, err := os.ReadFile(path); err == nil {
+			if r.packets == nil {
+				r.packets = map[string]string{}
+			}
+			r.packets[verb(args)] = string(b)
+		}
+	}
 	if r.answer != nil {
 		return r.answer(args)
 	}
@@ -71,7 +89,7 @@ func implementer() lane.Manifest {
 
 func newDriver(t *testing.T, m lane.Manifest, r *recorder) *Driver {
 	t.Helper()
-	d, err := New(m, r, []string{"--remote", "/repo"}, "/key", "SHA256:actor",
+	d, err := New(m, r, []string{"--remote", "/repo"}, testKey(t),
 		WorkFunc(func(string, Situation) (int, error) { return 3, nil }),
 		WithBase("abc1234..abc1234"))
 	if err != nil {
@@ -183,7 +201,10 @@ func TestExhaustionParksCarryingTheRefusalVerbatim(t *testing.T) {
 	if packetPath == "" {
 		t.Fatal("the park must carry a packet: every deliberate exit does")
 	}
-	body := readFile(t, packetPath)
+	body := r.packets["claim park"]
+	if body == "" {
+		t.Fatal("the park's packet was not captured in flight")
+	}
 	if !strings.Contains(body, code) {
 		t.Errorf("the packet's findings must carry the refusal's code %q verbatim: %s", code, body)
 	}
@@ -279,18 +300,18 @@ func TestConstructionRefusesALaneThatCannotLoop(t *testing.T) {
 	} {
 		m := implementer()
 		mutate(&m)
-		if _, err := New(m, r, []string{"--remote", "/r"}, "/k", "a", work, WithBase("a..a")); err == nil {
+		if _, err := New(m, r, []string{"--remote", "/r"}, testKey(t), work, WithBase("a..a")); err == nil {
 			t.Errorf("%s must refuse at construction", name)
 		}
 	}
 	m := implementer()
-	if _, err := New(m, r, []string{"--remote", "/r"}, "/k", "a", work); err == nil {
+	if _, err := New(m, r, []string{"--remote", "/r"}, testKey(t), work); err == nil {
 		t.Error("a loop with no resume coordinate must refuse: every deliberate exit carries a packet")
 	}
-	if _, err := New(m, r, nil, "/k", "a", work, WithBase("a..a")); err == nil {
+	if _, err := New(m, r, nil, testKey(t), work, WithBase("a..a")); err == nil {
 		t.Error("a loop with no posture must refuse: it would have no ledger to orient against")
 	}
-	if _, err := New(m, r, []string{"--remote", "/r"}, "/k", "a", nil, WithBase("a..a")); err == nil {
+	if _, err := New(m, r, []string{"--remote", "/r"}, testKey(t), nil, WithBase("a..a")); err == nil {
 		t.Error("a loop with no work step is a heartbeat, which the charter forbids")
 	}
 }
@@ -340,15 +361,6 @@ func flagValue(args []string, name string) string {
 	return ""
 }
 
-func readFile(t *testing.T, path string) string {
-	t.Helper()
-	b, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("cannot read the packet the loop wrote: %v", err)
-	}
-	return string(b)
-}
-
 // conformance: D5 arm 1 / AC7 — running the loop's declared liveness
 // steps ADVANCES the observation stream keyed to the lane's actor and
 // fence. This is the half 1a could not establish: it compared two
@@ -356,12 +368,12 @@ func readFile(t *testing.T, path string) string {
 // internal/obs keys it, so a stream written under the wrong actor or
 // the wrong fence fails rather than passing on a technicality.
 func TestLivenessRidesTheWorkAndIsKeyedToActorAndFence(t *testing.T) {
-	const actor = "SHA256:actor"
 	const fence = "9"
 	obsDir := t.TempDir()
 	r := &recorder{answer: offers("c-1", nil)}
 	m := implementer()
-	d, err := New(m, r, []string{"--remote", "/repo"}, "/key", actor,
+	keyPath, actor := testKeyAndFingerprint(t)
+	d, err := New(m, r, []string{"--remote", "/repo"}, keyPath,
 		WorkFunc(func(string, Situation) (int, error) { return 3, nil }),
 		WithBase("abc1234..abc1234"), WithObservations(obsDir))
 	if err != nil {
@@ -406,7 +418,6 @@ func TestLivenessRidesTheWorkAndIsKeyedToActorAndFence(t *testing.T) {
 // classification the maintenance reap depends on would be reading
 // failure as progress.
 func TestARefusedActEmitsNoLiveness(t *testing.T) {
-	const actor = "SHA256:actor"
 	obsDir := t.TempDir()
 	r := &recorder{}
 	r.answer = offers("c-1", func(args []string) (Result, bool) {
@@ -416,7 +427,8 @@ func TestARefusedActEmitsNoLiveness(t *testing.T) {
 		return Result{}, false
 	})
 	m := implementer()
-	d, err := New(m, r, []string{"--remote", "/repo"}, "/key", actor,
+	keyPath, actor := testKeyAndFingerprint(t)
+	d, err := New(m, r, []string{"--remote", "/repo"}, keyPath,
 		WorkFunc(func(string, Situation) (int, error) { return 1, nil }),
 		WithBase("a..a"), WithObservations(obsDir))
 	if err != nil {
@@ -475,7 +487,7 @@ func TestEveryFailureAfterTheClaimExitsDeliberately(t *testing.T) {
 		if work == nil {
 			work = func(string, Situation) (int, error) { return 1, nil }
 		}
-		d, err := New(implementer(), r, []string{"--remote", "/repo"}, "/key", "SHA256:a",
+		d, err := New(implementer(), r, []string{"--remote", "/repo"}, testKey(t),
 			WorkFunc(work), WithBase("a..a"))
 		if err != nil {
 			t.Fatal(err)
@@ -500,7 +512,7 @@ func TestEveryFailureAfterTheClaimExitsDeliberately(t *testing.T) {
 // leave the retry quietly poorer than the first.
 func TestAFailedWorkStepStillSettlesItsReservation(t *testing.T) {
 	r := &recorder{answer: offers("c-1", nil)}
-	d, err := New(implementer(), r, []string{"--remote", "/repo"}, "/key", "SHA256:a",
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, testKey(t),
 		WorkFunc(func(string, Situation) (int, error) { return 4, errors.New("no") }), WithBase("a..a"))
 	if err != nil {
 		t.Fatal(err)
@@ -609,7 +621,7 @@ func TestSituationReportsWhatTheReadSaid(t *testing.T) {
 // so its first read pays for the delta rather than the world.
 func TestWithSinceResumesFromTheGivenPosition(t *testing.T) {
 	r := &recorder{answer: offers("c-1", nil)}
-	d, err := New(implementer(), r, []string{"--remote", "/repo"}, "/key", "SHA256:a",
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, testKey(t),
 		WorkFunc(func(string, Situation) (int, error) { return 1, nil }),
 		WithBase("a..a"), WithSince("42"))
 	if err != nil {
@@ -634,7 +646,7 @@ func TestWithRepoDefersTheRangeToTheLoopVerbs(t *testing.T) {
 		}
 		return Result{}, false
 	})
-	d, err := New(implementer(), r, []string{"--remote", "/repo"}, "/key", "SHA256:a",
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, testKey(t),
 		WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithRepo("/work"))
 	if err != nil {
 		t.Fatal(err)
@@ -654,7 +666,7 @@ func TestWithRepoDefersTheRangeToTheLoopVerbs(t *testing.T) {
 	if hasFlag(park, "--base") {
 		t.Error("a loop given a repo must not also state a base: the verbs derive it")
 	}
-	body := readFile(t, flagValue(park, "--packet"))
+	body := r.packets["claim park"]
 	if strings.Contains(body, `"base"`) {
 		t.Errorf("the packet leaves base to the derivation: %s", body)
 	}
@@ -678,7 +690,7 @@ func TestARefusalWithoutAnAccountStillYieldsAFinding(t *testing.T) {
 	}
 	for _, c := range r.calls {
 		if verb(c) == "claim park" {
-			body := readFile(t, flagValue(c, "--packet"))
+			body := r.packets["claim park"]
 			if !strings.Contains(body, "refused without an account") {
 				t.Errorf("a silent refusal is itself the finding: %s", body)
 			}
@@ -725,9 +737,13 @@ func TestAPacketWithoutAReadAnchorSaysSo(t *testing.T) {
 			return Result{OK: true, Position: "10", Result: map[string]any{
 				"offers": []any{map[string]any{"subject": "c-1"}}}}
 		case "situation":
-			// A read reporting no window at all: the claim landed, but
-			// this lane cannot see its own anchor.
-			return Result{OK: true, Position: "11", Result: map[string]any{"windows": []any{}}}
+			// A window WITHOUT an acceptance field: the lane holds the
+			// claim and can see it, but the read does not report what it
+			// is judged against. (A read with no window at all is a
+			// different case entirely — the claim is gone, and the loop
+			// re-orients rather than parking.)
+			return Result{OK: true, Position: "11", Result: map[string]any{
+				"windows": []any{map[string]any{"subject": "c-1", "fence": "9"}}}}
 		case "budget reserve":
 			return Result{Exit: 8, OK: false, Code: "chain_invalid", Message: "exhausted"}
 		}
@@ -739,7 +755,7 @@ func TestAPacketWithoutAReadAnchorSaysSo(t *testing.T) {
 	}
 	for _, c := range r.calls {
 		if verb(c) == "claim park" {
-			body := readFile(t, flagValue(c, "--packet"))
+			body := r.packets["claim park"]
 			if !strings.Contains(body, "did not report") {
 				t.Errorf("the packet must say the anchor was unread rather than invent one: %s", body)
 			}
@@ -754,7 +770,7 @@ func TestAPacketWithoutAReadAnchorSaysSo(t *testing.T) {
 // had been returned that was never spent.
 func TestNegativeUnitsSettleAsZero(t *testing.T) {
 	r := &recorder{answer: offers("c-1", nil)}
-	d, err := New(implementer(), r, []string{"--remote", "/repo"}, "/key", "SHA256:a",
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, testKey(t),
 		WorkFunc(func(string, Situation) (int, error) { return -5, nil }), WithBase("a..a"))
 	if err != nil {
 		t.Fatal(err)
@@ -778,7 +794,12 @@ func TestNegativeUnitsSettleAsZero(t *testing.T) {
 // argv is built from the registry rather than from a string split here.
 func TestActArgvComesFromTheRegistry(t *testing.T) {
 	r := &recorder{}
-	d := newDriver(t, implementer(), r)
+	keyPath, _ := testKeyAndFingerprint(t)
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := d.Act("budget reserve", "c-1", "--amount", "5"); err != nil {
 		t.Fatal(err)
 	}
@@ -786,7 +807,7 @@ func TestActArgvComesFromTheRegistry(t *testing.T) {
 	if got[0] != "budget" || got[1] != "reserve" {
 		t.Fatalf("the group and subverb come from the registry: %v", got)
 	}
-	if flagValue(got, "--subject") != "c-1" || flagValue(got, "--key") != "/key" {
+	if flagValue(got, "--subject") != "c-1" || flagValue(got, "--key") != keyPath {
 		t.Errorf("every act carries its subject and the lane's one key: %v", got)
 	}
 	if flagValue(got, "--remote") != "/repo" {
@@ -802,7 +823,7 @@ func TestActArgvComesFromTheRegistry(t *testing.T) {
 // act would poll, orient, and then silently do nothing, which is the
 // shape of a lane that looks alive and accomplishes nothing.
 func TestALoopWithNoSeamRefuses(t *testing.T) {
-	_, err := New(implementer(), nil, []string{"--remote", "/r"}, "/k", "a",
+	_, err := New(implementer(), nil, []string{"--remote", "/r"}, testKey(t),
 		WorkFunc(func(string, Situation) (int, error) { return 0, nil }), WithBase("a..a"))
 	if err == nil {
 		t.Fatal("a loop with no verb seam can perform no act and must refuse")
@@ -869,7 +890,7 @@ func TestTheActGateGuardsEveryStepOfTheSequence(t *testing.T) {
 			m.LivenessFrom = []string{"budget reserve"}
 		}
 		r := &recorder{answer: offers("c-1", nil)}
-		d, err := New(m, r, []string{"--remote", "/repo"}, "/key", "SHA256:a",
+		d, err := New(m, r, []string{"--remote", "/repo"}, testKey(t),
 			WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithBase("a..a"))
 		if err != nil {
 			t.Fatalf("%s: construction: %v", missing, err)
@@ -923,20 +944,59 @@ func TestARefusedOrientAfterTheClaimParks(t *testing.T) {
 	}
 }
 
-// conformance: a loop with no identity refuses at construction. It
-// signs with one key and polls as its own actor, and a loop missing
-// either would either sign as nobody or poll for work it cannot take.
-func TestALoopWithoutAnIdentityRefuses(t *testing.T) {
-	r := &recorder{}
+// conformance: the lane's identity is DERIVED from its signing key and
+// cannot be supplied beside it. A loop told to poll as one actor while
+// signing as another would select work under one identity's
+// eligibility, act under a second, and write liveness under a third —
+// and the classifier, which keys the stream by the holder, would read
+// silence from a worker that was working (review finding on #191).
+//
+// The drill is that the two agree by CONSTRUCTION: there is no
+// parameter to disagree through, and the fingerprint the loop polls
+// with is the one its key produces.
+func TestTheActorIsDerivedFromTheSigningKey(t *testing.T) {
+	r := &recorder{answer: offers("c-1", nil)}
+	keyPath, want := testKeyAndFingerprint(t)
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, res := d.Poll(); res.Refused() {
+		t.Fatal("poll refused")
+	}
+	if got := flagValue(r.calls[0], "--actor"); got != want {
+		t.Errorf("the poll's actor must be the signing key's fingerprint: polled as %q, key is %q",
+			got, want)
+	}
+	// The poll is eligibility-scoped by fingerprint and takes no key;
+	// the acts sign with one. The pairing that matters is that the
+	// fingerprint above came from the key below, which is what
+	// derivation guarantees and a supplied actor could not.
+	if _, err := d.Act("claim take", "c-1"); err != nil {
+		t.Fatal(err)
+	}
+	act := r.calls[len(r.calls)-1]
+	if flagValue(act, "--key") != keyPath {
+		t.Errorf("the acts sign with the key the actor was derived from: %v", act)
+	}
+
+	// And a key the loop cannot read or parse refuses at construction,
+	// rather than later, mid-window.
 	work := WorkFunc(func(string, Situation) (int, error) { return 0, nil })
-	for name, args := range map[string][2]string{
-		"no key":   {"", "SHA256:a"},
-		"no actor": {"/k", ""},
-	} {
-		if _, err := New(implementer(), r, []string{"--remote", "/r"}, args[0], args[1], work,
-			WithBase("a..a")); err == nil {
-			t.Errorf("%s must refuse at construction", name)
-		}
+	if _, err := New(implementer(), r, []string{"--remote", "/r"}, "", work, WithBase("a..a")); err == nil {
+		t.Error("a loop with no key must refuse")
+	}
+	if _, err := New(implementer(), r, []string{"--remote", "/r"},
+		filepath.Join(t.TempDir(), "absent"), work, WithBase("a..a")); err == nil {
+		t.Error("a key the loop cannot read must refuse at construction")
+	}
+	junk := filepath.Join(t.TempDir(), "junk")
+	if err := os.WriteFile(junk, []byte("not-a-key\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(implementer(), r, []string{"--remote", "/r"}, junk, work, WithBase("a..a")); err == nil {
+		t.Error("a key the loop cannot parse must refuse at construction")
 	}
 }
 
@@ -959,5 +1019,298 @@ func TestAMalformedWindowRowIsSkipped(t *testing.T) {
 	}
 	if len(s.Windows) != 1 || !s.Holds("c-1") {
 		t.Fatalf("the well-formed rows survive: %+v", s.Windows)
+	}
+}
+
+// testKey writes a deterministic OpenSSH ed25519 private key and
+// returns its path. Drills sign with a real key because the loop's
+// identity is derived from one: a fixture that let a test name an
+// arbitrary actor would re-open exactly the gap that derivation closed.
+func testKey(t *testing.T) string {
+	t.Helper()
+	path, _ := testKeyAndFingerprint(t)
+	return path
+}
+
+func testKeyAndFingerprint(t *testing.T) (string, string) {
+	t.Helper()
+	seed := make([]byte, ed25519.SeedSize)
+	for i := range seed {
+		seed[i] = byte(i + 3)
+	}
+	k := ed25519.NewKeyFromSeed(seed)
+	block, err := ssh.MarshalPrivateKey(k, "loop-fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "id_ed25519")
+	if err := os.WriteFile(path, pem.EncodeToMemory(block), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fp, err := event.Fingerprint(k.Public().(ed25519.PublicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path, fp
+}
+
+// conformance: a claim reaped between the take's push and the refreshed
+// read leaves nothing to exit. The build plan's middle convergence arm
+// is exactly this — a refreshed position-stamped read showing the act is
+// no longer owed — and treating it as a failure would manufacture an
+// escalation storm out of ordinary fleet contention (review finding on
+// #191).
+func TestAClaimReapedBeforeTheReadIsIdleNotAnError(t *testing.T) {
+	orients := 0
+	r := &recorder{}
+	r.answer = func(args []string) Result {
+		switch verb(args) {
+		case "offer list":
+			return Result{OK: true, Position: "10", Result: map[string]any{
+				"offers": []any{map[string]any{"subject": "c-1"}}}}
+		case "situation":
+			orients++
+			// The post-claim read shows no window: someone reaped it.
+			return Result{OK: true, Position: "11", Result: map[string]any{"windows": []any{}}}
+		case "claim take":
+			return Result{OK: true, Position: "12", Result: map[string]any{"fence": "12"}}
+		}
+		return Result{OK: true, Position: "13"}
+	}
+	d := newDriver(t, implementer(), r)
+	step, err := d.Step(5)
+	if err != nil {
+		t.Fatalf("a reaped claim is ordinary contention, not an error: %v", err)
+	}
+	if step.Outcome != Idle {
+		t.Fatalf("the refreshed read proved the act is no longer owed, so the iteration is idle: %+v", step)
+	}
+	if orients < 2 {
+		t.Fatal("this drill is vacuous unless the post-claim read actually happened")
+	}
+	for _, got := range r.verbs() {
+		if got == "budget reserve" || got == "claim park" {
+			t.Errorf("nothing is held, so nothing may be spent against it or exited: %v", r.verbs())
+		}
+	}
+}
+
+// conformance: claim take is a declared liveness source in the shipped
+// implementer manifest, and it must be observable under the fence IT
+// opened. Emitting under the previous window's fence, or dropping it for
+// want of one, leaves the claim's own liveness invisible to the
+// classifier exactly when a worker is most likely to stall — between
+// taking work and starting it (review finding on #191).
+func TestTheClaimIsObservableUnderTheFenceItOpened(t *testing.T) {
+	obsDir := t.TempDir()
+	keyPath, actor := testKeyAndFingerprint(t)
+	const opened = "12"
+	orients := 0
+	r := &recorder{}
+	r.answer = func(args []string) Result {
+		switch verb(args) {
+		case "offer list":
+			return Result{OK: true, Position: "10", Result: map[string]any{
+				"offers": []any{map[string]any{"subject": "c-1"}}}}
+		case "claim take":
+			return Result{OK: true, Position: opened, Result: map[string]any{
+				"subject": "c-1", "fence": opened}}
+		case "situation":
+			orients++
+			if orients == 1 {
+				// The PRE-claim read holds no window, because there is
+				// none yet. This is what makes the drill non-vacuous:
+				// if the fence could only come from a read, it would be
+				// empty at claim time and the claim's own liveness would
+				// be dropped. The first version of this drill returned a
+				// window here and passed without the fix.
+				return Result{OK: true, Position: "11", Result: map[string]any{"windows": []any{}}}
+			}
+			return Result{OK: true, Position: "13", Result: map[string]any{
+				"windows": []any{map[string]any{"subject": "c-1", "fence": opened}}}}
+		}
+		return Result{OK: true, Position: "14"}
+	}
+	m := implementer()
+	m.LivenessFrom = []string{"claim take", "budget settle"}
+	d, err := New(m, r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) { return 1, nil }),
+		WithBase("a..a"), WithObservations(obsDir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Step(5); err != nil {
+		t.Fatal(err)
+	}
+	body := streamBody(t, obsDir, actor, opened)
+	if !strings.Contains(body, `"step":"claim take"`) {
+		t.Errorf("the claim must be observable under the fence it opened (%s/%s/%s.jsonl): %q",
+			obsDir, actor, opened, body)
+	}
+	if n := streamLines(t, obsDir, actor, ""); n != 0 {
+		t.Errorf("no observation may land under an empty fence key: %d lines", n)
+	}
+}
+
+// conformance: the packet a verb consumed is removed once it has. An
+// unattended lane runs indefinitely, so one file left per iteration is a
+// slow leak of the host's temporary storage and of the packets
+// themselves, which are work-product content rather than scratch
+// (review finding on #191).
+func TestPacketFilesDoNotOutliveTheirVerb(t *testing.T) {
+	for name, answer := range map[string]func([]string) (Result, bool){
+		"a submission": nil,
+		"a park": func(args []string) (Result, bool) {
+			if verb(args) == "budget reserve" {
+				return Result{Exit: 8, OK: false, Code: "chain_invalid", Message: "exhausted"}, true
+			}
+			return Result{}, false
+		},
+	} {
+		r := &recorder{answer: offers("c-1", answer)}
+		d := newDriver(t, implementer(), r)
+		if _, err := d.Step(5); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		named := 0
+		for _, c := range r.calls {
+			path := flagValue(c, "--packet")
+			if path == "" {
+				continue
+			}
+			named++
+			if _, err := os.Stat(path); !os.IsNotExist(err) {
+				t.Errorf("%s: %s outlived the verb that consumed it (%v)", name, path, err)
+			}
+		}
+		if named == 0 {
+			t.Errorf("%s: this drill is vacuous unless a packet was actually written", name)
+		}
+	}
+}
+
+// conformance: a key rotated under a running Driver refuses at the next
+// iteration rather than being adopted. Deriving the actor at
+// construction closes the mismatch a parameter could carry; it does not
+// close the one the filesystem can, because the loop passes --key
+// <path> and the CLI signs with whatever that path holds now (review
+// finding on #193).
+//
+// The refusal is the point, not the detection: silently switching
+// identity mid-loop would leave a window held by one actor and worked
+// by another, which is a worse state than stopping.
+func TestARotatedKeyRefusesRatherThanBeingAdopted(t *testing.T) {
+	r := &recorder{answer: offers("c-1", nil)}
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeSeededKey(t, keyPath, 3)
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// One clean iteration, so the drill is not passing because nothing
+	// ever worked.
+	if _, err := d.Step(5); err != nil {
+		t.Fatalf("the first iteration must run: %v", err)
+	}
+	before := len(r.calls)
+
+	// Rotate: the same path, different key material.
+	writeSeededKey(t, keyPath, 9)
+	step, err := d.Step(5)
+	if !errors.Is(err, ErrKeyRotated) {
+		t.Fatalf("a rotated key must refuse as ErrKeyRotated, got %v", err)
+	}
+	if step.Outcome != Idle || step.Step != "identity" {
+		t.Errorf("the refusal names the identity check and claims nothing: %+v", step)
+	}
+	if len(r.calls) != before {
+		t.Errorf("the refusal comes BEFORE polling: %d calls made after rotation", len(r.calls)-before)
+	}
+	if !strings.Contains(err.Error(), "restart the loop") {
+		t.Errorf("the refusal tells the operator what to do about it: %v", err)
+	}
+
+	// The caller-driven path refuses too: stepping by hand is not
+	// permission to sign under a key the loop never derived from.
+	if _, err := d.Act("claim take", "c-1"); !errors.Is(err, ErrKeyRotated) {
+		t.Errorf("Act must apply the same check, got %v", err)
+	}
+}
+
+// conformance: a packet created whose write then fails is unlinked by
+// writePacket itself. No verb will run and no caller holds a path, so
+// cleanup after the call cannot reach it — and this is precisely the
+// low-storage case, where leaking leaks when the host can least afford
+// it (review finding on #193).
+func TestAPacketCreatedThenFailedIsUnlinked(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+	r := &recorder{}
+	d := newDriver(t, implementer(), r)
+
+	// A packet body that marshals but cannot be written: the file is
+	// created, then the write fails because the descriptor is closed
+	// under it. Simulated by filling the disk is not portable, so the
+	// drill reaches the same branch through writePacket directly.
+	args, cleanup, err := d.writePacket(map[string]any{
+		"acceptance": []string{"x"}, "decisions": []any{},
+		"refs": []string{}, "findings": []map[string]string{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := flagValue(args, "--packet")
+	if created == "" {
+		t.Fatal("the packet must name a file")
+	}
+	if _, err := os.Stat(created); err != nil {
+		t.Fatalf("the packet exists until its cleanup runs: %v", err)
+	}
+	cleanup()
+	if _, err := os.Stat(created); !os.IsNotExist(err) {
+		t.Errorf("cleanup must unlink the packet: %v", err)
+	}
+
+	// And nothing is left behind in TMPDIR at all: the assertion that
+	// actually covers the failure branches, since a file leaked there
+	// has no path anyone still holds.
+	entries, err := os.ReadDir(tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), "seed-loop-packet-") {
+			t.Errorf("a packet file was left in TMPDIR: %s", e.Name())
+		}
+	}
+
+	// A body that cannot be marshalled fails before any file exists, so
+	// there is nothing to unlink and nothing to leak.
+	if _, _, err := d.writePacket(map[string]any{"bad": make(chan int)}); err == nil {
+		t.Error("an unmarshallable packet must refuse")
+	}
+	entries, _ = os.ReadDir(tmp)
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), "seed-loop-packet-") {
+			t.Errorf("a failed marshal must leave no file: %s", e.Name())
+		}
+	}
+}
+
+// writeSeededKey writes a deterministic OpenSSH ed25519 key at path.
+func writeSeededKey(t *testing.T, path string, first byte) {
+	t.Helper()
+	seed := make([]byte, ed25519.SeedSize)
+	for i := range seed {
+		seed[i] = byte(i) + first
+	}
+	block, err := ssh.MarshalPrivateKey(ed25519.NewKeyFromSeed(seed), "loop-fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, pem.EncodeToMemory(block), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -631,8 +631,8 @@ administrative card, not a Phase 8 item).
     keyring.AcceptedCapabilities says each act's verb accepts. Plus
     `seed lane list|show|validate` and exit 26 lane_invalid)
   - 1b dispatcher least-capability drilled by the injection
-    conformance suite (hostile corpus) — os-b779b4c7 — **review**
-    (task PR against plan #190). III.J's second row is now
+    conformance suite (hostile corpus) — os-b779b4c7 — **done**
+    (merged #192; card closed). III.J's second row is now
     **two-thirds met**, and the spec says so rather than reporting it
     closed: intents and tool output are covered, mirrors are not,
     because request.* has zero rows in the transition table.
@@ -654,7 +654,15 @@ administrative card, not a Phase 8 item).
       where the unlanded mirror arm will land: whichever card adds
       request.* inherits an input already carrying hostile text.
   - 1c the worker loop made executable with exhaustion parking —
-    os-abb206c8 — **done** (merged #191; card closed). It inherited
+    os-abb206c8 — **done** (merged #191; card closed). Four review
+    findings arrived after it merged and land as os-378e44f3: the
+    actor derived from the key rather than supplied beside it (and
+    re-derived each iteration, since a rotated key reopens the same
+    mismatch through the filesystem), a claim reaped before the
+    post-claim read ending the iteration idle rather than erroring,
+    the fence adopted from the act that opened it so the claim is
+    observable under its own window, and packet temp files unlinked
+    on every path. It inherited
     1a's unfinished half and closed it: the loop emits as a side-effect
     of a declared liveness act that SUCCEEDED, keyed to its own actor
     and the fence its orienting read reports, so `liveness_from` is now
@@ -740,11 +748,12 @@ the stale view, and a JSON null packet panicking the CLI — which also
 records in `next/spec/loop-verbs.md` that a derived value is
 re-examined against the refreshed tip and refused rather than
 replaced.
-**Next action: finish Phase 9 item 1, then items 2 through 4.** Item 1
-was split three ways and two thirds have landed or are in review: 1a
-merged (#188), 1c is in review, and **1b is the remainder** — the
-dispatcher's injection conformance suite, planned in #190 and blocked
-on that plan merging.
+**Next action: Phase 9 items 2 through 4.** Item 1 is COMPLETE: 1a
+merged (#188), 1c merged (#191), 1b merged (#192), with its four review
+findings landing as os-378e44f3. III.J's first row is met; its second is
+**two-thirds met** and the spec says so — intents and tool output are
+covered, mirrors are not, because `request.*` has zero rows in the
+transition table.
 
 Item 1's four ergonomic obligations are now all real rather than
 declared: the one position-stamped read each manifest names (and, since
