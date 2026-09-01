@@ -52,8 +52,15 @@ claim's holder and fence.
 - **live**: an observation within `expiry_after` and the count
   advanced within `wedge_after`.
 - **expired**: no observation within `expiry_after` — the
-  no-observations condition. Reap heuristic: after grace on the
-  lease.
+  no-observations condition. Reap heuristic: after a grace measured
+  from the last observation, the quantity this classification already
+  computes. Seed holds no lease: a claim stands until a deliberate
+  exit or a reap, and the stream is the only liveness evidence there
+  is. That is trustworthy precisely because the worker loop emits its
+  observations from its own steps
+  ([`docs/next-build-plan.md`](../../docs/next-build-plan.md) Phase 9
+  item 1), so absence of observation is absence of work rather than
+  absence of bookkeeping.
 - **wedged**: observations continue but the count last advanced more
   than `wedge_after` ago — observations without progress
   advancement. Reap heuristic: operator or maintenance judgment,

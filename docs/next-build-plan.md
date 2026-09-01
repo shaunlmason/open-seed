@@ -213,17 +213,48 @@ versioned.
    (poll, claim, work, meter, sync, deliberate exit), and exhaustion parking is part
    of that loop: a budget refusal at a spending gate triggers the `claim.parked` exit
    with packet (the III.H row the Phase 7 exit routes here), consuming Phase 8's
-   envelope budget block.
+   envelope budget block. Four obligations bind every lane's fragment, each a new
+   consumer of a table that already exists rather than a new authority. **One
+   position-stamped read on wake:** the fragment NAMES the single read it orients
+   from (`seed situation --key <its key> [--since <last position>]`) and the
+   position it carries forward, and fragment validation checks that the declaration
+   is present and names a real surface — promotion criterion 1's "orienting from one
+   position-stamped read" made a property of the role file rather than of the agent
+   writing it. **The loop acts through the loop verbs** of item 5(c) (`claim
+   take|release|park`, `submission make`, `budget reserve|settle|release`), never
+   the raw append seam, which consults the admission boundary not at all and so
+   cannot answer a refusal with what IS legal. **Liveness rides the work:** the
+   observations the expiry/wedge classification reads are emitted by the loop's own
+   steps (the metered run, the milestone at a real step, the sync), so a working
+   lane is a live lane by construction; the loop's vocabulary contains NO verb whose
+   only purpose is to report liveness, and a bare heartbeat is forbidden here rather
+   than merely discouraged. **The one-inbox doctrine:** push channels wake,
+   position-stamped reads convince — no lane treats a wake, an event or a message as
+   a fact about the world, only as a hint to read.
 2. Escalation (`blocked(needs-you)`) with packet + question + decision; report
-   surfaces age.
+   surfaces age. An escalation raised in answer to a refusal carries that refusal's
+   `code` and `message` in its packet, so the question a human is asked is the
+   boundary's own account rather than a lane's paraphrase of it.
 3. Maintenance loop: reap expired/wedged, reconcile divergence, rebuild projections,
    checkpoint (signed), lints — runnable unattended; audited as an ordinary actor.
    Lints include unsettled-run detection: a claim window carrying an admitted
    `run.started` whose `run.settled` is still missing once the subject has taken a
    subsequent claim window or reached a terminal state is flagged (the Phase 7 exit's
    metering-detection obligation; post-close settlement is a valid intermediate
-   state, so the condition is position-anchored, never mid park/reap flow).
-4. Small-team mode and fleet mode end-to-end fixtures.
+   state, so the condition is position-anchored, never mid park/reap flow). The
+   reaper may act on an `expired` classification BECAUSE item 1's loop emits its
+   observations from its own steps: absence of observation is therefore absence of
+   work, not absence of bookkeeping. No further predicate is added for it, and in
+   particular non-advancing observations are NOT a heartbeat signature: a legitimate
+   long-running step emits exactly that shape, which the existing expiry/wedge
+   classification already distinguishes.
+4. Small-team mode and fleet mode end-to-end fixtures. Both run with **no wake
+   channel at all** (the one-inbox doctrine asserted rather than asserted about),
+   and every refusal a lane meets in them is followed either by an admitting act on
+   its next attempt or by an escalation carrying that refusal: one-retry
+   convergence, in the only form a fixture can fail on. A refusal a correct lane
+   cannot act on is a bug here, exactly as a listed-but-refused verb is one in
+   Phase 8.
 5. **The lane-facing surface.** Lanes are defined here but nothing defines the
    surface they act through: today the CLI is the raw protocol seam (`ledger append
    --verb claim.taken --payload …`, fences read out of a projection by hand,
@@ -237,7 +268,14 @@ versioned.
    regression-class treatment. (b) A **situation read**: what is true for me now —
    standing obligations with clocks, active windows and fences, unread messages,
    budget headroom — with `--since <position>` returning only what changed, so a
-   resuming lane pays for the delta rather than reconstructing the world. (c) **Loop
+   resuming lane pays for the delta rather than reconstructing the world. Part (b) is
+   **partially met**: the obligations, windows and budget block landed, and the
+   unread messages did not, so the read a lane is told to orient from cannot yet
+   tell it that it has mail. (b) is complete only when `seed situation` carries the
+   messages addressed to the caller, with "unread" derived from the cited `--since`
+   position rather than from stored read-state — the position a lane carries forward
+   IS its read cursor, so no `message.read` verb is introduced and the surface gains
+   a section rather than a concept. (c) **Loop
    verbs** that derive every argument the system can derive (the fence from the
    active window, the reservation id from the budget view, the base range from the
    repository) and refuse before signing what the tables would refuse after, naming
