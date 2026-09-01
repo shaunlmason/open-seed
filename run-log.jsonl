@@ -741,3 +741,4 @@
 {"actor":"shaunlmason","data":{"title":"next: promotion milestone — define spin-out criteria and the critical path"},"task":"os-768361cc","ts":"2026-09-01T03:13:42Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-768361cc","ts":"2026-09-01T03:15:26Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T04:15:29Z"},"task":"os-768361cc","ts":"2026-09-01T03:15:29Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-768361cc","ts":"2026-09-01T03:18:25Z","verb":"transition"}
