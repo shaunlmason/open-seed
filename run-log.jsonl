@@ -748,3 +748,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-1112caa4","kind":"pr"},"task":"os-ef715d17","ts":"2026-09-01T03:35:09Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-ef715d17","ts":"2026-09-01T03:35:12Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: ledger show not_found must stamp the position it established"},"task":"os-fa69345e","ts":"2026-09-01T03:44:38Z","verb":"create"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:167","to":"ready"},"task":"os-768361cc","ts":"2026-09-01T03:51:57Z","verb":"plan-unblock"}
