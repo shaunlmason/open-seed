@@ -714,3 +714,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T03:45:19Z"},"task":"os-edf73d66","ts":"2026-09-01T02:45:19Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-6f294c30","kind":"pr"},"task":"os-edf73d66","ts":"2026-09-01T02:49:20Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-edf73d66","ts":"2026-09-01T02:49:23Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"engine: seed situation — one-envelope resume packet for an actor"},"task":"os-c1dbf7bc","ts":"2026-09-01T03:01:22Z","verb":"create"}
