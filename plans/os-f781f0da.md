@@ -115,7 +115,29 @@ forward pointer, not a gap."* This plan pays that pointer.
   a fifth packet part.** `packets.md` binds "exactly four parts, all
   keys present" and refuses unknown keys at the top level. So the raise
   carries the packet unchanged beside a new `escalation` object, and
-  the answer carries its own fields:
+  the answer carries its own fields.
+
+  **The packet travels on both raise forms; the fence travels on only
+  one.** Caught auditing this plan against its own D1 amendment rather
+  than in review, and worth stating because the two halves come from
+  different rules:
+
+  - The **packet** is required on every raise. The charter's §II.7 says
+    an escalation carries "the packet, the question, and the minimal
+    decision", and `packets.md` already anticipates this exact reuse
+    ("escalation packets … reuse this schema"). A raise from `ready` or
+    `review` has no work to hand off, which the schema already has a
+    spelling for: `base` is the unambiguous zero-length range
+    `"<mb>..<mb>"`, `refs` and `findings` may be empty, and `acceptance`
+    is the contract's own anchor.
+  - The **fence** rides only the `claim.parked` form.
+    `next/spec/lifecycle.md` is explicit that outside `in_progress`
+    there is no active fence, none is required, and **citing one
+    refuses** — a fence dies with its claim window. So an
+    `escalation.raised` carrying a fence must refuse, and that is the
+    landed rule holding rather than a new one.
+
+  From `in_progress`, on `claim.parked`:
 
   ```json
   {"fence": "12", "packet": {…four parts…},
@@ -123,6 +145,18 @@ forward pointer, not a gap."* This plan pays that pointer.
                   "options": [{"id": "a", "choice": "<one sentence>"},
                               {"id": "b", "choice": "<one sentence>"}]}}
   ```
+
+  From `ready` or `review`, on `escalation.raised` — same packet, same
+  `escalation` object, no fence:
+
+  ```json
+  {"packet": {…four parts, base "<mb>..<mb>"…},
+   "escalation": {"question": "…", "options": [{"id": "a", "choice": "…"},
+                                               {"id": "b", "choice": "…"}]}}
+  ```
+
+  And the answer:
+
   ```json
   {"escalation": "<position>", "choice": "a", "because": "<one sentence>"}
   ```
@@ -289,6 +323,10 @@ Nothing outside `next/**` except the work-product files above.
    and it admits; the same key's `escalation.raised` on an `in_progress`
    subject **refuses**, because nothing new may leave `in_progress`.
    Both asserted, so D1's distinction is enforced rather than described.
+   An `escalation.raised` **carrying a fence refuses** (the landed
+   outside-`in_progress` rule), and one carrying no packet refuses,
+   with the zero-length `base` range accepted — the three together pin
+   D4's split.
 10. **Mutation evidence, per fix rather than in aggregate.** Each of
    these must fail its drill: deleting the lockout branch; relaxing the
    two-option minimum; widening `decision.recorded` to accept
