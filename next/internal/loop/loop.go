@@ -283,6 +283,16 @@ func (d *Driver) act(name, subject string, extra ...string) (Result, error) {
 		return Result{}, fmt.Errorf("lane %q acts through %s and not %q: %w",
 			d.manifest.Lane, loopverb.English(d.manifest.ActsThrough), name, ErrUndeclaredAct)
 	}
+	// EVERY act, not just the iteration's first. A key rotated while the
+	// work step runs would otherwise let the settle and the exit sign as
+	// a new identity: the window would be opened by one actor and closed
+	// by another, or not closed at all, leaving the claim standing —
+	// which is the state the deliberate exits exist to make impossible
+	// (review finding on #194). Checking here is cheap next to the
+	// round-trip the act is about to make.
+	if err := d.checkIdentity(); err != nil {
+		return Result{}, err
+	}
 	args := []string{a.Group, a.Sub}
 	args = append(args, d.posture...)
 	args = append(args, "--key", d.keyPath, "--subject", subject)
@@ -334,13 +344,10 @@ func (d *Driver) observe(act, subject string) {
 }
 
 // Act performs one declared act, for a caller driving the steps itself.
-// The act gate and the identity check both apply here exactly as they
-// do inside Step: a caller stepping the loop by hand is not a caller
-// entitled to sign under a key the loop never derived from.
+// The act gate and the identity check both apply, because act applies
+// them: a caller stepping the loop by hand is not a caller entitled to
+// sign under a key the loop never derived from.
 func (d *Driver) Act(name, subject string, extra ...string) (Result, error) {
-	if err := d.checkIdentity(); err != nil {
-		return Result{}, err
-	}
 	return d.act(name, subject, extra...)
 }
 
@@ -620,6 +627,30 @@ func (d *Driver) successPacket() ([]string, func(), error) {
 	})
 }
 
+// packetFile is what writePacket writes through. The seam exists so the
+// post-creation failure branches below are REACHABLE by a drill: a test
+// that only ever exercises the success path cannot tell whether those
+// branches unlink, and this one did not (review finding on #194). It
+// follows the injection precedent internal/transition already sets.
+type packetFile interface {
+	Name() string
+	Write([]byte) (int, error)
+	Close() error
+}
+
+var createPacketFile = func() (packetFile, error) {
+	return os.CreateTemp("", "seed-loop-packet-*.json")
+}
+
+// InjectPacketWriter replaces the packet writer and returns a restore
+// func. Test-only: it exists to make a failure branch reachable, never
+// to change production behavior.
+func InjectPacketWriter(make func() (packetFile, error)) func() {
+	prev := createPacketFile
+	createPacketFile = make
+	return func() { createPacketFile = prev }
+}
+
 // writePacket writes the packet and returns the arguments naming it
 // plus a cleanup that removes the file. An unattended lane runs
 // indefinitely, so a packet left behind per iteration is a slow leak of
@@ -635,7 +666,7 @@ func (d *Driver) writePacket(p map[string]any) ([]string, func(), error) {
 	if err != nil {
 		return nil, noop, err
 	}
-	f, err := os.CreateTemp("", "seed-loop-packet-*.json")
+	f, err := createPacketFile()
 	if err != nil {
 		return nil, noop, err
 	}

@@ -239,11 +239,18 @@ would read silence from a worker that was working.
 Deriving once is not enough. The loop passes `--key <path>` and the CLI
 signs with whatever that path holds **now**, so a key rotated under a
 running loop reopens the same mismatch through the filesystem. The
-fingerprint is therefore re-derived and compared at the top of every
-iteration, and a change **refuses**: adopting it silently would leave a
-window held by one actor and worked by another, which is worse than
-stopping. Rotation is a real operational event, so the refusal names it
-and says to restart the loop.
+fingerprint is therefore re-derived and compared **before every act**,
+not once per iteration: the work step is the longest thing in an
+iteration and the likeliest moment for a rotation to land, and a check
+only at the top would let the settle and the exit sign as a new
+identity. A window opened by one actor and closed by another — or left
+open because the close refused — is exactly the state the deliberate
+exits exist to make impossible.
+
+A change **refuses**. Adopting it silently would produce that state
+rather than prevent it, so stopping is correct; and rotation being a
+real operational event, the refusal names it and says to restart the
+loop.
 
 ### Contention is ordinary
 

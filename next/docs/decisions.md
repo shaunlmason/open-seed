@@ -1376,3 +1376,19 @@ here. Newest last.
   cannot have, so reverting the fix did not fail it. The second was
   found ONLY because its mutation did not fail, which is the argument
   for mutation-testing every fix rather than trusting a green run.
+
+- **The identity check lives in `act`, not at the top of `Step`**
+  (review finding on #194). Checking once per iteration leaves the work
+  step — the longest part of one — as a window where a rotation lands
+  and the settle and exit then sign as a new identity. The failure that
+  prevents is specific: a window opened by one actor and closed by
+  another, or left open because the close refused, which is the state
+  the four deliberate exits exist to make impossible.
+- **A failure-path drill must reach the failure.** The first version of
+  the packet-unlink drill ran a successful `writePacket` and called the
+  success-path cleanup, so removing both error-branch unlinks left it
+  green — a test named for a branch it never entered. It now injects a
+  failing writer through a seam added for that purpose, following the
+  injection precedent `internal/transition` sets. This was the seventh
+  instance this cycle of a drill agreeing with a convenient shape, and
+  the only one added *in response to* a finding about the same class.
