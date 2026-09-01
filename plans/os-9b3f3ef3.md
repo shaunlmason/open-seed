@@ -108,9 +108,28 @@ objects.
   the malformed-packet drills, alongside a bare array and a bare
   string, because the drill missed this class by only ever trying
   malformed *objects*.
-- **D5 — scope guard.** No surface change: same seven verbs, same
-  flags, same envelope and journal contracts, same spec. Three
-  correctness fixes and their drills.
+- **D5 — say what "refuse before signing" means, in the spec.** The
+  phrase in `docs/next-build-plan.md` and
+  [`next/spec/loop-verbs.md`](../next/spec/loop-verbs.md) reads, to a
+  careful reader, as "no `event.Sign` call happens before the check"
+  (review finding on this PR). It cannot mean that, and the merged
+  code says so: `commit` signs and *then* runs `admit.Check`, and
+  `admit.Affordances` signs one probe per catalog verb as a matter of
+  routine. The boundary **cannot judge an unsigned record** at all,
+  because the actor rule verifies the signature: signing is how you
+  ask the boundary a question.
+
+  The invariant the phrase is reaching for is the one the spec already
+  states in the next sentence: *nothing is appended and nothing enters
+  the chain*. A signature over a record that never leaves memory costs
+  nothing and leaves no trace. So this task tightens the spec section
+  to say that plainly, rather than leaving the next reader to
+  re-derive it from the code, and the build plan's wording is left
+  alone because it is the phasing authority's and reads correctly
+  under the clarified gloss.
+- **D6 — scope guard.** No surface change: same seven verbs, same
+  flags, same envelope and journal contracts. Three correctness fixes,
+  one spec clarification, and their drills.
 
 ## Steps
 
@@ -133,11 +152,13 @@ objects.
    the pre-race count); `null`, a bare array and a bare string as
    `--packet`, each refused with the usage envelope and the chain
    unchanged; and the existing drills unchanged, since no surface moves.
-5. `next/docs/decisions.md`, `memory/*`; receipt; evidence; review.
+5. `next/spec/loop-verbs.md`: the D5 clarification.
+6. `next/docs/decisions.md`, `memory/*`; receipt; evidence; review.
 
 ## File Scope
 
 - `next/cmd/seed/loop.go`, `next/cmd/seed/remote.go`
+- `next/spec/loop-verbs.md` (the D5 clarification, one paragraph)
 - `next/cmd/seed/loop_cli_test.go`, `next/cmd/seed/remote_test.go`
 - `next/docs/decisions.md`, `memory/*`
 - `receipts/os-9b3f3ef3.json`
@@ -159,8 +180,12 @@ objects.
    (the combination that panicked) and without; the chain does not
    grow, and the CLI does not terminate.
 5. `ledger append`, the seven verbs' flags, the envelope contract and
-   the attempts journal are all unchanged; `next/spec/loop-verbs.md`
-   needs no edit beyond any sentence these fixes falsify.
+   the attempts journal are all unchanged.
+5b. `next/spec/loop-verbs.md` states plainly that signing is a local,
+   in-memory act and the invariant is that nothing is appended and
+   nothing enters the chain, so "refuse before signing" cannot be read
+   as forbidding the signature the boundary needs in order to judge
+   the record at all.
 6. `make check` green, coverage gate ≥90% held.
 
 ## Validation Commands
