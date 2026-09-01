@@ -619,8 +619,20 @@ func TestClaimRaceStorm(t *testing.T) {
 // is a repository no fixture creates, so it is the one the fixture
 // hardening cannot reach. It is also the one that lost the race in CI
 // (unlinkat .../state/gitdir: directory not empty, after the
-// assertions had passed). Asserting the SETTING rather than the
-// mechanism keeps this honest if the mechanism ever changes.
+// assertions had passed).
+//
+// What this pins is the EFFECTIVE setting under the test binary, and
+// the scope supplying it is the process-wide GIT_CONFIG_GLOBAL that
+// hardenGitEnv installs, NOT a repository-local write: NewClient inits
+// the git dir and writes no config, because D4 keeps production
+// unchanged (review finding on this PR). `git config --get` reads
+// every scope, which is the question worth asking here — "can a
+// detached gc still fire under this directory" — and the drill earns
+// its place by failing when the mechanism is removed, which is
+// mutation-checked. It does NOT establish that the client hardens its
+// own git dir, and outside a test binary nothing does; whether it
+// should is a production question this card's scope excludes, carded
+// separately.
 func TestClientGitDirHasNoAutoGC(t *testing.T) {
 	state := t.TempDir()
 	if _, err := NewClient(state, bareRemote(t), "refs/seed/ledger"); err != nil {
