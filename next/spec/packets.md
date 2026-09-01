@@ -103,8 +103,11 @@ unfinished item and lands it on the remote, and never re-tries the
 recorded dead end.
 
 Escalation packets (`blocked(needs-you)` carrying packet + question
-+ minimal decision) reuse this schema when the routing/escalation
-phase lands (§7) — a forward pointer, not a gap.
++ minimal decision) reuse this schema, landed in
+[`escalation.md`](escalation.md): the question rides **beside** the
+packet as a sibling payload key, never as a fifth part, and a raise
+with no work to hand off uses the zero-length `base` range the schema
+already spells.
 
 ## Conformance mapping
 
