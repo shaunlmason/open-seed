@@ -55,7 +55,7 @@ may restate them; validation reads the fields.
 
 | field | obligation |
 | --- | --- |
-| `orients_from` | the single position-stamped read on wake |
+| `orients_from` | the single position-stamped read on wake, in the posture the lane works in |
 | `acts_through` | the loop acts the lane performs, never the raw append seam |
 | `liveness_from` | which of the lane's own work steps emit observations |
 | `inbox` | push channels wake, position-stamped reads convince |
@@ -71,7 +71,7 @@ drift it exists to prevent.
 | `grants` name real capabilities | `keyring.Capabilities()` |
 | the lane's grants **intersect** what each act's verb accepts | `keyring.AcceptedCapabilities` |
 | `acts_through` names real loop acts | `internal/loopverb` |
-| `orients_from` is the situation read, with flags it takes | `lane.SituationFlags`, pinned to the CLI by drill |
+| `orients_from` is the situation read, with flags it takes and exactly one posture arm | `lane.SituationFlags`, pinned to the CLI by drill |
 | fragments exist, and none is orphaned | the filesystem, against the manifests |
 | resolution is deterministic | resolving twice, byte-compared |
 
@@ -102,18 +102,63 @@ lane cannot escape by declaring none, because **holding the `claim`
 capability means it claims, and claiming is a loop act**. The grant it
 already declares decides whether the obligation applies.
 
-**What this does not establish.** A subset check compares two labels.
-It cannot show the named step actually emits, because nothing executes
-here: manifests are data, and the loop that emits is Phase 9 item 1c's.
-The obligation is split at the seam where the evidence changes — 1a
-settles the declaration's shape; 1c must drill that running the
-declared steps advances the observation stream keyed to the lane's
-actor and fence, and that the loop reaches no liveness-only surface.
+**And the declaration is now enforced, not merely compared.** 1a could
+only check two labels against each other and said so here: it could not
+show the named step actually emits, because nothing executed. Phase 9
+item 1c's loop (`internal/loop`, [`loop-verbs.md`](loop-verbs.md))
+closes that:
+
+- The loop emits an observation as a **side-effect of a declared
+  liveness act that succeeded** — never as a step of its own. The set it
+  emits for IS `liveness_from`, read from the manifest at run time
+  rather than carried as a second list, so an act named there emits and
+  an act not named there does not.
+- The stream is keyed to the lane's own actor and to **the fence its
+  orienting read reports**, which is exactly how `internal/obs` keys
+  what it classifies. A stream written under any other actor or fence
+  is invisible to the classifier and therefore useless as liveness, so
+  the drills sample that exact key rather than merely counting lines.
+- A **refused** act emits nothing. Otherwise a lane wedged at a
+  boundary would look busiest exactly when it is most stuck, and the
+  classification the maintenance reap depends on would read failure as
+  progress.
+- The loop reaches no liveness-only surface, asserted as a property of
+  what it invoked: every call it makes is either one of the two reads it
+  orients from or an act its manifest declares.
+
+Each of those is mutation-checked — emitting per act rather than per
+declared act, keying by a constant fence, and emitting on a refused act
+each fail their drill.
 
 Fragment prose is additionally swept for an instruction to run a bare
 `seed obs emit`, since a fragment could tell an agent to heartbeat
 without declaring it. That sweep **is** a spelling rule and is treated
 as one: a second line of defence, never the argument.
+
+## One posture, or the read is not the view
+
+`orients_from` names **exactly one** of `--ledger` or `--remote`, and
+validation enforces the exclusive-or rather than a single required flag.
+The reason is not symmetry:
+
+`claim take` is **remote-only**. `claim.taken` is the one exclusive act,
+and only the push round-trip can order two rivals, so the local path
+refuses it outright. Until Phase 9 item 1c, `offer list` and `situation`
+bound `--ledger` alone — so in the only posture where a lane could
+claim, it could neither poll nor orient. A loop there would read a local
+copy that nothing refreshes and call its position authoritative, which
+is precisely the staleness the exclusive act exists to prevent.
+
+Both surfaces now take the pair, and the six shipped manifests declare
+the remote posture: the one a lane that claims can actually orient in.
+A read naming neither has no ledger to derive from; one naming both
+cannot say which view its position stamps. Both refuse.
+
+The loop could instead have read the remote-materialized store through
+internal packages, since it is a library in the same module. It must
+not: every manifest declares `seed situation …` as its orienting read,
+and a loop that oriented by internal call would make that declaration a
+fiction and reopen the drift these manifests exist to close.
 
 ## The dispatcher's posture is an allowlist
 
@@ -149,6 +194,10 @@ keyring's.
 - `seed lane list [--lanes <dir>]` — the six, with grants and fragment counts.
 - `seed lane show <name> [--lanes <dir>]` — the declarations plus the resolved prose.
 - `seed lane validate [--lanes <dir>]` — every check; findings name the lane, the field, and what refused.
+
+The reads a lane orients through take the posture pair as well:
+`seed situation` and `seed offer list` each accept `--ledger <dir>` xor
+`--remote <repo> [--ref <ref>] [--state <dir>]`.
 
 All three are read-only and idempotent: they open no ledger, mutate
 nothing, and journal no attempt, because a read is not an
