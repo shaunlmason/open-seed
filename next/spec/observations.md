@@ -56,11 +56,14 @@ claim's holder and fence.
   from the last observation, the quantity this classification already
   computes. Seed holds no lease: a claim stands until a deliberate
   exit or a reap, and the stream is the only liveness evidence there
-  is. That is trustworthy precisely because the worker loop emits its
-  observations from its own steps
+  is. The worker loop emits its observations from its own steps
   ([`docs/next-build-plan.md`](../../docs/next-build-plan.md) Phase 9
-  item 1), so absence of observation is absence of work rather than
-  absence of bookkeeping.
+  item 1), which removes forgotten bookkeeping as a cause of silence
+  and so makes this classification better evidence than it would
+  otherwise be. It does not make silence PROOF: the channel is lossy
+  by declaration, a dropped stream and dead work look identical from
+  outside it, and this stays a heuristic for a judgment rather than a
+  trigger.
 - **wedged**: observations continue but the count last advanced more
   than `wedge_after` ago — observations without progress
   advancement. Reap heuristic: operator or maintenance judgment,

@@ -1026,3 +1026,19 @@ here. Newest last.
   the messages new to it are those arisen after the cited `--since`
   position, which is the identity `--since` already has for
   obligations. The surface gains a section, not a concept.
+
+- Two over-claims corrected on review, both about treating a signal as
+  stronger than it is. (1) "Absence of observation is absence of work"
+  is exactly the inference the lossy declaration forbids: the channel
+  is ephemeral and lossy by charter §II.3, a dropped stream and dead
+  work are indistinguishable from outside it, and `no_data` has no
+  reap path at all. What loop-emitted observations buy is the removal
+  of forgotten bookkeeping as a CAUSE of silence, which makes the
+  classification better evidence without making it proof; the reap
+  stays a judgment needing corroboration. (2) One-retry convergence as
+  "admit or escalate" rejects correct behavior: in fleet mode a claim
+  race means the loser re-orients and takes different work, and a
+  fence invalidated by a concurrent reap says the same. The third arm
+  is a refreshed read showing the act is no longer owed, and it is the
+  common case rather than a loophole. What stays forbidden is the
+  fourth outcome: a blind retry or a silent loop.

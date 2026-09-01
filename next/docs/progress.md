@@ -626,15 +626,21 @@ administrative card, not a Phase 8 item).
   message, so the human is asked the boundary's own question (this
   card).
 - 9.3 unattended maintenance, whose lint list carries the Phase 7
-  exit's unsettled-run detection — backlog. The reaper may trust an
-  expired classification BECAUSE 9.1's loop emits observations from
-  its own steps; no heartbeat predicate is added, because
-  non-advancing observations are a legitimate long-running step (this
-  card).
+  exit's unsettled-run detection — backlog. 9.1's loop emitting
+  observations from its own steps makes an expired classification
+  better evidence, by removing forgotten bookkeeping as a cause of
+  silence; it does NOT make silence proof, because the channel is
+  lossy by declaration, so the reap stays a judgment needing
+  corroboration and no_data carries no reap path at all. No heartbeat
+  predicate is added either, because non-advancing observations are a
+  legitimate long-running step (this card).
 - 9.4 small-team and fleet fixtures — backlog. Both run with no wake
-  channel, and every refusal a lane meets is followed by an admitting
-  act or an escalation carrying it: one-retry convergence in the form
-  a fixture can fail on (this card).
+  channel, and every refusal converges within one retry in one of
+  three ways: an admitting act, a refreshed read showing the act is no
+  longer owed, or an escalation carrying the refusal. The middle arm
+  is the common case (a fleet-mode claim race means the loser
+  re-orients), and what is forbidden is the fourth outcome: a blind
+  retry or a silent loop (this card).
 
 ## Frontier
 
