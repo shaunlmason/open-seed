@@ -247,10 +247,19 @@ func TestLedgerShowNotFoundStampsTheTip(t *testing.T) {
 		t.Fatalf("a found record carries its own position: %d %+v", code, e.Position)
 	}
 
-	// A scan that failed partway established nothing trustworthy: the
-	// count it reached is records read before an error, not a
-	// statement about the chain, so chain_invalid stays UNSTAMPED even
-	// though position 0 was read before the failure at 1.
+	// chain_invalid stays UNSTAMPED (plans/os-fa69345e.md D3), even
+	// though position 0 was read before the failure at 1. This drill
+	// is a TRIPWIRE, not a claim that the behaviour is settled: D3
+	// wanted the branch pinned so a later "consistency" pass could not
+	// extend the stamp there incidentally.
+	//
+	// It should be extended there deliberately, and that is carded as
+	// os-37fcf7c6 (review finding on this PR). runLedgerVerify already
+	// stamps fail.Position, so show is the only chain failure that
+	// stamps nothing, and the envelope rule reserves null for a
+	// refusal raised before a tip was ever READ rather than before one
+	// was established. Taking that card inverts this assertion, which
+	// is the point of its being here.
 	segs, err := filepath.Glob(filepath.Join(ld, "segments", "*.jsonl"))
 	if err != nil || len(segs) == 0 {
 		t.Fatal("no segments")
