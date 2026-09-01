@@ -791,3 +791,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-a95db3f5","ts":"2026-09-01T06:07:13Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-7e197768","ts":"2026-09-01T06:08:00Z","verb":"close"}
 {"actor":"shaunlmason","data":{"evidence_id":"ev-5aeac64c","kind":""},"task":"os-7e197768","ts":"2026-09-01T06:09:53Z","verb":"attach-evidence"}
+{"actor":"","data":{"title":"next: loop verbs — three post-merge defects on the remote path (Codex review of #173)"},"task":"os-9b3f3ef3","ts":"2026-09-01T06:13:00Z","verb":"create"}
