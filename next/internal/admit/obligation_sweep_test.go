@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
@@ -59,8 +60,22 @@ func TestObligationsAreDischargeable(t *testing.T) {
 			t.Fatalf("position %d: %v", pos, err)
 		}
 		table := ctx.Table
-		rows := obligation.Derive(ctx.Records, table, func(subject string, s transition.SubjectState) []transition.ReservationFact {
-			return BudgetViewAt(ctx.Records, table, subject, s).Open
+		rows := obligation.Derive(ctx.Records, table, obligation.Deps{
+			BudgetOpen: func(subject string, s transition.SubjectState) []transition.ReservationFact {
+				return BudgetViewAt(ctx.Records, table, subject, s).Open
+			},
+			// The sweep's own copy of the standing wiring, kept
+			// independent of the projection's for the same reason
+			// probeViewAt is: if the two disagree on who can pay a
+			// debt, the probe below refuses and the class fails.
+			CanDischarge: func(actor string, verbs []string) bool {
+				for _, verb := range verbs {
+					if ctx.Keyring.HasAnyCapability(actor, keyring.AcceptedCapabilities(verb)) {
+						return true
+					}
+				}
+				return false
+			},
 		})
 		if ctx.Halt.Halted {
 			// A halt stops admission globally: every obligation still

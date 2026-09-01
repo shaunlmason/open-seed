@@ -64,11 +64,24 @@ with its fact:
   state, because post-close settlement is a valid intermediate state
   and a closed-without-settle predicate would file spurious findings
   mid park or reap flow (the Phase 7 exit's routing).
-- **`budget.open`** — an open valid reservation **while the subject
-  is `in_progress`**. Outside that window admission gates every
-  budget verb, so both closing verbs refuse and the reservation is a
-  maintenance concern rather than an obligation; the stranded-capacity
-  gap is tracked on its own card, not papered over here.
+- **`budget.open`** — an open valid reservation, **wherever it
+  stands**: from the reserve until a settle or a release closes it,
+  inside the window that opened it and after. Admission gates only
+  the reserve on `in_progress` ([`budgets.md`](budgets.md)), so both
+  closing verbs stay reachable once the window ends and the debt is
+  a debt rather than a maintenance concern. This matters most on the
+  failed-verdict retry, where the next claimant is a different worker
+  and an unclosed hold would come out of their remaining.
+
+  Owed by **whoever can still discharge it**, which is not always
+  whoever opened it and is never merely whoever holds the window: a
+  close admits for the reservation's own reserving signer or the
+  operator lane and for nobody else, so the row names that signer
+  while their standing lets them close, and `lane:operator` once
+  suspension or revocation means every close from them refuses.
+  Attributing a debt to a fingerprint nobody can sign for would hide
+  it from the one actor able to pay it, on exactly the
+  revocation-recovery path the charter cares about.
 - **`contract.blocked`** — a blocked subject; owed by the operator
   lane; discharged by the verbs leaving `blocked`.
 
@@ -86,15 +99,29 @@ identity and reports the board unfiltered; probes must be signed, so
 affordance stamping needs the key itself.
 
 `--since <position>` makes the response a **complete change report**,
-not a filtered list: obligations that arose after the cited position,
-an explicit `discharged` list naming every obligation that stood at
-it and no longer does, and a count of the unchanged. Applying the
-response to a prior snapshot must reproduce the standing set exactly
-— the property the drills assert. A delta of standing rows alone
-would leave a resuming lane holding a discharged obligation forever,
-and an unchanged *count* cannot say what disappeared. The cited
-position is a tip **ordinal**, so the prefix a lane last saw is
+not a filtered list: obligations that arose **or changed** after the
+cited position, an explicit `discharged` list naming every obligation
+that stood at it and no longer does, and a count of the unchanged.
+Applying the response to a prior snapshot must reproduce the standing
+set exactly — the property the drills assert. A delta of standing rows
+alone would leave a resuming lane holding a discharged obligation
+forever, and an unchanged *count* cannot say what disappeared. The
+cited position is a tip **ordinal**, so the prefix a lane last saw is
 `records[:position+1]`.
+
+**Changed** is content, not position. A row whose `owed_by` moves
+keeps the position it arose at, because the obligation changed hands
+rather than restarting — so a delta keyed on `since` alone would call
+a transfer unchanged, and the removals, derived from the prior set
+filtered to the caller, would not carry it either: the party it moved
+TO would hear nothing at all. That is the standing-aware `budget.open`
+transfer above, and the party it moves to is by construction the only
+one who can act. So the delta compares each standing row against what
+stood at the cited position, on the **unfiltered** prior set, because
+"it was not mine then and is now" is exactly the case a
+caller-filtered comparison cannot see. A row that stood at the cited
+position under no entry at all — `run.unsettled` begins standing at a
+position later than its own `since` — is reported for the same reason.
 
 The read is read-only and idempotent: it opens the ledger read-only,
 mutates nothing, and journals no attempt, because a read is not an
@@ -117,6 +144,13 @@ One global exception: under a declared halt nothing admits but the
 lift, so every obligation still *stands* while none is dischargeable.
 That is the halt working, not an obligation defect, and the sweep
 checks only well-formedness at halted positions.
+
+The sweep walks the shared scenario's every prefix, and the scenario
+ends by **suspending and then revoking** a lane that still holds an
+open reservation: a walk of only active actors can never reach the
+positions where an obligation's usual owner has lost the power to
+discharge it, which are the positions standing-aware attribution
+exists for.
 
 ## Deliberately absent (v0)
 

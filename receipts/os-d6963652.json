@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "task": "os-d6963652",
+  "merge_base": "7f456ed7b3ca233447b21fcf229d8e98e88a9809",
+  "head": "452ee5df18e8e74267235f9d2a5bd235eec9c942",
+  "plan_path": "plans/os-d6963652.md",
+  "plan_sha256": "ac3d66ac4a80c19f6167479628d1cd6471d94718d57354942445ee52d1241255",
+  "diff_files": [
+    "memory/DEADENDS.md",
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/budget_cli_test.go",
+    "next/cmd/seed/situation.go",
+    "next/cmd/seed/situation_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/affordances_test.go",
+    "next/internal/admit/budget_test.go",
+    "next/internal/admit/obligation_sweep_test.go",
+    "next/internal/obligation/obligation.go",
+    "next/internal/obligation/obligation_test.go",
+    "next/internal/project/obligations.go",
+    "next/spec/budgets.md",
+    "next/spec/lifecycle.md",
+    "next/spec/loop-verbs.md",
+    "next/spec/obligations.md"
+  ],
+  "diff_sha256": "56075720cf11476920259c29100eedea66d8b515154324af774c48dbae491f8c",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/obligation/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

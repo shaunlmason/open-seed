@@ -9,7 +9,8 @@ package main
 // the stable identity (subject, kind), so applying the response to a
 // prior snapshot reproduces the standing set exactly. A delta of
 // standing rows alone would leave a resuming lane holding a
-// discharged obligation forever.
+// discharged obligation forever, and a delta keyed on position alone
+// would leave one holding a row whose OWNER moved.
 //
 // Read-only and idempotent: it opens the ledger read-only, mutates
 // nothing, and journals no attempt, because a read is not an
@@ -21,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 
@@ -32,6 +34,14 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/project"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
+
+// sameObligation compares two rows' CONTENT under one identity. Since
+// is excluded because the caller tests it separately, and because a
+// row whose owner moved deliberately keeps the position it arose at:
+// the obligation did not restart, it changed hands.
+func sameObligation(a, b obligation.Row) bool {
+	return a.OwedBy == b.OwedBy && slices.Equal(a.DischargedBy, b.DischargedBy)
+}
 
 // owedToMe reports whether a row is the caller's: their fingerprint
 // outright, or a lane the caller holds the capability for. Lane-owed
@@ -161,9 +171,33 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 			}
 			return a["kind"].(string) < b["kind"].(string)
 		})
+		// "Arisen OR CHANGED" is not "arisen": Since alone answers only
+		// the first (review finding on this PR). An obligation whose
+		// OWNER moved keeps the position it arose at, so a row
+		// transferred to this caller after their --since would be
+		// filtered out here as unchanged AND absent from the removals
+		// above, which are derived from the prior set filtered to the
+		// caller — leaving the delta silent about a debt that is now
+		// theirs. That is exactly the standing-aware budget.open
+		// transfer (obligations.md): the operator lane inherits a
+		// reservation whose signer lost the power to close it, and the
+		// operator is the one party that must hear about it.
+		//
+		// So a row is changed when it arose after the cited position,
+		// when it did not stand there at all (run.unsettled is
+		// position-anchored and can BEGIN standing at a position later
+		// than its own Since), or when its content differs from what
+		// stood there. The prior set is consulted UNFILTERED, because
+		// "it was not mine then and is now" is precisely the case a
+		// caller-filtered comparison cannot see.
+		priorRows := map[string]obligation.Row{}
+		for _, row := range prior {
+			priorRows[row.Subject+"\x00"+row.Kind] = row
+		}
 		changed := []obligation.Row{}
 		for _, row := range mine {
-			if row.Since > sincePos {
+			was, stood := priorRows[row.Subject+"\x00"+row.Kind]
+			if row.Since > sincePos || !stood || !sameObligation(was, row) {
 				changed = append(changed, row)
 			} else {
 				unchanged++
