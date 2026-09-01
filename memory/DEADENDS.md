@@ -84,3 +84,33 @@ reason, so the next agent doesn't burn a session rediscovering why.
   at precisely the prefixes the fix was for. A probe that invents a
   citation does not test the rule you think it tests; it tests the
   citation.
+
+## Deriving a lane's reachable acts from the capability table (os-b779b4c7)
+
+Tried: computing the dispatcher's reachable act set as "every verb whose
+`keyring.AcceptedCapabilities` contains `dispatch`", on the reasoning
+that deriving from an existing authority beats keeping a list.
+
+Why it fails: that table returns `nil` for standing-only verbs, which
+any enrolled active key can append. The derivation silently omitted
+`message.sent` — the one dispatcher-reachable act that RELAYS text to
+another lane, and so the most consequential one for an injection suite.
+
+Instead: derive from actual admission outcomes. Attempt each verb with
+the key in question against a real ledger and classify by what the
+boundary does.
+
+## Manufacturing a spending-gate refusal with InjectSpendingVerb (os-abb206c8)
+
+Tried (as a review suggestion, not taken): making the worker loop's
+exhaustion drill trip the real spending gate by adding a verb to the
+spending table.
+
+Why it fails: `run.started` is admitted from {`supervise`, `operator`}
+and the implementer holds `claim`. The gate is structurally unreachable
+by a worker key, so a drill that reached it would exercise a path no
+production lane can walk — worse than the mislabel it was fixing.
+
+Instead: name the worker's real exhaustion point, `budget.reserve`
+refusing on capacity, and assert the refusal by its own message so it
+cannot silently become a different one.

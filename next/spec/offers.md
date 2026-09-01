@@ -84,10 +84,18 @@ authority.
   payload and appends through the same validated path as every
   append. Refusals reuse the established admission exits; no new exit
   codes.
-- `seed offer list --ledger <dir> --actor <fingerprint>
-  [--now <RFC3339>]` — the worker's poll: live offers whose
-  eligibility the actor meets, with the subject's tier beside the
-  scopes. An inactive or unknown actor sees an empty list.
+- `seed offer list (--ledger <dir> | --remote <repo> [--ref <ref>]
+  [--state <dir>]) --actor <fingerprint> [--now <RFC3339>]` — the
+  worker's poll: live offers whose eligibility the actor meets, with
+  the subject's tier beside the scopes. An inactive or unknown actor
+  sees an empty list.
+
+  The posture pair is an exclusive-or, and the poll takes it for the
+  same reason [`lanes.md`](lanes.md) gives for the orienting read:
+  `claim take` is remote-only, so a poll that could only read a local
+  directory would offer work in a view the claim does not land in.
+  `offer publish` stays local: it is the supervisor's write, and this
+  card widened what a worker READS.
 - Projections ([`projections.md`](projections.md)): offer facts land
   in the contracts view (`offers`, with the `last_claim` consumption
   boundary) and the cache's `offers` table. The report carries no

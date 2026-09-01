@@ -143,7 +143,8 @@ distinguishable from the boundary's own codes.
 - **No new authority.** Every act is a verb the tables already carry;
   nothing here can admit what admission refuses.
 - **No orchestration and no retries.** These are acts, not a loop.
-  The worker-lane loop that sequences them is Phase 9 item 1.
+  The loop that sequences them landed as `internal/loop` (Phase 9 item
+  1c) and is described below; it holds no authority these verbs do not.
 - **No state outside the ledger.** Nothing is cached between
   invocations; every derivation is recomputed from the authoritative
   view.
@@ -155,3 +156,80 @@ distinguishable from the boundary's own codes.
   from the materialized tip the act was judged against. Giving the
   remote posture its own journal home is a client-state decision this
   card does not make.
+
+## The loop that sequences them
+
+`next/internal/loop` (plan `plans/os-abb206c8.md`) is the worker lane's
+loop made executable. It is a **library, not a CLI verb**: Seed does not
+own the work, so the work step is supplied by the caller, and the
+consumers are Phase 9 item 4's small-team and fleet fixtures, which
+drive it in CI with no model and no wake channel.
+
+`seed loop run` is **deliberately absent**. It would invite treating the
+CLI as the agent, when the work step is the caller's and always was. It
+can land later, on evidence, if something outside a test wants it.
+
+The loop reimplements no verb. Every act goes through one seam whose
+implementation is this CLI's own dispatch, so a refusal reaches the loop
+with the boundary's account rather than a second admission check's guess
+at it. It never falls back to `ledger append`: a refusal it cannot act
+on is escalation's business (item 2), not a reason to reach past the
+boundary that gave it.
+
+### The sequence
+
+Poll (`offer list`) → orient (`situation`, carrying the last position
+forward as `--since`) → `claim take` → `budget reserve` → work →
+`budget settle` → `submission make`, or `claim park` when a refusal
+stops it after the window opened.
+
+The spend bracket is **reserve, work, settle** rather than work then
+meter: no execution path is unmetered ([`executors.md`](executors.md)),
+so capacity is committed before the work it pays for.
+
+### The act gate
+
+The loop resolves its lane manifest at construction and performs only
+the acts that manifest declares in `acts_through`, refusing anything
+else **before it is signed**. "The manifest describes the loop" is
+therefore enforced rather than coincidental: editing one without the
+other fails.
+
+### Exhaustion is the reserve, not the spending gate
+
+A worker's exhaustion point is `budget.reserve` refusing on capacity,
+and this distinction is load-bearing rather than pedantic:
+
+| | verb | admitted from | reachable by a `claim` lane |
+|---|---|---|---|
+| the spending gate | `run.started` | `supervise`, `operator` | **no** |
+| capacity exhaustion | `budget.reserve` | `claim`, `operator` | yes |
+
+`transition.IsSpendingVerb` holds exactly `run.started`, which is the
+**executor's** act ([`executors.md`](executors.md), step 2 of the spend
+bracket). No key a worker loop signs with can trip it. So the build
+plan's phrase "a budget refusal at a spending gate" names the concept —
+the point where a lane is told it cannot spend — and for this lane that
+point is the reserve.
+
+The exit is `claim park` with its four-part packet. The findings carry
+the refusal's **`code` and `message` verbatim**, and the acceptance part
+is the contract's own anchor as the orienting read reports it: what a
+successor is judged against is the contract's, never the lane's
+paraphrase.
+
+**A residual, recorded.** Budget exhaustion refuses under the generic
+`chain_invalid` (exit 8), the same code as a malformed payload or a
+broken chain, because [`envelope.md`](envelope.md) allocates no budget
+code. The message carries the whole account; the code misleads, since a
+successor reading `chain_invalid` would conclude the ledger is broken
+rather than the budget spent. The current behavior is pinned by a
+characterization assertion in `cmd/seed/loop_e2e_test.go`, so closing it
+fails that drill and forces this passage to be updated with it.
+
+### Contention is ordinary
+
+A lost `claim take` is not an error. In fleet mode two workers racing it
+means the loser re-orients and takes different work, and treating that
+as a failure would manufacture an escalation storm out of ordinary
+contention. The iteration ends idle, with no window owed an exit.

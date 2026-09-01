@@ -472,9 +472,14 @@ func (d *Driver) park(subject, step string, cause Result) (StepResult, error) {
 		return out, err
 	}
 	if res.Refused() {
+		// Both refusals, in full. The window is still open, and whoever
+		// reads this needs what stopped the work as much as what
+		// stopped the exit — the more so because an exhausted budget
+		// arrives under the generic chain_invalid, so the code alone
+		// would point at the ledger rather than the spend.
 		return out, fmt.Errorf(
-			"the window could not be parked after %s refused (%s): park refused (%s): %s",
-			step, cause.Code, res.Code, res.Message)
+			"the window could not be parked after %s refused (%s: %s): park refused (%s): %s",
+			step, cause.Code, cause.Message, res.Code, res.Message)
 	}
 	return out, nil
 }

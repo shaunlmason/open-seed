@@ -622,8 +622,8 @@ administrative card, not a Phase 8 item).
   liveness riding the loop's own steps with no heartbeat verb, and the
   one-inbox doctrine. Too large for one plan, so split three ways the
   way item 5 was:
-  - 1a the six lane fragments — os-cf1c9688 — **review** (task PR
-    against plan #187: next/lanes/** as manifests plus ordered prose
+  - 1a the six lane fragments — os-cf1c9688 — **done** (merged #188;
+    card closed: next/lanes/** as manifests plus ordered prose
     fragments, the four obligations as DECLARED FIELDS rather than
     paragraphs, and internal/lane checking each against an authority
     elsewhere — capabilities against internal/keyring, acts against the
@@ -631,16 +631,34 @@ administrative card, not a Phase 8 item).
     keyring.AcceptedCapabilities says each act's verb accepts. Plus
     `seed lane list|show|validate` and exit 26 lane_invalid)
   - 1b dispatcher least-capability drilled by the injection
-    conformance suite (hostile corpus) — backlog. 1a makes the standing
-    claim checkable via the allowlist; III.J's second row is half met
-    until the input-handling half lands.
+    conformance suite (hostile corpus) — os-b779b4c7 — plan PR #190
+    open. 1a makes the standing claim checkable via the allowlist;
+    III.J's second row is half met until the input-handling half lands.
+    The plan derives the dispatcher's reachable act set from ACTUAL
+    ADMISSION OUTCOMES rather than from AcceptedCapabilities, which is
+    not a reachability oracle: it returns nil for the standing-only
+    class, so a capability filter misses message.sent, which an
+    enrolled dispatcher can append and which RELAYS.
   - 1c the worker loop made executable with exhaustion parking —
-    backlog. It INHERITS 1a's unfinished half: 1a can check that a
-    lane's declared liveness sources are work steps it performs, but
-    not that running them emits, because nothing executes at 1a. 1c
-    must drill that the declared steps advance the observation stream
-    keyed to the lane's actor and fence, and that the loop reaches no
-    liveness-only surface.
+    os-abb206c8 — **review** (task PR against plan #189). It inherited
+    1a's unfinished half and closed it: the loop emits as a side-effect
+    of a declared liveness act that SUCCEEDED, keyed to its own actor
+    and the fence its orienting read reports, so `liveness_from` is now
+    what decides what happens rather than a label compared to another
+    label. Three things the work turned up:
+    - **The posture did not line up.** `claim take` refuses `--ledger`
+      outright, while `offer list` and `situation` bound `--ledger`
+      alone: in the only posture where a lane can claim it could
+      neither poll nor orient. Both reads took the exclusive-or, and
+      lane.SituationFlags follows with Posture beside Required.
+    - **Exhaustion is the reserve, not the spending gate.**
+      IsSpendingVerb holds only run.started, admitted from {supervise,
+      operator}; the implementer holds claim, so that gate is the
+      executor's and unreachable here. The drill asserts the capacity
+      refusal by its own message so it cannot become a different one.
+    - **The situation read withheld the acceptance anchor**, so a lane
+      could not write the packet its own exit requires. The window now
+      reports it.
 - 9.2 escalation with packet, question and decision — backlog. An
   escalation answering a refusal carries that refusal's code and
   message, so the human is asked the boundary's own question (this
@@ -708,17 +726,22 @@ the stale view, and a JSON null packet panicking the CLI — which also
 records in `next/spec/loop-verbs.md` that a derived value is
 re-examined against the refreshed tip and refused rather than
 replaced.
-**Next action: Phase 9 item 1** — the six lane role definitions as
-composable fragments, the dispatcher's least-capability posture, the
-injection conformance suite against dispatcher input handling, and
-the worker-lane loop carrying the exhaustion-park obligation the
-Phase 7 exit routes to it — a new card, plan-first, per the loop.
-That loop now has verbs to call rather than a raw seam to assemble,
-which is what item 5 part (c) exists to give it, and item 1's text
-now binds four ergonomic obligations besides (this card): the one
-position-stamped read each fragment names, the loop verbs as the
-loop's acts, liveness riding the loop's own steps, and the one-inbox
-doctrine. Then Phase 9 items 2 through 4 (escalation with packet,
+**Next action: finish Phase 9 item 1, then items 2 through 4.** Item 1
+was split three ways and two thirds have landed or are in review: 1a
+merged (#188), 1c is in review, and **1b is the remainder** — the
+dispatcher's injection conformance suite, planned in #190 and blocked
+on that plan merging.
+
+Item 1's four ergonomic obligations are now all real rather than
+declared: the one position-stamped read each manifest names (and, since
+1c, names in the posture the lane can actually claim in), the loop verbs
+as the loop's acts (enforced by 1c's act gate, which refuses anything
+`acts_through` does not declare), liveness riding the loop's own steps
+(emitted as a side-effect of a declared act that succeeded, keyed to the
+lane's actor and fence), and the one-inbox doctrine (the loop acts on
+its read, never on a wake).
+
+Then Phase 9 items 2 through 4 (escalation with packet,
 question and decision, carrying the refusal it answers; the
 unattended maintenance loop, whose lint list carries the Phase 7
 exit's unsettled-run detection; small-team and fleet fixtures, run

@@ -645,3 +645,53 @@ Fresh sessions read this file instead of rediscovering.
   the same lost counters at the same number forever. Cold-cache runs
   gave 86.7 / 90.7 / 90.7. When a re-run is the discriminator, make
   sure the re-run actually re-runs.
+
+## A capability table is not a reachability oracle (os-b779b4c7, os-abb206c8)
+
+`keyring.AcceptedCapabilities` answers "which capabilities admit this
+verb", and its switch falls through to `nil` for the standing-only
+class — the verbs `internal/admit`'s grant rule describes as needing
+"active standing only", `message.sent` among them. Deriving "what can
+this key do" by filtering that table for a capability therefore misses
+every verb in that class, silently.
+
+The general shape, which cost three review findings in one round: a
+lookup that *looks* like consulting an authority is only as complete as
+the authority's own domain. When the question is "what is reachable",
+ask the boundary — attempt the act and observe the outcome — rather
+than asking a table built to answer a narrower question.
+
+## A test double that guesses the boundary's shape teaches a false one
+
+The loop's unit drills answered a refused reserve with
+`{Exit: 9, Code: "budget"}`, invented from what a budget refusal ought
+to look like. The real boundary returns `{Exit: 8, Code:
+"chain_invalid"}` with the account in the message. The drills passed
+either way, so the double would have quietly taught this package a
+boundary that does not exist, and the packet-carries-the-refusal claim
+would have been verified against fiction.
+
+Doubles get their shapes from a run against the real thing, and the
+end-to-end drill that produced the shape is what keeps them honest.
+
+## Warm coverage readings hide the counter-loss flake (os-cafba959)
+
+`make check`'s gate read 90.0%, 90.1% and 90.3% on warm caches while
+cold runs of the same tree gave 89.3%, 90.7% and 90.7%. `go test`
+caches a package's result including its coverage contribution, so warm
+re-runs replay whatever counters the cached run lost, at the same
+number, which reads as stability.
+
+Consequence for any card landing near the gate: measure cold, several
+times, and leave headroom for the full observed swing (1.4 points here)
+rather than for the best reading.
+
+## Running the thing finds what reading it cannot
+
+Two gaps in os-abb206c8 were invisible to inspection and immediate once
+a loop actually ran: the situation read withheld the acceptance anchor,
+so a lane could not write the packet its own deliberate exit requires;
+and the manifests declared a liveness source that emitted nothing,
+because no loop verb ever touched `internal/obs`. Both had been read
+past repeatedly, including while writing the plan that named liveness
+as the inherited obligation.

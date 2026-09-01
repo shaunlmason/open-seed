@@ -1227,3 +1227,69 @@ here. Newest last.
   position it could honestly cite — and nothing is written back, since
   a resolved role on disk would be the second copy the ordered
   fragment list exists to prevent.
+
+## Phase 9 item 1c — the worker loop made executable (os-abb206c8)
+
+- The loop is a **library**, not a CLI verb. Seed does not own the
+  work: writing the code is the model's act, so the work step is
+  supplied by the caller. `seed loop run` is deliberately deferred and
+  named in the spec rather than quietly omitted, because it would
+  invite treating the CLI as the agent, and the real consumers are
+  item 4's fixtures, which drive this in CI with no model and no wake
+  channel. A library is what those can drive.
+- The loop **reimplements no verb**. Every act goes through one seam
+  whose only implementation is the CLI's own dispatch. A second
+  implementation of `claim.taken` inside the loop would consult the
+  admission boundary not at all, and so could not answer a refusal
+  with what IS legal — the whole reason the loop verbs exist.
+- **The reads learned the remote posture, and the alternative was
+  rejected on principle.** `claim take` refuses `--ledger` outright,
+  while `offer list` and `situation` bound `--ledger` alone: in the
+  only posture where a lane could claim, it could neither poll nor
+  orient. Because the loop is a library in the same module, it could
+  have read the remote-materialized store through internal packages
+  and skipped the CLI. It must not: every manifest declares `seed
+  situation …` as its orienting read, so orienting by internal call
+  would make that declaration a fiction and reopen exactly the drift
+  1a closed. The surfaces took the exclusive-or instead.
+- **`SituationFlag` gained `Posture` beside `Required`** because the
+  pair is an exclusive-or and a required-flag model cannot express
+  one: naming neither and naming both must each refuse, for different
+  reasons. The CLI drill derives both arms by perturbing a parsing
+  baseline rather than reading required-ness off the declaration.
+- **The worker's exhaustion point is `budget.reserve`, not the
+  spending gate.** `transition.IsSpendingVerb` holds exactly
+  `run.started`, admitted from {`supervise`, `operator`}; the
+  implementer holds `claim`, so that gate is the executor's and no key
+  this loop signs with can trip it. The build plan's phrase "a budget
+  refusal at a spending gate" names the concept, and for this lane the
+  concept lands on the reserve. Reaching for `InjectSpendingVerb` to
+  manufacture a refusal the loop could trip would have drilled a path
+  that exists only in the test.
+- **Liveness is emitted as a side-effect of a declared act that
+  SUCCEEDED**, keyed to the lane's own actor and the fence its
+  orienting read reports. Three guards are each load-bearing: only
+  acts named in `liveness_from` emit, so the declaration decides what
+  happens; only a succeeded act emits, so a lane wedged at a boundary
+  cannot look busiest when it is most stuck; and the key is the
+  classifier's own, so a stream under any other key would be invisible
+  to the reap while looking like liveness in a test. A write failure is
+  swallowed deliberately: the channel is lossy by declaration, and a
+  lane that abandoned real work over its telemetry disk would trade an
+  authoritative act for a non-authoritative one.
+- **The situation read now reports the acceptance anchor**, found by
+  running the loop rather than by reading the spec: a lane's deliberate
+  exit carries a packet, a packet's acceptance part is what a successor
+  is judged against, and the read withheld it — so the lane could not
+  write the exit its own contract requires.
+- **Budget exhaustion refuses as `chain_invalid` and this is NOT fixed
+  here** (carded `os-d03bde01`). No budget exit code exists, so the
+  message carries the whole account while the code misleads: a
+  successor reading `chain_invalid` would conclude the ledger is broken
+  rather than the budget spent. An exit code is protocol surface and
+  this card's scope guard does not open it, so the behavior is pinned
+  by a characterization assertion that fails when it is closed.
+- **A lost `claim take` is idle, not an error.** In fleet mode two
+  workers racing it means the loser re-orients and takes different
+  work; treating that as failure would manufacture an escalation storm
+  out of ordinary contention.
