@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task": "os-a95db3f5",
+  "merge_base": "0ebe635f7e311102689543fd59660ac38d693728",
+  "head": "94b3f3b8fc7c0fc8d7024a2520bbf365a0735588",
+  "plan_path": "plans/os-a95db3f5.md",
+  "plan_sha256": "f9a945bc1dc435e6d31668e40dfce03bde0af6af1b79c34acada4d5c4e5d05f4",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/preempt_cli_test.go"
+  ],
+  "diff_sha256": "6885b5b1e22e0f7f7e1330f4b16ebbd2f67aada9e459fc97ef1f6d7a89ad341a",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Preempt' -count=10",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
