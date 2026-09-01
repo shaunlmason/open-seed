@@ -1374,7 +1374,18 @@ func TestAKeyRotatedDuringTheWorkStepStopsAtTheNextAct(t *testing.T) {
 	keyPath := filepath.Join(dir, "id_ed25519")
 	writeSeededKey(t, keyPath, 3)
 
-	r := &recorder{answer: offers("c-1", nil)}
+	// The double refuses the exit the way the real boundary would: the
+	// fence rule admits holder-signed events only from the holder, so a
+	// rotated key cannot park the window its predecessor opened. A
+	// double that let the park succeed would test a case production
+	// never reaches.
+	r := &recorder{answer: offers("c-1", func(args []string) (Result, bool) {
+		if verb(args) == "claim park" {
+			return Result{Exit: 6, OK: false, Code: "fenced_out",
+				Message: "event on c-1 must cite the active fence 12 held by the original actor"}, true
+		}
+		return Result{}, false
+	})}
 	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
 		WorkFunc(func(string, Situation) (int, error) {
 			// The rotation lands mid-iteration, after claim take has
@@ -1393,17 +1404,30 @@ func TestAKeyRotatedDuringTheWorkStepStopsAtTheNextAct(t *testing.T) {
 		t.Errorf("the refusal names the act it stopped at: %+v", step)
 	}
 
-	// The window was opened, and the acts AFTER the rotation never
-	// reached the seam: no settle, no submission, no park signed by an
-	// identity the window does not belong to.
+	// The window was opened, and the loop ATTEMPTED its deliberate exit
+	// rather than returning with a claim standing. The first version of
+	// this drill asserted the opposite — that no park reached the seam —
+	// which encoded silent abandonment as correct behavior (review
+	// finding on #196). It is not: a window left open with no packet is
+	// exactly what the four deliberate exits exist to prevent.
 	got := r.verbs()
 	if !slices.Contains(got, "claim take") {
 		t.Fatalf("this drill is vacuous unless the window was actually opened: %v", got)
 	}
-	for _, after := range []string{"budget settle", "submission make", "claim park"} {
+	if !slices.Contains(got, "claim park") {
+		t.Errorf("an open window must have its exit ATTEMPTED even when the attempt cannot succeed: %v", got)
+	}
+	// The work-signing acts do not run: they would sign as an identity
+	// the window does not belong to.
+	for _, after := range []string{"budget settle", "submission make"} {
 		if slices.Contains(got, after) {
 			t.Errorf("%q reached the seam under a rotated key: %v", after, got)
 		}
+	}
+	// And the error says the window is open and needs a reap, rather
+	// than reading as a tidy stop.
+	if !strings.Contains(err.Error(), "left OPEN") || !strings.Contains(err.Error(), "reap") {
+		t.Errorf("the error must say the window is stranded and needs a reap: %v", err)
 	}
 }
 

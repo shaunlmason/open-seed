@@ -274,6 +274,12 @@ func (d *Driver) Declares(act string) bool { return slices.Contains(d.manifest.A
 // manifest's loop: editing the manifest without editing the loop, or
 // the reverse, now fails rather than drifting.
 func (d *Driver) act(name, subject string, extra ...string) (Result, error) {
+	return d.actGated(name, subject, false, extra...)
+}
+
+// actGated is act with the identity gate optionally bypassed for a
+// last-ditch exit; see the exemption below.
+func (d *Driver) actGated(name, subject string, lastDitch bool, extra ...string) (Result, error) {
 	a, ok := loopverb.ByName(name)
 	if !ok {
 		return Result{}, fmt.Errorf("%q is not a loop act (%s): %w",
@@ -290,8 +296,18 @@ func (d *Driver) act(name, subject string, extra ...string) (Result, error) {
 	// which is the state the deliberate exits exist to make impossible
 	// (review finding on #194). Checking here is cheap next to the
 	// round-trip the act is about to make.
-	if err := d.checkIdentity(); err != nil {
-		return Result{}, err
+	//
+	// The one exemption is a LAST-DITCH exit attempt, which must be
+	// allowed to reach the boundary even under a rotated key: refusing
+	// it here would guarantee the silent abandonment the check exists
+	// to prevent. Nothing is weakened by letting it through, because
+	// the fence rule is the actual protection — it admits holder-signed
+	// events only from the holder, so a rotated key's exit refuses at
+	// the boundary rather than succeeding wrongly.
+	if !lastDitch {
+		if err := d.checkIdentity(); err != nil {
+			return Result{}, err
+		}
 	}
 	args := []string{a.Group, a.Sub}
 	args = append(args, d.posture...)
@@ -510,7 +526,7 @@ func (d *Driver) Step(amount int) (StepResult, error) {
 
 	reserve, err := d.act("budget reserve", subject, "--amount", fmt.Sprintf("%d", amount))
 	if err != nil {
-		return StepResult{Outcome: Idle, Subject: subject, Step: "budget reserve"}, err
+		return d.strand(subject, "budget reserve", err)
 	}
 	if reserve.Refused() {
 		// Exhaustion (D4): the worker's spending gate is the reserve,
@@ -528,7 +544,7 @@ func (d *Driver) Step(amount int) (StepResult, error) {
 	// nobody closes comes out of the next claimant's remaining, and
 	// that claimant is a different worker.
 	if settle, err := d.act("budget settle", subject, "--actuals", fmt.Sprintf("%d", units)); err != nil {
-		return StepResult{Outcome: Idle, Subject: subject, Step: "budget settle"}, err
+		return d.strand(subject, "budget settle", err)
 	} else if settle.Refused() {
 		return d.park(subject, "budget settle", settle)
 	}
@@ -538,17 +554,46 @@ func (d *Driver) Step(amount int) (StepResult, error) {
 
 	handoff, cleanup, err := d.successPacket()
 	if err != nil {
-		return StepResult{Outcome: Idle, Subject: subject, Step: "submission make"}, err
+		return d.strand(subject, "submission make", err)
 	}
 	defer cleanup()
 	submit, err := d.act("submission make", subject, handoff...)
 	if err != nil {
-		return StepResult{Outcome: Idle, Subject: subject, Step: "submission make"}, err
+		return d.strand(subject, "submission make", err)
 	}
 	if submit.Refused() {
 		return d.park(subject, "submission make", submit)
 	}
 	return StepResult{Outcome: Submitted, Subject: subject}, nil
+}
+
+// strand handles an ERROR raised while a window is open: the loop
+// attempts the deliberate exit anyway and reports what happened.
+//
+// The case that motivates it is a key rotated mid-window (review
+// finding on #196). Returning the error directly left the claim and
+// its reservation open with no packet, which is exactly the silent
+// abandonment the four deliberate exits exist to prevent — and the
+// drill for it asserted that absence as correct, which was the
+// mistake underneath the mistake.
+//
+// The attempt often fails, and that is honest rather than futile: the
+// fence rule admits holder-signed events only from the holder, so a
+// rotated key cannot park the window its predecessor opened. The
+// window is then stranded whatever the loop does, and recovering it is
+// the maintenance lane's reap. What the loop owes is to TRY, and then
+// to say plainly that the window is open and why, rather than to
+// return as though nothing were outstanding.
+func (d *Driver) strand(subject, step string, cause error) (StepResult, error) {
+	res, parkErr := d.parkGated(subject, step, Result{Code: "loop_error", Message: cause.Error()}, true)
+	if parkErr == nil {
+		// The exit landed after all: the window is closed and its
+		// packet carries the cause.
+		return res, cause
+	}
+	return StepResult{Outcome: Parked, Subject: subject, Step: step},
+		fmt.Errorf("%w; the window on %s is left OPEN and needs a reap: the deliberate exit also "+
+			"failed (%v)", cause, subject, parkErr)
 }
 
 // park closes an open window deliberately, carrying the refusal that
@@ -557,13 +602,17 @@ func (d *Driver) Step(amount int) (StepResult, error) {
 // escalation: the next worker is given the refusal rather than this
 // lane's paraphrase of it.
 func (d *Driver) park(subject, step string, cause Result) (StepResult, error) {
+	return d.parkGated(subject, step, cause, false)
+}
+
+func (d *Driver) parkGated(subject, step string, cause Result, lastDitch bool) (StepResult, error) {
 	out := StepResult{Outcome: Parked, Subject: subject, Cause: cause, Step: step}
 	extra, cleanup, err := d.packetFor(step, cause)
 	if err != nil {
 		return out, err
 	}
 	defer cleanup()
-	res, err := d.act("claim park", subject, extra...)
+	res, err := d.actGated("claim park", subject, lastDitch, extra...)
 	if err != nil {
 		return out, err
 	}

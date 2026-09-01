@@ -1377,13 +1377,36 @@ here. Newest last.
   found ONLY because its mutation did not fail, which is the argument
   for mutation-testing every fix rather than trusting a green run.
 
-- **The identity check lives in `act`, not at the top of `Step`**
-  (review finding on #194). Checking once per iteration leaves the work
-  step — the longest part of one — as a window where a rotation lands
-  and the settle and exit then sign as a new identity. The failure that
-  prevents is specific: a window opened by one actor and closed by
-  another, or left open because the close refused, which is the state
-  the four deliberate exits exist to make impossible.
+- **The identity check lives in `act` AS WELL AS before polling, never
+  instead of it** (review findings on #194 and #195). Checking once per
+  iteration leaves the work step — the longest part of one — as a
+  window where a rotation lands and the settle and exit then sign as a
+  new identity: a window opened by one actor and closed by another, or
+  left open because the close refused, which is the state the four
+  deliberate exits exist to make impossible.
+
+  **Both checks are load-bearing, for different paths.** `Poll` and
+  `Orient` carry the cached actor, so the pre-poll check keeps the READ
+  path honest; an idle driver never reaches an act at all, and without
+  it a rotated worker would poll forever under an obsolete fingerprint
+  and miss work granted only to its new identity. The per-act check
+  keeps the WRITE path honest. An earlier wording of this entry said
+  "in `act`, not at the top of `Step`", which would have licensed
+  deleting the pre-poll one — recorded here because a decision record
+  is a licence, and this one nearly issued the wrong permit twice.
+- **A rotation mid-window still ATTEMPTS the deliberate exit** (review
+  finding on #196). Returning the rotation error directly left the
+  claim and its reservation open with no packet, which is the silent
+  abandonment the exits exist to prevent — and the drill asserted that
+  absence as correct, which was the mistake underneath the mistake.
+
+  The exit attempt is exempt from the identity gate, or refusing it
+  would guarantee the abandonment the gate exists to prevent. Nothing
+  is weakened: the fence rule admits holder-signed events only from the
+  holder, so a rotated key's exit refuses at the boundary rather than
+  succeeding wrongly. The window is then genuinely stranded and the
+  error says so, naming the reap — which is the maintenance lane's
+  business (Phase 9 item 3), not something the loop can do for itself.
 - **A failure-path drill must reach the failure.** The first version of
   the packet-unlink drill ran a successful `writePacket` and called the
   success-path cleanup, so removing both error-branch unlinks left it
