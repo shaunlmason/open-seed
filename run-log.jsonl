@@ -826,3 +826,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: ledger show's chain_invalid does not stamp its failing position, unlike verify"},"task":"os-37fcf7c6","ts":"2026-09-01T08:55:25Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 9 item 1a — the six lane role fragments and the four ergonomic obligations"},"task":"os-4f095d25","ts":"2026-09-01T09:00:06Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"cancelled","transitioned":true},"task":"os-4f095d25","ts":"2026-09-01T09:00:52Z","verb":"cancel"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 9 item 1a — the six lane role fragments and the four ergonomic obligations"},"task":"os-cf1c9688","ts":"2026-09-01T09:00:54Z","verb":"create"}
