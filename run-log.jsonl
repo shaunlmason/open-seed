@@ -909,3 +909,4 @@
 {"actor":"shaunlmason","data":{"title":"next: Phase 9 item 3 — the unattended maintenance loop"},"task":"os-8a5f14bb","ts":"2026-09-01T20:22:11Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 9 item 4 — small-team and fleet end-to-end fixtures"},"task":"os-6a08b166","ts":"2026-09-01T20:22:36Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-8a5f14bb","ts":"2026-09-01T20:22:48Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T21:22:51Z"},"task":"os-8a5f14bb","ts":"2026-09-01T20:22:51Z","verb":"claim"}
