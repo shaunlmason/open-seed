@@ -30,27 +30,46 @@ forward pointer, not a gap."* This plan pays that pointer.
 
 ## Design decisions (binding for this task)
 
-- **D1 — escalation is a QUALIFIER on the exits that already reach
-  `blocked`, never a fifth exit.** From `in_progress` it rides
-  `claim.parked`; from `ready` it rides `contract.blocked`.
+- **D1 — from `in_progress` the escalation rides `claim.parked`;
+  everywhere else it is its own verb, `escalation.raised`.** The
+  distinction that matters is not "new verb versus qualifier" — it is
+  **which state the verb can leave**.
 
-  This is forced, not preferred. `next/spec/lifecycle.md` pins the four
-  deliberate exits from `in_progress` by self-validation, and III.F
-  ("every exit from `in_progress` is deliberate … silent abandonment is
-  impossible by construction") depends on that set being **closed**. A
-  new `escalation.raised` row out of `in_progress` would open it to buy
-  nothing: the park already carries the four-part packet, already
-  requires the active fence, and already lands in `blocked`. An
-  escalation is what the payload SAYS, not a new door.
+  `next/spec/lifecycle.md` pins the four deliberate exits from
+  `in_progress` by self-validation, and III.F ("every exit from
+  `in_progress` is deliberate … silent abandonment is impossible by
+  construction") depends on that set being **closed**. So nothing new
+  may leave `in_progress`, and there the escalation rides the park,
+  which already carries the four-part packet, already requires the
+  active fence, and already lands in `blocked`.
 
-  Consequence, stated rather than hidden: "any lane can raise" is
-  bounded in v0 by who can already reach `blocked`. The claim lane can
-  (its park) and the dispatch lane can (`contract.blocked`). A verifier
-  holding a `review` subject **cannot** — there is no `review` →
-  `blocked` row, and adding one is a lifecycle change with its own
-  consequences for the reconciliation chain. Recorded as a known v0
-  gap with its reason rather than closed by inventing a row this item
-  does not ask for.
+  A verb that **cannot** admit from `in_progress` opens none of that.
+  `escalation.raised` is therefore added with
+  `{"from": ["ready", "review"], "to": "blocked"}` — the four exits stay
+  exactly four, and the charter's "**any** lane can raise
+  `blocked(needs-you)`" (§II.11) is satisfied rather than deferred.
+
+  This corrects the plan's first draft, which shipped the verifier as a
+  known gap: a verifier holding a `review` subject could not raise one
+  at all, because no `review` → `blocked` row existed (review finding on
+  #197). Shipping a gap against a normative charter line was the wrong
+  trade, and the workaround available to it was worse — rendering a
+  **fail** verdict to reach `contract.returned` would launder an
+  environmental problem into a judgement about the submission, which is
+  precisely the laundering Phase 6 spent a card preventing.
+
+  Capability: `claim`, `dispatch`, `verdict`, `supervise`, `operator`.
+  Raising a question **grants nothing**, which is the `offer.published`
+  argument: the contract can leave `blocked` only through the operator's
+  `decision.recorded` or a citing cancellation (D3), so a raiser cannot
+  move work, only stop it and hand a human the decision. The residual is
+  that any of those lanes can freeze a contract; it is bounded by being
+  attributable, by the operator's answer, and by there being no way to
+  unfreeze one's own escalation.
+
+  Answering from `review` returns the subject to `ready`, exactly as
+  `contract.returned` already does, with prior facts — the submission
+  and any standing verdict — persisting as history.
 
 - **D2 — the ANSWER is its own operator-only verb: `decision.recorded`
   (`blocked` → `ready`).** It cannot ride `contract.unblocked`, which
@@ -75,6 +94,18 @@ forward pointer, not a gap."* This plan pays that pointer.
   operator-only, and cancelling an escalated contract IS a human
   decision — refusing it would trap the contract with no operator path
   out, which is a worse failure than the one being prevented.
+
+  But it must **cite the escalation it is answering**. The first draft
+  left the cancel unconstrained, which let a subject reach a terminal
+  state with the standing escalation neither cited nor answered: the
+  obligation simply disappeared, taking the audit link with it, and
+  "nothing else moves until it is answered" was satisfied only by
+  accident (review finding on #197). So while an escalation stands,
+  `contract.cancelled` admits only carrying
+  `{"escalation": "<position>"}`, and that citation is what records that
+  the decision taken was to cancel. The contract is never trapped, the
+  obligation is discharged rather than dropped, and the chain still
+  shows which question the cancellation answered.
 
   The lockout is derived from the fold at admission time, following the
   red-verdict lockout precedent (`plans/os-d2497eb7.md`,
@@ -119,19 +150,36 @@ forward pointer, not a gap."* This plan pays that pointer.
   prose does. Transcript-dumping is then a refusal rather than a
   style note.
 
-- **D6 — waiting escalations surface as an OBLIGATION, and age needs no
-  new surface.** `next/spec/obligations.md` rows already carry `since
-  <position>` under a named clock, so a new fact-shaped kind is the
-  whole of "the report surfaces it with age":
+- **D6 — waiting escalations surface as an OBLIGATION, and age is
+  ELAPSED TIME, never a position difference.** The new fact-shaped kind:
 
   | kind | owed by | discharged by |
   | --- | --- | --- |
   | `escalation.pending` | `lane:operator` | `decision.recorded`, `contract.cancelled` |
 
-  An operator's `seed situation` read then lists waiting escalations
-  with the position that raised each, and **resolution latency is the
-  chain's own arithmetic** — the answer's position minus the raise's —
-  derivable by anyone from history, stored nowhere.
+  The plan's first draft said latency was "the answer's position minus
+  the raise's". That is wrong, and wrong in both directions: positions
+  are **ordinals**, so an escalation sitting untouched for hours reads
+  as zero, and a burst of unrelated traffic makes an instant answer look
+  old (review finding on #197). Positions order; they do not measure.
+
+  Age comes from the raising event's own `ts`, and the discipline is
+  already set by [`offers.md`](../next/spec/offers.md), reused rather
+  than reinvented:
+
+  - **Admission never reads a wall clock.** Every comparison admission
+    makes is between fields inside the event, which is why a born-dead
+    offer refuses deterministically. Nothing about the escalation's age
+    is therefore an admission concern at all.
+  - **A live read may.** Offer liveness takes `--now`, defaulting to the
+    wall clock, precisely because "listing is a live read, unlike
+    admission". Escalation age is the same kind of read.
+
+  So the row carries the raise's `ts` beside its position; age is
+  `now − ts` at the read's `--now`; and **resolution latency is
+  `answer.ts − raise.ts`**, both from the chain, computed by whoever
+  reports and stored nowhere. Positions stay for identity and for the
+  `--since` delta, which is what they are for.
 
   Not chosen: a `seed report` verb. Nothing in the tree has one; the
   build plan's "report surfaces age" names an outcome, not a surface;
@@ -164,20 +212,27 @@ forward pointer, not a gap."* This plan pays that pointer.
 
 ## Steps
 
-1. `next/spec/transitions.json` + `next/spec/lifecycle.md` — the
-   `decision.recorded` row (`blocked` → `ready`) and the quotation that
-   a drill pins to the table.
+1. `next/spec/transitions.json` + `next/spec/lifecycle.md` — two rows,
+   `escalation.raised` (`["ready", "review"]` → `blocked`) and
+   `decision.recorded` (`blocked` → `ready`), and the quotation a drill
+   pins to the table. The four exits from `in_progress` are unchanged,
+   and a drill asserts that neither new verb admits from it.
 2. `next/internal/transition` — the embedded table moves with it.
-3. `next/internal/keyring` + `next/spec/actors.md` — the operator-only
-   capability row, its no-fallback reason recorded in the form the
-   three existing such rows use.
+3. `next/internal/keyring` + `next/spec/actors.md` — two capability
+   rows: `escalation.raised` across the lanes that can hold standing on
+   a subject, and `decision.recorded` operator-only, its no-fallback
+   reason recorded in the form the three existing such rows use.
 4. `next/internal/admit` — the escalation shape rule (question,
-   options, the answer's citation) and the standing-escalation lockout
-   on `contract.unblocked`.
-5. `next/internal/obligation` — the `escalation.pending` kind; and
-   `next/spec/obligations.md`'s fact-shaped table gains its row.
-6. `next/cmd/seed` — `claim park --question/--option`, `decision record`
-   with its derivation, and the affordance catalog entry.
+   options, the answer's citation), the standing-escalation lockout on
+   `contract.unblocked`, and the citation `contract.cancelled` must
+   carry while an escalation stands.
+5. `next/internal/obligation` — the `escalation.pending` kind carrying
+   the raise's `ts` beside its position; and `next/spec/obligations.md`'s
+   fact-shaped table gains its row.
+6. `next/cmd/seed` — `claim park --question/--option`, `escalation
+   raise` for the non-claim states, `decision record` with its
+   derivation, `situation`'s age at `--now`, and the affordance catalog
+   entries.
 7. `next/spec/escalation.md` — the new spec, and the forward pointer in
    `packets.md` becomes a link.
 8. `next/docs/decisions.md`, `memory/LEARNINGS.md`; receipt; evidence;
@@ -207,9 +262,10 @@ Nothing outside `next/**` except the work-product files above.
    offending part. A drill plants each.
 3. While an escalation stands, `contract.unblocked` refuses and the
    refusal names both the escalation's position and
-   `decision.recorded`. `contract.cancelled` still admits — asserted,
-   because a lockout that traps the contract is the failure this
-   criterion exists to exclude.
+   `decision.recorded`. `contract.cancelled` still admits **when it
+   cites the escalation** and refuses when it does not — both asserted,
+   because a lockout that traps the contract and a cancel that drops the
+   obligation are the two failures this criterion exists to exclude.
 4. `decision.recorded` admits from an operator key and **refuses from a
    dispatch key** citing capability, which is the whole of D2. A drill
    uses a real dispatch-capability actor, not an unenrolled one, so the
@@ -220,14 +276,27 @@ Nothing outside `next/**` except the work-product files above.
    standing escalations it refuses naming both candidates rather than
    choosing, and with none it refuses naming what would establish one.
 7. An operator's `seed situation` lists the waiting escalation with the
-   position that raised it, and the delta form (`--since`) reports its
-   removal by `(subject, kind)` once answered.
-8. **Mutation evidence, per fix rather than in aggregate.** Each of
+   position that raised it **and its age at `--now`**, and the delta
+   form (`--since`) reports its removal by `(subject, kind)` once
+   answered.
+8. **Age is elapsed time, drilled against both ledgers that break a
+   position difference.** On an IDLE ledger — no events after the raise
+   — age grows with `--now` and is non-zero. On a BUSY one — many
+   unrelated events between raise and answer — the reported latency is
+   unchanged by that traffic. A drill asserts each, so a position
+   subtraction reintroduced later fails.
+9. A verifier-capability key raises an escalation on a `review` subject
+   and it admits; the same key's `escalation.raised` on an `in_progress`
+   subject **refuses**, because nothing new may leave `in_progress`.
+   Both asserted, so D1's distinction is enforced rather than described.
+10. **Mutation evidence, per fix rather than in aggregate.** Each of
    these must fail its drill: deleting the lockout branch; relaxing the
    two-option minimum; widening `decision.recorded` to accept
    `CapDispatch`; dropping the `escalation.pending` row from the
-   obligations kinds.
-9. `make check` green with coverage measured **cold**, at least three
+   obligations kinds; dropping the citation requirement from
+   `contract.cancelled`; adding `in_progress` to `escalation.raised`'s
+   `from` set.
+11. `make check` green with coverage measured **cold**, at least three
    readings above the 90% gate, and the suites pass unprivileged.
 
 ## Validation Commands
@@ -241,9 +310,9 @@ make check
 
 ## Expected diff shape
 
-One table row, one capability row, one admission rule, one obligations
-kind, two CLI surfaces, one new spec file and four amended ones, plus
-drills. Roughly +700/-40 lines, all under `next/**` and the work-product
+Two table rows, two capability rows, one admission rule, one obligations
+kind, three CLI surfaces, one new spec file and four amended ones, plus
+drills. Roughly +850/-40 lines, all under `next/**` and the work-product
 files.
 
 ## A risk worth naming now
@@ -260,3 +329,14 @@ rather than leaving a later reader to guess whether the constraint was
 considered or merely inherited. Relaxing it later is a one-row change
 to a shape rule; tightening it later is a break for every lane that
 learned to send free text.
+
+**A second risk, from this plan's own review.** Its first draft got
+three things wrong in the same direction — it deferred the verifier's
+route, left the cancel uncited, and measured age by subtracting
+ordinals — and each was a case of taking the cheaper reading of a
+normative line rather than the one the line actually requires. The
+amendments above close all three. The general lesson is recorded in
+`next/docs/decisions.md` with the fixes, because the pattern (a plan
+that satisfies a charter sentence *by accident* rather than by
+construction) is the one worth catching next time, not the three
+instances.
