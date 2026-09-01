@@ -197,6 +197,40 @@ func rngHead(rng string) string {
 	return rng
 }
 
+// pollUntil waits for a CONDITION against a bounded deadline at a short
+// interval (plans/os-a95db3f5.md D4). The deadline is a failure bound,
+// never a pacing device: on a fast runner this returns in one interval,
+// and a slow one only delays the proof rather than falsifying it. The
+// parked-state loop below already had this shape; the two fixed windows
+// this card replaces were the copies that got it wrong, and asserted
+// "within N milliseconds" where they meant "at all".
+func pollUntil(cond func() bool) bool {
+	for deadline := time.Now().Add(15 * time.Second); time.Now().Before(deadline); time.Sleep(30 * time.Millisecond) {
+		if cond() {
+			return true
+		}
+	}
+	return cond()
+}
+
+// obsLines is the length of one worker's observation stream, keyed to
+// its actor and fence: the only liveness evidence these drills have,
+// and what both waits below are actually about. A line still being
+// written parses as nothing and is skipped, so this can under-report by
+// one, never over-report: every wait here is written to be sound in
+// that direction.
+func obsLines(obsDir, actor, fence string) int {
+	snap, err := obs.Load(obsDir)
+	if err != nil {
+		return 0
+	}
+	stream, ok := snap.StreamFor(actor, fence)
+	if !ok {
+		return 0
+	}
+	return len(stream.Lines)
+}
+
 // conformance: III.H — preemption is graceful-first with specified
 // safe-point semantics in the worker contract: the admitted interrupt
 // parks a conforming worker deliberately with its packet, a raw
@@ -218,7 +252,26 @@ func TestGracefulPreemptionDrill(t *testing.T) {
 	// The DoS shape: a raw unprivileged interrupt (workerB holds only
 	// the claim lane) folds but parks no one.
 	rawAppend(t, ld, workerRawKey(23), "run.interrupted", "c-1", `{"fence": "`+fence+`"}`)
-	time.Sleep(250 * time.Millisecond)
+
+	// A HANDSHAKE, not a settle window (plans/os-a95db3f5.md D3). A
+	// duration here could pass for the wrong reason — nothing parked
+	// because nothing had booted — and a growth assertion across it
+	// would flake on a descheduled worker, which is the very failure
+	// this card fixes.
+	//
+	// The helper's cycle is L1 → C1 → sleep → L2 → C2 → sleep → …:
+	// each line is followed by an interrupt check. Sample the stream as
+	// the raw append returns, at a moment when the raw event is already
+	// in the ledger. Line n0+1 completes after that sample, so the
+	// check C(n0+1) that follows it reads a ledger CONTAINING the raw
+	// event; the appearance of line n0+2 proves C(n0+1) ran to
+	// completion and declined to park. Two lines, and only then the
+	// assertion.
+	n0 := obsLines(obsDir, fps["workerA"], fence)
+	if !pollUntil(func() bool { return obsLines(obsDir, fps["workerA"], fence) >= n0+2 }) {
+		_ = cmd.Process.Kill()
+		t.Fatalf("the worker never completed a cycle over the raw interrupt: stream stuck at %d", n0)
+	}
 	if s := stateOf(t, ld); s.State != "in_progress" {
 		_ = cmd.Process.Kill()
 		t.Fatalf("a raw unprivileged interrupt must park no one: %s", s.State)
@@ -231,17 +284,17 @@ func TestGracefulPreemptionDrill(t *testing.T) {
 		_ = cmd.Process.Kill()
 		t.Fatalf("run.interrupted: %d %+v", code, e)
 	}
-	parked := false
-	for deadline := time.Now().Add(15 * time.Second); time.Now().Before(deadline); time.Sleep(30 * time.Millisecond) {
+	// The loop this one was: pollUntil is its extraction, so a future
+	// drill copies the right pattern rather than one of the two fixed
+	// windows this card removed.
+	parked := pollUntil(func() bool {
 		st, failEnv := loadVerdictState(ld)
 		if failEnv != nil {
-			continue
+			return false
 		}
-		if s, ok := st.fold.State("c-1"); ok && s.State == "blocked" {
-			parked = true
-			break
-		}
-	}
+		s, ok := st.fold.State("c-1")
+		return ok && s.State == "blocked"
+	})
 	if !parked {
 		_ = cmd.Process.Kill()
 		t.Fatal("the polling worker never parked on the admitted interrupt")
@@ -295,30 +348,30 @@ func TestForcePreemptionDrill(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Establish the worker is UP before asserting anything about it
+	// (plans/os-a95db3f5.md D1). The old fixed window sampled the
+	// world before there was a worker to sample, so a subprocess that
+	// booted slower than the window failed a system that was working.
+	live := func() bool { return obsLines(obsDir, fps["workerA"], fence) > 0 }
+	if !pollUntil(live) {
+		_ = cmd.Process.Kill()
+		t.Fatal("the deaf worker never emitted its first observation")
+	}
+
 	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", keys["supervisor"],
 		"--verb", "run.interrupted", "--subject", "c-1", "--payload", `{"fence": "`+fence+`"}`); code != 0 {
 		_ = cmd.Process.Kill()
 		t.Fatalf("run.interrupted: %d %+v", code, e)
 	}
 
-	// The worker ignores it: still metering past the interrupt, the
-	// subject still in_progress.
-	lines := func() int {
-		snap, err := obs.Load(obsDir)
-		if err != nil {
-			return 0
-		}
-		stream, ok := snap.StreamFor(fps["workerA"], fence)
-		if !ok {
-			return 0
-		}
-		return len(stream.Lines)
-	}
-	before := lines()
-	time.Sleep(300 * time.Millisecond)
-	if got := lines(); got <= before {
+	// The worker ignores it: still metering PAST the interrupt, the
+	// subject still in_progress. Polled for growth, never for elapsed
+	// time (D2) — "kept metering past the interrupt" is what this
+	// asserts, and no duration expresses it.
+	before := obsLines(obsDir, fps["workerA"], fence)
+	if !pollUntil(func() bool { return obsLines(obsDir, fps["workerA"], fence) > before }) {
 		_ = cmd.Process.Kill()
-		t.Fatalf("the deaf worker must keep metering past the interrupt: %d then %d", before, got)
+		t.Fatalf("the deaf worker must keep metering past the interrupt: stream stuck at %d", before)
 	}
 	if s := stateOf(t, ld); s.State != "in_progress" {
 		_ = cmd.Process.Kill()

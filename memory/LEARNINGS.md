@@ -589,3 +589,25 @@ Fresh sessions read this file instead of rediscovering.
   the failure disproves, so the error branch stays unstamped even
   though a count sits right there in scope. Symmetry between sibling
   branches is not a reason on its own; each has to earn its stamp.
+- 2026-09-01 (os-a95db3f5): when a drill sleeps, ask what the sleep is
+  standing in for. Both windows in the preemption file stood in for
+  "the worker is up", and each failed differently: the positive one
+  flaked when a subprocess booted slower than 300ms, and the negative
+  one PASSED VACUOUSLY when it did — nothing parked because nothing was
+  running. The vacuous pass is worse in kind, because an assertion that
+  succeeds for the wrong reason never fails and so never gets filed.
+- 2026-09-01 (os-a95db3f5): raising a timeout makes a flake rarer
+  without fixing it, because the assertion still says "within N
+  milliseconds" where it means "at all". Poll a condition against a
+  deadline instead, and treat the deadline as a failure bound rather
+  than a pacing device: on a fast runner it returns in one interval,
+  and a slow one only delays the proof.
+- 2026-09-01 (os-a95db3f5): a negative assertion needs a handshake, not
+  a window, and initial liveness is not enough — adding "and it kept
+  growing across the window" would have traded a vacuous pass for a new
+  instance of the same flake, since a descheduled worker fails a growth
+  assertion while behaving exactly as it should. The worker's own loop
+  supplied the handshake: its cycle emits a line THEN checks, so two
+  lines after the event landed prove it evaluated the event and
+  declined. Look for an ordering the system already guarantees before
+  reaching for a duration.
