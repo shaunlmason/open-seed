@@ -14,6 +14,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -66,9 +67,31 @@ func maintenanceLedger(t *testing.T) *maintenanceStand {
 		t.Fatalf("claim: %v", err)
 	}
 	dir := t.TempDir()
+	out := filepath.Join(dir, "out")
+	t.Cleanup(func() {
+		// Published projection trees are locked (0555 directories), so
+		// unlock before testing's own TempDir cleanup or RemoveAll
+		// fails on an unprivileged runner. Registered AFTER the
+		// TempDir above so it runs BEFORE that removal: cleanups are
+		// LIFO.
+		//
+		// This is the established shape (cmd/seed/project_cli_test.go
+		// carries it with the same comment), and omitting it is
+		// invisible to anyone running the suite as root — which is why
+		// this card's own criterion asks for an unprivileged run.
+		_ = filepath.WalkDir(out, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				_ = os.Chmod(p, 0o755)
+			}
+			return nil
+		})
+	})
 	return &maintenanceStand{
 		ld: ld, src: src, obsDir: filepath.Join(dir, "obs"),
-		out: filepath.Join(dir, "out"), artifacts: filepath.Join(dir, "artifacts"),
+		out: out, artifacts: filepath.Join(dir, "artifacts"),
 		priv: priv, keys: keys, fps: fps, fence: fence,
 		asOf: "2026-09-01T12:00:00Z",
 	}

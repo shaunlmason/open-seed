@@ -861,3 +861,25 @@ inverse of the usual one (#202 recorded its sibling: a drill failing
 because the fix worked). The fix was to compare against the prefix the
 snapshot NAMES. **A materialization is evidence about a position, and
 the position it names is the only one it can be checked against.**
+
+## Running as root masks the permission failures CI will find (os-8a5f14bb)
+
+`make check` was green locally and red in CI on a `TempDir RemoveAll
+cleanup: permission denied`. `project.Rebuild` locks its published
+build trees (0555 directories) by design, so Go's `t.TempDir()` cleanup
+cannot remove them — unless the process is root, which ignores the
+permission bits entirely.
+
+The card's own acceptance criterion said "the suites pass
+unprivileged". Coverage was measured cold, as asked; the unprivileged
+run was skipped because everything was already green, which is exactly
+when it is worth the least and costs the most to skip.
+
+Two things follow. **The unprivileged run is not a formality when the
+container is root** — it is the only run that sees this class of
+failure at all. And **the fix already existed in the tree**:
+`cmd/seed/project_cli_test.go` carries a `t.Cleanup` that walks the
+output and chmods directories writable, with a comment naming "an
+unprivileged runner". A new drill against a locked surface needs the
+same cleanup, registered AFTER the `t.TempDir()` it unlocks so LIFO
+ordering runs it first.
