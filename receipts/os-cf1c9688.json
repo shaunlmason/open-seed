@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "task": "os-cf1c9688",
+  "merge_base": "7c3179936c6aeec5727e5b20f430f27d3b7fba9b",
+  "head": "c4cc2dbd8d7840abfd70a235d4247abad44ba2b3",
+  "plan_path": "plans/os-cf1c9688.md",
+  "plan_sha256": "1b24a25a8002552ef0540d1e37569ddf453cba377be76b846fa412bc1b09328e",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/budget.go",
+    "next/cmd/seed/lane.go",
+    "next/cmd/seed/lane_cli_test.go",
+    "next/cmd/seed/loop.go",
+    "next/cmd/seed/main.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/envelope/envelope.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/lane/lane.go",
+    "next/internal/lane/lane_test.go",
+    "next/internal/loopverb/loopverb.go",
+    "next/internal/loopverb/loopverb_test.go",
+    "next/lanes/curator.json",
+    "next/lanes/dispatcher.json",
+    "next/lanes/fragments/common/acts-through-verbs.md",
+    "next/lanes/fragments/common/deliberate-exit.md",
+    "next/lanes/fragments/common/liveness.md",
+    "next/lanes/fragments/common/one-inbox.md",
+    "next/lanes/fragments/common/orienting-read.md",
+    "next/lanes/fragments/lane/curator.md",
+    "next/lanes/fragments/lane/dispatcher.md",
+    "next/lanes/fragments/lane/implementer.md",
+    "next/lanes/fragments/lane/maintenance.md",
+    "next/lanes/fragments/lane/planner.md",
+    "next/lanes/fragments/lane/verifier.md",
+    "next/lanes/implementer.json",
+    "next/lanes/maintenance.json",
+    "next/lanes/planner.json",
+    "next/lanes/verifier.json",
+    "next/spec/lanes.md"
+  ],
+  "diff_sha256": "44b7e8610db47c41ed1617cc0a9a0cbfcdf40eae81d7ebf7d4194f08064a45ee",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/lane/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/loopverb/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go run ./cmd/seed lane validate --lanes ./lanes",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
