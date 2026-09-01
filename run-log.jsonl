@@ -879,3 +879,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:195","to":"ready"},"task":"os-eb35672a","ts":"2026-09-01T16:52:29Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T17:52:32Z"},"task":"os-eb35672a","ts":"2026-09-01T16:52:32Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-2d5319ea","kind":"pr"},"task":"os-eb35672a","ts":"2026-09-01T17:02:23Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-eb35672a","ts":"2026-09-01T17:02:26Z","verb":"transition"}
