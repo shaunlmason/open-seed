@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "task": "os-eb35672a",
+  "merge_base": "1aa9316b695679cda22e9708688baffd1dbcdb6d",
+  "head": "1a26ac5ab4ac2965a32e165271eb514370a7c023",
+  "plan_path": "plans/os-eb35672a.md",
+  "plan_sha256": "f7339384f9f58f9c2bfff010c55c80d320c469dda5b3642918e471ca5943396a",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/decisions.md",
+    "next/internal/loop/loop.go",
+    "next/internal/loop/loop_test.go",
+    "next/spec/loop-verbs.md"
+  ],
+  "diff_sha256": "4e27fb2f914113d5a3168437545167d820959caaad06e9e3f6fddce2f8b9ec97",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/loop/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/loop/ -count=5",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
