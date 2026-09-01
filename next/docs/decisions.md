@@ -907,3 +907,37 @@ here. Newest last.
   (affordances) but not obligation, so nothing answers what a lane
   owes; every fact needed is already folded, so this is a projection
   and never a new authority.
+
+## 2026-09-01 — obligations projection and the situation read (os-52d5da3f, plan #170)
+
+- Obligation is a projection over the fold, never a new authority:
+  state-shaped kinds read discharged_by from the transition tables,
+  and the closed fact-shaped set maps each remaining kind to the spec
+  pairing it with its fact (run.settled, budget settle/release,
+  verdict.rendered, merge.requested).
+- The dischargeability sweep earned its place on first run by
+  catching a real modeling error: verdict.unmerged advertised
+  merge.observed while admission still refused it for want of a
+  merge.requested. The merge chain is two events, so the kind now has
+  two shapes — until a request cites the verdict the debt is the
+  operator's and merge.requested pays it; after that the forge fact
+  is the observer's. Same class the affordance sweep catches one
+  level down, which is the argument for building the class with the
+  surface rather than after it.
+- The sweep asserts AT LEAST ONE discharging verb admits for the owed
+  actor, not all of them: discharged_by names the acts that end the
+  obligation, while who may perform each is the affordance layer's
+  business (a claim is discharged by release, park, reap or
+  submission, of which the holder may take three and the supervisor
+  the fourth). Requiring all would force capability policy into a
+  derivation that must stay a projection.
+- Under a declared halt every obligation still stands and none is
+  dischargeable; the sweep checks only well-formedness at halted
+  positions, because that is the halt working rather than an
+  obligation defect.
+- --since cites a tip ORDINAL, so the prefix a resuming lane last saw
+  is records[:position+1]. The first implementation used
+  records[:position] and the round-trip drill caught it — the same
+  off-by-one the envelope's position stamp turns on.
+- Part (c), the loop verbs, is split to os-7e197768 for
+  reviewability; item 5 stays one obligation with two landings.

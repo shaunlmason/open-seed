@@ -49,6 +49,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runLedger(args[1:], stdout, stderr)
 	case "project":
 		return runProject(args[1:], stdout, stderr)
+	case "situation":
+		return runSituation(args[1:], stdout, stderr)
 	case "obs":
 		return runObs(args[1:], stdout, stderr)
 	case "plan":

@@ -434,3 +434,21 @@ Fresh sessions read this file instead of rediscovering.
   named criteria are facts about sequencing; check them before
   amending order, because prose elsewhere can read as permission
   they do not grant.
+- 2026-09-01 (os-52d5da3f): build the drift class WITH the surface,
+  not after it. The obligation sweep failed on its first run and the
+  failure was a real modeling error (a pass verdict advertised
+  merge.observed while admission wanted merge.requested first: the
+  merge chain is two events). A class that re-derives the advertised
+  act through the enforcing path finds this in seconds; review and
+  reasoning had both missed it.
+- 2026-09-01 (os-52d5da3f): when advertising what discharges an
+  obligation, separate WHAT ends it from WHO may do it. Asserting
+  that every discharging verb admits for the owed party forces
+  capability policy into a derivation; asserting that at least one
+  does keeps the derivation a projection and still catches the
+  undischargeable case.
+- 2026-09-01 (os-52d5da3f): a position stamp is a tip ORDINAL, so the
+  prefix a client that stopped there last saw is records[:pos+1].
+  Both times this codebase has reasoned about a stamped position
+  across a boundary, the off-by-one appeared; write the +1 with a
+  comment naming the ordinal.
