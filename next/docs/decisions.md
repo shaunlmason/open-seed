@@ -987,3 +987,49 @@ here. Newest last.
   deliberate absence rather than left implicit; giving the remote
   posture its own journal home is a client-state decision no card has
   made yet.
+
+## 2026-09-01 — the loop verbs' three post-merge defects (os-9b3f3ef3, plan #179)
+
+- A derived argument must be re-examined against every refreshed tip,
+  and REFUSED on divergence rather than silently replaced. The
+  optimistic loop re-fetches, re-signs and re-judges per attempt, but
+  the payload was fixed at the call, so a rival reservation landing
+  mid-flight left `budget settle` citing the one that was sole when
+  the session opened. Admission accepted it, because the budget rule
+  asks only that the citation exist, be valid and be unclosed: the
+  sole-open check lives in the CLI, against the stale view. The
+  command therefore made, silently, the exact choice
+  `soleOpenReservation` exists to refuse.
+- Re-deriving and PROCEEDING would have been the wrong fix. A value
+  derived from a view that has since moved is not a better argument,
+  it is a different decision: a second reservation makes the act
+  ambiguous, and a reaped-and-re-taken window is an authorization the
+  lane never gave. The check compares and refuses, naming what
+  changed.
+- No `internal/gitref` change was needed. The `Validate` callback
+  already receives the refreshed store and the candidate record, so
+  the recheck composes into the seam that exists; threading a
+  payload-producing function into the transport would have taught it
+  about argument derivation. One admission context per attempt now
+  serves both the recheck and `admit.Check`, which also removes a
+  duplicate replay.
+- A refusal must keep the position it was COMPUTED at.
+  `remoteFailureEnvelope` already stamped the refreshed position
+  through `refusalAt`, and `refuse` then overwrote it with the
+  session's opening tip while advertising affordances from before the
+  race. The stamp is the concurrency signal the field exists for, so
+  a stale one inverts its meaning. `refusalAt` now carries the view,
+  and an envelope that already has a position keeps it.
+- "Refuse before signing" is about the chain, not about `event.Sign`.
+  The boundary cannot judge an unsigned record: the actor rule
+  verifies the signature, and `admit.Affordances` signs one probe per
+  catalog verb for that reason. A reviewer read the phrase as
+  forbidding the signature itself, which would have made the merged
+  implementation of the feature a violation of its own contract. The
+  spec now says so plainly rather than leaving it to be re-derived
+  from the code.
+- The JSON value `null` unmarshals into a map with NO error and
+  leaves it nil, so writing a derived base panicked. Every malformed
+  packet the drills tried was an object, which is exactly why the
+  class was missed; they now cover null, an array, a string and a
+  number, with and without `--base`.

@@ -472,3 +472,27 @@ Fresh sessions read this file instead of rediscovering.
   boundary, whose refusal names the state and beats anything the
   derivation could say. Deciding this per shape rather than per verb
   kept the error surface small.
+- 2026-09-01 (os-9b3f3ef3): when a retry loop re-runs validation, ask
+  what else it should be re-running. gitref's AppendLoop re-fetched,
+  re-signed and re-judged per attempt, which looks complete until you
+  notice the PAYLOAD was computed once, outside it. Anything derived
+  from a view must be recomputed wherever that view is refreshed, or
+  the refresh is a half-measure that reads like a whole one.
+- 2026-09-01 (os-9b3f3ef3): on divergence, refuse rather than
+  re-derive-and-proceed. Substituting a freshly derived value looks
+  like the helpful fix and is the dangerous one: the caller's act was
+  authorized against a view that no longer exists, so a different
+  value is a different decision, not a better argument. Refuse and
+  name what changed; let the lane re-orient.
+- 2026-09-01 (os-9b3f3ef3): a position stamp that is merely PRESENT is
+  not correct. `remoteFailureEnvelope` computed the right refreshed
+  position and the caller's helper then overwrote it with a stale one,
+  which is worse than never stamping: it inverts the concurrency
+  signal the field exists for. When two layers can both stamp, make
+  the outer one defer to a stamp that already exists.
+- 2026-09-01 (os-9b3f3ef3): a malformed-input drill is only as wide as
+  the shapes it tries. Every bad packet the drills used was an object,
+  so the JSON value `null` — which unmarshals into a nil map with no
+  error — walked past them into a panic. When a decoder is tolerant of
+  a whole VALUE class, test the class, not the variations within one
+  member of it.
