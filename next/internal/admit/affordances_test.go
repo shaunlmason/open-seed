@@ -65,29 +65,133 @@ func TestAffordanceCatalogCompleteness(t *testing.T) {
 	}
 }
 
-// conformance: III.I — the walk drives one chain through birth,
-// claim, spend, run, review, verdicts pass and fail, block, and
-// halt, querying affordances for each lane along the way: every
-// catalog verb except the actor.enrolled carve-out is listed at a
-// position where it is legal, the curated illegal set never appears,
-// and the output is sorted and stable.
-func TestAffordancesWalk(t *testing.T) {
-	store, resolve, signer := seededStore(t)
-	keys := map[string]ed25519.PrivateKey{
+// walkStep is one append of the shared scenario script
+// (plans/os-148d3ba1.md D2): the signing lane, the draft version,
+// the verb, the subject, and the payload synthesized from the
+// context standing at the step's position. station labels the
+// position after the append for the walk's curated assertions; the
+// regression-class sweep ignores it and checks every position.
+type walkStep struct {
+	lane    string
+	v       string
+	verb    string
+	subject string
+	payload func(t *testing.T, ctx *Context) string
+	station string
+}
+
+// walkLanes returns the five capability lanes the scenario enrolls,
+// keyed by name, on deterministic fixture keys.
+func walkLanes(t *testing.T) map[string]ed25519.PrivateKey {
+	return map[string]ed25519.PrivateKey{
 		"holder":     fixtureKey(t, 2),
 		"supervisor": fixtureKey(t, 3),
 		"verifier":   fixtureKey(t, 4),
 		"sealer":     fixtureKey(t, 5),
 		"observer":   fixtureKey(t, 6),
 	}
-	loose := func(fp string) (ed25519.PublicKey, bool) {
-		for _, p := range keys {
+}
+
+// walkResolver resolves the lane keys ahead of the keyring (the
+// scenario enrolls them mid-script) and falls back to the genesis
+// resolver for the root.
+func walkResolver(t *testing.T, resolve ledger.Resolver, lanes map[string]ed25519.PrivateKey) ledger.Resolver {
+	return func(fp string) (ed25519.PublicKey, bool) {
+		for _, p := range lanes {
 			if fpOf(t, p) == fp {
 				return p.Public().(ed25519.PublicKey), true
 			}
 		}
 		return resolve(fp)
 	}
+}
+
+// walkScript is the one scenario history both the walk and the
+// regression-class sweep replay: upgrade, enrollment, then birth,
+// claim, spend, run, review, verdicts pass and fail, block, and
+// halt — exactly the chain the walk drove before the extraction,
+// with the enrollment order fixed for replay stability.
+func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
+	static := func(body string) func(*testing.T, *Context) string {
+		return func(*testing.T, *Context) string { return body }
+	}
+	steps := []walkStep{
+		{"root", "seed/0", ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed1 + `"}`), ""},
+	}
+	caps := map[string]string{
+		"holder": keyring.CapClaim, "supervisor": keyring.CapSupervise,
+		"verifier": keyring.CapVerdict, "sealer": keyring.CapSealer,
+		"observer": keyring.CapObserver,
+	}
+	for _, lane := range []string{"holder", "supervisor", "verifier", "sealer", "observer"} {
+		steps = append(steps,
+			walkStep{"root", version.Seed1, keyring.VerbEnrolled, fpOf(t, lanes[lane]), static(enrollBody(t, lanes[lane], "agent", lane)), ""},
+			walkStep{"root", version.Seed1, keyring.VerbGranted, fpOf(t, lanes[lane]), static(`{"capability": "` + caps[lane] + `"}`), ""},
+		)
+	}
+	steps[len(steps)-1].station = "enrolled"
+	return append(steps,
+		walkStep{"root", version.Seed1, "intent.filed", "c-1", static(filedBody), "filed-c1"},
+		walkStep{"root", version.Seed1, "contract.specified", "c-1", static(specBody), "ready-c1"},
+		walkStep{"holder", version.Seed1, "claim.taken", "c-1", static(`{}`), "claimed-c1"},
+		walkStep{"holder", version.Seed1, "budget.reserve", "c-1", func(t *testing.T, ctx *Context) string {
+			return reserveBody("2", fenceOf(t, ctx, "c-1"))
+		}, "reserved-c1"},
+		walkStep{"supervisor", version.Seed1, "run.started", "c-1", func(t *testing.T, ctx *Context) string {
+			return `{"fence": "` + fenceOf(t, ctx, "c-1") + `", "reservation": "` + reservationOf(t, ctx, "c-1") + `"}`
+		}, "running-c1"},
+		walkStep{"holder", version.Seed1, "submission.made", "c-1", func(t *testing.T, ctx *Context) string {
+			return `{"fence": "` + fenceOf(t, ctx, "c-1") + `", "packet": ` + minPacket + `}`
+		}, "review-c1"},
+		walkStep{"verifier", version.Seed1, "verdict.rendered", "c-1", func(t *testing.T, ctx *Context) string {
+			return `{"verdict": "pass", "receipt": "` + zeros64 + `", "submission": "` + submissionOf(t, ctx, "c-1") + `", "independence": "L1"}`
+		}, "passed-c1"},
+		walkStep{"root", version.Seed1, "merge.requested", "c-1", func(t *testing.T, ctx *Context) string {
+			return `{"verdict": "` + verdictOf(t, ctx, "c-1") + `"}`
+		}, "merged-c1"},
+		walkStep{"root", version.Seed1, "intent.filed", "c-2", static(filedBody), ""},
+		walkStep{"root", version.Seed1, "contract.specified", "c-2", static(specBody), ""},
+		walkStep{"holder", version.Seed1, "claim.taken", "c-2", static(`{}`), ""},
+		walkStep{"holder", version.Seed1, "submission.made", "c-2", func(t *testing.T, ctx *Context) string {
+			return `{"fence": "` + fenceOf(t, ctx, "c-2") + `", "packet": ` + minPacket + `}`
+		}, "review-c2"},
+		walkStep{"verifier", version.Seed1, "verdict.rendered", "c-2", func(t *testing.T, ctx *Context) string {
+			return `{"verdict": "fail", "receipt": "` + zeros64 + `", "submission": "` + submissionOf(t, ctx, "c-2") + `", "independence": "L1"}`
+		}, "failed-c2"},
+		walkStep{"root", version.Seed1, "intent.filed", "c-3", static(filedBody), ""},
+		walkStep{"root", version.Seed1, "contract.specified", "c-3", static(specBody), "ready-c3"},
+		walkStep{"root", version.Seed1, "contract.blocked", "c-3", static(`{}`), "blocked-c3"},
+		walkStep{"root", version.Seed1, "system.halt.declared", "system", static(`{"reason": "walk"}`), "halted"},
+		walkStep{"root", version.Seed1, "system.halt.lifted", "system", static(`{}`), "lifted"},
+	)
+}
+
+// runWalkStep synthesizes the step's payload from the standing
+// context and appends the signed record.
+func runWalkStep(t *testing.T, store *ledger.Store, resolve ledger.Resolver, keys map[string]ed25519.PrivateKey, s walkStep) {
+	t.Helper()
+	ctx, err := ContextAt(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	appendSignedV(t, store, resolve, keys[s.lane], s.v, s.verb, s.subject, s.payload(t, ctx))
+}
+
+// conformance: III.I — the walk drives one chain through birth,
+// claim, spend, run, review, verdicts pass and fail, block, and
+// halt, querying affordances for each lane along the way: every
+// catalog verb except the actor.enrolled carve-out is listed at a
+// position where it is legal, the curated illegal set never appears,
+// and the output is sorted and stable. The history is the shared
+// walkScript; the assertions run at its labeled stations.
+func TestAffordancesWalk(t *testing.T) {
+	store, resolve, signer := seededStore(t)
+	lanes := walkLanes(t)
+	keys := map[string]ed25519.PrivateKey{"root": signer}
+	for name, key := range lanes {
+		keys[name] = key
+	}
+	loose := walkResolver(t, resolve, lanes)
 	ctxAt := func() *Context {
 		c, err := ContextAt(store)
 		if err != nil {
@@ -107,167 +211,163 @@ func TestAffordancesWalk(t *testing.T) {
 		return out
 	}
 	has := func(list []string, verb string) bool { return slices.Contains(list, verb) }
-	step := func(priv ed25519.PrivateKey, verb, subject, payload string) {
-		t.Helper()
-		appendSignedV(t, store, loose, priv, version.Seed1, verb, subject, payload)
-	}
 
 	// Pre-upgrade: the root can upgrade the protocol.
 	if l := list(signer, "system"); !has(l, "system.protocol.upgraded") {
 		t.Fatalf("the root lists the upgrade on the fresh chain: %v", l)
 	}
-	appendSigned(t, store, loose, signer, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
-	for name, cap := range map[string]string{
-		"holder": keyring.CapClaim, "supervisor": keyring.CapSupervise,
-		"verifier": keyring.CapVerdict, "sealer": keyring.CapSealer,
-		"observer": keyring.CapObserver,
-	} {
-		step(signer, keyring.VerbEnrolled, fpOf(t, keys[name]), enrollBody(t, keys[name], "agent", name))
-		step(signer, keyring.VerbGranted, fpOf(t, keys[name]), `{"capability": "`+cap+`"}`)
-	}
 
-	// Actor management and the system surface, for the operator.
-	if l := list(signer, fpOf(t, keys["holder"])); !has(l, "actor.granted") || !has(l, "actor.suspended") || !has(l, "actor.revoked") {
-		t.Fatalf("the operator lists actor management on an enrolled actor: %v", l)
+	stations := map[string]func(){
+		"enrolled": func() {
+			// Actor management and the system surface, for the
+			// operator; then birth: filing is listed before the
+			// subject exists and nothing claim-shaped is.
+			if l := list(signer, fpOf(t, keys["holder"])); !has(l, "actor.granted") || !has(l, "actor.suspended") || !has(l, "actor.revoked") {
+				t.Fatalf("the operator lists actor management on an enrolled actor: %v", l)
+			}
+			sys := list(signer, "system")
+			if !has(sys, "system.halt.declared") || !has(sys, "system.checkpoint") {
+				t.Fatalf("the operator lists halt and checkpoint on system: %v", sys)
+			}
+			fresh := list(signer, "c-1")
+			if !has(fresh, "intent.filed") {
+				t.Fatalf("filing lists on a fresh subject: %v", fresh)
+			}
+			if has(fresh, "claim.taken") || has(fresh, "run.started") {
+				t.Fatalf("claim and run must not list before birth: %v", fresh)
+			}
+		},
+		"filed-c1": func() {
+			if l := list(signer, "c-1"); !has(l, "contract.specified") {
+				t.Fatalf("specification lists on a filed subject: %v", l)
+			}
+		},
+		"ready-c1": func() {
+			// Ready: the worker can claim, the supervisor can offer,
+			// the sealer can commit, the operator can cancel; the run
+			// verbs cannot fire yet.
+			if l := list(keys["holder"], "c-1"); !has(l, "claim.taken") {
+				t.Fatalf("the holder lists the claim at ready: %v", l)
+			}
+			if l := list(keys["supervisor"], "c-1"); !has(l, "offer.published") || has(l, "run.started") {
+				t.Fatalf("the supervisor lists the offer and no run at ready: %v", l)
+			}
+			if l := list(keys["sealer"], "c-1"); !has(l, "check.sealed") {
+				t.Fatalf("the sealer lists the commitment at ready: %v", l)
+			}
+			if l := list(signer, "c-1"); !has(l, "contract.cancelled") {
+				t.Fatalf("the operator lists cancellation at ready: %v", l)
+			}
+		},
+		"claimed-c1": func() {
+			// Claimed: the holder's window opens; a second claim does
+			// not list; the verifier has nothing to judge.
+			held := list(keys["holder"], "c-1")
+			for _, verb := range []string{"claim.released", "claim.parked", "submission.made", "plan.proposed", "progress.milestone", "budget.reserve", "message.sent"} {
+				if !has(held, verb) {
+					t.Fatalf("the holder lists %s inside the window: %v", verb, held)
+				}
+			}
+			if has(held, "claim.taken") {
+				t.Fatalf("a second claim must not list while held: %v", held)
+			}
+			if l := list(signer, "c-1"); !has(l, "claim.reaped") {
+				t.Fatalf("the operator lists the reap on a held subject: %v", l)
+			}
+			if l := list(keys["verifier"], "c-1"); has(l, "verdict.rendered") {
+				t.Fatalf("no submission stands, so the verdict must not list: %v", l)
+			}
+		},
+		"reserved-c1": func() {
+			// Spend: the closes and the supervisor's run open over the
+			// reservation.
+			if l := list(keys["holder"], "c-1"); !has(l, "budget.settle") || !has(l, "budget.release") {
+				t.Fatalf("the holder lists the closes over an open reservation: %v", l)
+			}
+			sup := list(keys["supervisor"], "c-1")
+			if !has(sup, "run.started") || !has(sup, "run.interrupted") {
+				t.Fatalf("the supervisor lists the run verbs over an open reservation: %v", sup)
+			}
+		},
+		"running-c1": func() {
+			sup := list(keys["supervisor"], "c-1")
+			if !has(sup, "run.settled") {
+				t.Fatalf("the supervisor lists the settle after the start: %v", sup)
+			}
+			if has(sup, "run.started") {
+				t.Fatalf("one run per window: a second start must not list: %v", sup)
+			}
+			if l := list(signer, "c-1"); !has(l, "plan.approved") {
+				t.Fatalf("the operator lists plan approval: %v", l)
+			}
+		},
+		"review-c1": func() {
+			// Review: the verifier's window opens; the pass chain
+			// follows.
+			if l := list(keys["verifier"], "c-1"); !has(l, "verdict.rendered") {
+				t.Fatalf("the verifier lists the verdict on review: %v", l)
+			}
+			if l := list(keys["holder"], "c-1"); has(l, "verdict.rendered") {
+				t.Fatalf("the holder is no verifier — the verdict must not list for the claim lane: %v", l)
+			}
+		},
+		"passed-c1": func() {
+			if l := list(signer, "c-1"); !has(l, "merge.requested") {
+				t.Fatalf("the operator lists the merge request over the pass verdict: %v", l)
+			}
+		},
+		"merged-c1": func() {
+			if l := list(keys["observer"], "c-1"); !has(l, "merge.observed") {
+				t.Fatalf("the observer lists the forge fact after the request: %v", l)
+			}
+		},
+		"review-c2": func() {
+			// The fail path: return and override list only over a
+			// standing fail.
+			if l := list(signer, "c-2"); has(l, "contract.returned") || has(l, "merge.overridden") {
+				t.Fatalf("no fail stands, so return and override must not list: %v", l)
+			}
+		},
+		"failed-c2": func() {
+			if l := list(signer, "c-2"); !has(l, "contract.returned") || !has(l, "merge.overridden") {
+				t.Fatalf("the operator lists return and override over the fail: %v", l)
+			}
+			if l := list(signer, "c-2"); !has(l, "wedge.declared") {
+				t.Fatalf("the operator lists the wedge: %v", l)
+			}
+		},
+		"ready-c3": func() {
+			// The blocked path (blocked's one source state is ready).
+			if l := list(signer, "c-3"); !has(l, "contract.blocked") {
+				t.Fatalf("the operator lists blocking at ready: %v", l)
+			}
+		},
+		"blocked-c3": func() {
+			if l := list(signer, "c-3"); !has(l, "contract.unblocked") {
+				t.Fatalf("the operator lists unblocking on a blocked subject: %v", l)
+			}
+		},
+		"halted": func() {
+			// Halt: the work verbs stop listing, and the lift remains.
+			if l := list(signer, "system"); !has(l, "system.halt.lifted") {
+				t.Fatalf("the operator lists the lift under halt: %v", l)
+			}
+			if l := Affordances(ctxAt(), keys["holder"], "c-3"); len(l) != 0 {
+				t.Fatalf("under halt the worker's list empties: %v", l)
+			}
+		},
+		"lifted": func() {},
 	}
-	sys := list(signer, "system")
-	if !has(sys, "system.halt.declared") || !has(sys, "system.checkpoint") {
-		t.Fatalf("the operator lists halt and checkpoint on system: %v", sys)
-	}
-
-	// Birth: filing is listed before the subject exists; nothing
-	// claim-shaped is.
-	fresh := list(signer, "c-1")
-	if !has(fresh, "intent.filed") {
-		t.Fatalf("filing lists on a fresh subject: %v", fresh)
-	}
-	if has(fresh, "claim.taken") || has(fresh, "run.started") {
-		t.Fatalf("claim and run must not list before birth: %v", fresh)
-	}
-	step(signer, "intent.filed", "c-1", filedBody)
-	if l := list(signer, "c-1"); !has(l, "contract.specified") {
-		t.Fatalf("specification lists on a filed subject: %v", l)
-	}
-	step(signer, "contract.specified", "c-1", specBody)
-
-	// Ready: the worker can claim, the supervisor can offer, the
-	// sealer can commit, the operator can cancel; the run verbs
-	// cannot fire yet.
-	if l := list(keys["holder"], "c-1"); !has(l, "claim.taken") {
-		t.Fatalf("the holder lists the claim at ready: %v", l)
-	}
-	if l := list(keys["supervisor"], "c-1"); !has(l, "offer.published") || has(l, "run.started") {
-		t.Fatalf("the supervisor lists the offer and no run at ready: %v", l)
-	}
-	if l := list(keys["sealer"], "c-1"); !has(l, "check.sealed") {
-		t.Fatalf("the sealer lists the commitment at ready: %v", l)
-	}
-	if l := list(signer, "c-1"); !has(l, "contract.cancelled") {
-		t.Fatalf("the operator lists cancellation at ready: %v", l)
-	}
-
-	// Claimed: the holder's window opens; a second claim does not
-	// list; the verifier has nothing to judge.
-	step(keys["holder"], "claim.taken", "c-1", `{}`)
-	held := list(keys["holder"], "c-1")
-	for _, verb := range []string{"claim.released", "claim.parked", "submission.made", "plan.proposed", "progress.milestone", "budget.reserve", "message.sent"} {
-		if !has(held, verb) {
-			t.Fatalf("the holder lists %s inside the window: %v", verb, held)
+	for _, s := range walkScript(t, lanes) {
+		runWalkStep(t, store, loose, keys, s)
+		if s.station != "" {
+			fn, ok := stations[s.station]
+			if !ok {
+				t.Fatalf("no station block for %q", s.station)
+			}
+			fn()
 		}
 	}
-	if has(held, "claim.taken") {
-		t.Fatalf("a second claim must not list while held: %v", held)
-	}
-	if l := list(signer, "c-1"); !has(l, "claim.reaped") {
-		t.Fatalf("the operator lists the reap on a held subject: %v", l)
-	}
-	if l := list(keys["verifier"], "c-1"); has(l, "verdict.rendered") {
-		t.Fatalf("no submission stands, so the verdict must not list: %v", l)
-	}
-
-	// Spend: reserve, then the closes and the supervisor's run.
-	step(keys["holder"], "budget.reserve", "c-1", reserveBody("2", fenceOf(t, ctxAt(), "c-1")))
-	if l := list(keys["holder"], "c-1"); !has(l, "budget.settle") || !has(l, "budget.release") {
-		t.Fatalf("the holder lists the closes over an open reservation: %v", l)
-	}
-	sup := list(keys["supervisor"], "c-1")
-	if !has(sup, "run.started") || !has(sup, "run.interrupted") {
-		t.Fatalf("the supervisor lists the run verbs over an open reservation: %v", sup)
-	}
-	fence := fenceOf(t, ctxAt(), "c-1")
-	step(keys["supervisor"], "run.started", "c-1", `{"fence": "`+fence+`", "reservation": "`+reservationOf(t, ctxAt(), "c-1")+`"}`)
-	sup = list(keys["supervisor"], "c-1")
-	if !has(sup, "run.settled") {
-		t.Fatalf("the supervisor lists the settle after the start: %v", sup)
-	}
-	if has(sup, "run.started") {
-		t.Fatalf("one run per window: a second start must not list: %v", sup)
-	}
-	if l := list(signer, "c-1"); !has(l, "plan.approved") {
-		t.Fatalf("the operator lists plan approval: %v", l)
-	}
-
-	// Review: the verifier's window opens; the pass chain follows.
-	step(keys["holder"], "submission.made", "c-1", `{"fence": "`+fence+`", "packet": `+minPacket+`}`)
-	if l := list(keys["verifier"], "c-1"); !has(l, "verdict.rendered") {
-		t.Fatalf("the verifier lists the verdict on review: %v", l)
-	}
-	if l := list(keys["holder"], "c-1"); has(l, "verdict.rendered") {
-		t.Fatalf("the holder is no verifier — the verdict must not list for the claim lane: %v", l)
-	}
-	step(keys["verifier"], "verdict.rendered", "c-1", `{"verdict": "pass", "receipt": "`+zeros64+`", "submission": "`+submissionOf(t, ctxAt(), "c-1")+`", "independence": "L1"}`)
-	if l := list(signer, "c-1"); !has(l, "merge.requested") {
-		t.Fatalf("the operator lists the merge request over the pass verdict: %v", l)
-	}
-	step(signer, "merge.requested", "c-1", `{"verdict": "`+verdictOf(t, ctxAt(), "c-1")+`"}`)
-	if l := list(keys["observer"], "c-1"); !has(l, "merge.observed") {
-		t.Fatalf("the observer lists the forge fact after the request: %v", l)
-	}
-
-	// The fail path on a second subject: return and override list
-	// only over a standing fail.
-	for _, s := range [][3]string{
-		{"intent.filed", "c-2", filedBody},
-		{"contract.specified", "c-2", specBody},
-	} {
-		step(signer, s[0], s[1], s[2])
-	}
-	step(keys["holder"], "claim.taken", "c-2", `{}`)
-	fence2 := fenceOf(t, ctxAt(), "c-2")
-	step(keys["holder"], "submission.made", "c-2", `{"fence": "`+fence2+`", "packet": `+minPacket+`}`)
-	if l := list(signer, "c-2"); has(l, "contract.returned") || has(l, "merge.overridden") {
-		t.Fatalf("no fail stands, so return and override must not list: %v", l)
-	}
-	step(keys["verifier"], "verdict.rendered", "c-2", `{"verdict": "fail", "receipt": "`+zeros64+`", "submission": "`+submissionOf(t, ctxAt(), "c-2")+`", "independence": "L1"}`)
-	if l := list(signer, "c-2"); !has(l, "contract.returned") || !has(l, "merge.overridden") {
-		t.Fatalf("the operator lists return and override over the fail: %v", l)
-	}
-	if l := list(signer, "c-2"); !has(l, "wedge.declared") {
-		t.Fatalf("the operator lists the wedge: %v", l)
-	}
-
-	// The blocked path on a third subject (blocked's one source
-	// state is ready).
-	step(signer, "intent.filed", "c-3", filedBody)
-	step(signer, "contract.specified", "c-3", specBody)
-	if l := list(signer, "c-3"); !has(l, "contract.blocked") {
-		t.Fatalf("the operator lists blocking at ready: %v", l)
-	}
-	step(signer, "contract.blocked", "c-3", `{}`)
-	if l := list(signer, "c-3"); !has(l, "contract.unblocked") {
-		t.Fatalf("the operator lists unblocking on a blocked subject: %v", l)
-	}
-
-	// Halt last: under the halt the work verbs stop listing, and the
-	// lift remains.
-	step(signer, "system.halt.declared", "system", `{"reason": "walk"}`)
-	if l := list(signer, "system"); !has(l, "system.halt.lifted") {
-		t.Fatalf("the operator lists the lift under halt: %v", l)
-	}
-	if l := Affordances(ctxAt(), keys["holder"], "c-3"); len(l) != 0 {
-		t.Fatalf("under halt the worker's list empties: %v", l)
-	}
-	step(signer, "system.halt.lifted", "system", `{}`)
 
 	// Determinism at the final position.
 	a := Affordances(ctxAt(), keys["holder"], "c-1")

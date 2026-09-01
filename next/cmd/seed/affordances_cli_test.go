@@ -12,6 +12,9 @@ import (
 	"fmt"
 	"slices"
 	"testing"
+
+	"github.com/shaunlmason/open-seed/next/internal/admit"
+	"github.com/shaunlmason/open-seed/next/internal/ledger"
 )
 
 // conformance: III.I — every verb response includes the verbs
@@ -94,5 +97,61 @@ func TestAffordanceStamping(t *testing.T) {
 	}
 	if len(e.Affordances) == 0 || e.Budget == nil {
 		t.Fatalf("keyed status stamps both advisory fields: %v %+v", e.Affordances, e.Budget)
+	}
+}
+
+// conformance: III.I row 2 — the position stamp that makes a
+// concurrent event detectable (plans/os-148d3ba1.md D4): the
+// stamped position and the stamped list must agree with an
+// independent recomputation at that position, or divergence between
+// a listing and a later refusal cannot be attributed. Both halves
+// stamp the tip ordinal of the context the list was computed at
+// (ctx.Count - 1: ContextAt counts records, the stamp is
+// zero-based) — for a success that is the appended record's own
+// ordinal, for a preview refusal the unmoved tip's.
+func TestAffordanceStampPositionAgreement(t *testing.T) {
+	ld, _, _, _, _, priv, rootKey, _, _ := offerLedger(t)
+
+	e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+		"--verb", "message.sent", "--subject", "c-1", "--payload", `{"n": 1}`)
+	if code != 0 || e.Position == nil {
+		t.Fatalf("append: %d %+v", code, e)
+	}
+	store, err := ledger.Open(ld)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, err := admit.ContextAt(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := fmt.Sprintf("%d", ctx.Count-1); *e.Position != want {
+		t.Fatalf("the success stamp carries the tip ordinal: stamped %s, context tip %s", *e.Position, want)
+	}
+	if direct := admit.Affordances(ctx, rootKey, "c-1"); !slices.Equal(direct, e.Affordances) {
+		t.Fatalf("the stamped list is the list at the stamped position: stamped %v, recomputed %v", e.Affordances, direct)
+	}
+
+	// A malformed actor event fails the keyring preview before
+	// anything is written; the refusal envelope still stamps
+	// position and affordances, computed at the unmoved tip for the
+	// refused signer.
+	e, code = runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+		"--verb", "actor.enrolled", "--subject", "c-2", "--payload", `{"garbage": true}`)
+	if code == 0 || e.Error == nil || e.Position == nil {
+		t.Fatalf("the malformed enroll refuses with a stamped envelope: %d %+v", code, e)
+	}
+	after, err := admit.ContextAt(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Count != ctx.Count {
+		t.Fatalf("a refusal moves no tip: %d vs %d", after.Count, ctx.Count)
+	}
+	if want := fmt.Sprintf("%d", after.Count-1); *e.Position != want {
+		t.Fatalf("the refusal stamp carries the unmoved tip ordinal: stamped %s, want %s", *e.Position, want)
+	}
+	if direct := admit.Affordances(after, rootKey, "c-2"); !slices.Equal(direct, e.Affordances) {
+		t.Fatalf("the refusal's stamped list is the signer's list at the unmoved tip: stamped %v, recomputed %v", e.Affordances, direct)
 	}
 }
