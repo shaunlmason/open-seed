@@ -203,6 +203,96 @@ func TestLedgerShowNeverWrites(t *testing.T) {
 	}
 }
 
+// conformance: next/spec/envelope.md "Position stamping" — every
+// response that REACHED the ledger stamps it, and a not_found from
+// show --position reached it hardest: the scan visited every record
+// and therefore established the count (plans/os-fa69345e.md). Without
+// the stamp, not_found on a chain of length N is indistinguishable
+// from not_found on a chain of length 10,000 where the position never
+// will exist, which is the one refusal where a concurrent append is
+// most likely.
+func TestLedgerShowNotFoundStampsTheTip(t *testing.T) {
+	dir, priv, _ := writeKeys(t)
+	ld := filepath.Join(dir, "ledger")
+	if _, code := runEnv(t, "init", "--ledger", ld, "--key", priv); code != 0 {
+		t.Fatal("init failed")
+	}
+	if _, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+		"--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`); code != 0 {
+		t.Fatal("append failed")
+	}
+
+	// Two records: positions 0 and 1, tip ordinal 1. Asking for the
+	// position an append would land at next refuses, stamped, so the
+	// caller can tell "not yet" from "never".
+	e, code := runEnv(t, "ledger", "show", "--ledger", ld, "--position", "2")
+	if code != 4 || e.Error == nil || e.Error.Code != "not_found" {
+		t.Fatalf("a missing position exits 4 not_found: %d %+v", code, e)
+	}
+	if e.Error.Message != "no record at position 2" {
+		t.Fatalf("the message is unchanged: %q", e.Error.Message)
+	}
+	if e.Position == nil || *e.Position != "1" {
+		t.Fatalf("the refusal carries the tip the scan established: %v", e.Position)
+	}
+	// Far past the tip is the same refusal with the same stamp: the
+	// stamp reports the chain, never the request.
+	if e, _ := runEnv(t, "ledger", "show", "--ledger", ld, "--position", "10000"); e.Position == nil || *e.Position != "1" {
+		t.Fatalf("the stamp is the tip, not a function of the asked position: %v", e.Position)
+	}
+
+	// A record that IS there still carries the requested position.
+	e, code = runEnv(t, "ledger", "show", "--ledger", ld, "--position", "0")
+	if code != 0 || !e.OK || e.Position == nil || *e.Position != "0" {
+		t.Fatalf("a found record carries its own position: %d %+v", code, e.Position)
+	}
+
+	// A scan that failed partway established nothing trustworthy: the
+	// count it reached is records read before an error, not a
+	// statement about the chain, so chain_invalid stays UNSTAMPED even
+	// though position 0 was read before the failure at 1.
+	segs, err := filepath.Glob(filepath.Join(ld, "segments", "*.jsonl"))
+	if err != nil || len(segs) == 0 {
+		t.Fatal("no segments")
+	}
+	b, err := os.ReadFile(segs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimRight(string(b), "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected two records in one segment, got %d", len(lines))
+	}
+	lines[1] = `{"event": {`
+	if err := os.WriteFile(segs[0], []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e, code = runEnv(t, "ledger", "show", "--ledger", ld, "--position", "2")
+	if code != 8 || e.Error == nil || e.Error.Code != "chain_invalid" {
+		t.Fatalf("an unparsable record exits 8 chain_invalid: %d %+v", code, e)
+	}
+	if e.Position != nil {
+		t.Fatalf("a failed scan asserts no position: %v", *e.Position)
+	}
+}
+
+// conformance: next/spec/envelope.md — an empty chain establishes no
+// position, so the same refusal carries null rather than inventing
+// one. The helper declines at zero, so no branch has to say so.
+func TestLedgerShowNotFoundOnAnEmptyChain(t *testing.T) {
+	ld := filepath.Join(t.TempDir(), "ledger")
+	if err := os.MkdirAll(filepath.Join(ld, "segments"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	e, code := runEnv(t, "ledger", "show", "--ledger", ld, "--position", "0")
+	if code != 4 || e.Error == nil || e.Error.Code != "not_found" {
+		t.Fatalf("an empty chain has no position 0: %d %+v", code, e)
+	}
+	if e.Position != nil {
+		t.Fatalf("an empty chain establishes no position: %v", *e.Position)
+	}
+}
+
 // conformance: next/spec/protocol.md "Protocol version" — an append signs
 // at the version active at the tip, and refuses when that version is
 // outside the build's supported set (#85 review).

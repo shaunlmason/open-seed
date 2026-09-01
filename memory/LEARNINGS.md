@@ -472,3 +472,15 @@ Fresh sessions read this file instead of rediscovering.
   boundary, whose refusal names the state and beats anything the
   derivation could say. Deciding this per shape rather than per verb
   kept the error surface small.
+- 2026-09-01 (os-fa69345e): when a read surface refuses, ask what the
+  read already established. `show --position` scanned the entire chain
+  and then discarded the count on the not_found path, which is the one
+  refusal where a concurrent append is most likely: a caller asking
+  for position N on a chain of length N cannot otherwise tell "not
+  yet" from "never". The distinction that matters for a position stamp
+  is not success-versus-refusal but reached-the-data-versus-did-not.
+- 2026-09-01 (os-fa69345e): a partial scan is not a short chain.
+  Stamping the count an aborted iteration reached would assert a tip
+  the failure disproves, so the error branch stays unstamped even
+  though a count sits right there in scope. Symmetry between sibling
+  branches is not a reason on its own; each has to earn its stamp.

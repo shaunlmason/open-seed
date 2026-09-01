@@ -987,3 +987,25 @@ here. Newest last.
   deliberate absence rather than left implicit; giving the remote
   posture its own journal home is a client-state decision no card has
   made yet.
+
+## 2026-09-01 — show's not_found stamps the tip (os-fa69345e, plan #176)
+
+- `ledger show --position <missing>` scanned every record and then
+  returned `not_found` unstamped. The envelope rule already covered
+  it: a refusal raised BEFORE a tip was ever read carries null, and
+  this refusal read the whole chain. The missing stamp was not a
+  fabricated position withheld, it was a known position discarded —
+  so the fix is code, not spec, and restating the rule would imply it
+  had been ambiguous.
+- The count comes from the iteration already running, never a second
+  `Tip()` call. `show` is the read surface that never writes and must
+  stay cheap; recovering a number the scan already held would be the
+  wrong fix even though it produces the same envelope.
+- `stampTip` declines at a zero count, so an empty chain carries null
+  for free and no branch has to say so.
+- The `chain_invalid` branch stays UNSTAMPED, deliberately. A scan
+  that failed partway established nothing trustworthy: the count it
+  reached is records read before an error, not a statement about the
+  chain, and stamping it would assert a position the failure
+  disproves. A drill pins this so a later "consistency" pass does not
+  extend the stamp there.
