@@ -762,3 +762,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T05:34:43Z"},"task":"os-52d5da3f","ts":"2026-09-01T04:34:43Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"title":"next: loop verbs — Phase 9 item 5 part (c)"},"task":"os-7e197768","ts":"2026-09-01T04:46:34Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-8879f37c","kind":"pr"},"task":"os-52d5da3f","ts":"2026-09-01T04:50:53Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-52d5da3f","ts":"2026-09-01T04:50:56Z","verb":"transition"}
