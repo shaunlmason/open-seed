@@ -238,9 +238,12 @@ Nothing outside `next/**` except the work-product files above.
 
 ## Acceptance Criteria
 
-1. One `maintain run` pass against a real ledger reaps an expired,
-   lease-elapsed claim and leaves a `claim.reaped` packet, asserted by
-   reading the chain back rather than by the verb's own report.
+1. One `maintain run` pass against a real ledger reaps a claim that
+   is **both** classified `expired` and carrying an unanswered
+   admitted `run.interrupted` on its active fence, and leaves a
+   `claim.reaped` packet whose findings record the ignored interrupt
+   (`executors.md`'s force path). Asserted by reading the chain back
+   rather than by the verb's own report.
 2. **A `no_data` stream is never reaped**, however old the claim, and
    the refusal says why. Drilled directly, because this is where the
    instinct to reap is strongest and the evidence weakest.
