@@ -1,12 +1,17 @@
 ---
 id: os-abb206c8
 title: 'next: Phase 9 item 1c — the worker loop made executable, with exhaustion parking'
-state: review
+state: done
 priority: P2
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-01T15:09:21Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/191
 created_at: "2026-09-01T13:28:53Z"
-updated_at: "2026-09-01T14:42:03Z"
+updated_at: "2026-09-01T15:09:21Z"
 ---
 
 Phase 9 item 1, third of three cards (1a landed as #188; 1b is the dispatcher's injection conformance suite, still uncarded).
