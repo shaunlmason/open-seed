@@ -1635,9 +1635,30 @@ func WedgeDeclared(records []*event.Record, table *transition.Table, subject str
 			continue
 		}
 		prior, ok := table.StateAt(prefix, subject)
-		if ok && prior.Claim != nil && prior.Claim.Fence == fence {
-			return true
+		if !ok || prior.Claim == nil || prior.Claim.Fence != fence {
+			continue
 		}
+		// The CITATION, judged by the fence rule's own terms (review
+		// finding on #205). Checking only that the claim at this
+		// position carried the fence is not enough: a wedge naming a
+		// STALE fence is refused at admission and would still have
+		// corroborated here, so a boundary-refused declaration could
+		// have reaped a live claim — the precise hole this whole
+		// derivation exists to close.
+		//
+		// The two conditions mirror the rule rather than tightening
+		// it: any citation present must match the active fence, and a
+		// holder or prior claimant must cite one at all. Being
+		// stricter than admission would refuse to reap on evidence the
+		// boundary accepts, which is a different bug.
+		if cited, hasCited := fenceCitation(rec.Event.Payload); hasCited {
+			if cited != strconv.Itoa(fence) {
+				continue
+			}
+		} else if rec.Event.Actor == prior.Claim.Holder || prior.PriorClaimants[rec.Event.Actor] {
+			continue
+		}
+		return true
 	}
 	return false
 }

@@ -204,9 +204,6 @@ func (m *maintainSession) file(f reconcile.Finding) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := m.append("escalation.raised", f.Subject, []byte(`{"question": "fix?", "options": [{"id": "a", "choice": "yes"}, {"id": "b", "choice": "no"}]}`)); err == nil {
-		return f.Subject, nil
-	}
 	if err := m.append("intent.filed", id, payload); err != nil {
 		return "", err
 	}

@@ -316,6 +316,7 @@ func TestMaintainHoldsNoPrivatePowers(t *testing.T) {
 func TestMaintainFilesDefectsAndRaisesNoEscalation(t *testing.T) {
 	m := maintenanceLedger(t)
 	m.divergeC2(t)
+	m.pendingC3(t)
 	e, code := m.run(t)
 	if code != 0 {
 		t.Fatalf("maintain run: %d %+v", code, e)
@@ -341,6 +342,19 @@ func TestMaintainFilesDefectsAndRaisesNoEscalation(t *testing.T) {
 		}
 	}
 	filed := rep.Filed[0]
+	// The id is the DERIVED defect id, not the finding's subject. This
+	// is what makes filing idempotent through the ledger's own
+	// duplicate refusal — and it is also the assertion that catches a
+	// filing path which reached the subject by some other route, such
+	// as raising an escalation on it and returning that subject as the
+	// "filed" id (review finding on #205).
+	if want := maintain.DefectID(reconcile.Finding{Subject: filed.Subject, Class: filed.Class,
+		Detail: findingDetail(rep, filed.Subject, filed.Class)}); filed.Filed != want {
+		t.Errorf("a finding files under its derived id %q, got %q", want, filed.Filed)
+	}
+	if !strings.HasPrefix(filed.Filed, "d-") {
+		t.Fatalf("a filed defect is recognizable as one: %q", filed.Filed)
+	}
 	s, ok := st.fold.State(filed.Filed)
 	if !ok {
 		t.Fatalf("the filed contract must exist in the fold: %s", filed.Filed)
@@ -637,4 +651,103 @@ func unsettledFor(t *testing.T, m *maintenanceStand, subject string) bool {
 		}
 	}
 	return false
+}
+
+// conformance: the wedge half of D4's corroboration is judged by the
+// fence rule's OWN terms (review finding on #205).
+//
+// A wedge.declared naming a STALE fence is refused at admission — "any
+// citation present must match the active fence whoever signs" — and the
+// first version of admit.WedgeDeclared never looked at the citation at
+// all. It checked only that the claim at that position carried the
+// fence being asked about, so a boundary-refused declaration
+// corroborated a reap of a LIVE claim. That is the precise hole the
+// derivation exists to close, reopened inside it.
+func TestMaintainRefusesAWedgeCitingTheWrongFence(t *testing.T) {
+	m := maintenanceLedger(t)
+	m.stale(t)
+	// Shape-valid, signed by a capable actor, at a position where the
+	// active claim IS m.fence — and citing a different one.
+	// Signed by an OPERATOR-capable key, which wedge.declared requires:
+	// the first draft of this drill used the supervisor and passed
+	// because the grant rule refused it, so the citation was never the
+	// deciding factor. A drill that passes for the wrong reason is the
+	// vacuity this card keeps guarding against.
+	rawAppend(t, m.ld, workerRawKey(31), "wedge.declared", "c-1", fmt.Sprintf(
+		`{"fence": "%d", "observed": %q, "count": 0, "since": %q}`,
+		m.fence+1, m.asOf, m.asOf))
+
+	e, code := m.run(t)
+	if code != 0 {
+		t.Fatalf("maintain run: %d %+v", code, e)
+	}
+	rep := report(t, e)
+	if len(rep.Reaped) != 0 {
+		t.Fatalf("a wedge naming a fence other than the active one corroborates nothing: %+v", rep.Reaped)
+	}
+	if len(rep.Skipped) != 1 || !strings.Contains(rep.Skipped[0].Because, "asked to stop") {
+		t.Fatalf("the skip must be the uncorroborated one: %+v", rep.Skipped)
+	}
+}
+
+// And the control: the SAME wedge citing the right fence does reap, so
+// the drill above is refusing for the citation rather than because
+// wedges never corroborate at all.
+func TestMaintainReapsOnAWedgeCitingTheActiveFence(t *testing.T) {
+	m := maintenanceLedger(t)
+	m.stale(t)
+	if _, err := admitAppend(t, m.ld, workerRawKey(31), "wedge.declared", "c-1", fmt.Sprintf(
+		`{"fence": "%d", "observed": %q, "count": 0, "since": %q}`,
+		m.fence, m.asOf, m.asOf)); err != nil {
+		t.Fatalf("a correctly cited wedge must admit: %v", err)
+	}
+	e, code := m.run(t)
+	if code != 0 {
+		t.Fatalf("maintain run: %d %+v", code, e)
+	}
+	rep := report(t, e)
+	if len(rep.Reaped) != 1 {
+		t.Fatalf("an admitted wedge on the active fence corroborates: %+v (skipped %+v)", rep.Reaped, rep.Skipped)
+	}
+	if !strings.Contains(rep.Reaped[0].Because, "wedge.declared") {
+		t.Errorf("the reap names the corroboration that decided it: %q", rep.Reaped[0].Because)
+	}
+}
+
+// findingDetail recovers a finding's detail from the report, so the
+// derived-id assertion recomputes the id from the same three parts the
+// loop hashed rather than from a copy of them.
+func findingDetail(rep maintain.Report, subject, class string) string {
+	for _, f := range rep.Findings {
+		if f.Subject == subject && f.Class == class {
+			return f.Detail
+		}
+	}
+	return ""
+}
+
+// pendingC3 leaves a contract in REVIEW carrying a finding: a pass
+// verdict with no observed merge, which reconcile.Subject reports as
+// unreconciled.
+//
+// Its state is the point. escalation.raised admits only from ready or
+// review, so without such a subject a filing path that tried to raise
+// an escalation would have its attempt refused and fall through to
+// intent.filed, behaving identically and leaving every assertion green
+// (review finding on #205 — that is exactly how a swallowed escalation
+// attempt survived this drill). With c-3 present the attempt LANDS,
+// and the actor scan fires.
+func (m *maintenanceStand) pendingC3(t *testing.T) {
+	t.Helper()
+	offerFile(t, m.ld, m.priv, strings.Repeat("a", 40), "c-3")
+	fence, err := admitAppend(t, m.ld, workerRawKey(23), "claim.taken", "c-3", `{}`)
+	if err != nil {
+		t.Fatalf("c-3 claim: %v", err)
+	}
+	sub := rawAppend(t, m.ld, workerRawKey(23), "submission.made", "c-3", fmt.Sprintf(
+		`{"fence": "%d", "packet": {"acceptance": ["c-3"], "decisions": [], "base": %q, "refs": [], "findings": []}}`,
+		fence, packet.ZeroRange))
+	rawAppend(t, m.ld, workerRawKey(24), "verdict.rendered", "c-3", fmt.Sprintf(
+		`{"verdict": "pass", "receipt": %q, "submission": "%d", "independence": "L1"}`,
+		strings.Repeat("b", 64), sub))
 }

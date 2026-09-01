@@ -883,3 +883,40 @@ output and chmods directories writable, with a comment naming "an
 unprivileged runner". A new drill against a locked surface needs the
 same cleanup, registered AFTER the `t.TempDir()` it unlocks so LIFO
 ordering runs it first.
+
+## A mutation you cannot revert is a mutation you will ship (os-8a5f14bb)
+
+A mutation test left a deliberate defect in the shipped tree, and review
+caught it rather than any drill. The revert was:
+
+```sh
+git checkout cmd/seed/maintain.go 2>/dev/null || cp /tmp/m2.bak internal/maintain/maintain.go
+```
+
+`cmd/seed/maintain.go` was a NEW file, so `git checkout` had nothing to
+restore, failed into `/dev/null`, and the fallback restored **a
+different file**. The tree kept the mutation. Everything afterwards was
+green, and green is exactly what the mutation predicted: it made the
+filing path try an escalation first, which that fixture always refused,
+so the loop fell through to the correct behavior.
+
+Three things follow.
+
+**Revert by construction, not by command.** Snapshot the file you are
+about to mutate and restore that same path — `cp X X.bak` then `cp
+X.bak X` — never a `git` verb whose behavior depends on whether the
+file is tracked, and never with the failure silenced.
+
+**Verify the revert, not the tests.** A passing suite cannot tell "the
+mutation is gone" from "the mutation is inert here". The check that
+works is a diff or a grep for the mutation's own text.
+
+**An inert mutation is a void experiment, not a passing one.** This
+mutation could never land: `escalation.raised` requires a packet, so
+the payload was refused on shape before any rule about escalations ran.
+Re-running it with a WELL-FORMED payload against a subject in `review`
+made it land, and the guard fired immediately. The rule already
+recorded on #202 — a mutation that changes nothing means the drill
+never reached the code — has a second half: it may equally mean the
+mutation never reached the code, and the two are told apart only by
+making the mutation land.
