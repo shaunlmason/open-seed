@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "task": "os-7e197768",
+  "merge_base": "6a86b9366b5e37224e3fc21d9a06cb75bbf21637",
+  "head": "888258e7fb523bd154766921c98b012cc25f3109",
+  "plan_path": "plans/os-7e197768.md",
+  "plan_sha256": "24f585d828cbc071f5c5532ecdbb588f20c02eb897af8ad7b7fae809fb367b56",
+  "diff_files": [
+    "memory/DEADENDS.md",
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/affordances.go",
+    "next/cmd/seed/budget.go",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/loop.go",
+    "next/cmd/seed/loop_cli_test.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/remote.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/spec/envelope.md",
+    "next/spec/loop-verbs.md",
+    "next/spec/obligations.md"
+  ],
+  "diff_sha256": "95c800eb0d9c97c6d1415bd3f09d9327c54592fd23452e28efd0bddd8b1dc011",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
