@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -114,6 +115,70 @@ func TestReservationRaceAndStatus(t *testing.T) {
 		t.Fatalf("an unknown subject is not found: %+v", e)
 	}
 	_ = fps
+}
+
+// conformance: III.H — the same out-of-window close through the CLI
+// (plans/os-d6963652.md D5, step 5): the loop verb omits the fence
+// key because no window is active, the close lands and returns the
+// capacity, and budget status --key LISTS it beforehand, which is
+// the surface the unconditional probe citation broke.
+func TestBudgetClosesAfterTheWindowThroughTheCLI(t *testing.T) {
+	restore := transition.InjectBudgetClass("ten", 10)
+	defer restore()
+	ld, _, base, specCommit, head, priv, _, keys, _ := offerLedger(t)
+	for _, step := range [][]string{
+		{"intent.filed", `{"intent": "drill", "tier": "trivial", "budget": "ten", "routing": "core"}`},
+		{"contract.specified", fmt.Sprintf(`{"acceptance": {"ref": "accept.md @ %s", "executable": true, "gate": "pr/6 @ %s"}}`, specCommit, specCommit)},
+	} {
+		if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+			"--verb", step[0], "--subject", "c-1", "--payload", step[1]); code != 0 {
+			t.Fatalf("%s: %d %+v", step[0], code, e)
+		}
+	}
+	worker := keys["workerA"]
+	if _, err := admitAppend(t, ld, workerRawKey(22), "claim.taken", "c-1", `{}`); err != nil {
+		t.Fatalf("claim: %v", err)
+	}
+	if e, code := runEnv(t, "budget", "reserve", "--ledger", ld, "--key", worker,
+		"--subject", "c-1", "--amount", "8"); code != 0 || !e.OK {
+		t.Fatalf("reserve: %d %+v", code, e)
+	}
+
+	// The window ends with the reservation open: exactly the shape
+	// that stranded 8 of the class's 10 units.
+	pkt := writePacket(t, "")
+	if e, code := runEnv(t, "submission", "make", "--ledger", ld, "--key", worker,
+		"--subject", "c-1", "--packet", pkt, "--base", base+".."+head); code != 0 || !e.OK {
+		t.Fatalf("submission make: %d %+v", code, e)
+	}
+
+	// The status surface lists the closes for the reservation's own
+	// signer, outside any window. Without the conditional citation
+	// the probes would refuse at the fence rule and this list would
+	// hide a legal act.
+	e, code := runEnv(t, "budget", "status", "--ledger", ld, "--subject", "c-1", "--key", worker)
+	if code != 0 {
+		t.Fatalf("status: %d %+v", code, e)
+	}
+	for _, verb := range []string{"budget.settle", "budget.release"} {
+		if !slices.Contains(e.Affordances, verb) {
+			t.Fatalf("status lists %s outside the window: %v", verb, e.Affordances)
+		}
+	}
+
+	// And the close itself: no --fence flag exists, and none LANDS,
+	// because no window is active to cite.
+	e, code = runEnv(t, "budget", "settle", "--ledger", ld, "--key", worker, "--subject", "c-1", "--actuals", "6")
+	if code != 0 || !e.OK {
+		t.Fatalf("the signer settles after the window ends: %d %+v", code, e)
+	}
+	if p := payloadAt(t, ld, chainCount(t, ld)-1); p["fence"] != nil {
+		t.Fatalf("outside a window the close cites no fence: %+v", p)
+	}
+	e, code = runEnv(t, "budget", "status", "--ledger", ld, "--subject", "c-1")
+	if code != 0 || e.Result["remaining"] != "4" || e.Result["settled"] != "6" {
+		t.Fatalf("capacity returns to capacity minus actuals: %d %+v", code, e.Result)
+	}
 }
 
 // statusInt digs the first open reservation's position out of the

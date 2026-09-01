@@ -633,14 +633,26 @@ administrative card, not a Phase 8 item).
   lossy by declaration, so the reap stays a judgment needing
   corroboration and no_data carries no reap path at all. No heartbeat
   predicate is added either, because non-advancing observations are a
-  legitimate long-running step (this card).
+  legitimate long-running step (os-68ea0b2d).
 - 9.4 small-team and fleet fixtures — backlog. Both run with no wake
   channel, and every refusal converges within one retry in one of
   three ways: an admitting act, a refreshed read showing the act is no
   longer owed, or an escalation carrying the refusal. The middle arm
   is the common case (a fleet-mode claim race means the loser
   re-orients), and what is forbidden is the fourth outcome: a blind
-  retry or a silent loop (this card).
+  retry or a silent loop (os-68ea0b2d).
+- out-of-item: a reservation outlives its window — os-d6963652 —
+  **review** (task PR against plan #175: admission gated all three
+  budget verbs on `in_progress`, so a reservation whose claim window
+  ended could never be settled or released while `BudgetViewAt` kept
+  counting it against capacity; the gate moves to `budget.reserve`
+  alone, the `budget.open` obligation drops the live-window
+  restriction its reason no longer supports and is attributed
+  standing-awarely to whoever can still close it, and the three budget
+  affordance probes move to the conditional fence citation without
+  which the dischargeability sweep could not go green at the very
+  prefixes the fix is for; the shared walk now ends by suspending and
+  revoking the lane holding an open reservation)
 
 ## Frontier
 
