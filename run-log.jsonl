@@ -712,3 +712,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T03:31:28Z"},"task":"os-edf73d66","ts":"2026-09-01T02:31:28Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 11 — callscript as a design reference for the drafted-workflow authoring surface"},"task":"os-2420b91e","ts":"2026-09-01T02:45:04Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T03:45:19Z"},"task":"os-edf73d66","ts":"2026-09-01T02:45:19Z","verb":"lease-renew"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-6f294c30","kind":"pr"},"task":"os-edf73d66","ts":"2026-09-01T02:49:20Z","verb":"attach-evidence"}
