@@ -1,10 +1,11 @@
 ---
 id: os-f781f0da
 title: 'next: Phase 9 item 2 — escalation with packet, question and decision'
-state: backlog
+state: ready
 priority: P1
 squad: core
 created_at: "2026-09-01T17:25:06Z"
+updated_at: "2026-09-01T17:27:58Z"
 ---
 
 Phase 9 item 2 of docs/next-build-plan.md, the next frontier item after
