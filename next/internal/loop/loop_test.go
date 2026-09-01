@@ -1250,40 +1250,67 @@ func TestAPacketCreatedThenFailedIsUnlinked(t *testing.T) {
 	r := &recorder{}
 	d := newDriver(t, implementer(), r)
 
-	// A packet body that marshals but cannot be written: the file is
-	// created, then the write fails because the descriptor is closed
-	// under it. Simulated by filling the disk is not portable, so the
-	// drill reaches the same branch through writePacket directly.
-	args, cleanup, err := d.writePacket(map[string]any{
+	// The failure is INJECTED, so the branch is genuinely reached. The
+	// first version of this drill ran a successful writePacket and then
+	// called the success-path cleanup, which left both error-branch
+	// unlinks unprotected: removing them kept it green (review finding
+	// on #194). A drill for a failure path has to fail.
+	body := map[string]any{
 		"acceptance": []string{"x"}, "decisions": []any{},
 		"refs": []string{}, "findings": []map[string]string{},
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
-	created := flagValue(args, "--packet")
-	if created == "" {
-		t.Fatal("the packet must name a file")
-	}
-	if _, err := os.Stat(created); err != nil {
-		t.Fatalf("the packet exists until its cleanup runs: %v", err)
-	}
-	cleanup()
-	if _, err := os.Stat(created); !os.IsNotExist(err) {
-		t.Errorf("cleanup must unlink the packet: %v", err)
+	for name, mode := range map[string]string{
+		"the write fails": "write",
+		"the close fails": "close",
+	} {
+		var created string
+		restore := InjectPacketWriter(func() (packetFile, error) {
+			f, err := os.CreateTemp(tmp, "seed-loop-packet-*.json")
+			if err != nil {
+				return nil, err
+			}
+			created = f.Name()
+			return &faultyPacketFile{File: f, mode: mode}, nil
+		})
+		_, _, err := d.writePacket(body)
+		restore()
+		if err == nil {
+			t.Errorf("%s: writePacket must refuse", name)
+			continue
+		}
+		if created == "" {
+			t.Errorf("%s: the drill needs the file to have been created first", name)
+			continue
+		}
+		if _, statErr := os.Stat(created); !os.IsNotExist(statErr) {
+			t.Errorf("%s: writePacket must unlink the file it created (%s): %v", name, created, statErr)
+		}
 	}
 
-	// And nothing is left behind in TMPDIR at all: the assertion that
-	// actually covers the failure branches, since a file leaked there
-	// has no path anyone still holds.
+	// Nothing left behind at all: a leaked file here has no path anyone
+	// still holds, which is why the sweep is by directory.
 	entries, err := os.ReadDir(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), "seed-loop-packet-") {
-			t.Errorf("a packet file was left in TMPDIR: %s", e.Name())
+			t.Errorf("a packet file was left behind: %s", e.Name())
 		}
+	}
+
+	// The success path still cleans up through its returned closer.
+	args, cleanup, err := d.writePacket(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ok := flagValue(args, "--packet")
+	if _, err := os.Stat(ok); err != nil {
+		t.Fatalf("the packet exists until its cleanup runs: %v", err)
+	}
+	cleanup()
+	if _, err := os.Stat(ok); !os.IsNotExist(err) {
+		t.Errorf("cleanup must unlink the packet: %v", err)
 	}
 
 	// A body that cannot be marshalled fails before any file exists, so
@@ -1291,12 +1318,29 @@ func TestAPacketCreatedThenFailedIsUnlinked(t *testing.T) {
 	if _, _, err := d.writePacket(map[string]any{"bad": make(chan int)}); err == nil {
 		t.Error("an unmarshallable packet must refuse")
 	}
-	entries, _ = os.ReadDir(tmp)
-	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), "seed-loop-packet-") {
-			t.Errorf("a failed marshal must leave no file: %s", e.Name())
-		}
+}
+
+// faultyPacketFile fails deterministically at a named point after the
+// file exists, which is the only way to reach writePacket's
+// post-creation unlinks.
+type faultyPacketFile struct {
+	*os.File
+	mode string
+}
+
+func (f *faultyPacketFile) Write(b []byte) (int, error) {
+	if f.mode == "write" {
+		return 0, errors.New("injected write failure")
 	}
+	return f.File.Write(b)
+}
+
+func (f *faultyPacketFile) Close() error {
+	if f.mode == "close" {
+		_ = f.File.Close()
+		return errors.New("injected close failure")
+	}
+	return f.File.Close()
 }
 
 // writeSeededKey writes a deterministic OpenSSH ed25519 key at path.
@@ -1312,5 +1356,122 @@ func writeSeededKey(t *testing.T, path string, first byte) {
 	}
 	if err := os.WriteFile(path, pem.EncodeToMemory(block), 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// conformance: a key rotated DURING the work step stops the iteration
+// at the next act, rather than letting a new identity settle or exit a
+// window the old one opened (review finding on #194). The single check
+// at the top of Step could not see this: Work.Do is the longest thing
+// in an iteration and the likeliest moment for a rotation to land.
+//
+// The outcome asserted is deliberately not "it recovers": a window
+// opened by one actor and closed by another, or left open because the
+// close refused, is exactly the state the deliberate exits exist to
+// make impossible. Stopping is the correct behavior.
+func TestAKeyRotatedDuringTheWorkStepStopsAtTheNextAct(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeSeededKey(t, keyPath, 3)
+
+	// The double refuses the exit the way the real boundary would: the
+	// fence rule admits holder-signed events only from the holder, so a
+	// rotated key cannot park the window its predecessor opened. A
+	// double that let the park succeed would test a case production
+	// never reaches.
+	r := &recorder{answer: offers("c-1", func(args []string) (Result, bool) {
+		if verb(args) == "claim park" {
+			return Result{Exit: 6, OK: false, Code: "fenced_out",
+				Message: "event on c-1 must cite the active fence 12 held by the original actor"}, true
+		}
+		return Result{}, false
+	})}
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) {
+			// The rotation lands mid-iteration, after claim take has
+			// already opened a window under the original identity.
+			writeSeededKey(t, keyPath, 9)
+			return 4, nil
+		}), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	step, err := d.Step(5)
+	if !errors.Is(err, ErrKeyRotated) {
+		t.Fatalf("the act after the work step must refuse as ErrKeyRotated, got %v", err)
+	}
+	if step.Step != "budget settle" {
+		t.Errorf("the refusal names the act it stopped at: %+v", step)
+	}
+
+	// The window was opened, and the loop ATTEMPTED its deliberate exit
+	// rather than returning with a claim standing. The first version of
+	// this drill asserted the opposite — that no park reached the seam —
+	// which encoded silent abandonment as correct behavior (review
+	// finding on #196). It is not: a window left open with no packet is
+	// exactly what the four deliberate exits exist to prevent.
+	got := r.verbs()
+	if !slices.Contains(got, "claim take") {
+		t.Fatalf("this drill is vacuous unless the window was actually opened: %v", got)
+	}
+	if !slices.Contains(got, "claim park") {
+		t.Errorf("an open window must have its exit ATTEMPTED even when the attempt cannot succeed: %v", got)
+	}
+	// The work-signing acts do not run: they would sign as an identity
+	// the window does not belong to.
+	for _, after := range []string{"budget settle", "submission make"} {
+		if slices.Contains(got, after) {
+			t.Errorf("%q reached the seam under a rotated key: %v", after, got)
+		}
+	}
+	// And the error says the window is open and needs a reap, rather
+	// than reading as a tidy stop.
+	if !strings.Contains(err.Error(), "left OPEN") || !strings.Contains(err.Error(), "reap") {
+		t.Errorf("the error must say the window is stranded and needs a reap: %v", err)
+	}
+}
+
+// conformance: an IDLE driver still catches a rotation. This is the
+// case the per-act check cannot cover and the pre-poll check exists
+// for: a driver whose poll returns no subjects never reaches act at
+// all, so a rotated worker would otherwise poll forever under the
+// obsolete fingerprint and miss work granted only to its new identity
+// (review finding on #195).
+//
+// Poll carries the cached actor, which is exactly why the read path
+// needs its own check rather than inheriting the write path's.
+func TestAnIdleDriverStillCatchesARotation(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeSeededKey(t, keyPath, 3)
+
+	// An empty queue: Poll succeeds and offers nothing, so no act runs.
+	r := &recorder{answer: func(args []string) Result {
+		if verb(args) == "offer list" {
+			return Result{OK: true, Position: "10", Result: map[string]any{"offers": []any{}}}
+		}
+		return Result{OK: true, Position: "10"}
+	}}
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if step, err := d.Step(5); err != nil || step.Outcome != Idle {
+		t.Fatalf("the drill needs a genuinely idle iteration first: %+v %v", step, err)
+	}
+	for _, got := range r.verbs() {
+		if got != "offer list" {
+			t.Fatalf("this drill is vacuous unless the iteration stopped at the poll: %v", r.verbs())
+		}
+	}
+
+	writeSeededKey(t, keyPath, 9)
+	step, err := d.Step(5)
+	if !errors.Is(err, ErrKeyRotated) {
+		t.Fatalf("an idle driver must still be told its key rotated, got %v", err)
+	}
+	if step.Step != "identity" {
+		t.Errorf("the refusal names the identity check: %+v", step)
 	}
 }

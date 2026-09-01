@@ -239,11 +239,45 @@ would read silence from a worker that was working.
 Deriving once is not enough. The loop passes `--key <path>` and the CLI
 signs with whatever that path holds **now**, so a key rotated under a
 running loop reopens the same mismatch through the filesystem. The
-fingerprint is therefore re-derived and compared at the top of every
-iteration, and a change **refuses**: adopting it silently would leave a
-window held by one actor and worked by another, which is worse than
-stopping. Rotation is a real operational event, so the refusal names it
-and says to restart the loop.
+fingerprint is therefore re-derived and compared **before every act**,
+not once per iteration: the work step is the longest thing in an
+iteration and the likeliest moment for a rotation to land, and a check
+only at the top would let the settle and the exit sign as a new
+identity. A window opened by one actor and closed by another — or left
+open because the close refused — is exactly the state the deliberate
+exits exist to make impossible.
+
+A change **refuses**. Adopting it silently would produce that state
+rather than prevent it, so stopping is correct; and rotation being a
+real operational event, the refusal names it and says to restart the
+loop.
+
+**A refusal from inside an open window still attempts the exit.**
+Refusing is not returning. An error raised *after* the window opened
+leaves a claim and its reservation standing, and returning it directly
+would be the silent abandonment those exits exist to prevent — so the
+loop attempts `claim park` anyway, carrying the cause as the packet's
+findings, and reports only then.
+
+That attempt is the one act **exempt from the identity gate**. Refusing
+it there would guarantee the abandonment the gate exists to prevent, and
+nothing is weakened by letting it through: the fence rule is the actual
+protection, admitting holder-signed events only from the holder, so a
+rotated key's exit refuses **at the boundary** rather than succeeding
+wrongly.
+
+Under a rotation, then, the attempt is expected to fail and the window
+is genuinely stranded: the predecessor's fence cannot be cited by the
+successor's key, no key the loop can reach closes it, and recovery is
+the maintenance lane's reap (item 3, unbuilt). The error says exactly
+that — the window is left OPEN and needs a reap — and carries both
+refusals, the one that stopped the work and the one that stopped the
+exit.
+
+This is the bound on *every involuntary exit leaves a packet*: what the
+loop owes is the **attempt**, which it always makes, and not the
+landing, which is not always in its gift. Where the exit does land the
+packet carries the cause, exactly as an ordinary park would.
 
 ### Contention is ordinary
 
