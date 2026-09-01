@@ -115,6 +115,20 @@ Measured on this tree, not assumed.
   the next reader learns the wrong thing. It is replaced by what was
   measured, with a pointer to the decisions entry.
 
+- **D7.5 — `flavors/core-Makefile` moves in lockstep, and it is in
+  scope.** `scripts/flavor-test.sh` compares `./Makefile` byte for byte
+  against `flavors/core-Makefile` in its offline mode, and
+  `scripts/validate.sh` runs that mode as part of `make check`. So a
+  `Makefile` edit without a refreshed mirror fails the gate with
+  *"flavors/core-Makefile has drifted"*, and this plan's first draft put
+  the mirror outside its own file scope — the implementation could not
+  have reached acceptance criterion 9 without violating its approved
+  plan (review finding on #198).
+
+  The mirror is refreshed exactly as the check's own message says
+  (`cp Makefile flavors/core-Makefile`), never hand-edited, so the two
+  cannot disagree in a way `cmp` would miss.
+
 - **D8 — scope guard.** No change to `-p 1`, to `-covermode`, to
   `-coverpkg`, or to the 90% threshold. No new coverage collection
   strategy: the pod path was evaluated and **rejected** above, and that
@@ -133,6 +147,8 @@ Measured on this tree, not assumed.
    existing flags, parse `go tool cover -func`'s total, print the
    gate's line.
 4. `Makefile` — `check-next` calls it; the refuted comment is replaced.
+   Then `cp Makefile flavors/core-Makefile`, in the same commit: the
+   offline flavor check compares them byte for byte inside `make check`.
 5. `next/docs/decisions.md`, `memory/LEARNINGS.md`; receipt; evidence;
    review. `os-4eaf8b13` is closed with this card.
 
@@ -141,11 +157,13 @@ Measured on this tree, not assumed.
 - `next/internal/covergate/**` (new), `next/cmd/covergate/**` (new)
 - `Makefile` (the `check-next` target: the integration point
   `docs/next-build-plan.md` §0 names)
+- `flavors/core-Makefile` (its byte-identical mirror, refreshed in the
+  same commit: `make check` compares them, D7.5)
 - `next/docs/decisions.md`, `memory/*`
 - `receipts/os-cafba959.json`
 
 No production code under `next/internal/**` other than the new package,
-and nothing else outside `next/**`.
+and nothing else outside `next/**` beyond the two files above.
 
 ## Acceptance Criteria
 
@@ -169,7 +187,10 @@ and nothing else outside `next/**`.
 8. **Mutation evidence, per fix.** Each must fail a drill: deleting the
    cache clean; removing the re-collection; making the re-collection
    unconditional; looping the re-collection.
-9. `make check` green, coverage measured cold, at least three readings
+9. `flavors/core-Makefile` is byte-identical to `Makefile`, asserted by
+   running `sh scripts/flavor-test.sh --offline` directly as well as
+   through `make check`, so a stale mirror fails before it reaches CI.
+10. `make check` green, coverage measured cold, at least three readings
    above the gate.
 
 ## Validation Commands
@@ -184,8 +205,9 @@ make check
 ## Expected diff shape
 
 One new package with its drills, one thin `cmd` wiring, one Makefile
-target rewritten, and the work-product files. Roughly +450/-20 lines,
-all under `next/**` except the `Makefile` target this plan names.
+target rewritten with its `flavors/core-Makefile` mirror refreshed, and
+the work-product files. Roughly +450/-20 lines, all under `next/**`
+except the two Makefile files this plan names.
 
 ## A risk worth naming now
 
