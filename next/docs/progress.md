@@ -594,7 +594,7 @@ administrative card, not a Phase 8 item).
   change report with an explicit discharged list; and the
   dischargeability sweep over every prefix of the shared walk
   scenario, which caught a real modeling error on its first run)
-- 9.5 part (c) loop verbs — os-7e197768 — **review** (task PR
+- 9.5 part (c) loop verbs — os-7e197768 — **done** (merged #173
   against plan #172: the seven acts that close poll → claim → work →
   meter → submit → exit, each deriving the fence from the active
   window, the reservation from the shared budget view, the plan
@@ -629,12 +629,19 @@ every card closed. Phase 8 is done and closed: every plan (#158,
 the out-of-item ledger writeHead race fix (#161 against plan #159),
 and the exit record above (card os-ef715d17's task PR) are merged
 with every card closed.
-Phase 9 is under way: item 5 is complete once the loop verbs land —
-its derivation and read merged (#171), and its acts are in review
-(os-7e197768). The lane-facing surface is therefore whole in shape:
-`seed situation` says what is true and what is owed, and the loop
-verbs are how a lane acts on it without hand-assembling protocol
-arguments.
+Phase 9 is under way: item 5's derivation and read merged (#171) and
+its loop verbs merged (#173). The lane-facing surface is therefore
+whole in shape: `seed situation` says what is true and what is owed,
+and the loop verbs are how a lane acts on it without hand-assembling
+protocol arguments. #173's post-merge review found three defects in
+those verbs — a derived argument not re-derived across the optimistic
+retry (a rival reservation landing mid-flight was silently closed,
+the exact choice `soleOpenReservation` exists to refuse), a remote
+refusal stamped from the stale view, and a JSON null packet panicking
+the CLI — carded as **os-9b3f3ef3** and fixed by this card's own task
+PR, which also records in `next/spec/loop-verbs.md` that a derived
+value is re-examined per refreshed tip and refused rather than
+replaced.
 **Next action: Phase 9 item 1** — the six lane role definitions as
 composable fragments, the dispatcher's least-capability posture, the
 injection conformance suite against dispatcher input handling, and
