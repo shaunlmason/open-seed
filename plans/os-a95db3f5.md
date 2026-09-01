@@ -25,7 +25,7 @@ establishing that there is a worker to sample:
 | Line | Window | Asserts | Failure mode |
 | --- | --- | --- | --- |
 | ~318 | 300ms | line count **grew** | a slow boot fails a working system (the filed flake) |
-| ~221 | 250ms | a raw unprivileged interrupt parked **no one** | a slow boot **passes vacuously**: nothing parked because nothing was running |
+| ~221 | 250ms | a raw unprivileged interrupt parked **no one** | a slow boot **passes vacuously**: nothing parked because nothing was running — and merely asserting growth across the window would flake on a descheduled worker instead (D3) |
 
 The second is worse in kind, because a negative assertion that
 succeeds for the wrong reason never fails and never gets filed. It is
@@ -45,13 +45,37 @@ for the next card.
   exceeds that sample or a generous deadline expires. The deadline is
   a failure bound, never a pacing device: on a fast runner the drill
   returns in one interval.
-- **D3 — the negative assertion keeps a settle window, now anchored.**
-  You cannot poll for something failing to happen, so the raw-interrupt
-  case keeps a bounded wait — but it runs against a worker D1 has
-  already proven live, and it additionally asserts the stream **kept
-  growing** across the window. "Still metering and still `in_progress`"
-  is the positive form of "parked no one", and it cannot pass
-  vacuously.
+- **D3 — the negative assertion becomes a HANDSHAKE, not a window.**
+  The first draft kept a bounded settle window and additionally
+  asserted the stream "kept growing" across it. That trades a vacuous
+  pass for a **new instance of the very flake this card fixes**
+  (review finding on this PR): a worker descheduled for longer than
+  the window — precisely the loaded-runner case — fails the growth
+  assertion even though it ignored the raw interrupt exactly as it
+  should. Initial liveness prevents the vacuous pass; it does not make
+  progress happen inside an interval.
+
+  The helper's own loop supplies an exact handshake instead. Each
+  cycle **emits an observation, then checks for a boundary-valid
+  interrupt**, then sleeps:
+
+  ```
+  L1 → C1 → sleep → L2 → C2 → sleep → …
+  ```
+
+  Sample the stream length `n0` immediately after the raw interrupt's
+  append returns. Every line up to `n0` was written before that read,
+  so `L(n0+1)` is written **after** the raw interrupt landed, and the
+  check `C(n0+1)` that follows it therefore reads a ledger that
+  **contains** the raw event. The appearance of `L(n0+2)` proves
+  `C(n0+1)` ran to completion and declined to park.
+
+  So the assertion is: poll a generous deadline for the stream to
+  reach `n0+2`, **then** assert the subject is still `in_progress`.
+  Two lines, not a duration. It cannot pass vacuously (the worker
+  provably evaluated the raw interrupt) and it cannot flake on
+  scheduling (the deadline is a failure bound, and slowness only
+  delays the proof rather than falsifying it).
 - **D4 — one shared helper, matching the file's existing posture.**
   A single poll-until helper used by both sites and shaped like the
   15-second/30ms loop already in the file, so a future drill copies the
@@ -69,9 +93,11 @@ for the next card.
    interval, condition-driven).
 2. `TestForcePreemptionDrill`: wait for the worker's first observation
    (D1), land the interrupt, sample, then poll for growth (D2).
-3. The raw-unprivileged-interrupt case: wait for the worker to be up
-   (D1), then assert both that the subject stayed `in_progress` and
-   that the stream kept growing across the window (D3).
+3. The raw-unprivileged-interrupt case: sample the stream length as
+   the raw append returns, poll until it has advanced by **two** lines
+   (the D3 handshake, which is what proves the worker evaluated the
+   raw interrupt and declined), then assert the subject is still
+   `in_progress`. No settle duration remains in this test.
 4. Run the package repeatedly and under load
    (`go test ./cmd/seed/ -run 'Preempt' -count=10`, and once with
    `-p 1` coverage instrumentation as CI runs it) to confirm the flake
@@ -93,8 +119,11 @@ for the next card.
 2. The force drill establishes the worker is live before the
    interrupt, and asserts growth after it by polling rather than by
    elapsed time.
-3. The raw-interrupt case can no longer pass vacuously: it asserts a
-   live, still-metering worker alongside the unchanged state.
+3. The raw-interrupt case can no longer pass vacuously OR flake: it
+   waits for the two-line handshake that proves the worker completed
+   an interrupt check against a ledger containing the raw event, and
+   only then asserts the unchanged state. No fixed settle duration
+   survives anywhere in the file.
 4. No production file changes; the scenarios, verbs and orderings the
    drills exercise are unchanged.
 5. `go test ./cmd/seed/ -run 'Preempt' -count=10` green, and green
