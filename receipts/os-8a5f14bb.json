@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-8a5f14bb",
   "merge_base": "08c6f1f1e911757413b871eb07b27de904e165a1",
-  "head": "4a51c4dae56edcce6a6ce148d8bf7f84c9095942",
+  "head": "e92a1943d06c3216fe952a97917715a8514a8b98",
   "plan_path": "plans/os-8a5f14bb.md",
   "plan_sha256": "2221f5facb7fe130a6ccc5611e33fe8b1f47924a5bdebd2f31c906d1b32628bd",
   "diff_files": [
@@ -31,7 +31,7 @@
     "next/spec/maintenance.md",
     "next/spec/observations.md"
   ],
-  "diff_sha256": "64c7b397c0e9dda94e998555c8c0a56d2d0cf169d5a3f21d30b40766de485dd1",
+  "diff_sha256": "afbb3f9f0d08268c9b5f791a7baa7009899e718929dec5c4e20b7fcff1083e53",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
