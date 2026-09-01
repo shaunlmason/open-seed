@@ -865,3 +865,4 @@
 {"actor":"shaunlmason","data":{"title":"next: four review fixes for the worker loop (identity, contention, fence, packet leak)"},"task":"os-378e44f3","ts":"2026-09-01T15:13:23Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-378e44f3","ts":"2026-09-01T15:13:54Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T16:13:57Z"},"task":"os-378e44f3","ts":"2026-09-01T15:13:57Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-378e44f3","ts":"2026-09-01T15:15:31Z","verb":"transition"}
