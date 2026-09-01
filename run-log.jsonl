@@ -773,3 +773,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-01T06:43:09Z"},"task":"os-7e197768","ts":"2026-09-01T05:43:09Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-d4b80256","kind":""},"task":"os-7e197768","ts":"2026-09-01T05:45:45Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-7e197768","ts":"2026-09-01T05:45:52Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-68ea0b2d","ts":"2026-09-01T05:46:52Z","verb":"promote"}
