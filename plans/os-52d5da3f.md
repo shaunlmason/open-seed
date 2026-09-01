@@ -42,10 +42,16 @@ polish.
   which verbs leave a state, so the discharging set for a
   state-shaped obligation is exactly the verbs whose `from` matches
   the subject's state and whose class the owed-by actor could hold.
-  Where an obligation is fact-shaped rather than state-shaped (an
-  unsettled run, an open reservation) the discharging verb is the
-  one the spec pairs with it (`run.settled`, `budget.settle` /
-  `budget.release`), cited to its spec file. Nothing here re-derives
+  Some obligations are **fact-shaped**, not state-shaped: their
+  closing verb changes no lifecycle state and appears in no table
+  row. That set is closed and each member cites the spec pairing it
+  with its fact — `run.settled` for an unsettled run, `budget.settle`
+  / `budget.release` for an open reservation, and
+  **`verdict.rendered` for a pending submission**
+  (`next/spec/verdicts.md`; review finding on this PR — the table's
+  only exits from `review` are `merge.observed`, `contract.returned`
+  and `contract.cancelled`, so a table-only derivation would have
+  advertised no useful discharger for the verifier lane at all). Nothing here re-derives
   legality: an obligation whose `discharged_by` verb is refused at
   the same position is the III.I row-2 bug class one level up and
   gets the same treatment in D5.
@@ -63,11 +69,24 @@ polish.
   metering-detection obligation, and deliberately **position-
   anchored**: flagged only once the subject has taken a subsequent
   claim window or reached a terminal state, never mid park/reap
-  flow), `budget.open` (a valid open reservation; owed by the
-  holder), and `contract.blocked` (state `blocked`; owed by whoever
+  flow), `budget.open` (a valid open reservation **while the
+  subject is in_progress**; owed by the holder), and
+  `contract.blocked` (state `blocked`; owed by whoever
   the `blocked-on` names, or the operator lane when it names no
   one). Anything else waits for a card: an open-ended kind list
   would make the projection a policy surface, which it must not be.
+  The `budget.open` window restriction is a finding, not a
+  preference (review finding on this PR): `admit.go` gates every
+  budget verb on `in_progress`, so once the holder leaves the window
+  a still-open reservation has **no admissible closing act** — both
+  advertised dischargers refuse. An obligation nobody can discharge
+  is an anomaly, not an obligation, so this projection emits none;
+  the stranded-capacity gap itself is card `os-d6963652`, which
+  weighs an admission change against routing it to Phase 9 item 3's
+  maintenance reap (the precedent the Phase 7 exit set for unsettled
+  runs). This plan neither fixes nor hides it: it declines to
+  advertise a discharge that cannot happen, and names where the fix
+  is being decided.
 - **D4 — the situation read is one position-stamped envelope, and
   `--since` is a delta, not a diff.** `seed situation --ledger <dir>
   --key <k> [--subject s] [--since <position>]` renders the
@@ -76,10 +95,19 @@ polish.
   lane-owed), the subjects where the caller holds an active window
   with the fence, unread message count, and the budget block the
   envelope already knows how to render. With `--since <position>`
-  the response carries only obligations that **arose or changed at
-  or after** that position, plus a count of those unchanged, because
-  the history is append-only and positions total: a resuming lane
-  pays for the delta rather than reconstructing the world. The read
+  the response is a **complete change report**, not a filtered list:
+  obligations that arose or changed at or after that position, **plus
+  an explicit `discharged` list** naming every obligation that stood
+  before the cited position and no longer does, keyed by its stable
+  identity `(subject, kind)` with the position that discharged it,
+  plus a count of those unchanged. Removals must be explicit (review
+  finding on this PR): a delta of standing rows alone leaves a
+  resuming lane holding a discharged obligation forever, and an
+  unchanged *count* cannot say what disappeared. Stable identity is
+  what makes the response applicable, so `(subject, kind)` is
+  normative rather than incidental, and applying the response to a
+  prior snapshot must reproduce the standing set exactly — the
+  property the drills assert. The read
   is read-only and idempotent, opens the ledger read-only, journals
   no attempt (it is not an admission-boundary attempt), and stamps
   affordances exactly as every other keyed surface does.
@@ -89,7 +117,11 @@ polish.
   drafted and run through the enforcing `admit.Check` for the owed
   actor; an obligation advertising a verb that admission refuses at
   the same position fails the class by name. Lane-owed kinds probe
-  with a fixture key holding the lane's capability. This is what
+  with a fixture key holding the lane's capability. The sweep also
+  asserts that **every emitted obligation carries a non-empty
+  `discharged_by`** (review finding on this PR: a sweep over an empty
+  discharger set passes vacuously, worthless exactly where a kind's
+  mapping was forgotten). This is what
   keeps the projection honest without letting it become a second
   legality authority.
 - **D6 — scope guard.** No new authority, no new source of truth, no
@@ -138,15 +170,22 @@ polish.
 2. The six kinds are covered by table-driven tests, `run.unsettled`
    position-anchored per the Phase 7 exit's routing.
 3. `seed situation` returns one position-stamped envelope; `--since`
-   returns only changed obligations plus an unchanged count; the
-   read journals nothing and mutates nothing.
+   returns arisen-or-changed obligations **and an explicit
+   `discharged` list keyed by `(subject, kind)`**, such that applying
+   the response to a prior snapshot reproduces the standing set
+   exactly (asserted by drill); the read journals nothing and mutates
+   nothing.
 4. The drift sweep fails when an advertised `discharged_by` verb is
-   refused at the same position.
-5. `next/spec/obligations.md` documents the shape, kinds, derivation
+   refused at the same position, and fails when any emitted
+   obligation carries an empty `discharged_by`.
+5. `budget.open` is emitted only inside the live claim window, with
+   the outside-window stranded-reservation gap named and routed to
+   card `os-d6963652` rather than papered over.
+6. `next/spec/obligations.md` documents the shape, kinds, derivation
    and absences; `projections.md` references it.
-6. The loop-verbs follow-up card exists and is named in the progress
+7. The loop-verbs follow-up card exists and is named in the progress
    entry, so item 5 reads as one obligation with two landings.
-7. `make check` green, coverage gate ≥90% held.
+8. `make check` green, coverage gate ≥90% held.
 
 ## Validation Commands
 
