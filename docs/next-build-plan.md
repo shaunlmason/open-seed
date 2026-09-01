@@ -224,9 +224,32 @@ versioned.
    metering-detection obligation; post-close settlement is a valid intermediate
    state, so the condition is position-anchored, never mid park/reap flow).
 4. Small-team mode and fleet mode end-to-end fixtures.
+5. **The lane-facing surface.** Lanes are defined here but nothing defines the
+   surface they act through: today the CLI is the raw protocol seam (`ledger append
+   --verb claim.taken --payload …`, fences read out of a projection by hand,
+   four-part packets hand-built). Three parts, one deliverable. (a) An **obligations
+   projection**: per subject and actor, what is owed, since which position, under
+   which clock, and which verbs discharge it — a projection like every other
+   (deterministic, byte-identical, position-stamped, rebuildable,
+   non-authoritative), deriving `discharged_by` from the transition tables so it
+   invents no legality; an obligation whose discharging verb is refused at the same
+   position is the III.I row-2 bug class one level up, and carries the same
+   regression-class treatment. (b) A **situation read**: what is true for me now —
+   standing obligations with clocks, active windows and fences, unread messages,
+   budget headroom — with `--since <position>` returning only what changed, so a
+   resuming lane pays for the delta rather than reconstructing the world. (c) **Loop
+   verbs** that derive every argument the system can derive (the fence from the
+   active window, the reservation id from the budget view, the base range from the
+   repository) and refuse before signing what the tables would refuse after, naming
+   the act that would succeed. This is Phase 8's principle one level up — one rule
+   set, enforcement and advertisement — applied to situation and argument
+   construction, and it is what promotion's loop-completeness criterion (§5) needs:
+   a lane that cannot orient or choose cannot run unattended, whatever the
+   conformance report says.
 
 *Exit:* charter III.J — both modes run the full loop in CI; injection corpus green;
-maintenance runs unattended in the fixture.
+maintenance runs unattended in the fixture. This phase carries promotion's
+lanes-operable and loop-completeness gates (§5).
 
 ### Phase 10 — Qualification and evaluation  *(deps: 9)*
 
@@ -276,6 +299,9 @@ converts to a workflow through the gates.
 6. Docs generation: lifecycle prose from `transitions.json`; operator handbook;
    simulation mode (credential-free end-to-end).
 
+This phase carries promotion's migration gate (item 5) and, in item 1, the drill
+that must be green before the self-hosting cutover (§5).
+
 *Exit:* charter III.B (service posture), III.O (compromised-actor drill in CI),
 III.P complete; the fixture organization runs a week-long simulated backlog
 (accelerated clock) meeting III.R's zero-violation bar.
@@ -311,3 +337,62 @@ admission intake (III.B says MAY). File cards when Phase 13 is exhausted.
 Maintain `next/docs/progress.md`: one line per plan item — `phase.item — card id —
 PR — state`. Update it in every task PR touching `next/**`. It is the single place a
 fresh agent reads to find the frontier; keep it truthful before starting new work.
+
+## 5. Promotion (spin-out)
+
+The ground rules say `scripts/seed` (v1) "remains the only coordination entry point
+for doing the work **until spin-out**", and the autonomy contract lists
+publishing/spin-out among the few escalations. This section says what spin-out is,
+what must be true first, and who decides.
+
+**Two steps.** *Self-hosting*: this repository's own development coordinates on
+Seed, with v1 retained read-only for its history. *Distribution*: Seed becomes what
+new users clone. **Neither cutover is autonomously decidable.** Spin-out *is* the
+entry-point switch, so the self-hosting cutover is itself the reserved escalation —
+renaming the later publish does not authorize the earlier authority switch. Agents
+drive the work up to each gate, present the evidence, and stop.
+
+**Criteria.** Promotion to self-hosting is met when, at the enforced self-hosted
+posture:
+
+1. **Loop-completeness.** A lane runs poll → claim → plan-gate → work → meter →
+   submit → verdict → merge-observe → deliberate exit, plus escalation and messages,
+   entirely through Seed verbs, orienting from one position-stamped read rather than
+   hand-assembling ledger payloads and hand-computing fences (Phase 9 item 5).
+2. **Lanes operable.** Phase 9 complete: role fragments, dispatcher
+   least-capability, injection corpus green, worker loop with exhaustion parking,
+   escalation with packet/question/decision, maintenance runnable unattended.
+3. **Migration proven.** `seed import --from-open-seed` (Phase 12 item 5) drilled
+   against a real export of *this* repository's v1 state, not only a fixture.
+4. **Shadow run.** Seed coordinates a declared slice of this repository's own cards
+   beside v1 for a stated window, with any divergence reconciled and recorded.
+5. **Cutover and rollback written down.** Which entry point flips when, what stays
+   authoritative where during the window, and the documented path back.
+6. **Core conformance.** Phases 0 through 12 complete, so every pillar's mechanisms
+   stand, with `doctor` reporting exactly which Phase 13 rows remain open.
+7. **The compromised-actor drill green in CI** (Phase 12 item 1) **before the
+   cutover, not after.** The cutover is when real authority moves to Seed, so the
+   drill demonstrating the §I.2 ceiling against a valid stolen key must precede it;
+   nothing is at risk while Seed coordinates nothing.
+
+**What is not required.** Phase 13 alone follows promotion — the plan already says
+full Part III conformance is claimable only after that phase, with `doctor`
+reporting the open rows meanwhile. Phases 10 and 11 **are** required: "Phases 0–12
+deliver core conformance" describes what those phases deliver collectively, Phase
+10's exit owns III.E and III.G and the III.O eval items, Phase 11's owns III.K,
+criterion 6 demands every pillar's mechanisms, and Phase 12 declares `deps: all`.
+Promoting without them would hand real coordination to a system whose verdicts
+carry no calibration and whose grants carry no runtime qualification. If an earlier
+*supervised* step is ever wanted — Seed coordinating real work while humans remain
+at every merge gate — it is a distinct milestone that must name what it trades away
+(III.E tuples, III.G calibration, III.K curation), carry its own risk statement, and
+be accepted by a human as the deviation it is, never presented as consistent with
+this phasing.
+
+**Critical path.** Phase 9 (including item 5) → Phases 10 and 11, which both declare
+`deps: 9` and therefore run in parallel with each other → Phase 12 in full → shadow
+run → the escalated self-hosting cutover → the escalated distribution step. Phase 13
+follows. Promotion is gated by four more phases, not one.
+
+This section is the plan's, not the charter's: it schedules and defines a milestone
+and is never itself a Part III criterion.
