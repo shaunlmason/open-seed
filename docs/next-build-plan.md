@@ -246,7 +246,11 @@ maintenance runs unattended in the fixture.
 1. Staged pipeline stores (observations → hypotheses → validated → policy) with
    grant-gated boundaries; workers append candidates only.
 2. Promotion gate: ≥2-trajectory support, applies-when, provenance, last-validated;
-   adversarial evaluation for behavior-changing lessons; contested state.
+   adversarial evaluation for behavior-changing lessons; contested state. The
+   applies-when carries its delivery moment: a promoted lesson whose applies-when
+   matches the claimed subject surfaces in the claim packet and in the response
+   envelope at claim time (the charter III.I row the Phase 8 exit routes here —
+   knowledge nobody is shown at the right moment is knowledge that does not exist).
 3. Poisoning drill: constructed trajectories fail to achieve promotion.
 4. Expiry, retirement (evidence kept), rollback-by-revert.
 5. Flywheel v0: recurring-shape detection from the ledger → drafted workflow → mock
@@ -289,8 +293,12 @@ adapter), and the doctor reports which Phase 13 criteria remain open until then.
 3. Non-primary forge adapter for the forge extras (III.N).
 4. Federation read remotes and cross-repo request ingress (III.N).
 5. A2A-shaped cross-organization boundary (III.N).
+6. Machine-protocol surface exposing the CLI's verbs with identical semantics, and
+   platform parity (including Windows) documented and tested (III.I — the row the
+   Phase 8 exit routes here; the CLI stays the complete interface, so this adds a
+   second surface over the same rule set, never a second semantics).
 
-*Exit:* the named III.F/III.H/III.N criteria green; the conformance report shows
+*Exit:* the named III.F/III.H/III.I/III.N criteria green; the conformance report shows
 Part III complete at the enforced self-hosted posture.
 
 ## 3. Backlog (true extras, not conformance-blocking)

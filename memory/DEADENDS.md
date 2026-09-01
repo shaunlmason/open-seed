@@ -42,3 +42,12 @@ reason, so the next agent doesn't burn a session rediscovering why.
   untouched at `todo`: a green-looking result that measured nothing. Assert that
   fixtures were actually created before drawing a conclusion from what happened
   to them.
+- 2026-09-01 (os-ef715d17): refusals-only telemetry cannot produce a
+  rate. The first 8.3 design journaled refusals and took the
+  denominator from the chain over the journal's position span, which
+  miscounts by construction (one refusal at tip 10 followed by a
+  hundred clean appends reads 0.5000, not ~0.0099) and mixes an
+  operator-local numerator with an all-actors denominator, so the
+  metric would have measured unrelated ledger traffic rather than an
+  affordance gap. Journal ATTEMPTS, both outcomes, at the same seams:
+  numerator and denominator must come from one population.

@@ -384,3 +384,33 @@ Fresh sessions read this file instead of rediscovering.
 - `seed task plan-unblock` takes the PR as `--pr N` (it builds the
   `plan:N` entry itself); passing the entry via `--blocked-on` or a
   URL yields `invalid_transition`, the same error as a wrong state.
+- 2026-09-01 (os-ef715d17): a best-effort writer paired with a strict
+  reader needs a commit marker, or one torn write poisons every later
+  read forever. The attempts journal writes best-effort (journaling
+  must never fail the verb it rides) but is read strictly (a declared
+  input's garbage is the declarer's error), so a short write under
+  disk pressure would have refused every future report build; the
+  terminating newline became the commit marker and an unterminated
+  final fragment is ignored, while terminated lines stay strict.
+- 2026-09-01 (os-ef715d17): a cache several processes rewrite needs a
+  per-writer temp name. The ledger's HEAD used one shared `HEAD.tmp`
+  while both the append path and `Open`'s repair path wrote it, so a
+  reader's rename could consume the appender's temp and fail its
+  rename with ENOENT — a CI flake that only reproduced under
+  contention. Also preserve the target's mode: `os.CreateTemp` opens
+  at 0600 and a rename carries that over whatever the file had.
+- 2026-09-01 (os-ef715d17): advertisement/enforcement drift is
+  testable as a class, not just at curated stations. Sweep every
+  prefix position of one shared scenario, and at each position
+  independently re-draft every advertised option and run it through
+  the enforcing path: today the property holds by construction, and
+  the sweep is what keeps a later split (caching, memoization, a
+  parallel derivation) from drifting silently. Curated
+  presence/absence assertions are not equivalent coverage — they
+  never re-draft what they list.
+- 2026-09-01 (os-ef715d17): a position stamp is only useful if the
+  reader knows which ordinal it carries. `stampTip` writes the
+  zero-based tip position while a context's `Count` is the record
+  count, so any check comparing them must use `Count - 1`; the
+  distinction is easy to get wrong in exactly the drill meant to
+  prove the stamp trustworthy.

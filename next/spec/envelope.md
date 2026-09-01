@@ -32,8 +32,12 @@ Every verb response is exactly one JSON line:
   schema itself is unchanged by that metric.
 - `position` is the ledger position the response was computed at, so a
   concurrent change is detectable rather than mysterious (charter §II.10).
-  It is `null` until the ledger lands (Phase 1); from then on every response
-  stamps it.
+  Every response that reached the ledger stamps it; a refusal raised before a
+  tip was ever read (a malformed invocation, an unreadable ledger directory)
+  carries `null` rather than inventing a position, because a fabricated stamp
+  would break exactly the detection this field exists for. The attempts journal
+  turns on the same distinction: an unstamped response is not an
+  admission-boundary attempt ([`refusals.md`](refusals.md)).
 - `affordances` lists the verbs currently legal **for this actor on this
   subject**, computed by drafting one signed probe per catalog verb and
   running the same rule set admission enforces (one rule set, two

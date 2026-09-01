@@ -517,18 +517,70 @@ task PR (an administrative card, not a Phase 7 item).
   seven enrolled-lane pairs at every position, and the CLI drill
   pinning that stamped position and stamped list agree with
   independent recomputation on success and refusal envelopes)
-- 8.3 refusal-rate metric in the report — os-edf73d66 — **review**
-  (task PR against plan #164 as amended: the attempts journal
+- 8.3 refusal-rate metric in the report — os-edf73d66 — **done**
+  (#165 merged, card closed; plan #164 as amended: the attempts journal
   journaling both outcomes best-effort at every stamped
   admission-boundary seam, the journal as a declared digest-covered
   report input via --refusals, the nullable refusals section with
   one-population counts and the four-decimal rate, report v10,
   next/spec/refusals.md, and the D4 drills including the
-  1-refusal-beside-100-admissions=0.0099 fixture)
+  1-refusal-beside-100-admissions=0.0099 fixture; the review round
+  hardened the journal against torn short writes — Note restores the
+  previous length when the fragment is provably the tail, and Load
+  treats the terminating newline as the commit marker so an
+  uncommitted fragment cannot poison every future declaring build,
+  while terminated lines stay strict)
 - (out of item) ledger writeHead race fix — os-c6fb95ee — **done**
   (#161 merged, card closed: per-writer unique temps preserving the
   established HEAD mode, with the store-level contention regression
   test; the flake tripped TestGracefulPreemptionDrill on main)
+
+**Phase 8 exit (the III.I subset docs/next-build-plan.md scopes):
+met.** Met means the two criteria the plan's own exit line names,
+the scoped-exit posture of the Phase 2, 3, 5, 6, and 7 records. The
+same-rule-set property test is green on main (#163: every listed
+verb independently re-drafted and run through the enforcing Check at
+every prefix position of the shared walk scenario, for all seven
+enrolled-lane pairs, with determinism and strictly ascending output
+asserted, so a later split between computation and enforcement fails
+as a named class rather than drifting), and the envelope schema is
+stable and versioned (seed-envelope/0, its bump discipline stated in
+next/spec/envelope.md, exit codes allocated in the spec table rather
+than ad hoc). Charter III.I as a whole is NOT claimable at this
+exit, so all five rows are walked rather than the two the exit line
+scopes. Row 1 (versioned schema-stable envelope, structured errors,
+meaningful exit codes, the verbs currently legal for this actor on
+this subject, the position it was computed at): met by #160, with
+three bounded carve-outs named rather than glossed — a response
+carrying no actor-and-subject context (keyless read surfaces; probes
+must be signed, so a fingerprint alone cannot compute a list) lists
+the empty set, which is the honest answer where no such set exists;
+actor.enrolled is listed only where the prober could supply the
+subject's public key, which no fingerprint-holder can derive; and a
+refusal that never opened a ledger carries a null position rather
+than inventing one, which the spec sentence corrected in this PR now
+states. Row 2 (one rule set for computation and enforcement;
+listed-then-refused at the same position a bug class with a
+regression test): met by #160's computation plus #163's sweep. Row 4
+(refusal rates tracked as an affordance-gap metric): met by #165's
+attempts journal — attempts, both outcomes, journaled best-effort at
+every stamped admission-boundary seam — and report v10's refusals
+section, whose rate draws numerator and denominator from that one
+population rather than from the chain. Row 3 (the CLI is the
+complete interface; a machine-protocol surface exposes identical
+semantics; platform parity including Windows documented and tested)
+and row 5 (matching promoted lessons surface in packets and
+envelopes at claim time) are recorded UNMET, not claimed: no
+machine-protocol surface and no platform-parity documentation or
+test exist today, and row 5 presupposes the curator's promoted-lesson
+store. Neither was routed anywhere in the build plan, so this task
+extends the plan to name them in the landing phases' own text — row
+3 as Phase 13's machine-protocol-and-parity item, with III.I added
+to that phase's exit line, and row 5 in Phase 11 item 2's promotion
+gate, beside the applies-when it already records. Full charter III.I
+conformance is therefore claimable only once Phase 11 and Phase 13
+both close. This exit record is card os-ef715d17's task PR (an
+administrative card, not a Phase 8 item).
 
 ## Frontier
 
@@ -544,16 +596,30 @@ merged with every card closed. Phase 7 is done and closed: every
 plan (#144/#146, #147/#148, #150, #153), every implementation (7.1
 #145, 7.2 #149, 7.3 #151 with follow-up #152, 7.4 #154), and the
 exit record above (card os-c9e24032's task PR) are merged with
-every card closed. 8.1 (#160), the
-out-of-item ledger writeHead race fix (#161), and 8.2 (#163, the
-regression class over the shared walk scenario) are merged with
-their cards closed.
-**Next action: land 8.3** (os-edf73d66, the refusal-rate report
-metric — plan #164 merged, task PR in review), then the Phase 8
-exit record (a new card, plan-first, per the Phase 5-7 exit
-precedent) against the build-plan exit line: charter III.I's
-same-rule-set property test (8.2) and the envelope schema stable
-and versioned. Phase 9's worker-lane loop carries the
-exhaustion-park obligation the Phase 7 exit routes to it.
+every card closed. Phase 8 is done and closed: every plan (#158,
+#162, #164), every implementation (8.1 #160, 8.2 #163, 8.3 #165),
+the out-of-item ledger writeHead race fix (#161 against plan #159),
+and the exit record above (card os-ef715d17's task PR) are merged
+with every card closed.
+**Next action: Phase 9 item 1** — the six lane role definitions as
+composable fragments, the dispatcher's least-capability posture, the
+injection conformance suite against dispatcher input handling, and
+the worker-lane loop carrying the exhaustion-park obligation the
+Phase 7 exit routes to it — a new card, plan-first, per the loop;
+then Phase 9 items 2 through 4 (escalation with packet, question and
+decision; the unattended maintenance loop, whose lint list carries
+the Phase 7 exit's unsettled-run detection; small-team and fleet
+fixtures).
+The III.I remainder rides the phases it was routed to: Phase 11 item
+2 carries claim-time lesson surfacing, and Phase 13 carries the
+machine-protocol surface and platform parity, with III.I on its exit
+line — full III.I conformance closes only when both do.
+**The destination is promotion (spin-out)**: Seed coordinating this
+repository's own development, and then becoming what new users
+clone. What promotion requires — and a lane-facing surface proposed
+as a further Phase 9 item — is card os-768361cc's plan-gated
+build-plan amendment, still open at this writing. No promotion
+criteria are asserted here, and none should be read from this file:
+the amendment is the authority once it merges.
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
