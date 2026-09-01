@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-01T20:49:29Z"
     lease_expires: "2026-09-01T22:18:58Z"
 created_at: "2026-09-01T20:22:10Z"
-updated_at: "2026-09-01T21:18:58Z"
+updated_at: "2026-09-01T21:22:34Z"
 ---
 
 Phase 9 item 3 of docs/next-build-plan.md. Above L1: plan first at
@@ -75,3 +75,7 @@ Open questions for the plan to decide and record:
    row? Each has a different authority.
 4. How is "runnable unattended" drilled without a scheduler? Item 4's
    fixtures run wakeless; this loop should be drillable the same way.
+
+## Evidence ev-3f0f3164 (pr, seed-next-implementer, 2026-09-01T21:22:34Z)
+
+https://github.com/shaunlmason/open-seed/pull/205
