@@ -8,9 +8,9 @@ claim:
     actor: seed-next-implementer
     token: c-aaf65c058ba0bc03
     claimed_at: "2026-09-01T02:31:28Z"
-    lease_expires: "2026-09-01T03:31:28Z"
+    lease_expires: "2026-09-01T03:45:19Z"
 created_at: "2026-08-31T23:10:23Z"
-updated_at: "2026-09-01T02:31:28Z"
+updated_at: "2026-09-01T02:45:19Z"
 ---
 
 Build plan Phase 8 item 3; charter III.I row 4 (refusal rates tracked as an affordance-gap metric) and section II.10. Refusals never reach the chain, so the metric needs a recorded source: journal admission refusals locally at the refusing CLI seams (best-effort, never failing the verb), declare the journal to the report build as an input following the observations pattern (digest-covered, section null on input-free builds), and emit counts, by-code/by-verb breakdowns, and a position-span rate. Plan-first (L2).
