@@ -31,19 +31,40 @@ it is pushed to or only committed in:
 | bare fixture | `internal/gitref/gitref_test.go` | bare, pushed to |
 | `verdictRepo` | `cmd/seed/verdict_cli_test.go` | non-bare, committed in |
 | `clonedRepo` | `cmd/seed/loop_cli_test.go` | bare origin **and** a clone that pushes |
+| bare remote, mirror clone | `cmd/seed-admit/drill_test.go` | bare, pushed to; `clone --mirror` |
+| three fixtures | `cmd/seed-admit/main_test.go` | two bare, one non-bare |
 
 So the fix applies to the class, not to the one fixture that happened
 to lose the race first.
 
 ## Design decisions (binding for this task)
 
-- **D1 — configure at creation, never clean up after.** Every git
-  repository a fixture creates is created with `gc.auto=0`,
-  `gc.autoDetach=false` and `receive.autoGC=false`, passed as `-c`
-  flags on the creating command (and on the clone) so the setting is
-  in effect from the first object write, before any hook could spawn a
-  collector. A post-hoc `git config` write would leave a window; a
-  `t.Cleanup` that waits for stragglers would be a race against a
+- **D1 — WRITE the settings into the repository, before its first
+  object.** Every git repository a fixture creates gets `gc.auto=0`,
+  `gc.autoDetach=false` and `receive.autoGC=false` **written into its
+  own config**, immediately after `init` (or `clone`) and before any
+  object-producing operation.
+
+  The first draft of this plan said to pass them as `-c` flags on the
+  creating command. **That would have shipped a no-op** — review
+  finding on this PR, verified here:
+
+  ```console
+  $ git -c gc.auto=0 -c receive.autoGC=false init -q --bare r.git
+  $ git -C r.git config --get gc.auto        # exit 1: unset
+  $ git -C r.git config --get receive.autoGC # exit 1: unset
+  ```
+
+  `git -c` scopes a value to **that one invocation**; it writes
+  nothing. So the later commits, and above all the bare remote's own
+  `receive-pack` — the process that actually lost the race — would
+  still have run under stock auto-gc, and the flake would have
+  survived a change that read like a fix. A no-op that looks like a
+  fix is worse than no fix at all, because it retires the card.
+
+  `init --bare` produces no objects, so a `git config` write on the
+  next line is still before the first object: there is no window, and
+  a `t.Cleanup` that waits for stragglers would be a race against a
   race.
 - **D2 — all three settings, because they are three different
   spawners.** `gc.auto=0` disables the heuristic entirely;
@@ -64,21 +85,28 @@ to lose the race first.
   These are fixture-construction flags. Every assertion, timing and
   scenario stays exactly as it is; the drills must keep passing
   unchanged, which is the whole evidence that the fix is inert.
-- **D5 — `clonedRepo` is covered if it exists at implementation
-  time.** It arrives with `os-7e197768` (#173, unmerged at this
-  writing). The task implements against whatever bare-or-not git
-  fixtures the tree holds when it lands, so the sweep is stated as a
-  property ("every git repository a test creates") rather than as a
-  fixed list, and the drill in step 3 checks the property rather than
-  four names.
+- **D5 — the sweep is a property over the tree, not a list of names.**
+  The table above is what the tree holds today, and it is already
+  wider than the first draft recorded: `cmd/seed-admit` carries three
+  more fixtures plus a `clone --mirror` (review finding on this PR —
+  the stated file scope contradicted the acceptance criterion, which
+  said *every* `next/**` test repository). `clonedRepo` has since
+  landed with #173 and is in scope too. So the task implements
+  against whatever repository-creating fixtures the tree holds when it
+  lands, and the guard in step 3 checks the property rather than a
+  fixed set of names — which is exactly what keeps the scope and the
+  criterion from drifting apart again.
 
 ## Steps
 
-1. Add the shared fixture-config list to `cmd/seed` and
-   `internal/gitref` test helpers per D3.
-2. Apply it at every git repository creation in `next/**` tests: the
-   `git init` calls (bare and not) and the `git clone`, per the table
-   above and anything else present at implementation time.
+1. Add the shared hardening helper to the `cmd/seed`,
+   `cmd/seed-admit` and `internal/gitref` test packages per D3: it
+   takes a repository path and writes the three settings into that
+   repository's config.
+2. Call it immediately after every repository creation in `next/**`
+   tests — every `git init` (bare and not), every `git clone`
+   (including `--mirror`) — per the table above and anything else
+   present at implementation time.
 3. Add a guard that keeps the property true: a test that walks the
    `next/**` test sources for `git init` / `git clone` invocations and
    fails if one is constructed without the hardening flags. A comment
@@ -93,6 +121,7 @@ to lose the race first.
 - `next/cmd/seed/remote_test.go`, `next/cmd/seed/verdict_cli_test.go`,
   `next/cmd/seed/loop_cli_test.go` (if present), and any further
   `next/cmd/seed` fixture that creates a repository
+- `next/cmd/seed-admit/main_test.go`, `next/cmd/seed-admit/drill_test.go`
 - `next/internal/gitref/gitref_test.go`
 - one new guard test
 - `memory/*` if warranted
@@ -101,11 +130,15 @@ to lose the race first.
 ## Acceptance Criteria
 
 1. Every git repository created by a `next/**` test — bare or not,
-   pushed to or only committed in — is created with `gc.auto=0`,
-   `gc.autoDetach=false` and `receive.autoGC=false`, applied on the
-   creating command rather than written afterwards.
+   pushed to or only committed in, `cmd/seed-admit` included — has
+   `gc.auto=0`, `gc.autoDetach=false` and `receive.autoGC=false`
+   **written into its own config**, before its first object. A `git
+   -c` flag on the creating command does NOT satisfy this and the
+   guard must reject it: `git -C <repo> config --get gc.auto` returns
+   the value in a fixture repository.
 2. A guard test fails if a new fixture creates a repository without
-   them.
+   them, and it covers `cmd/seed-admit` as well as `cmd/seed` and
+   `internal/gitref`.
 3. No production file changes; no assertion, timing or scenario
    changes in any existing drill.
 4. `go test ./cmd/seed/ ./internal/gitref/ -count=5` green.
@@ -121,6 +154,6 @@ make check
 
 ## Expected diff shape
 
-A shared flag list in two test packages, applied at four or five
-creation sites, plus one guard test. Roughly +60/-10 lines, all in
-`next/**` test files.
+A shared hardening helper in three test packages, called at roughly
+nine creation sites, plus one guard test. Roughly +90/-10 lines, all
+in `next/**` test files.
