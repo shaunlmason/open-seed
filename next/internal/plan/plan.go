@@ -206,3 +206,75 @@ func Classify(paths []string) Class {
 		return ClassMixed
 	}
 }
+
+// Item is one rubric item (plans/os-2e34f66a.md D1): the residue the
+// acceptance spec could not make a command, scored item by item by the
+// verifier with cited evidence and explicit uncertainty, never as one
+// holistic score (SEED-NEXT.md §7).
+type Item struct {
+	ID        string `json:"id"`
+	Criterion string `json:"criterion"`
+}
+
+// rubricIDRE is the id grammar: a slug, unique within the spec.
+var rubricIDRE = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
+
+// RubricError names the part of a rubric the parser refuses: a render
+// on such a spec refuses spec_unrunnable, since a rubric that cannot be
+// scored item by item cannot decide.
+type RubricError struct {
+	Detail string
+}
+
+func (e *RubricError) Error() string { return "rubric: " + e.Detail }
+
+// Rubric reads the "## Rubric" section exactly as Commands reads
+// "Validation commands": each bullet is `- <id>: <criterion>`, the id
+// a slug unique within the spec and the criterion non-empty. A spec
+// may carry both sections; a spec with neither, or an empty section,
+// yields no items and no error.
+func Rubric(doc []byte) ([]Item, error) {
+	lines := strings.Split(string(doc), "\n")
+	current := ""
+	var items []Item
+	seen := map[string]bool{}
+	for _, line := range lines {
+		if m := markerText(line); m != "" {
+			if m == "rubric" {
+				current = "rubric"
+			} else {
+				current = ""
+			}
+			continue
+		}
+		if current == "" {
+			continue
+		}
+		raw := strings.TrimSpace(line)
+		if raw == "" || !strings.ContainsAny(raw[:1], "-*+") {
+			continue
+		}
+		t := strings.TrimSpace(strings.TrimLeft(raw, "-*+ \t"))
+		if t == "" {
+			continue
+		}
+		id, criterion, ok := strings.Cut(t, ":")
+		id = strings.Trim(strings.TrimSpace(id), "`*_")
+		criterion = strings.TrimSpace(criterion)
+		if !ok || id == "" {
+			return nil, &RubricError{Detail: fmt.Sprintf("item %q carries no id: an item is `- <id>: <criterion>`", t)}
+		}
+		if !rubricIDRE.MatchString(id) {
+			return nil, &RubricError{Detail: fmt.Sprintf("id %q is not a slug (lowercase letters, digits and dashes)", id)}
+		}
+		if criterion == "" {
+			return nil, &RubricError{Detail: fmt.Sprintf("item %q carries no criterion", id)}
+		}
+		if seen[id] {
+			return nil, &RubricError{Detail: fmt.Sprintf("id %q appears twice: an id is unique within the spec, since the scorecard cites it", id)}
+		}
+		seen[id] = true
+		items = append(items, Item{ID: id, Criterion: criterion})
+	}
+	return items, nil
+}

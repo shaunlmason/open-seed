@@ -26,6 +26,20 @@ is explicit: only the literal booleans admit. An absent or null
 marker refuses — it decodes indistinguishably from a declared
 `false`, and silence must never decide whether content is armed.
 
+## The rubric
+
+Acceptance that cannot be a command is a **`## Rubric`** section of
+the same spec body (plans/os-2e34f66a.md D1): bullets `- <id>:
+<criterion>`, the id a slug unique within the spec. It is the residue
+the spec could not make a command, and it merges through the same gate
+as the commands: gate-before-run covers it, `plan.Rubric` reads it
+exactly as `plan.Commands` reads "Validation commands", a spec may
+carry both, and a spec with a rubric renders only over a scorecard the
+verifier scores item by item ([`verdicts.md`](verdicts.md), "The
+rubric and the scorecard"). A duplicate, empty or non-slug id refuses
+at render as `spec_unrunnable`: a rubric that cannot be scored item by
+item cannot decide.
+
 ## The gate rule: no tier exemption
 
 `executable: true` REQUIRES `gate`, **at every tier**. The charter's

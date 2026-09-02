@@ -97,6 +97,14 @@ func EvidenceAt(id string, s transition.SubjectState, store *artifact.Store, rep
 			}
 		}
 	}
+	// The scorecard's evidence-grade half (plans/os-2e34f66a.md D3)
+	// needs no merge: the cited artifact is graded wherever the
+	// verdict stands.
+	if s.Verdict != nil && s.Verdict.Scorecard != nil && store != nil {
+		if f := ScorecardAt(id, s.Verdict, store); f != nil {
+			out = append(out, *f)
+		}
+	}
 	if s.Merged == nil || s.Merged.SHA == "" || s.Verdict == nil {
 		// Record-derivable classes already cover chains this
 		// incomplete; there is no evidence to grade.
@@ -161,6 +169,46 @@ func Lessons(records []*event.Record, fold *transition.Fold, repo string, at tim
 			Detail: fmt.Sprintf("the promotion of %s does not resolve in the repository: %s — a fact a worker would be handed must verify before it surfaces", u.Lesson, u.Reason)})
 	}
 	return out
+}
+
+// ScorecardAt is the evidence-grade half of the scorecard rule
+// (plans/os-2e34f66a.md D3): the cited scorecard retrieves intact and
+// its items (id, score, uncertainty) equal the payload's, in order.
+// The record half, the derivation over the payload's items, is every
+// boundary's and classifies nothing here.
+func ScorecardAt(id string, v *transition.VerdictFact, store *artifact.Store) *Finding {
+	body, err := store.Get(v.Scorecard.Digest)
+	if err != nil {
+		return &Finding{Subject: id, Class: ClassScorecardUnverified,
+			Detail: fmt.Sprintf("the scorecard %s cited by the verdict at position %d is not retrievable intact: %v — the evidence a verdict points at must survive verbatim", v.Scorecard.Digest, v.Pos, err)}
+	}
+	var stored struct {
+		Items []transition.ScoreItem `json:"items"`
+	}
+	if err := json.Unmarshal(body, &stored); err != nil {
+		return &Finding{Subject: id, Class: ClassScorecardUnverified,
+			Detail: fmt.Sprintf("the scorecard %s cited by the verdict at position %d does not parse: %v", v.Scorecard.Digest, v.Pos, err)}
+	}
+	if why := ScoresDiffer(v.Scorecard.Items, stored.Items); why != "" {
+		return &Finding{Subject: id, Class: ClassScorecardUnverified,
+			Detail: fmt.Sprintf("the verdict at position %d carries items its stored scorecard %s does not: %s — the payload's items are what every boundary derived from, and the artifact is what the verifier scored", v.Pos, v.Scorecard.Digest, why)}
+	}
+	return nil
+}
+
+// ScoresDiffer names the first disagreement between the payload's
+// items and the artifact's, or "" when they agree.
+func ScoresDiffer(payload, stored []transition.ScoreItem) string {
+	if len(payload) != len(stored) {
+		return fmt.Sprintf("the payload scores %d items, the artifact %d", len(payload), len(stored))
+	}
+	for i := range payload {
+		p, a := payload[i], stored[i]
+		if p.ID != a.ID || p.Score != a.Score || p.Uncertainty != a.Uncertainty {
+			return fmt.Sprintf("item %d is %s/%s/%s in the payload and %s/%s/%s in the artifact", i, p.ID, p.Score, p.Uncertainty, a.ID, a.Score, a.Uncertainty)
+		}
+	}
+	return ""
 }
 
 // LessonsStale lists the lessons stale at the instant: the latest

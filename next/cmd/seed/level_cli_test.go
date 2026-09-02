@@ -31,12 +31,21 @@ func levelLedger(t *testing.T) (ld, src, specCommit, rng, priv string, keys map[
 	ld, src, base, specCommit, head, priv, rootKey, keys, _ := offerLedger(t)
 	// A sealer, so the tiers that require sealed checks can be
 	// rendered: the level is computed after the unsealed refusal, and
-	// every tier but trivial requires the seal.
+	// every tier but trivial requires the seal. The human: a key with
+	// a verdict grant beside operator standing (plans/os-2e34f66a.md
+	// D4), which renders the critical tier over the verifier's
+	// deferral; the root implemented these contracts, so L1 keeps it
+	// out.
 	sealKey, sealPub, sealFP := writeWorkerKey(t, 25)
 	keys["sealer"] = sealKey
+	humanKey, humanPub, humanFP := writeWorkerKey(t, 26)
+	keys["human"] = humanKey
 	for _, step := range [][]string{
 		{"actor.enrolled", sealFP, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "sealer"}`, sealPub)},
 		{"actor.granted", sealFP, `{"capability": "sealer"}`},
+		{"actor.enrolled", humanFP, fmt.Sprintf(`{"key": %q, "kind": "human", "name": "reviewer"}`, humanPub)},
+		{"actor.granted", humanFP, `{"capability": "verdict"}`},
+		{"actor.granted", humanFP, `{"capability": "operator"}`},
 	} {
 		if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
 			"--verb", step[0], "--subject", step[1], "--payload", step[2]); code != 0 {
@@ -62,7 +71,7 @@ func levelLedger(t *testing.T) (ld, src, specCommit, rng, priv string, keys map[
 		if tier != "trivial" {
 			if e, code := runEnv(t, "seal", "create", "--ledger", ld, "--subject", subject, "--repo", src,
 				"--checks", checks, "--key", keys["sealer"]); code != 0 {
-				t.Fatalf("seal create on %s: %d %+v", subject, code, e)
+				t.Fatalf("seal create on %s: %d %+v", subject, code, e.Error)
 			}
 		}
 		fence := rawAppendAt(t, ld, rootKey, version.Seed4, "claim.taken", subject, `{}`)
@@ -108,9 +117,23 @@ func TestVerdictRenderComputesTheLevel(t *testing.T) {
 	if code != 64 {
 		t.Fatalf("a partial declaration refuses at usage: %d %+v", code, e)
 	}
+	// The critical tier's render is a human's (plans/os-2e34f66a.md
+	// D4): the verifier refuses human_verdict whatever it declares,
+	// defers the whole verdict with the receipt it computed, and the
+	// human renders over that receipt, a key with operator standing
+	// being no sealed-checks recipient.
 	e, code = render("c-crit", declare("other/1")...)
+	if code != 20 || e.Error == nil || e.Error.Code != "human_verdict" {
+		t.Fatalf("a verdict-only key on a critical contract refuses human_verdict: %d %+v", code, e.Error)
+	}
+	e, code = runEnv(t, "verdict", "defer", "--ledger", ld, "--subject", "c-crit", "--repo", src, "--key", keys["verifier"])
+	if code != 0 || e.Result["owed_by"] != "lane:operator" || e.Result["receipt"] == nil {
+		t.Fatalf("the verifier defers the critical verdict whole, citing its receipt: %d %+v", code, e)
+	}
+	e, code = runEnv(t, append([]string{"verdict", "render", "--ledger", ld, "--subject", "c-crit", "--repo", src,
+		"--key", keys["human"], "--verdict", "pass"}, declare("other/1")...)...)
 	if code != 0 || e.Result["independence"] != "L2" {
-		t.Fatalf("a different model family on a critical contract renders L2: %d %+v", code, e)
+		t.Fatalf("the human renders L2 over the deferral's receipt: %d %+v", code, e)
 	}
 
 	drive("c-exec", "standard", true)

@@ -323,6 +323,12 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	if errors.As(err, &nie) {
 		return envelope.Fail(envelope.ExitNotIndependent, "not_independent", err.Error())
 	}
+	var ve *admit.VerdictError
+	if errors.As(err, &ve) && ve.Code != "" {
+		// The rubric derivation's refinements under checks_red
+		// (plans/os-2e34f66a.md D3; next/spec/envelope.md).
+		return envelope.Fail(envelope.ExitChecksRed, ve.Code, err.Error())
+	}
 	var pre *transition.PlanRequiredError
 	if errors.As(err, &pre) {
 		return envelope.Fail(envelope.ExitPlanRequired, "plan_required", err.Error())

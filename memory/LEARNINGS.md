@@ -1268,6 +1268,16 @@ the assertions read, and there is no copy to go stale.
 - Two parallel shell calls share one working directory: a `cd` in one
   moves the other. Use absolute paths in every call that runs beside
   another, or a merge intended for one worktree lands in another.
+- Before designing a human's act, check what the human's key can and
+  cannot hold. The sealed-checks recipient set excludes operator
+  standing, so a "human = verdict + operator" key can never compute a
+  receipt on a sealed subject; the deferral had to carry the receipt.
+  The drills that first went red were the existing critical-tier ones,
+  which is what they are for.
+- A shadowed `rep :=` inside an `if` is invisible until an act cites
+  the wrong payload two steps later; when a derivation "re-owes"
+  something already performed, check which payload was appended
+  before suspecting the derivation.
 - A fold that re-judges a fact "through the same checks" must include
   the grant: re-running the record gates alone binds a well-formed
   fact pushed raw under the wrong key. Read the keyring at the
