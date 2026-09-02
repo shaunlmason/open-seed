@@ -8,9 +8,9 @@ claim:
     actor: seed-next-implementer
     token: c-e99f832302a955dd
     claimed_at: "2026-09-02T10:36:51Z"
-    lease_expires: "2026-09-02T12:36:51Z"
+    lease_expires: "2026-09-02T12:57:03Z"
 created_at: "2026-09-01T14:55:14Z"
-updated_at: "2026-09-02T10:36:51Z"
+updated_at: "2026-09-02T10:57:03Z"
 ---
 
 Found while building the injection conformance suite (os-b779b4c7),
