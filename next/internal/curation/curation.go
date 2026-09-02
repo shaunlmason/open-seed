@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -234,8 +235,8 @@ func ParseLesson(subject string, raw []byte) (*Lesson, error) {
 	if !anchorRE.MatchString(l.Lesson) {
 		return nil, &ShapeError{LessonVerb, subject, fmt.Sprintf("lesson %q is not an anchored path (\"<path> @ <commit>\")", l.Lesson)}
 	}
-	if !strings.HasPrefix(l.Lesson, LessonsDir+"/") {
-		return nil, &ShapeError{LessonVerb, subject, fmt.Sprintf("lesson %q is not under %s/: the validated store is one place", l.Lesson, LessonsDir)}
+	if !UnderLessonsDir(l.Lesson) {
+		return nil, &ShapeError{LessonVerb, subject, fmt.Sprintf("lesson %q is not under %s/: the validated store is one place, and a path that climbs out of it names a file the store's lint never sees", l.Lesson, LessonsDir)}
 	}
 	if !anchorRE.MatchString(l.PR) {
 		return nil, &ShapeError{LessonVerb, subject, fmt.Sprintf("pr %q is not \"<pr> @ <merged-commit>\"", l.PR)}
@@ -248,6 +249,22 @@ func ParseLesson(subject string, raw []byte) (*Lesson, error) {
 		return nil, &ShapeError{LessonVerb, subject, fmt.Sprintf("the cited hypothesis %s is not this subject: a promotion is a fact on the hypothesis it promotes", c.Contract)}
 	}
 	return &l, nil
+}
+
+// UnderLessonsDir reports whether the anchor's path lies inside the
+// lessons store: the path is clean (no `.` or `..` segment, no doubled
+// or trailing separator, so a lexical prefix cannot be climbed out
+// of), relative, and prefixed by the store. A path such as
+// `next/knowledge/lessons/../x` matches the anchor grammar and
+// resolves outside the store, which is what the promotion must never
+// name (review finding on the task PR).
+func UnderLessonsDir(anchor string) bool {
+	p, _, _ := strings.Cut(anchor, " @ ")
+	p = strings.TrimSpace(p)
+	if p == "" || path.Clean(p) != p || strings.HasPrefix(p, "/") {
+		return false
+	}
+	return strings.HasPrefix(p, LessonsDir+"/")
 }
 
 // Observation is one admitted stage-one fact: a packet finding's
@@ -278,7 +295,7 @@ func ObservationAt(records []*event.Record, table *transition.Table, c Citation)
 	}
 	prefix := table.FoldRecords(records[:c.Position])
 	s, ok := prefix.State(e.Subject)
-	if !ok || s.Claim == nil {
+	if !ok || s.Claim == nil || !WindowAdmitted(records, s) {
 		return nil, false
 	}
 	switch {
@@ -323,12 +340,61 @@ func isExit(verb string) bool {
 	return false
 }
 
-// Failed reports whether the contract stands failed: its latest
-// verdict is a fail with no later pass. A failed trajectory supports
+// WindowAdmitted re-judges the claim window the fold reports: the
+// claim.taken at the fence is on the subject, signed by the holder,
+// and the holder held a capability the claim accepts at that prefix.
+// The lifecycle fold applies a legal transition whoever signed it, so
+// a raw-pushed claim by a grantless key opens an apparent window;
+// what looks like a holder's observation inside it passed no boundary
+// (review finding on the task PR).
+func WindowAdmitted(records []*event.Record, s transition.SubjectState) bool {
+	if s.Claim == nil || s.Claim.Fence < 0 || s.Claim.Fence >= len(records) {
+		return false
+	}
+	at := &records[s.Claim.Fence].Event
+	if at.Verb != "claim.taken" || at.Actor != s.Claim.Holder {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:s.Claim.Fence])
+	return err == nil && ring != nil && ring.HasAnyCapability(s.Claim.Holder, keyring.AcceptedCapabilities("claim.taken"))
+}
+
+// FailedAt reports whether the contract stands failed: its latest
+// AUTHENTICATED verdict is a fail. A verdict authenticates at its own
+// position when its signer held a verdict grant there and was no
+// claimant, past or present, nor the bound submission's signer at that
+// prefix (the verifier boundary's L1 rule); a raw-pushed pass by a
+// grantless or implementing key after an authentic fail clears nothing
+// (review finding on the task PR). A failed trajectory supports
 // nothing (the charter's support rule).
-func Failed(fold *transition.Fold, contract string) bool {
-	s, ok := fold.State(contract)
-	return ok && s.Verdict != nil && s.Verdict.Verdict == "fail"
+func FailedAt(records []*event.Record, table *transition.Table, contract string) bool {
+	failed := false
+	for pos, rec := range records {
+		e := &rec.Event
+		if e.Verb != transition.VerdictRenderedVerb || e.Subject != contract || !keyring.Applies(e.V) {
+			continue
+		}
+		var p struct {
+			Verdict string `json:"verdict"`
+		}
+		if json.Unmarshal(e.Payload, &p) != nil || (p.Verdict != "pass" && p.Verdict != "fail") {
+			continue
+		}
+		prefix := table.FoldRecords(records[:pos])
+		s, ok := prefix.State(contract)
+		if !ok || s.State != "review" || s.Submission == nil {
+			continue
+		}
+		if e.Actor == s.Submission.Signer || s.PriorClaimants[e.Actor] || (s.Claim != nil && e.Actor == s.Claim.Holder) {
+			continue
+		}
+		ring, _, err := keyring.StateAt(records[:pos])
+		if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(transition.VerdictRenderedVerb)) {
+			continue
+		}
+		failed = p.Verdict == "fail"
+	}
+	return failed
 }
 
 // SupportError is the boundary's refusal of a proposal's support.
@@ -358,7 +424,7 @@ func CheckSupport(records []*event.Record, table *transition.Table, fold *transi
 		if !ok {
 			return nil, &SupportError{subject, fmt.Sprintf("support entry %s is not an admitted observation (a deliberate exit with findings or a dead end, inside the holder's window)", raw)}
 		}
-		if Failed(fold, c.Contract) {
+		if FailedAt(records, table, c.Contract) {
 			return nil, &SupportError{subject, fmt.Sprintf("support entry %s cites a failed contract: a failed trajectory supports nothing", raw)}
 		}
 		contracts[c.Contract] = true
@@ -372,11 +438,23 @@ func CheckSupport(records []*event.Record, table *transition.Table, fold *transi
 
 // HypothesisValid re-judges the cited record as an admitted proposal:
 // a hypothesis on the cited subject at the cited position, whose
-// signer held curate at that prefix and whose support passed the
-// boundary's rule there. Fold presence is never proof of admission, so
-// a raw-pushed proposal promotes nothing: the stage it would skip is
-// the one the citation re-judges.
+// signer held curate at that prefix, whose support passed the
+// boundary's rule there, and that no earlier admitted proposal of the
+// same subject makes a duplicate. Fold presence is never proof of
+// admission, so a raw-pushed proposal promotes nothing: the stage it
+// would skip is the one the citation re-judges.
 func HypothesisValid(records []*event.Record, table *transition.Table, c Citation) (*Hypothesis, bool) {
+	h, ok := proposalPasses(records, table, c)
+	if !ok || AdmittedProposalBefore(records, table, c.Contract, c.Position) {
+		return nil, false
+	}
+	return h, true
+}
+
+// proposalPasses is the position-accurate half of admission without
+// the duplicate rule: the shape, the grant at the prefix, and the
+// support judged there.
+func proposalPasses(records []*event.Record, table *transition.Table, c Citation) (*Hypothesis, bool) {
 	if table == nil || c.Position < 0 || c.Position >= len(records) {
 		return nil, false
 	}
@@ -393,13 +471,34 @@ func HypothesisValid(records []*event.Record, table *transition.Table, c Citatio
 	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, []string{keyring.CapCurate}) {
 		return nil, false
 	}
-	if _, dup := Fold(prefix).Hypothesis(e.Subject); dup {
-		return nil, false
-	}
 	if _, err := CheckSupport(prefix, table, table.FoldRecords(prefix), e.Subject, h); err != nil {
 		return nil, false
 	}
 	return h, true
+}
+
+// AdmittedProposalBefore reports whether an admitted proposal on the
+// subject stands at a position before the given one: the duplicate a
+// re-proposal is refused against. Only a proposal that passed the
+// boundary counts, so a raw-pushed, well-shaped proposal by a key
+// holding no curate cannot reserve a hypothesis id (review finding on
+// the task PR). The earliest proposal that passes the grant and the
+// support is the admitted one, every later one its duplicate, so one
+// forward scan settles it.
+func AdmittedProposalBefore(records []*event.Record, table *transition.Table, subject string, before int) bool {
+	if before > len(records) {
+		before = len(records)
+	}
+	for pos := 0; pos < before; pos++ {
+		e := &records[pos].Event
+		if e.Verb != HypothesisVerb || e.Subject != subject {
+			continue
+		}
+		if _, ok := proposalPasses(records, table, Citation{Contract: subject, Position: pos}); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // DeadEndFact is a folded dead end.
@@ -475,6 +574,13 @@ func (s *State) Hypothesis(id string) (*HypothesisFact, bool) {
 // boundary re-judges citations from the records.
 func Fold(records []*event.Record) *State {
 	s := &State{DeadEnds: map[string][]DeadEndFact{}, Hypotheses: map[string]*HypothesisFact{}, Lessons: map[string]LessonFact{}}
+	// A proposal folds only when it passed the boundary at its own
+	// position: the fold is what the duplicate rule and the
+	// promotion's citation read, so a raw-pushed proposal must be an
+	// anomaly here, never a hypothesis (review finding on the task
+	// PR). The table is the shipped one; without it nothing can be
+	// judged and every proposal counts an anomaly.
+	table, terr := transition.Default()
 	for pos, rec := range records {
 		e := &rec.Event
 		if !keyring.Applies(e.V) {
@@ -498,6 +604,14 @@ func Fold(records []*event.Record) *State {
 			if _, dup := s.Hypotheses[e.Subject]; dup {
 				// A second proposal of one claim is the duplicate the
 				// boundary refuses; in history it changes nothing.
+				s.Anomalies++
+				continue
+			}
+			if terr != nil {
+				s.Anomalies++
+				continue
+			}
+			if _, ok := HypothesisValid(records, table, Citation{Contract: e.Subject, Position: pos}); !ok {
 				s.Anomalies++
 				continue
 			}

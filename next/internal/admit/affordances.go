@@ -202,7 +202,7 @@ func curationProbes(ctx *Context) (support, hypothesis string) {
 			continue
 		}
 		cit := curation.Citation{Contract: e.Subject, Position: pos}
-		if _, ok := curation.ObservationAt(ctx.Records, ctx.Table, cit); !ok || curation.Failed(ctx.Lifecycle, e.Subject) {
+		if _, ok := curation.ObservationAt(ctx.Records, ctx.Table, cit); !ok || curation.FailedAt(ctx.Records, ctx.Table, e.Subject) {
 			continue
 		}
 		byContract[e.Subject] = fmt.Sprintf("%s@%d", e.Subject, pos)

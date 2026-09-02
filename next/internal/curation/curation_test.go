@@ -7,6 +7,7 @@ package curation
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -114,9 +115,13 @@ func TestShapesRefuseNamingThePart(t *testing.T) {
 	}
 }
 
-// The fold renders the stages, counts a malformed raw fact as an
-// anomaly, folds a promotion citing no hypothesis as unbound, and
-// ignores facts before the keyring boundary and lifecycle verbs alike.
+// The fold renders the dead ends, counts a malformed raw fact as an
+// anomaly, and on a bare chain (no keyring, so no proposal can have
+// passed the boundary) counts every proposal an anomaly and folds
+// every promotion unbound: a hypothesis folds only once admission
+// re-judges it (review finding on the task PR), and the admitted fold
+// is drilled where a boundary stands, in internal/admit. Facts before
+// the keyring boundary and lifecycle verbs alike are ignored.
 func TestFoldRendersStagesAndCountsAnomalies(t *testing.T) {
 	holder, curator, observer := testKey(1), testKey(2), testKey(3)
 	claim := "retry once"
@@ -143,19 +148,48 @@ func TestFoldRendersStagesAndCountsAnomalies(t *testing.T) {
 	if st.DeadEnds["c-1"][0].Actor == "" || st.DeadEnds["c-1"][0].Pos != 0 || st.DeadEnds["c-1"][0].Condition != "z" {
 		t.Fatalf("a dead end carries its actor, position and fields: %+v", st.DeadEnds["c-1"][0])
 	}
-	h, ok := st.Hypothesis(id)
-	if !ok || h.Pos != 4 || h.Stage != StagePromoted || h.Lesson == nil || *h.Lesson != 8 || len(st.HypothesisIDs()) != 1 {
-		t.Fatalf("the hypothesis folds once, promoted by the lesson citing it: %+v %v", h, st.HypothesisIDs())
+	if _, ok := st.Hypothesis(id); ok || len(st.HypothesisIDs()) != 0 {
+		t.Fatalf("no proposal passed a boundary, so none folds as a hypothesis: %v", st.HypothesisIDs())
 	}
-	if len(st.Lessons) != 1 || len(st.Unbound) != 1 || st.Unbound[0].Pos != 7 {
-		t.Fatalf("the promotion citing no admitted hypothesis is unbound, never a lesson: %+v %+v", st.Lessons, st.Unbound)
+	if len(st.Lessons) != 0 || len(st.Unbound) != 2 || st.Unbound[0].Pos != 7 || st.Unbound[1].Pos != 8 {
+		t.Fatalf("a promotion citing no admitted hypothesis is unbound, never a lesson: %+v %+v", st.Lessons, st.Unbound)
 	}
-	// One malformed dead end and one duplicate proposal.
-	if st.Anomalies != 2 {
-		t.Fatalf("malformed and duplicate raw facts count anomalies, %d", st.Anomalies)
+	// One malformed dead end and two proposals that passed no boundary.
+	if st.Anomalies != 3 {
+		t.Fatalf("malformed and unadmitted raw facts count anomalies, %d", st.Anomalies)
 	}
 	if !st.Any() || Fold(nil).Any() {
 		t.Fatal("Any reports whether the prefix carries a curation fact")
+	}
+}
+
+// A promotion names a file inside the validated store and nothing
+// else: an anchor whose path climbs out of it matches the anchor
+// grammar and must still refuse (review finding on the task PR).
+func TestLessonAnchorsStayUnderTheStore(t *testing.T) {
+	for anchor, want := range map[string]bool{
+		LessonsDir + "/retry.md @ 0123456":         true,
+		LessonsDir + "/nested/retry.md @ 0123456":  true,
+		LessonsDir + "/../../secrets.md @ 0123456": false,
+		LessonsDir + "/a/../../../x.md @ 0123456":  false,
+		LessonsDir + "/./retry.md @ 0123456":       false,
+		LessonsDir + "//retry.md @ 0123456":        false,
+		LessonsDir + " @ 0123456":                  false,
+		LessonsDir + "/ @ 0123456":                 false,
+		"/" + LessonsDir + "/retry.md @ 0123456":   false,
+		LessonsDir + "x/retry.md @ 0123456":        false,
+		"next/knowledge/other/retry.md @ 0123456":  false,
+		"../" + LessonsDir + "/retry.md @ 0123456": false,
+	} {
+		if got := UnderLessonsDir(anchor); got != want {
+			t.Errorf("UnderLessonsDir(%q) = %v, want %v", anchor, got, want)
+		}
+	}
+	id := HypothesisID("retry once")
+	body := fmt.Sprintf(`{"lesson": "%s/../../x.md @ 0123456", "hypothesis": "%s@4", "pr": "pr/1 @ 0123456"}`, LessonsDir, id)
+	var se *ShapeError
+	if _, err := ParseLesson(id, []byte(body)); !errors.As(err, &se) || !strings.Contains(err.Error(), "climbs out") {
+		t.Fatalf("a traversal path refuses as a shape refusal naming the store: %v", err)
 	}
 }
 

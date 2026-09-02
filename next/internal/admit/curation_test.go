@@ -29,7 +29,7 @@ const findingPacket = `{"acceptance": ["resume"], "decisions": [], "base": "1234
 type curationStand struct {
 	ctx                                          *Context
 	root, worker, worker2, curator, observer     ed25519.PrivateKey
-	verifier, dispatcher                         ed25519.PrivateKey
+	verifier, dispatcher, stranger               ed25519.PrivateKey
 	step                                         func(priv ed25519.PrivateKey, v, verb, subject, payload string) *Context
 	deadEnd1, deadEnd1b, park2, submission3, hyp int
 	raise5                                       int
@@ -50,7 +50,8 @@ func curationFixture(t *testing.T) *curationStand {
 	st := &curationStand{root: root, worker: fixtureKey(t, 2), claim: "retry the fetch once"}
 	st.id = curation.HypothesisID(st.claim)
 	st.worker2, st.curator, st.observer, st.verifier, st.dispatcher = fixtureKey(t, 11), fixtureKey(t, 12), fixtureKey(t, 13), fixtureKey(t, 14), fixtureKey(t, 15)
-	keys := []ed25519.PrivateKey{root, st.worker, st.worker2, st.curator, st.observer, st.verifier, st.dispatcher}
+	st.stranger = fixtureKey(t, 16)
+	keys := []ed25519.PrivateKey{root, st.worker, st.worker2, st.curator, st.observer, st.verifier, st.dispatcher, st.stranger}
 	loose := func(fp string) (ed25519.PublicKey, bool) {
 		for _, p := range keys {
 			if fpOf(t, p) == fp {
@@ -85,6 +86,9 @@ func curationFixture(t *testing.T) *curationStand {
 		ctx = step(root, version.Seed1, keyring.VerbEnrolled, fpOf(t, e.key), enrollBody(t, e.key, "agent", e.name))
 		ctx = step(root, version.Seed1, keyring.VerbGranted, fpOf(t, e.key), `{"capability": "`+e.cap+`"}`)
 	}
+	// The stranger is enrolled and holds nothing: the key whose raw
+	// pushes the boundary drills re-judge.
+	ctx = step(root, version.Seed1, keyring.VerbEnrolled, fpOf(t, st.stranger), enrollBody(t, st.stranger, "agent", "stranger"))
 	open := func(subject string) *Context {
 		ctx = step(root, version.Seed1, "intent.filed", subject, trivialFiling)
 		ctx = step(root, version.Seed1, "contract.specified", subject, specBody)
@@ -265,6 +269,14 @@ func TestPromotionCitesAnAdmittedHypothesis(t *testing.T) {
 	if err := Check(ctx, draftV(t, st.observer, version.Seed1, curation.LessonVerb, st.id, lesson(curation.LessonsDir+"/retry.md", cite(st.id, st.hyp), "pr/9 @ 0123456"), ctx.Tip)); !errors.As(err, &se) {
 		t.Fatalf("a bare path refuses: %v", err)
 	}
+	// A path that climbs out of the store matches the anchor grammar
+	// and names a file the store's lint never sees (review finding on
+	// the task PR).
+	for _, escaped := range []string{curation.LessonsDir + "/../../x.md @ 0123456", curation.LessonsDir + "/./retry.md @ 0123456", "/" + curation.LessonsDir + "/retry.md @ 0123456"} {
+		if err := Check(ctx, draftV(t, st.observer, version.Seed1, curation.LessonVerb, st.id, lesson(escaped, cite(st.id, st.hyp), "pr/9 @ 0123456"), ctx.Tip)); !errors.As(err, &se) || !strings.Contains(err.Error(), "climbs out") {
+			t.Fatalf("%s: a path outside the store refuses naming it: %v", escaped, err)
+		}
+	}
 	var oog *OutOfGrantError
 	if err := Check(ctx, draftV(t, st.curator, version.Seed1, curation.LessonVerb, st.id, good, ctx.Tip)); !errors.As(err, &oog) {
 		t.Fatalf("a curate key cannot promote: %v", err)
@@ -334,6 +346,133 @@ func TestCuratorRaisesAndItsReachableSetIsNamed(t *testing.T) {
 	for _, verb := range Affordances(early.ctx, early.curator, "c-1") {
 		if verb == curation.HypothesisVerb {
 			t.Fatal("with nothing citable the proposal is invisible")
+		}
+	}
+}
+
+// A well-shaped proposal raw-pushed by a key holding no curate passed
+// no boundary, so it reserves nothing: the curator's proposal of the
+// same claim still admits, the fold counts the raw one an anomaly and
+// binds the promotion to the admitted position (review finding on the
+// task PR: the duplicate rule and the fold read admission, never
+// presence).
+func TestRawProposalReservesNoSubject(t *testing.T) {
+	st := curationFixture(t)
+	ctx := st.ctx
+	good := st.proposal(cite("c-1", st.deadEnd1), cite("c-2", st.park2))
+	rawPos := ctx.Count
+	ctx = st.step(st.worker, version.Seed1, curation.HypothesisVerb, st.id, good)
+	if fold := curation.Fold(ctx.Records); len(fold.HypothesisIDs()) != 0 || fold.Anomalies != 1 {
+		t.Fatalf("the raw proposal folds as an anomaly, never a hypothesis: %v %d", fold.HypothesisIDs(), fold.Anomalies)
+	}
+	if _, ok := curation.HypothesisValid(ctx.Records, ctx.Table, curation.Citation{Contract: st.id, Position: rawPos}); ok {
+		t.Fatal("a proposal by a claim key is never an admitted hypothesis")
+	}
+	if err := Check(ctx, draftV(t, st.curator, version.Seed1, curation.HypothesisVerb, st.id, good, ctx.Tip)); err != nil {
+		t.Fatalf("the curator's proposal is no duplicate of a raw push: %v", err)
+	}
+	admitted := ctx.Count
+	ctx = st.step(st.curator, version.Seed1, curation.HypothesisVerb, st.id, good)
+	fold := curation.Fold(ctx.Records)
+	h, ok := fold.Hypothesis(st.id)
+	if !ok || h.Pos != admitted || h.Stage != curation.StageProposed || fold.Anomalies != 1 {
+		t.Fatalf("the admitted proposal folds at its own position: %+v %d", h, fold.Anomalies)
+	}
+	var ce *CurationError
+	if err := Check(ctx, draftV(t, st.curator, version.Seed1, curation.HypothesisVerb, st.id, good, ctx.Tip)); !errors.As(err, &ce) || !strings.Contains(err.Error(), fmt.Sprintf("position %d", admitted)) {
+		t.Fatalf("a re-proposal refuses against the admitted position, not the raw one: %v", err)
+	}
+	// The curator's own re-proposal, raw-pushed past the boundary,
+	// is the duplicate the rule refused: it folds as an anomaly and a
+	// promotion citing it re-judges the same duplicate.
+	dupPos := ctx.Count
+	ctx = st.step(st.curator, version.Seed1, curation.HypothesisVerb, st.id, good)
+	if fold := curation.Fold(ctx.Records); fold.Anomalies != 2 || len(fold.HypothesisIDs()) != 1 {
+		t.Fatalf("the raw duplicate folds as an anomaly: %d %v", fold.Anomalies, fold.HypothesisIDs())
+	}
+	if _, ok := curation.HypothesisValid(ctx.Records, ctx.Table, curation.Citation{Contract: st.id, Position: dupPos}); ok {
+		t.Fatal("a duplicate of an admitted proposal is not itself admitted")
+	}
+	lesson := func(pos int) string {
+		return fmt.Sprintf(`{"lesson": %q, "hypothesis": %q, "pr": "pr/9 @ 0123456"}`, curation.LessonsDir+"/retry.md @ 0123456", cite(st.id, pos))
+	}
+	for name, pos := range map[string]int{"raw": rawPos, "duplicate": dupPos} {
+		if err := Check(ctx, draftV(t, st.observer, version.Seed1, curation.LessonVerb, st.id, lesson(pos), ctx.Tip)); !errors.As(err, &ce) {
+			t.Fatalf("a promotion citing the %s position refuses: %v", name, err)
+		}
+	}
+	if err := Check(ctx, draftV(t, st.observer, version.Seed1, curation.LessonVerb, st.id, lesson(admitted), ctx.Tip)); err != nil {
+		t.Fatalf("a promotion citing the admitted position admits: %v", err)
+	}
+	promoted := ctx.Count
+	ctx = st.step(st.observer, version.Seed1, curation.LessonVerb, st.id, lesson(admitted))
+	fold = curation.Fold(ctx.Records)
+	h, _ = fold.Hypothesis(st.id)
+	if h == nil || h.Stage != curation.StagePromoted || h.Lesson == nil || *h.Lesson != promoted || len(fold.Lessons) != 1 || len(fold.Unbound) != 0 || fold.Anomalies != 2 {
+		t.Fatalf("the promotion folds the admitted hypothesis to promoted: %+v %+v", h, fold.Unbound)
+	}
+}
+
+// A claim raw-pushed by a grantless key opens an apparent window in
+// the lifecycle fold, and a dead end signed by that key inside it
+// looks like the holder's own; neither passed a boundary, so the
+// observation supports nothing (review finding on the task PR: the
+// window a citation rests on is re-judged, not read off the fold).
+func TestObservationsInsideAGrantlessWindowSupportNothing(t *testing.T) {
+	st := curationFixture(t)
+	ctx := st.ctx
+	rawClaim := ctx.Count
+	ctx = st.step(st.stranger, version.Seed1, "claim.taken", "c-4", `{}`)
+	s, ok := ctx.Lifecycle.State("c-4")
+	if !ok || s.Claim == nil || s.Claim.Holder != fpOf(t, st.stranger) || s.Claim.Fence != rawClaim {
+		t.Fatalf("the lifecycle fold applies the raw claim whoever signed it: %+v", s.Claim)
+	}
+	if curation.WindowAdmitted(ctx.Records, s) {
+		t.Fatal("a window opened by a grantless key is not admitted")
+	}
+	if held, _ := ctx.Lifecycle.State("c-1"); !curation.WindowAdmitted(ctx.Records, held) {
+		t.Fatal("the worker's window on c-1 is admitted")
+	}
+	rawDeadEnd := ctx.Count
+	ctx = st.step(st.stranger, version.Seed1, curation.DeadEndVerb, "c-4", deadEndBody(fmt.Sprint(rawClaim)))
+	if _, ok := curation.ObservationAt(ctx.Records, ctx.Table, curation.Citation{Contract: "c-4", Position: rawDeadEnd}); ok {
+		t.Fatal("a dead end inside a grantless window is no observation")
+	}
+	var sup *curation.SupportError
+	if err := Check(ctx, draftV(t, st.curator, version.Seed1, curation.HypothesisVerb, st.id, st.proposal(cite("c-1", st.deadEnd1), cite("c-4", rawDeadEnd)), ctx.Tip)); !errors.As(err, &sup) || !strings.Contains(err.Error(), "not an admitted observation") {
+		t.Fatalf("a proposal citing it refuses as a support refusal: %v", err)
+	}
+	// The same raw push by a key holding claim but not the window: a
+	// second worker's claim on a held contract is not a legal
+	// transition, so nothing opens; the fixture's own holder windows
+	// stay the only admitted ones.
+	if err := Check(ctx, draftV(t, st.curator, version.Seed1, curation.HypothesisVerb, st.id, st.proposal(cite("c-1", st.deadEnd1), cite("c-2", st.park2)), ctx.Tip)); err != nil {
+		t.Fatalf("the admitted observations still support: %v", err)
+	}
+}
+
+// A failed contract stays failed under a raw pass: the verdict the
+// support rule reads is the latest AUTHENTICATED one, and a pass
+// signed by the implementer, or by a grantless key, authenticates
+// nothing (review finding on the task PR).
+func TestARawPassClearsNoAuthenticFail(t *testing.T) {
+	st := curationFixture(t)
+	ctx := st.ctx
+	if !curation.FailedAt(ctx.Records, ctx.Table, "c-3") || curation.FailedAt(ctx.Records, ctx.Table, "c-2") {
+		t.Fatal("the verifier's fail stands on c-3 and nowhere else")
+	}
+	pass := `{"verdict": "pass", "receipt": "` + strings.Repeat("0", 64) + `", "submission": "` + fmt.Sprint(st.submission3) + `", "independence": "L1"}`
+	for _, signer := range []ed25519.PrivateKey{st.worker, st.stranger} {
+		ctx = st.step(signer, version.Seed1, transition.VerdictRenderedVerb, "c-3", pass)
+		if s, _ := ctx.Lifecycle.State("c-3"); s.Verdict == nil || s.Verdict.Verdict != "pass" || s.State != "review" {
+			t.Fatalf("the lifecycle fold records the raw pass as the latest verdict: %+v", s.Verdict)
+		}
+		if !curation.FailedAt(ctx.Records, ctx.Table, "c-3") {
+			t.Fatal("a raw pass clears nothing")
+		}
+		var sup *curation.SupportError
+		if err := Check(ctx, draftV(t, st.curator, version.Seed1, curation.HypothesisVerb, st.id, st.proposal(cite("c-1", st.deadEnd1), cite("c-3", st.submission3)), ctx.Tip)); !errors.As(err, &sup) || !strings.Contains(err.Error(), "failed contract") {
+			t.Fatalf("the failed trajectory still supports nothing: %v", err)
 		}
 	}
 }

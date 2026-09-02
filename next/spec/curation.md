@@ -31,8 +31,15 @@ rests on and the boundary re-judges each from the record; a promotion
 cites the hypothesis it promotes and the boundary re-judges that the
 citation passed. A lesson that cites no admitted hypothesis folds
 `unbound`, never as a lesson. Fold presence is never proof of admission
-(the `RunStartValid` posture): a raw-pushed dead end outside a window
-supports nothing, and a raw-pushed proposal promotes nothing.
+(the `RunStartValid` posture), and neither is a tolerant lifecycle fold:
+a raw-pushed dead end outside a window supports nothing; a dead end
+inside a window that a grantless key's raw `claim.taken` opened supports
+nothing either, since the window is re-judged at its fence (the claim on
+the subject, signed by its holder, who held `claim` at that prefix:
+`curation.WindowAdmitted`); a raw-pushed proposal neither promotes nor
+reserves its subject (an unadmitted proposal folds as an anomaly, so the
+duplicate rule reads admission, never presence); and a raw-pushed pass
+clears no authenticated fail.
 
 Refused: a lessons store in the ledger. A lesson is a document humans
 and lanes read, it changes behavior when it lands, and the charter
@@ -59,12 +66,18 @@ the whitespace-normalized claim text, `curation.HypothesisID`), carries
 `{"claim", "applies_when", "support": ["<contract>@<position>", …],
 "exceptions": [...], "provenance": ["<path @ commit>", …]}`. A subject
 not derived from the claim refuses; one claim derives one subject, so a
-re-proposal refuses as a duplicate at the boundary rather than
-accumulating. **The support floor**: at least two citations, each an
+re-proposal of an admitted claim refuses as a duplicate at the boundary
+rather than accumulating (the earliest proposal that passed the grant
+and the support is the admitted one; a raw-pushed proposal that passed
+no boundary reserves nothing, `curation.AdmittedProposalBefore`). **The support floor**: at least two citations, each an
 admitted observation (a deliberate exit whose packet carries at least
 one finding, or a dead end, signed by the window's holder and citing
 the fence active at its own prefix), on at least two distinct
-contracts, none of which stands failed (its latest verdict a fail).
+contracts, none of which stands failed: its latest AUTHENTICATED
+verdict a fail (`curation.FailedAt`: a verdict counts when its signer
+held `verdict` at the verdict's own position and was neither the bound
+submission's signer nor a claimant, past or present, so a raw-pushed
+pass by an implementing or grantless key clears nothing).
 That is the structural minimum the charter makes non-promotable to
 skip: a worker promoting its own single run is refused by
 construction. The full promotion gate (more than one actor where the
@@ -74,8 +87,11 @@ the contested state) is item 2's, on top of this shape.
 **`curation.lesson.promoted`**, on the hypothesis subject, carries
 `{"lesson": "next/knowledge/lessons/<id>.md @ <commit>", "hypothesis":
 "<h-id>@<position>", "pr": "<pr> @ <merged-commit>"}`: anchored paths
-all three, the lesson under the one store, the cited hypothesis this
-subject. It admits only citing an admitted proposal at that position:
+all three, the lesson under the one store (a clean relative path
+prefixed by `next/knowledge/lessons/`, `curation.UnderLessonsDir`: a
+path that climbs out through `..` matches the anchor grammar and
+refuses, or the promotion would name a file the store's lint never
+sees), the cited hypothesis this subject. It admits only citing an admitted proposal at that position:
 the citation is re-judged from the record (the signer held `curate`
 there, the support passed there, the claim was not already proposed).
 The lesson file's frontmatter names its hypothesis, applies-when,

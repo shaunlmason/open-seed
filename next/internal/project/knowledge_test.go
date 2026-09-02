@@ -59,11 +59,14 @@ func TestKnowledgeProjectionPublishesTheStages(t *testing.T) {
 		add(root, version.Seed1, "contract.specified", subject, `{"acceptance": {"ref": "specs/thing.md @ abc1234", "executable": false}}`)
 		add(worker, version.Seed1, "claim.taken", subject, `{}`)
 	}
-	add(worker, version.Seed1, curation.DeadEndVerb, "c-1", `{"fence": "9", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
-	add(worker, version.Seed1, curation.DeadEndVerb, "c-2", `{"fence": "12", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
+	// The claims stand at 8 and 11, the dead ends at 12 and 13: the
+	// projection's fold re-judges each citation, so the fixture's
+	// observations are real ones inside admitted windows.
+	add(worker, version.Seed1, curation.DeadEndVerb, "c-1", `{"fence": "8", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
+	add(worker, version.Seed1, curation.DeadEndVerb, "c-2", `{"fence": "11", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
 	claim := "retry once"
 	id := curation.HypothesisID(claim)
-	add(curator, version.Seed1, curation.HypothesisVerb, id, fmt.Sprintf(`{"claim": %q, "applies_when": "flaky", "support": ["c-1@13", "c-2@14"], "exceptions": [], "provenance": []}`, claim))
+	add(curator, version.Seed1, curation.HypothesisVerb, id, fmt.Sprintf(`{"claim": %q, "applies_when": "flaky", "support": ["c-1@12", "c-2@13"], "exceptions": [], "provenance": []}`, claim))
 	add(worker, version.Seed1, curation.HypothesisVerb, "h-000000000000", `{"claim": "x"}`)
 	add(root, version.Seed1, curation.LessonVerb, "h-ffffffffffff", `{"lesson": "next/knowledge/lessons/x.md @ 0123456", "hypothesis": "h-ffffffffffff@3", "pr": "pr/1 @ 0123456"}`)
 
