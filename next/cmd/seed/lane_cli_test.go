@@ -40,8 +40,13 @@ func TestShippedLanesValidate(t *testing.T) {
 	if code != 0 || !e.OK {
 		t.Fatalf("the shipped lanes must validate clean: %d %+v", code, e)
 	}
-	if e.Result["lanes"] != "6" {
-		t.Fatalf("the charter names six lanes (SEED-NEXT.md §II.11): %+v", e.Result)
+	// The COMPLETE half of the closed enumeration (plans/os-d6a52784.md
+	// D3): internal/lane refuses a seventh lane by name, and this drill,
+	// over the shipped set, asserts all six are present. The two roles
+	// the charter defines outside the loop are counted apart, so "eight
+	// manifests" never reads as "eight lanes".
+	if e.Result["lanes"] != "6" || e.Result["roles"] != "2" {
+		t.Fatalf("the charter names six lanes (SEED-NEXT.md §II.11) and two non-loop roles (§II.9, §8): %+v", e.Result)
 	}
 
 	e, code = runEnv(t, "lane", "list", "--lanes", dir)
@@ -49,15 +54,21 @@ func TestShippedLanesValidate(t *testing.T) {
 		t.Fatalf("lane list: %d %+v", code, e)
 	}
 	rows, _ := e.Result["lanes"].([]any)
-	var names []string
+	byKind := map[string][]string{}
 	for _, r := range rows {
 		m, _ := r.(map[string]any)
-		names = append(names, m["lane"].(string))
+		byKind[m["kind"].(string)] = append(byKind[m["kind"].(string)], m["lane"].(string))
 	}
-	slices.Sort(names)
-	want := []string{"curator", "dispatcher", "implementer", "maintenance", "planner", "verifier"}
-	if !slices.Equal(names, want) {
-		t.Fatalf("the six lanes are the charter's six: %v, want %v", names, want)
+	for k := range byKind {
+		slices.Sort(byKind[k])
+	}
+	want := slices.Clone(lane.CharterLanes())
+	slices.Sort(want)
+	if !slices.Equal(byKind[lane.KindLane], want) {
+		t.Fatalf("the six lanes are the charter's six, all present: %v, want %v", byKind[lane.KindLane], want)
+	}
+	if !slices.Equal(byKind[lane.KindRole], []string{"observer", "supervisor"}) {
+		t.Fatalf("the two roles are the charter's supervisor and observer: %v", byKind[lane.KindRole])
 	}
 }
 
@@ -100,6 +111,7 @@ func TestLaneValidateRefusesWithFindings(t *testing.T) {
 	}
 	if err := os.WriteFile(filepath.Join(dir, "planner.json"), []byte(`{
   "lane": "planner",
+  "kind": "lane",
   "summary": "s",
   "grants": ["wizard"],
   "orients_from": "seed situation --key <key>",
@@ -333,4 +345,38 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// conformance: the reviewer's exact case (review finding on #212) —
+// `seed lane validate` on a copy of the shipped set with planner.json
+// removed refuses with lane_invalid and names the absent lane, rather
+// than certifying "lanes: 5". This runs through the CLI so it is the
+// path an operator's --lanes directory actually takes.
+func TestLaneValidateRefusesASetMissingACharterLane(t *testing.T) {
+	src := shippedLanes(t)
+	dir := t.TempDir()
+	if err := os.CopyFS(dir, os.DirFS(src)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(dir, "planner.json")); err != nil {
+		t.Fatal(err)
+	}
+	e, code := runEnv(t, "lane", "validate", "--lanes", dir)
+	if code != 26 || e.Error == nil || e.Error.Code != "lane_invalid" {
+		t.Fatalf("a set missing a charter lane exits 26 lane_invalid, got %d %+v", code, e)
+	}
+	rows, _ := e.Result["findings"].([]any)
+	named := false
+	for _, r := range rows {
+		f, _ := r.(map[string]any)
+		if f["lane"] == "planner" && f["field"] == "kind" {
+			named = true
+		}
+	}
+	if !named {
+		t.Fatalf("the finding names the absent lane: %+v", rows)
+	}
+	if e.Result["lanes"] != "5" {
+		t.Errorf("the count is honest about what was found: %+v", e.Result)
+	}
 }

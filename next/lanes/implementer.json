@@ -1,5 +1,6 @@
 {
   "lane": "implementer",
+  "kind": "lane",
   "summary": "Takes one claimed card from a merged plan to a reviewable PR, metering what it spends and exiting deliberately.",
   "grants": [
     "claim"

@@ -1,5 +1,6 @@
 {
   "lane": "dispatcher",
+  "kind": "lane",
   "summary": "Converts intents and mirror requests into routed contracts with draft acceptance specs; runs with least standing capability because it reads the most untrusted text.",
   "grants": [
     "dispatch"

@@ -798,12 +798,22 @@ this card settled are worth carrying forward.
   fleet needs it for contention, and small-team could never have run
   locally, because `claim take` is refused off the remote and a claim
   is the loop's first act. Neither clause of III.J mentions transport.
-- **III.J's closing row is met, with one gap recorded rather than
-  hidden**: no shipped lane grants `supervise` or `observer`, which
-  `offer.published` and `merge.observed` require, so a deployment built
-  purely from the six lanes can neither publish its own offers nor
-  record its own merges. The fixtures stage both as background
-  identities; the gap is **os-d6a52784**.
+- **III.J's closing row is met, and the gap it recorded is CLOSED**
+  (os-d6a52784, plan #210). No shipped manifest granted `supervise`,
+  `observer` or — found in review, the worst of the three since it has
+  no operator fallback — `sealer`. The charter's six lanes (§II.11) are
+  a closed enumeration, and both missing parts already exist in the
+  charter outside it: the supervisor is §II.9 and the observer is §8's
+  governed observer. So they ship as **roles**, manifests of a required
+  `kind` beside the six, validated by the same code, refused by name if
+  they claim to be a seventh lane; `sealer` rides the verifier, whose
+  keyring the sealed bodies are already encrypted to. The mode fixtures
+  now provision both roles **from their manifests** rather than staging
+  them as identities the test invented, which is what makes the closure
+  real rather than reported. The drill whose absence let this reach
+  Phase 9 reads the capability table's own source and, run against the
+  pre-fix tree, names **six** ungranted verbs across the three
+  capabilities — three more than the card had found.
 
 Item 1 is COMPLETE: 1a
 merged (#188), 1c merged (#191), 1b merged (#192), with its four review
