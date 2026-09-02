@@ -497,7 +497,7 @@ var affordanceCatalog = []struct {
 		return `{` + v.fenceKV() + v.planDigestKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000"}`
 	}},
 	{"plan.approved", func(v *probeView) string {
-		return `{` + v.fenceKV() + v.planDigestKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000", "pr": "probe"}`
+		return `{` + v.fenceKV() + v.planDigestKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000", "pr": "pr/0 @ 0000000000000000000000000000000000000000"}`
 	}},
 	{"progress.milestone", func(v *probeView) string {
 		return `{` + v.fenceKV() + `"count": 1, "step": "probe"}`
