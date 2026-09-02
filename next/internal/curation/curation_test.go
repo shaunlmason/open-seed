@@ -9,6 +9,7 @@ package curation
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -573,5 +574,122 @@ func TestGateTableMatchesTheRegistry(t *testing.T) {
 	}
 	if len(registered) == 0 || len(spec) == 0 {
 		t.Fatal("an empty registry or table would pass vacuously")
+	}
+}
+
+// conformance: plans/os-0d537fbd.md D1, D2, D3, D4 — the shapes the
+// retirement verbs carry, expiry at an instant, and the structure and
+// dedup lints, each refusing at a registered gate naming the part.
+func TestRetirementShapesRefuseAtTheirGates(t *testing.T) {
+	id := HypothesisID("retry once", nil)
+	good := fmt.Sprintf(`{"lesson": "%s/x.md @ 0123456", "hypothesis": "%s@4", "reason": "regression", "pr": "pr/9 @ 0123456"}`, LessonsDir, id)
+	if _, err := ParseRetirement(id, []byte(good)); err != nil {
+		t.Fatalf("a regression retirement with its pr parses: %v", err)
+	}
+	if _, err := ParseRetirement(id, []byte(fmt.Sprintf(`{"lesson": "%s/x.md @ 0123456", "hypothesis": "%s@4", "reason": "superseded", "superseded_by": "9"}`, LessonsDir, id))); err != nil {
+		t.Fatalf("a superseded retirement with its position parses: %v", err)
+	}
+	if _, err := ParseRetirement(id, []byte(fmt.Sprintf(`{"lesson": "%s/x.md @ 0123456", "hypothesis": "%s@4", "reason": "expired"}`, LessonsDir, id))); err != nil {
+		t.Fatalf("an expired retirement with neither field parses: %v", err)
+	}
+	for name, c := range map[string]struct{ body, gate string }{
+		"unknown key":        {strings.Replace(good, `"reason"`, `"note": "x", "reason"`, 1), GateRetireShape},
+		"bare lesson":        {strings.Replace(good, "/x.md @ 0123456", "/x.md", 1), GateRetireShape},
+		"outside the store":  {strings.Replace(good, LessonsDir+"/x.md", LessonsDir+"/../x.md", 1), GateRetireShape},
+		"other subject":      {strings.Replace(good, id+"@4", "h-000000000000@4", 1), GateRetireShape},
+		"unknown reason":     {strings.Replace(good, `"regression"`, `"tired"`, 1), GateRetireReason},
+		"regression no pr":   {strings.Replace(good, `, "pr": "pr/9 @ 0123456"`, "", 1), GateRetireReason},
+		"regression with by": {strings.Replace(good, `"pr": "pr/9 @ 0123456"`, `"pr": "pr/9 @ 0123456", "superseded_by": "9"`, 1), GateRetireReason},
+		"superseded no by":   {strings.Replace(good, `"regression", "pr": "pr/9 @ 0123456"`, `"superseded"`, 1), GateRetireReason},
+		"superseded with pr": {strings.Replace(good, `"regression"`, `"superseded"`, 1), GateRetireReason},
+		"expired with pr":    {strings.Replace(good, `"regression"`, `"expired"`, 1), GateRetireReason},
+		"pr not anchored":    {strings.Replace(good, "pr/9 @ 0123456", "pr/9", 1), GateRetireShape},
+		"by not a position":  {strings.Replace(good, `"regression", "pr": "pr/9 @ 0123456"`, `"superseded", "superseded_by": "nine"`, 1), GateRetireShape},
+	} {
+		_, err := ParseRetirement(id, []byte(c.body))
+		if err == nil {
+			t.Errorf("%s: refuses", name)
+			continue
+		}
+		if got := gateOf(t, err); got != c.gate {
+			t.Errorf("%s: refuses at %s, got %s (%v)", name, c.gate, got, err)
+		}
+	}
+	var inc *transition.IncompleteError
+	if _, err := ParseRetirement(id, []byte(`{"lesson": "", "hypothesis": "", "reason": ""}`)); !errors.As(err, &inc) {
+		t.Fatalf("empty fields refuse as incomplete naming them: %v", err)
+	}
+	dead := `{"deadend": "c-1@7", "environment": "ci-runner/v1", "reason": "the runner moved"}`
+	if _, err := ParseDeadEndRetirement(DeadEndRetireVerb, "c-1", []byte(dead)); err != nil {
+		t.Fatalf("a dead-end retirement parses: %v", err)
+	}
+	for name, body := range map[string]string{
+		"unknown key":   strings.Replace(dead, `"reason"`, `"note": "x", "reason"`, 1),
+		"bad citation":  strings.Replace(dead, "c-1@7", "c-1", 1),
+		"other subject": strings.Replace(dead, "c-1@7", "c-2@7", 1),
+	} {
+		if _, err := ParseDeadEndRetirement(DeadEndUnretireVerb, "c-1", []byte(body)); err == nil || gateOf(t, err) != GateDeadEndRetireShape {
+			t.Errorf("%s: refuses at the shape gate: %v", name, err)
+		}
+	}
+	if _, err := ParseDeadEndRetirement(DeadEndRetireVerb, "c-1", []byte(`{"deadend": "c-1@7", "environment": "", "reason": ""}`)); !errors.As(err, &inc) {
+		t.Fatalf("empty fields refuse as incomplete: %v", err)
+	}
+}
+
+// Expiry is derived at an instant and compared with >=: at the stamp
+// the lesson is expired, a second before it is not, and a stamp that
+// does not parse counts as expired.
+func TestExpiryIsDerivedAtAnInstant(t *testing.T) {
+	l := LessonFact{Expires: "2026-12-01T00:00:00Z"}
+	at := time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)
+	if !Expired(l, at) {
+		t.Fatal("at the stamp the lesson is expired")
+	}
+	if Expired(l, at.Add(-time.Second)) {
+		t.Fatal("a second before the stamp it is not")
+	}
+	if !Expired(LessonFact{Expires: "never"}, at) {
+		t.Fatal("a stamp that does not parse counts as expired")
+	}
+	if !stampAfter("2026-12-02T00:00:00Z", "2026-12-01T00:00:00Z") || stampAfter("2026-12-01T00:00:00Z", "2026-12-01T00:00:00Z") || stampAfter("x", "2026-12-01T00:00:00Z") {
+		t.Fatal("stampAfter is strict and refuses what does not parse")
+	}
+}
+
+// The structure lint requires exactly the known keys and the README's
+// sections in order; the dedup lint names the second file citing one
+// hypothesis.
+func TestStructureAndDedupLints(t *testing.T) {
+	id := HypothesisID("retry once", nil)
+	head := "---\nhypothesis: " + id + "@4\napplies-when: {\"routing\": \"core\"}\nsupport: c-1@4, c-2@9\nprovenance: plans/x.md @ 0123456\nlast-validated: 2026-09-01T00:00:00Z\nexpires: 2026-12-01T00:00:00Z\ncarrier: knowledge\n---\n"
+	good := head + "\n# Retry once\n\n## Claim\n\nretry once\n\n## Evidence\n\nc-1@4, c-2@9\n\n## Applies when\n\ncore\n"
+	if err := LintStructure([]byte(good)); err != nil {
+		t.Fatalf("the README's shape lints: %v", err)
+	}
+	for name, body := range map[string]string{
+		"unknown key":     strings.Replace(good, "carrier: knowledge\n", "carrier: knowledge\nowner: me\n", 1),
+		"missing section": strings.Replace(good, "## Evidence\n\nc-1@4, c-2@9\n\n", "", 1),
+		"out of order":    strings.Replace(strings.Replace(good, "## Claim", "## Zz", 1), "## Applies when", "## Claim", 1) + "\n## Applies when\n",
+	} {
+		if err := LintStructure([]byte(body)); err == nil || gateOf(t, err) != GateLintStructure {
+			t.Errorf("%s: refuses at the structure gate: %v", name, err)
+		}
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# store\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "a.md"), []byte(good), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := LintDuplicates(dir, nil); err != nil {
+		t.Fatalf("one file per hypothesis lints: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.md"), []byte(strings.Replace(good, id+"@4", id+"@9", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := LintDuplicates(dir, nil); err == nil || gateOf(t, err) != GateLintDuplicate || !strings.Contains(err.Error(), "b.md is the duplicate") {
+		t.Fatalf("a second file citing the hypothesis refuses naming the duplicate: %v", err)
 	}
 }

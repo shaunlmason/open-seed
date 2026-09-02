@@ -84,7 +84,7 @@ func TestReportLanesSection(t *testing.T) {
 			t.Errorf("the report carries %s: %s", want, view)
 		}
 	}
-	if v := project.Report().Version; v != "12" {
+	if v := project.Report().Version; v != "13" {
 		t.Fatalf("the report's version names the lanes section: %s", v)
 	}
 

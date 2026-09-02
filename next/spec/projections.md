@@ -140,7 +140,9 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   claim's own fence-keyed stream, and `refusals` (report version
   "10"; [`refusals.md`](refusals.md); version "11" adds the `knowledge`
   section and its `contested` count, [`curation.md`](curation.md), so
-  an unchanged tip republishes with the section): null unless a rebuild declares
+  an unchanged tip republishes with the section; version "12" its
+  `retired` and `stale` counts, the latter at the declared instant):
+  null unless a rebuild declares
   an attempts journal, else the affordance-gap metric — outcome
   counts over the journal's one population, refusal breakdowns, the
   stamped-position span as context, and the four-decimal rate. The
@@ -158,20 +160,27 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   and never a new authority ([`obligations.md`](obligations.md)). The
   situation read consumes the same derivation at the ledger tip.
 
-- **`knowledge`** (`knowledge.json`, version 2): the curation
+- **`knowledge`** (`knowledge.json`, version 3): the curation
   pipeline's stages ([`curation.md`](curation.md)): the stage counts
-  (observations, hypotheses, promoted, contested, lessons, unbound),
-  dead ends by contract, hypotheses with their stage (`proposed`,
+  (observations, hypotheses, promoted, contested, lessons, unbound,
+  and `retired` and `stale` when non-zero), dead ends by contract with
+  their retirement flags, hypotheses with their stage (`proposed`,
   `promoted`, `contested`) and `single_actor_family` where the actor
-  arm was waived, contests by hypothesis, lessons each with
-  `surfaces` and the reason when not (the record half: promoted and
-  not contested; the repository half, ancestry and digest, is the
-  reader's, since a build holds no repository), the unbound promotions
-  and the anomaly count, from the curation fold; `seed knowledge show`
-  renders the same derivation at the tip. The report carries a
-  `knowledge` section with the stage counts when the chain holds any
-  curation fact, so builds of chains that hold none stay
-  byte-identical.
+  arm was waived, contests by hypothesis, the latest promotion per
+  lesson path each with `surfaces`, `stale`, `retired` and the reason
+  when it does not surface (the record half: promoted, not contested,
+  not retired, not expired at the declared instant; the repository
+  half, ancestry and digest, is the reader's, since a build holds no
+  repository), the standing retirements, the unbound promotions and
+  the anomaly count, from the curation fold. The projection declares
+  input consumption since version 3: the declared observation inputs'
+  `as_of` is the instant staleness is judged at, echoed as `as_of`;
+  with no instant declared nothing is flagged and `staleness` says so
+  (both fields present only once the chain holds a lesson). `seed
+  knowledge show [--now]` renders the same derivation at the tip. The
+  report carries a `knowledge` section with the stage counts when the
+  chain holds any curation fact, so builds of chains that hold none
+  stay byte-identical.
 
 - **`cache`** (`cache.db`): the single-machine read-throughput
   surface — one SQLite database mirroring the views (`roster`,

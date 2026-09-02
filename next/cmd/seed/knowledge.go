@@ -1,8 +1,10 @@
 // The knowledge verbs (plans/os-f30ee0d3.md D4; next/spec/curation.md):
-// the three curation facts driven against a real ledger with the fence
-// and the hypothesis id derived, and the fold rendered. No loop act:
-// the worker loop's exits already carry findings, and a standalone dead
-// end is the holder's deliberate extra, like plan propose.
+// the curation facts driven against a real ledger with the fence and
+// the hypothesis id derived, and the fold rendered. No loop act: the
+// worker loop's exits already carry findings, and a standalone dead end
+// is the holder's deliberate extra, like plan propose. Retirement, the
+// dead-end acts, applicability, the bloat lints and the flags at an
+// instant are plans/os-0d537fbd.md D2 to D4.
 
 package main
 
@@ -26,11 +28,16 @@ import (
 
 func runKnowledge(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "knowledge requires a subverb: deadend | propose | validate | contest | promote | lint | show"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "knowledge requires a subverb: deadend [retire | unretire] | propose | validate | contest | promote | retire | lint | show"), stdout, stderr)
 	}
 	switch args[0] {
 	case "deadend":
+		if len(args) > 1 && (args[1] == "retire" || args[1] == "unretire") {
+			return runKnowledgeDeadEndRetire(args[1], args[2:], stdout, stderr)
+		}
 		return runKnowledgeDeadEnd(args[1:], stdout, stderr)
+	case "retire":
+		return runKnowledgeRetire(args[1:], stdout, stderr)
 	case "propose":
 		return runKnowledgePropose(args[1:], stdout, stderr)
 	case "validate":
@@ -44,7 +51,109 @@ func runKnowledge(args []string, stdout, stderr io.Writer) int {
 	case "show":
 		return runKnowledgeShow(args[1:], stdout, stderr)
 	}
-	return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown knowledge subverb %q: deadend | propose | validate | contest | promote | lint | show", args[0])), stdout, stderr)
+	return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown knowledge subverb %q: deadend [retire | unretire] | propose | validate | contest | promote | retire | lint | show", args[0])), stdout, stderr)
+}
+
+// runKnowledgeDeadEndRetire is the curator's act on a dead end whose
+// environment moved (plans/os-0d537fbd.md D3): retire, or un-retire
+// over a standing retirement, on the dead end's own contract.
+func runKnowledgeDeadEndRetire(name string, args []string, stdout, stderr io.Writer) int {
+	verb := curation.DeadEndRetireVerb
+	if name == "unretire" {
+		verb = curation.DeadEndUnretireVerb
+	}
+	fs := flag.NewFlagSet("knowledge deadend "+name, flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	f := bindLoopFlags(fs)
+	deadend := fs.String("deadend", "", "the admitted dead end, <contract>@<position>")
+	environment := fs.String("environment", "", "the environment now, which must differ from the one the previous act named")
+	reason := fs.String("reason", "", "why the environment's move changes what the dead end says")
+	err := fs.Parse(args)
+	extra := ""
+	for _, req := range []struct{ name, v string }{{"--deadend", *deadend}, {"--environment", *environment}, {"--reason", *reason}} {
+		if err == nil && strings.TrimSpace(req.v) == "" {
+			extra = req.name + " <text>"
+			break
+		}
+	}
+	if failEnv := knowledgeUsage("knowledge deadend "+name, f, err, fs.NArg(), extra); failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	c, ok := curation.ParseCitation(*deadend)
+	if !ok {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--deadend %q is not <contract>@<position>", *deadend)), stdout, stderr)
+	}
+	subject := c.Contract
+	payload := mustJSON(curation.DeadEndRetirement{DeadEnd: *deadend, Environment: *environment, Reason: *reason})
+	if _, perr := curation.ParseDeadEndRetirement(verb, subject, payload); perr != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", perr.Error()), stdout, stderr)
+	}
+	signer, failEnv := loopSigner(*f.keyPath, *f.as)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	ls, failEnv := openLoopSession(f)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	defer ls.done()
+	*f.subject = subject
+	return ls.commit(f, loopAct{verb: verb, payload: payload,
+		resultAt: func(int) map[string]any {
+			return map[string]any{"subject": subject, "deadend": *deadend, "environment": *environment}
+		}}, signer, stdout, stderr)
+}
+
+// runKnowledgeRetire is the retirement observation (plans/os-0d537fbd.md
+// D2): the standing promotion revoked by regression (the revert's
+// merge), supersession (a later promotion) or expiry, the evidence
+// staying where it is.
+func runKnowledgeRetire(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("knowledge retire", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	f := bindLoopFlags(fs)
+	lesson := fs.String("lesson", "", "the retired promotion's lesson, \"next/knowledge/lessons/<id>.md @ <commit>\"")
+	hypothesis := fs.String("hypothesis", "", "the promotion's hypothesis, <h-id>@<position>")
+	reason := fs.String("reason", "", "why: "+strings.Join(curation.RetireReasons, " | "))
+	pr := fs.String("pr", "", "regression only: the revert's merge, \"<pr> @ <merged-commit>\"")
+	supersededBy := fs.String("superseded-by", "", "superseded only: the position of the later admitted promotion")
+	err := fs.Parse(args)
+	extra := ""
+	switch {
+	case err != nil:
+	case strings.TrimSpace(*lesson) == "":
+		extra = "--lesson <path @ commit>"
+	case strings.TrimSpace(*hypothesis) == "":
+		extra = "--hypothesis <h-id>@<position>"
+	case strings.TrimSpace(*reason) == "":
+		extra = "--reason <" + strings.Join(curation.RetireReasons, "|") + ">"
+	}
+	if failEnv := knowledgeUsage("knowledge retire", f, err, fs.NArg(), extra); failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	cit, ok := curation.ParseCitation(*hypothesis)
+	if !ok || !curation.IsHypothesisSubject(cit.Contract) {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--hypothesis %q is not <h-id>@<position>", *hypothesis)), stdout, stderr)
+	}
+	subject := cit.Contract
+	payload := mustJSON(curation.Retirement{Lesson: *lesson, Hypothesis: *hypothesis, Reason: *reason, PR: *pr, SupersededBy: *supersededBy})
+	if _, perr := curation.ParseRetirement(subject, payload); perr != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", perr.Error()), stdout, stderr)
+	}
+	signer, failEnv := loopSigner(*f.keyPath, *f.as)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	ls, failEnv := openLoopSession(f)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	defer ls.done()
+	*f.subject = subject
+	return ls.commit(f, loopAct{verb: curation.RetireVerb, payload: payload,
+		resultAt: func(int) map[string]any {
+			return map[string]any{"subject": subject, "lesson": *lesson, "reason": *reason}
+		}}, signer, stdout, stderr)
 }
 
 // listFlag collects a repeatable string flag.
@@ -255,14 +364,19 @@ func runKnowledgePromote(args []string, stdout, stderr io.Writer) int {
 // D3): the admitted observations on contracts the hypothesis's
 // predicate selects that are outside its support set, for the curator
 // to judge, then contest or promote. No machine decides that an
-// outcome contradicts a claim.
+// outcome contradicts a claim. With --environment it also reports each
+// selected contract's dead ends with their applicability
+// (plans/os-0d537fbd.md D3): string equality with the environment
+// given, the retired flag, and the held-out listing excluding retired
+// dead ends.
 func runKnowledgeValidate(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("knowledge validate", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	f := bindLoopFlags(fs)
 	hypothesis := fs.String("hypothesis", "", "the admitted hypothesis, <h-id>@<position>")
+	environment := fs.String("environment", "", "the environment a run would declare: each dead end is marked applicable to it or not, by string equality")
 	if err := fs.Parse(args); err != nil || (*f.dir == "") == (*f.remote == "") || *hypothesis == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "knowledge validate requires --ledger <dir> or --remote <repo> (not both) and --hypothesis <h-id>@<position>"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "knowledge validate requires --ledger <dir> or --remote <repo> (not both) and --hypothesis <h-id>@<position> [--environment <e>]"), stdout, stderr)
 	}
 	cit, ok := curation.ParseCitation(*hypothesis)
 	if !ok || !curation.IsHypothesisSubject(cit.Contract) {
@@ -282,7 +396,28 @@ func runKnowledgeValidate(args []string, stdout, stderr io.Writer) int {
 	for _, o := range curation.HeldOut(ls.ctx.Records, ls.ctx.Table, ls.ctx.Lifecycle, h) {
 		rows = append(rows, map[string]any{"contract": o.Contract, "position": fmt.Sprintf("%d", o.Position), "verb": o.Verb, "holder": o.Holder})
 	}
-	return render(stampTip(envelope.OK(map[string]any{"hypothesis": *hypothesis, "stage": h.Stage, "support": h.Support, "held_out": rows}), ls.ctx.Count), stdout, stderr)
+	deadEnds := []map[string]any{}
+	for _, id := range ls.ctx.Lifecycle.Subjects() {
+		if s, ok := ls.ctx.Lifecycle.State(id); !ok || !h.AppliesWhen.Selects(s) {
+			continue
+		}
+		for _, d := range st.DeadEnds[id] {
+			row := map[string]any{"contract": id, "position": fmt.Sprintf("%d", d.Pos), "environment": d.Environment, "retired": d.Retired}
+			if d.Retired {
+				row["retired_environment"] = d.RetiredEnvironment
+			}
+			if *environment != "" {
+				row["applies"] = d.Applies(*environment)
+			}
+			deadEnds = append(deadEnds, row)
+		}
+	}
+	out := map[string]any{"hypothesis": *hypothesis, "stage": h.Stage, "support": h.Support, "held_out": rows,
+		"held_out_excludes": "retired dead ends", "dead_ends": deadEnds}
+	if *environment != "" {
+		out["environment"] = *environment
+	}
+	return render(stampTip(envelope.OK(out), ls.ctx.Count), stdout, stderr)
 }
 
 func runKnowledgeContest(args []string, stdout, stderr io.Writer) int {
@@ -332,7 +467,9 @@ func runKnowledgeContest(args []string, stdout, stderr io.Writer) int {
 
 // runKnowledgeLint is the promotion gate's file half
 // (plans/os-96850e5a.md D4): the lesson file against its fact, its
-// hypothesis and the repository, at the declared instant.
+// hypothesis and the repository, at the declared instant; then the
+// bloat half (plans/os-0d537fbd.md D4): the file's structure, and the
+// store the file sits in holding one file per hypothesis.
 func runKnowledgeLint(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("knowledge lint", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -380,14 +517,25 @@ func runKnowledgeLint(args []string, stdout, stderr io.Writer) int {
 	if fact == nil {
 		return render(stampTip(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no admitted promotion cites %s: the file half judges a lesson the ledger promoted", rel)), ls.ctx.Count), stdout, stderr)
 	}
-	if err := curation.LintFile(*repo, body, *fact, h, now); err != nil {
-		var ge *curation.GateError
-		if errors.As(err, &ge) {
-			return render(stampTip(envelope.Fail(envelope.ExitChecksRed, "lint_refused", err.Error()), ls.ctx.Count), stdout, stderr)
+	// The bloat half first, since it needs no repository: the file's
+	// structure and the store's one-file-per-hypothesis; then the
+	// gate's file half against the fact, the hypothesis and the
+	// repository at the declared instant.
+	for _, lint := range []func() error{
+		func() error { return curation.LintStructure(body) },
+		func() error { return curation.LintDuplicates(filepath.Dir(file), st) },
+		func() error { return curation.LintFile(*repo, body, *fact, h, now) },
+	} {
+		if err := lint(); err != nil {
+			var ge *curation.GateError
+			if errors.As(err, &ge) {
+				return render(stampTip(envelope.Fail(envelope.ExitChecksRed, "lint_refused", err.Error()), ls.ctx.Count), stdout, stderr)
+			}
+			return render(stampTip(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), ls.ctx.Count), stdout, stderr)
 		}
-		return render(stampTip(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), ls.ctx.Count), stdout, stderr)
 	}
-	return render(stampTip(envelope.OK(map[string]any{"lesson": fact.Lesson, "hypothesis": fact.Hypothesis, "carrier": fact.Carrier, "digest": fact.Digest, "lint": "ok"}), ls.ctx.Count), stdout, stderr)
+	return render(stampTip(envelope.OK(map[string]any{"lesson": fact.Lesson, "hypothesis": fact.Hypothesis, "carrier": fact.Carrier, "digest": fact.Digest,
+		"lint": "ok", "structure": "ok", "dedup": "ok", "store": filepath.Dir(file)}), ls.ctx.Count), stdout, stderr)
 }
 
 // relativeTo is the file's repository-relative path when it lies
@@ -405,19 +553,32 @@ func relativeTo(repo, file string) string {
 	return filepath.ToSlash(rel)
 }
 
+// runKnowledgeShow renders the knowledge view at the tip: with --now,
+// at that instant, every expired lesson flagged stale; without it,
+// nothing flagged and the view saying so (plans/os-0d537fbd.md D4).
 func runKnowledgeShow(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("knowledge show", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	f := bindLoopFlags(fs)
+	nowFlag := fs.String("now", "", "RFC3339: the instant staleness is judged at (default: none declared, nothing flagged)")
 	if err := fs.Parse(args); err != nil || (*f.dir == "") == (*f.remote == "") || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "knowledge show requires --ledger <dir> or --remote <repo> (not both)"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "knowledge show requires --ledger <dir> or --remote <repo> (not both) [--now <RFC3339>]"), stdout, stderr)
+	}
+	var at *time.Time
+	if *nowFlag != "" {
+		parsed, err := time.Parse(time.RFC3339, *nowFlag)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--now %q is not RFC3339", *nowFlag)), stdout, stderr)
+		}
+		utc := parsed.UTC()
+		at = &utc
 	}
 	ls, failEnv := openLoopSession(f)
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
 	defer ls.done()
-	view := project.DeriveKnowledge(ls.ctx.Records)
+	view := project.DeriveKnowledgeAt(ls.ctx.Records, at)
 	var out map[string]any
 	if err := json.Unmarshal(mustJSON(view), &out); err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)

@@ -29,9 +29,9 @@ the proposal behind a grant nothing implementing can hold.
 
 | stage | storage | fact | who appends |
 |---|---|---|---|
-| observations | the ledger, on the contract | the packet's `findings` ([`packets.md`](packets.md)) and **`curation.deadend.recorded`** | the window's holder (`claim`), `operator` |
+| observations | the ledger, on the contract | the packet's `findings` ([`packets.md`](packets.md)) and **`curation.deadend.recorded`**; **`curation.deadend.retired`** and **`curation.deadend.unretired`**, the curator's judgment that the environment moved | the window's holder (`claim`), `operator`; the two environment acts **`curate`** alone |
 | hypotheses | the ledger, on a hypothesis subject | **`curation.hypothesis.proposed`**, **`curation.hypothesis.contested`** | **`curate`** alone, no operator fallback |
-| validated lessons | `next/knowledge/lessons/<id>.md`, merged by PR, and the ledger | **`curation.lesson.promoted`** (the PR observation) | `observer`, `operator` |
+| validated lessons | `next/knowledge/lessons/<id>.md`, merged by PR, and the ledger | **`curation.lesson.promoted`** (the PR observation), **`curation.lesson.retired`** (the observation that the promotion is revoked) | `observer`, `operator` |
 | policy | role, skill and workflow patches on the protected surface, by PR | none in this item | the governance root, through gates |
 
 **No stage skips, by citation.** A hypothesis cites the observations it
@@ -53,8 +53,10 @@ Refused: a lessons store in the ledger. A lesson is a document humans
 and lanes read, it changes behavior when it lands, and the charter
 routes promotion through a PR precisely so that rollback is a revert;
 the ledger carries the observation of that merge, the `plan.approved`
-posture. Refused here: `lesson.retired`; retirement and expiry are item
-4's, and a verb with no reader is a verb nobody drills.
+posture. `lesson.retired`, refused by item 1 as a verb with no reader,
+landed with item 4 once it had three: the surfacing set, the
+projection and the maintenance loop ("Expiry, retirement and
+applicability" below).
 
 ## The facts
 
@@ -218,25 +220,36 @@ there is a red test rather than a silent gap.
 | `contest.shape` | the contest's payload shape and fields |
 | `deadend.holder` | the dead end is the window holder's own |
 | `deadend.shape` | the dead end's payload shape and fields |
+| `deadend_retirement.deadend` | the citation is an admitted dead end on this subject |
+| `deadend_retirement.environment` | the environment differs from the one the previous act named |
+| `deadend_retirement.shape` | the dead-end retirement's payload shape and fields |
+| `deadend_retirement.standing` | a retirement needs no standing retirement, an un-retirement needs one |
 | `lint.ancestry` | the anchor commit is an ancestor of the repository's head |
 | `lint.applies_when` | the frontmatter's applies-when parses and equals the hypothesis's |
 | `lint.carrier` | the frontmatter's carrier equals the fact's |
 | `lint.digest` | the file's bytes at the anchor hash to the fact's digest |
+| `lint.duplicate` | one lesson file per hypothesis in the store |
 | `lint.frontmatter` | the lesson file opens with the frontmatter block and its keys |
 | `lint.hypothesis` | the frontmatter cites the fact's hypothesis |
 | `lint.provenance` | every provenance anchor resolves in the repository at its commit |
 | `lint.stamps` | last-validated is not after the declared instant, expires is after it, and both equal the fact's |
+| `lint.structure` | the frontmatter carries exactly the known keys and the body the README's sections, in order |
 | `lint.support` | the frontmatter's support equals the hypothesis's |
 | `promotion.adversarial` | the adversarial evaluation is an authenticated pass bound to this hypothesis and this lesson anchor, filed after the hypothesis |
 | `promotion.carrier` | the carrier is a member |
 | `promotion.contested` | a contested hypothesis is not promotable |
 | `promotion.digest` | the digest is the lesson file's sha256 |
 | `promotion.hypothesis` | the promotion cites an admitted hypothesis on its own subject |
+| `promotion.revalidation` | a re-promotion of a path carries a last_validated after the previous admitted promotion's |
 | `promotion.shape` | the promotion's payload shape and fields |
 | `promotion.stamps` | last_validated and expires are RFC3339 and ordered |
 | `promotion.support` | the hypothesis's support still satisfies the arms at promotion |
 | `proposal.shape` | the proposal's payload shape and fields |
 | `proposal.subject` | the subject is derived from the claim and its exceptions |
+| `retirement.promotion` | the retirement cites the latest admitted promotion of its path |
+| `retirement.reason` | pr rides regression alone, superseded_by rides superseded alone, expired carries neither |
+| `retirement.shape` | the retirement's payload shape and fields |
+| `retirement.superseded_by` | superseded_by names a later admitted promotion, never the retired one |
 | `support.actors` | two distinct holders where the family allows it |
 | `support.duplicate` | one claim is proposed once |
 | `support.failed` | no cited contract stands failed |
@@ -244,13 +257,127 @@ there is a red test rather than a silent gap.
 | `support.observation` | every citation is an admitted observation |
 
 
+## Expiry, retirement and applicability
+
+**Expiry is derived, never a fact** (plans/os-0d537fbd.md D1). At a
+declared instant a promoted lesson is `expired` when the instant is at
+or past its `expires` stamp (`curation.Expired`, at-or-past, so a lesson
+is expired at the second its stamp names); an expired lesson leaves
+the surfacing set and is flagged `stale` wherever the store is shown at
+an instant. **Revalidation is a re-promotion.** The curator runs the
+hypothesis against the held-out evidence again (`seed knowledge
+validate`), the file's `last-validated` and `expires` move forward in
+a PR, and the observer records a new `lesson.promoted` for the same
+path at the new anchor, through the whole gate again (a fresh survival
+bound to the new anchor included). The fold keeps the **latest admitted
+promotion per lesson path** (`State.Lessons`, keyed by path), and a
+re-promotion whose `last_validated` is not after the previous admitted
+promotion's refuses at `promotion.revalidation` naming both, so the
+latest promotion per path is always the most recently validated
+(`curation.LatestPromotionBefore`: one forward pass, every earlier
+promotion judged through the arms and the order against the latest it
+admitted so far, never a refold per promotion). No
+`lesson.revalidated` verb: a stamp that moved is a file that changed,
+and a file that changed is a PR.
+
+**Retirement is an observation, and the evidence stays** (D2).
+**`curation.lesson.retired`**, on the hypothesis subject, accepted by
+`observer` and `operator` (the promotion's own row), carries
+`{"lesson": "<path @ promoted-commit>", "hypothesis": "<h@position>",
+"reason": "regression" | "superseded" | "expired", "pr"?, "superseded_by"?}`,
+strictly decoded (an unknown key refuses at `retirement.shape`). The two
+optional fields are each REQUIRED by exactly one reason and FORBIDDEN by
+the others (`retirement.reason`): `regression` requires `pr`, the
+revert's merge, which is the charter's one command observed (a
+promotion was a PR, so its rollback is `git revert` of the merge, and
+the ledger carries the observation that it happened); `superseded`
+requires `superseded_by`, the position of an admitted `lesson.promoted`
+later than the retired promotion and not the retired promotion itself
+(`retirement.superseded_by`: the reviewer of that promotion judged the
+supersession, the record checks the citation is a real, later
+promotion, necessarily of another path, since a later promotion of the
+same path already superseded the old one in the fold); `expired`
+requires neither, the stamp the fold already holds being the evidence
+(and admission reads no clock, so the boundary does not judge that the
+stamp has passed: the observer's act is the observation). The boundary
+requires the cited promotion to be the latest admitted promotion of its
+path and unretired (`retirement.promotion`: a superseded one is already
+gone, and a second retirement over a standing one names it). The fold
+moves the path to `Retired`; a retired lesson never surfaces; its file
+at the promoted anchor, its hypothesis, its support and every
+observation remain, which is "revokes conclusions and keeps evidence".
+A retired lesson comes back only by a new promotion of the path through
+the gate, which clears the retirement.
+
+**Dead ends retire and un-retire on the environment, by a curator's
+attributable act** (D3). **`curation.deadend.retired`** and
+**`curation.deadend.unretired`**, on the contract subject, `curate`
+alone, carry `{"deadend": "<contract>@<position>", "environment":
+"<the environment now>", "reason"}`. The boundary requires the citation
+to be an admitted dead end on that subject
+(`deadend_retirement.deadend`; another contract's dead end refuses at
+the shape gate, since the act is a fact on the contract the dead end
+was recorded on), and an environment that CHANGED
+(`deadend_retirement.environment`): a retirement's `environment` must
+differ from the dead end's recorded one (it no longer applies because
+the environment moved), and an un-retirement's from the standing
+retirement's declared one (the environment moved again), so neither
+act admits in the environment the previous act named; a retirement
+needs no standing retirement and an un-retirement needs one
+(`deadend_retirement.standing`). Both comparisons are exact string
+equality, the one comparison applicability uses: **a dead end applies
+to a run whose declared tuple environment equals the dead end's
+`environment`** and it is not retired (`DeadEndFact.Applies`). The
+fold flags (`retired`, `retired_environment`, `retired_at`) and never
+deletes; the held-out listing (`seed knowledge validate`) excludes
+retired dead ends and says so, and with `--environment <e>` reports
+each selected contract's dead ends with the environment, the retired
+flag and whether it applies to `e`. No automatic retirement or
+un-retirement, and no environment predicate beyond equality with the
+run's declared tuple.
+
+## Bloat: staleness flags, dedup and structure
+
+The `knowledge` projection takes a declared instant (`Inputs.AsOf`,
+the observation section's posture; it declares input consumption since
+version "3", an instant being an input) and flags `stale` on every
+expired lesson, counting them in `stages.stale` beside
+`stages.retired`; with no instant declared it flags nothing and says so
+(`staleness: "undeclared: …"`, once the chain holds a lesson), so a
+build without an instant never reads as "nothing is stale". `seed
+knowledge show [--now <RFC3339>]` renders the same view: the stage,
+the flags and the reason per lesson (retired with its reason and the
+evidence its reason carries; contested; expired at the instant). `seed
+knowledge lint` gains the bloat half before the gate's file half:
+**structure** (`lint.structure`: the frontmatter carries exactly the
+known keys, and the body carries the README's sections `## Claim`,
+`## Evidence`, `## Applies when` in that order) and **dedup**
+(`lint.duplicate`: the store the file sits in holds one file per
+hypothesis; two files citing one hypothesis refuse naming the
+duplicate, the file the admitted promotion does not cite; a
+revalidation keeps its path, so it is never a duplicate; two
+hypotheses whose claim and exceptions canonicalize equal are one id
+already). A drill applies both to the shipped store under `make
+check`. **The maintenance loop notices what nobody revalidated**
+(D5): the lint `lesson_stale` ([`maintenance.md`](maintenance.md),
+[`reconciliation.md`](reconciliation.md)) files a defect contract for
+a lesson expired at the loop's declared instant for at least
+`--stale-after` with no later promotion or retirement, idempotently
+through the ledger; the finding's subject is `<lesson path>@<promotion
+position>`, so one stale cycle files once and a re-promoted lesson
+whose new promotion expires in its turn files new work. The loop never
+retires: it asks.
+
 ## Delivery
 
-The surfacing set (`curation.Surfacing`) is every admitted promotion
-(the fold binds only what passed the promotion boundary at its own
-position) whose hypothesis is not contested by an admitted contest,
-whose applies-when selects the subject, AND whose fact resolves in the
-repository the reader holds:
+The surfacing set (`curation.Surfacing`) is the latest admitted
+promotion per lesson path (the fold binds only what passed the
+promotion boundary at its own position) whose hypothesis is not
+contested by an admitted contest, which is not retired, which is not
+expired at the read's instant (`claim take --now`, `seed situation
+--now`; the wall clock otherwise; admission reads no clock, the
+offer-liveness posture), whose applies-when selects the subject, AND
+whose fact resolves in the repository the reader holds:
 the anchor commit is an ancestor of the repository's head (the
 promotion PR merged) and the file's bytes at the anchor hash to the
 fact's `digest`. A fact that does not resolve is reported as
@@ -319,17 +446,28 @@ lane can raise" reaching the one lane it did not
 ([`escalation.md`](escalation.md)).
 
 The curator's reachable set at the boundary is the proposal, the
-contest, the raise, and `message.sent`, which any enrolled active key
-appends (the relay the injection suite names for the dispatcher); the
-injection suite derives the set from `admit.Affordances` and pins it.
+contest, the two dead-end environment acts, the raise, and
+`message.sent`, which any enrolled active key appends (the relay the
+injection suite names for the dispatcher); the injection suite derives
+the set from `admit.Affordances` and pins it. The retirement is the
+observer's and the operator's, never the curator's: the promotion's
+own row, since the retirement is the observation that a promotion is
+revoked.
 
 ## Versioning
 
-The four verbs are catalog growth under an existing namespace, the
+The seven verbs are catalog growth under an existing namespace, the
 `offer.published` precedent: an older validator refuses the unknown
 verb safely, admission policy shapes them, the fold counts a malformed
 raw fact as an anomaly, and every existing chain verifies byte for
-byte. No protocol bump.
+byte. No protocol bump: for item 4's three (plans/os-0d537fbd.md D7),
+verification takes a verb it has no rule for on active standing (the
+standing-only class `message.sent` belongs to; `lesson.retired`'s name
+in the catalog gave it no rule at verification), so a chain carrying
+them raw-pushed verifies identically under the build before the card
+and under it, and only admission's answer changed; a drill raw-pushes
+the three and asserts the chain verifies and the fold counts three
+anomalies.
 
 ## Surfaces
 
@@ -345,7 +483,10 @@ byte. No protocol bump.
   citations or a predicate that is no object refuse at usage naming
   the part.
 - `seed knowledge validate (--ledger <dir> | --remote <repo>)
-  --hypothesis <h-id>@<position>` — the held-out listing.
+  --hypothesis <h-id>@<position> [--environment <e>]` — the held-out
+  listing (retired dead ends excluded, and the envelope says so) and
+  the selected contracts' dead ends with the environment, the retired
+  flag and, with `--environment`, whether each applies to `e`.
 - `seed knowledge contest … --key <path> --hypothesis
   <h-id>@<position> --evidence <contract>@<position>… --reason <text>`
   — the curator's contest.
@@ -355,16 +496,32 @@ byte. No protocol bump.
   --last-validated <RFC3339> --expires <RFC3339>` — the observer's
   promotion, the subject the cited hypothesis's, the digest read from
   the file at its anchor in the repository (never typed).
+- `seed knowledge retire … --key <path> --lesson <path @ commit>
+  --hypothesis <h-id>@<position> --reason <regression|superseded|expired>
+  [--pr <pr @ commit>] [--superseded-by <position>]` — the observer's
+  retirement, the subject the cited hypothesis's; the reason's field
+  pairing is judged at usage before the boundary judges the citation.
+- `seed knowledge deadend retire … --key <path> --deadend
+  <contract>@<position> --environment <e> --reason <text>` and `seed
+  knowledge deadend unretire …` — the curator's environment acts, the
+  subject the cited contract.
 - `seed knowledge lint <file> (--ledger <dir> | --remote <repo>) --repo
-  <dir> [--now <RFC3339>]` — the gate's file half; a refusal is
-  `lint_refused` naming the gate.
-- `seed knowledge show (--ledger <dir> | --remote <repo>)` — the fold:
-  the stage counts, dead ends by contract, hypotheses with their stage
-  (`proposed`, `promoted`), lessons, the unbound promotions.
-- The `knowledge` projection (`knowledge.json`) publishes the same view
-  ([`projections.md`](projections.md)); the report carries a
-  `knowledge` section counting the stages when the chain holds any
-  curation fact.
+  <dir> [--now <RFC3339>]` — the bloat half (structure, then the
+  store's dedup) and the gate's file half; a refusal is `lint_refused`
+  naming the gate.
+- `seed knowledge show (--ledger <dir> | --remote <repo>) [--now
+  <RFC3339>]` — the fold: the stage counts, dead ends by contract with
+  their flags, hypotheses with their stage (`proposed`, `promoted`,
+  `contested`), lessons with `surfaces`, `stale`, `retired` and the
+  reason, the standing retirements, the unbound promotions; `as_of`
+  with `--now`, else `staleness` saying the instant is undeclared.
+- `seed maintain run … [--stale-after <duration>]` — the `lesson_stale`
+  lint at the pass's declared instant ([`maintenance.md`](maintenance.md)).
+- The `knowledge` projection (`knowledge.json`, version 3) publishes the
+  same view at the declared inputs' instant
+  ([`projections.md`](projections.md)); the report (version 12)
+  carries a `knowledge` section counting the stages, the retired and
+  the stale, when the chain holds any curation fact.
 
 ## The poisoning drill
 
@@ -499,6 +656,31 @@ drill before the fold learned to re-judge both facts.
   contest, the fold's stage and the surfacing set's exclusion,
   drilled at the boundary, in the projection and on every delivery
   surface.
+- III.K row 6 (every promoted lesson carries a last-validated stamp
+  and an expiry-for-revalidation; retirement revokes conclusions and
+  keeps evidence; a promoted lesson implicated in a regression rolls
+  back by reverting its PR, one command because it was a PR): the
+  stamps on the fact, expiry derived at the read's instant,
+  revalidation as a re-promotion under `promotion.revalidation`,
+  `lesson.retired` with its three reasons and the fold that keeps the
+  file, the hypothesis and the observations, the revert observed as
+  `regression` with its `pr`; drilled at the boundary, in the
+  projection, at the terminal and end to end in the modes fixture
+  (the revert observed, the claim after carrying nothing).
+- III.K row 7 (dead ends record failure condition and environment, and
+  can be un-retired when the environment changes; the curator checks
+  dead-end applicability, not just lesson applicability):
+  `deadend.retired` and `deadend.unretired` on an environment that
+  changed, applicability by string equality with the run's declared
+  environment, `seed knowledge validate --environment` reporting it;
+  drilled at the boundary and at the terminal.
+- III.K row 9 (knowledge bloat is managed: dedup with provenance,
+  staleness flags, structure lint): `lint.duplicate` and
+  `lint.structure` under `seed knowledge lint` and `make check`, the
+  `stale` flags at the projection's declared instant, and the
+  `lesson_stale` maintenance finding; routed here by
+  `docs/next-build-plan.md` Phase 11 item 4.
 - III.I row 5 (knowledge shown at the right moment): the surfacing set
   on `claim take`, in the provisioned handoff and in the orienting
-  read, verified against the repository before anything surfaces.
+  read, verified against the repository before anything surfaces, at
+  the instant the read declares.

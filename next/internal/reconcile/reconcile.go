@@ -69,6 +69,17 @@ const ClassVerdictUnverified = "verdict_unverified"
 // never surfaces to a worker; this class is where it is reported.
 const ClassLessonUnverified = "lesson_unverified"
 
+// ClassLessonStale is a lesson whose latest admitted promotion is
+// expired at the maintenance loop's declared instant, for at least its
+// stale-after threshold, with no standing retirement
+// (plans/os-0d537fbd.md D5): nobody revalidated it and nobody retired
+// it. Record-derived at a declared instant, the loop's, since no
+// build reads a clock. The finding's subject is "<path>@<promotion
+// position>", so the defect's identity follows the promotion: one
+// stale cycle files once and the boundary refuses the duplicate, and
+// a re-promotion that expires in its turn files new work.
+const ClassLessonStale = "lesson_stale"
+
 // ClassIndependenceUnverified is a folded verdict whose recorded
 // independence level the records do not support, or which is short of
 // its subject's tier (plans/os-99829835.md D5): verdict_unverified's

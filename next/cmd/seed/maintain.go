@@ -60,9 +60,10 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 	out := fs.String("out", "", "projection output directory (default: no rebuild)")
 	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
 	asOf := fs.String("as-of", "", "declared classification instant (RFC3339; defaults to now)")
-	if err := fs.Parse(args); err != nil || *dir == "" || *repo == "" || *keyPath == "" || *obsDir == "" || fs.NArg() != 0 {
+	staleAfter := fs.Duration("stale-after", 0, "how long past its expiry an unrevalidated, unretired lesson stands before lesson_stale files it (default: on expiry)")
+	if err := fs.Parse(args); err != nil || *dir == "" || *repo == "" || *keyPath == "" || *obsDir == "" || fs.NArg() != 0 || *staleAfter < 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
-			"maintain run requires --ledger <dir> --repo <dir> --key <path> --obs <dir> [--out <dir>] [--artifacts <dir>] [--as-of <ts>]"), stdout, stderr)
+			"maintain run requires --ledger <dir> --repo <dir> --key <path> --obs <dir> [--out <dir>] [--artifacts <dir>] [--as-of <ts>] [--stale-after <duration>]"), stdout, stderr)
 	}
 	keyBytes, err := os.ReadFile(*keyPath)
 	if err != nil {
@@ -98,6 +99,7 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 	sess := &maintainSession{dir: *dir, st: st, signer: signer}
 	deps := maintain.Deps{
 		Now:        now,
+		StaleAfter: *staleAfter,
 		Records:    st.records,
 		Table:      st.table,
 		Fold:       st.fold,

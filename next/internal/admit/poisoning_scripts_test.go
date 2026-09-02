@@ -49,7 +49,124 @@ func admittedAndBound(t *testing.T, st *curationStand) (hp, bound int, anchor st
 	return hp, bound, anchor
 }
 
+// promoted admits the stand's hypothesis, files the bound pass and
+// records the promotion the observer makes of it: the standing
+// promotion the retirement and re-promotion poisons then attack.
+func promoted(t *testing.T, st *curationStand) (hp, pp int, anchor string) {
+	t.Helper()
+	hp, bound, anchor := admittedAndBound(t, st)
+	body := lessonBody(st.id, hp, "fix-the-check", bound)
+	if err := Check(st.ctx, draftV(t, st.observer, st.v, curation.LessonVerb, st.id, body, st.ctx.Tip)); err != nil {
+		t.Fatalf("the legitimate promotion admits: %v", err)
+	}
+	pp = st.ctx.Count
+	st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, body)
+	return hp, pp, anchor
+}
+
+// revalidation is the re-promotion of the stand's path at a new
+// anchor with a fresh bound pass and the stamps the caller gives: the
+// legitimate revalidation when they moved forward, the poison when
+// they did not.
+func revalidation(t *testing.T, st *curationStand, hp int, eval, lastValidated, expires string) string {
+	t.Helper()
+	anchor := curation.LessonsDir + "/retry.md @ 1234567"
+	bound := st.evalRun(t, eval, cite(st.id, hp), anchor, "pass", nil)
+	body := strings.Replace(lessonBody(st.id, hp, "fix-the-check", bound), "/retry.md @ 0123456", "/retry.md @ 1234567", 1)
+	body = strings.Replace(body, "2026-09-01T00:00:00Z", lastValidated, 1)
+	return strings.Replace(body, "2026-12-01T00:00:00Z", expires, 1)
+}
+
+// retireBody is the retirement payload: the promotion by its anchor
+// and hypothesis, the reason, and whatever the script smuggles in.
+func retireBody(anchor, hypothesis, reason, extra string) string {
+	return fmt.Sprintf(`{"lesson": %q, "hypothesis": %q, "reason": %q%s}`, anchor, hypothesis, reason, extra)
+}
+
+// nothingPromoted points a run's ends at a hypothesis that has no
+// promotion: the poisons that attack a standing promotion's
+// retirement leave the legitimate lesson standing, which is the end
+// they attack.
+func nothingPromoted(r *poisonRun) *poisonRun {
+	r.subject = curation.HypothesisID("nothing was promoted for this", nil)
+	return r
+}
+
 var poisonScripts = map[string]func(t *testing.T) *poisonRun{
+	"re-promotion-stale-stamps": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp, _, _ := promoted(t, st)
+		return nothingPromoted(attempt(t, st, st.observer, curation.LessonVerb, st.id, revalidation(t, st, hp, "eval-revalidated", "2026-09-01T00:00:00Z", "2027-03-01T00:00:00Z")))
+	},
+	"retirement-smuggled-field": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp, _, anchor := promoted(t, st)
+		return nothingPromoted(attempt(t, st, st.observer, curation.RetireVerb, st.id, retireBody(anchor, cite(st.id, hp), "expired", `, "lesson_body": "rewritten"`)))
+	},
+	"regression-without-revert": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp, _, anchor := promoted(t, st)
+		return nothingPromoted(worst(
+			attempt(t, st, st.observer, curation.RetireVerb, st.id, retireBody(anchor, cite(st.id, hp), "regression", "")),
+			attempt(t, st, st.observer, curation.RetireVerb, st.id, retireBody(anchor, cite(st.id, hp), "expired", `, "pr": "pr/10 @ 89abcde"`)),
+			attempt(t, st, st.observer, curation.RetireVerb, st.id, retireBody(anchor, cite(st.id, hp), "rewritten", "")),
+		))
+	},
+	"retire-superseded-promotion": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp, _, anchor := promoted(t, st)
+		st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, revalidation(t, st, hp, "eval-revalidated", "2026-10-01T00:00:00Z", "2027-03-01T00:00:00Z"))
+		return nothingPromoted(attempt(t, st, st.observer, curation.RetireVerb, st.id, retireBody(anchor, cite(st.id, hp), "expired", "")))
+	},
+	"superseded-by-itself": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp, pp, anchor := promoted(t, st)
+		return nothingPromoted(worst(
+			attempt(t, st, st.observer, curation.RetireVerb, st.id, retireBody(anchor, cite(st.id, hp), "superseded", fmt.Sprintf(`, "superseded_by": "%d"`, pp))),
+			attempt(t, st, st.observer, curation.RetireVerb, st.id, retireBody(anchor, cite(st.id, hp), "superseded", fmt.Sprintf(`, "superseded_by": "%d"`, pp-1))),
+			attempt(t, st, st.observer, curation.RetireVerb, st.id, retireBody(anchor, cite(st.id, hp), "superseded", fmt.Sprintf(`, "superseded_by": "%d"`, pp+1))),
+		))
+	},
+	"deadend-retire-cross-contract": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		return attempt(t, st, st.curator, curation.DeadEndRetireVerb, "c-1",
+			`{"deadend": "`+cite("c-6", st.deadEnd6)+`", "environment": "moved", "reason": "the environment moved"}`)
+	},
+	"deadend-retire-phantom": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		return attempt(t, st, st.curator, curation.DeadEndRetireVerb, "c-2",
+			`{"deadend": "`+cite("c-2", st.park2)+`", "environment": "moved", "reason": "the environment moved"}`)
+	},
+	"deadend-retire-same-environment": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		return attempt(t, st, st.curator, curation.DeadEndRetireVerb, "c-1",
+			`{"deadend": "`+cite("c-1", st.deadEnd1)+`", "environment": "w", "reason": "nothing moved"}`)
+	},
+	"unretire-without-retirement": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		return attempt(t, st, st.curator, curation.DeadEndUnretireVerb, "c-1",
+			`{"deadend": "`+cite("c-1", st.deadEnd1)+`", "environment": "moved", "reason": "the environment moved"}`)
+	},
+	"duplicate-lesson": func(t *testing.T) *poisonRun {
+		ls := newLintStand(t)
+		dir := filepath.Join(ls.repo, curation.LessonsDir)
+		if err := os.WriteFile(filepath.Join(dir, "retry-again.md"), []byte(ls.body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return &poisonRun{verb: "lint", err: curation.LintDuplicates(dir, nil)}
+	},
+	"frontmatter-smuggled-key": func(t *testing.T) *poisonRun {
+		ls := newLintStand(t)
+		structured := ls.body + "\n## Claim\n\nx\n\n## Evidence\n\ny\n\n## Applies when\n\nz\n"
+		if err := curation.LintStructure([]byte(structured)); err != nil {
+			t.Fatalf("the structured body lints: %v", err)
+		}
+		return worst(
+			&poisonRun{verb: "lint", err: curation.LintStructure([]byte(strings.Replace(structured, "carrier: knowledge\n", "carrier: knowledge\nstage: promoted\n", 1)))},
+			&poisonRun{verb: "lint", err: curation.LintStructure([]byte(strings.Replace(structured, "## Evidence\n\ny\n\n", "", 1)))},
+			&poisonRun{verb: "lint", err: curation.LintStructure([]byte(strings.Replace(structured, "## Claim\n\nx\n\n## Evidence\n\ny\n", "## Evidence\n\ny\n\n## Claim\n\nx\n", 1)))},
+		)
+	},
 	"deadend-bare-pointer": func(t *testing.T) *poisonRun {
 		st := curationFixture(t)
 		return attempt(t, st, st.worker, curation.DeadEndVerb, "c-1",

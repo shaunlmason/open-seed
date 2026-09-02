@@ -466,9 +466,18 @@ func runClaimTake(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(io.Discard)
 	f := bindLoopFlags(fs)
 	repo := fs.String("repo", "", "repository the surfacing lessons are verified against (default: none surface, their count is reported unverified)")
+	nowFlag := fs.String("now", "", "RFC3339 instant the lessons' expiry is read at (default: now); admission reads no clock")
 	parseErr := fs.Parse(args)
 	if env := f.usage("claim take", parseErr, fs.NArg(), ""); env != nil {
 		return render(env, stdout, stderr)
+	}
+	now := time.Now().UTC()
+	if *nowFlag != "" {
+		parsed, err := time.Parse(time.RFC3339, *nowFlag)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--now %q is not an RFC3339 timestamp", *nowFlag)), stdout, stderr)
+		}
+		now = parsed
 	}
 	if *f.dir != "" {
 		return render(exclusiveOnlineOnly(claimTakenVerb), stdout, stderr)
@@ -497,7 +506,7 @@ func runClaimTake(args []string, stdout, stderr io.Writer) int {
 	// the result.
 	var lessons, unresolvedRows []map[string]any
 	deriveLessons := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
-		surfaced, unresolved := curation.Surfacing(ctx.Records, ctx.Lifecycle, *repo, subject)
+		surfaced, unresolved := curation.Surfacing(ctx.Records, ctx.Lifecycle, *repo, subject, now)
 		lessons = []map[string]any{}
 		for _, l := range surfaced {
 			lessons = append(lessons, map[string]any{"lesson": l.Lesson, "hypothesis": l.Hypothesis, "applies_when": l.AppliesWhen, "carrier": l.Carrier, "digest": l.Digest})
