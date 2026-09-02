@@ -1,11 +1,16 @@
 ---
 id: os-8e53ffd9
 title: 'next: Phase 10 item 1 — runtime tuples in enrollment and grants; adapters report the provisioned tuple; drift is out-of-grant'
-state: ready
+state: in_progress
 priority: P1
 squad: core
+claim:
+    actor: seed-next-implementer
+    token: c-535b638c03c53688
+    claimed_at: "2026-09-02T07:30:44Z"
+    lease_expires: "2026-09-02T08:30:44Z"
 created_at: "2026-09-02T07:29:45Z"
-updated_at: "2026-09-02T07:30:41Z"
+updated_at: "2026-09-02T07:30:44Z"
 ---
 
 Phase 10 (qualification and evaluation) item 1, the frontier named by
