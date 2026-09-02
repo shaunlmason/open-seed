@@ -130,7 +130,7 @@ var (
 	GateLintProvenance      = register("lint.provenance", "every provenance anchor resolves in the repository at its commit")
 	GateLintDigest          = register("lint.digest", "the file's bytes at the anchor hash to the fact's digest")
 	GateLintAncestry        = register("lint.ancestry", "the anchor commit is an ancestor of the repository's head")
-	GateLintStamps          = register("lint.stamps", "last-validated is not after the declared instant and expires is after it")
+	GateLintStamps          = register("lint.stamps", "last-validated is not after the declared instant, expires is after it, and both equal the fact's")
 	GateLintCarrier         = register("lint.carrier", "the frontmatter's carrier equals the fact's")
 )
 
@@ -904,6 +904,28 @@ func CheckContest(records []*event.Record, table *transition.Table, fold *transi
 	return h, nil
 }
 
+// ContestedBefore reports whether an admitted contest on the subject
+// stands before the position: one position-accurate scan, never a
+// refold. CheckPromotion asks this from inside the fold's own
+// promotion replay, and a refold from there would re-enter every
+// earlier promotion's replay in turn, exponential in the promotions a
+// chain carries (review finding on the item 3 PR).
+func ContestedBefore(records []*event.Record, table *transition.Table, subject string, before int) bool {
+	if before > len(records) {
+		before = len(records)
+	}
+	for pos := 0; pos < before; pos++ {
+		e := &records[pos].Event
+		if e.Verb != ContestVerb || e.Subject != subject {
+			continue
+		}
+		if _, ok := ContestValid(records, table, pos); ok {
+			return true
+		}
+	}
+	return false
+}
+
 // ContestValid re-judges the record at the position as an admitted
 // contest: a contest on the subject whose signer held curate at that
 // prefix and whose citations pass CheckContest there.
@@ -945,7 +967,7 @@ func CheckPromotion(records []*event.Record, table *transition.Table, fold *tran
 	if !ok {
 		return NewGateError(GatePromotionHypothesis, LessonVerb, subject, fmt.Sprintf("%s is not an admitted hypothesis: a lesson promotes a proposal that passed the boundary, and no stage skips", l.Hypothesis))
 	}
-	if Fold(records).Contested(subject) {
+	if ContestedBefore(records, table, subject, len(records)) {
 		return NewGateError(GatePromotionContested, LessonVerb, subject, "the hypothesis stands contested: a contested hypothesis is never promoted or averaged back; a new proposal citing the counter-evidence as an exception is the road out")
 	}
 	if _, err := CheckSupport(records, table, fold, subject, h); err != nil {
@@ -1544,6 +1566,9 @@ func LintFile(repo string, body []byte, fact LessonFact, h *HypothesisFact, now 
 	}
 	if !ex.After(now) {
 		return NewGateError(GateLintStamps, LessonVerb, subject, fmt.Sprintf("expires %s is not after the declared instant %s", fm["expires"], now.Format(time.RFC3339)))
+	}
+	if fm["last-validated"] != fact.LastValidated || fm["expires"] != fact.Expires {
+		return NewGateError(GateLintStamps, LessonVerb, subject, fmt.Sprintf("the frontmatter's stamps (%s, %s) differ from the fact's (%s, %s): the reviewed file's dates are the lifecycle dates, and a promotion that recorded others carries dates nobody reviewed", fm["last-validated"], fm["expires"], fact.LastValidated, fact.Expires))
 	}
 	if fm["carrier"] != fact.Carrier {
 		return NewGateError(GateLintCarrier, LessonVerb, subject, fmt.Sprintf("the frontmatter's carrier %q differs from the fact's %q", fm["carrier"], fact.Carrier))

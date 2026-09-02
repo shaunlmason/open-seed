@@ -223,10 +223,20 @@ func TestKnowledgeVerbsDriveTheStages(t *testing.T) {
 	if e, code := promote(observerKey, anchor, fmt.Sprintf("%s@%d", id, hpos+1)); code == 0 || e.Error == nil || !strings.Contains(e.Error.Message, "admitted hypothesis") {
 		t.Fatalf("citing a position that is no hypothesis refuses: %d %+v", code, e.Error)
 	}
+	// The stamps are the reviewed file's: a flag that disagrees refuses
+	// at usage naming both, and the promotion needs no stamp flag at
+	// all (review finding on the item 3 PR).
+	if e, code := promote(observerKey, anchor, cited, "--expires", "2027-06-01T00:00:00Z"); code != 64 || e.Error == nil || !strings.Contains(e.Error.Message, "disagrees with the reviewed file") {
+		t.Fatalf("a stamp flag that disagrees with the frontmatter refuses at usage: %d %+v", code, e.Error)
+	}
+	promoteBare := func(key, lesson, hypothesis string) (ledgerEnv, int) {
+		return runEnv(t, "knowledge", "promote", "--ledger", ld, "--key", key, "--lesson", lesson, "--hypothesis", hypothesis, "--pr", "pr/7 @ "+lessonCommit,
+			"--repo", repo, "--carrier", "knowledge", "--adversarial", fmt.Sprintf("fix-the-check@%d", pass))
+	}
 	if e, code := promote(curatorKey, anchor, cited); code != 14 {
 		t.Fatalf("the curator cannot promote: %d %+v", code, e.Error)
 	}
-	if e, code := promote(observerKey, anchor, cited); code != 0 || e.Result["subject"] != id {
+	if e, code := promoteBare(observerKey, anchor, cited); code != 0 || e.Result["subject"] != id {
 		t.Fatalf("the observer promotes the admitted hypothesis citing the survived eval: %d %+v", code, e)
 	}
 	view = show()

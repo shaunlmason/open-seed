@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -882,6 +883,31 @@ func TestPromotionPassAuthenticationAppliesTheLevelRule(t *testing.T) {
 	st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, lessonBody(st.id, hp, "fix-the-check", short))
 	if fold := curation.Fold(st.ctx.Records); len(fold.LessonsOf(st.id)) != 0 || len(fold.Unbound) != 1 {
 		t.Fatalf("a promotion citing the level-short pass folds unbound: %+v", fold.Unbound)
+	}
+}
+
+// The fold's promotion replay never refolds: CheckPromotion reads the
+// contested state from a position-accurate scan, so a chain carrying
+// many promotions folds in linear passes rather than re-entering every
+// earlier promotion's replay (review finding on the item 3 PR, where
+// the refold was exponential in the promotions a chain carried).
+func TestFoldingManyPromotionsNeverRefolds(t *testing.T) {
+	st := curationFixture(t)
+	hp := st.admitHypothesis(t)
+	plain := plainPass(t, st)
+	body := lessonBody(st.id, hp, "fix-the-check", plain)
+	for i := 0; i < 24; i++ {
+		st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, body)
+	}
+	done := make(chan *curation.State, 1)
+	go func() { done <- curation.Fold(st.ctx.Records) }()
+	select {
+	case fold := <-done:
+		if len(fold.Unbound) != 24 || len(fold.LessonsOf(st.id)) != 0 {
+			t.Fatalf("twenty-four raw promotions fold unbound: %d unbound", len(fold.Unbound))
+		}
+	case <-time.After(20 * time.Second):
+		t.Fatal("folding twenty-four promotions did not finish in twenty seconds: the replay refolds")
 	}
 }
 

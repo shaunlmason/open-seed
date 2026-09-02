@@ -178,8 +178,8 @@ func runKnowledgePromote(args []string, stdout, stderr io.Writer) int {
 	repo := fs.String("repo", "", "the repository the lesson merged in: the digest is read from the file at its anchor")
 	carrier := fs.String("carrier", "", "where the lesson lands: "+strings.Join(curation.Carriers, " | "))
 	adversarial := fs.String("adversarial", "", "the counter-trajectory it survived, <eval>@<verdict position>")
-	lastValidated := fs.String("last-validated", "", "RFC3339: when the lesson was last validated")
-	expires := fs.String("expires", "", "RFC3339: when the lesson needs revalidation")
+	lastValidated := fs.String("last-validated", "", "RFC3339: restates the reviewed file's last-validated (read from the frontmatter at the anchor; refuses when it disagrees)")
+	expires := fs.String("expires", "", "RFC3339: restates the reviewed file's expires (read from the frontmatter at the anchor; refuses when it disagrees)")
 	err := fs.Parse(args)
 	extra := ""
 	switch {
@@ -196,8 +196,6 @@ func runKnowledgePromote(args []string, stdout, stderr io.Writer) int {
 		extra = "--carrier <" + strings.Join(curation.Carriers, "|") + ">"
 	case strings.TrimSpace(*adversarial) == "":
 		extra = "--adversarial <eval>@<verdict position>"
-	case strings.TrimSpace(*lastValidated) == "" || strings.TrimSpace(*expires) == "":
-		extra = "--last-validated <RFC3339> --expires <RFC3339>"
 	}
 	if failEnv := knowledgeUsage("knowledge promote", f, err, fs.NArg(), extra); failEnv != nil {
 		return render(failEnv, stdout, stderr)
@@ -218,10 +216,23 @@ func runKnowledgePromote(args []string, stdout, stderr io.Writer) int {
 	if gerr != nil {
 		return render(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("the lesson %s does not exist at its anchor in %s: the digest is read from the merged file, never typed", *lesson, *repo)), stdout, stderr)
 	}
+	// The lifecycle stamps are the reviewed file's (review finding on
+	// the item 3 PR): read from the frontmatter at the anchor, never
+	// typed; a flag may restate them and refuses when it disagrees, so
+	// the fact never carries dates nobody reviewed.
+	fm, ferr := curation.Frontmatter(at)
+	if ferr != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("the lesson at %s has no readable frontmatter: %v", *lesson, ferr)), stdout, stderr)
+	}
+	for _, st := range []struct{ flag, key, given string }{{"--last-validated", "last-validated", *lastValidated}, {"--expires", "expires", *expires}} {
+		if strings.TrimSpace(st.given) != "" && strings.TrimSpace(st.given) != fm[st.key] {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("%s %s disagrees with the reviewed file's %s %s at %s: the stamps are the merged frontmatter's, and a promotion recording others would carry dates nobody reviewed", st.flag, st.given, st.key, fm[st.key], *lesson)), stdout, stderr)
+		}
+	}
 	subject := cit.Contract
 	l := curation.Lesson{Lesson: *lesson, Hypothesis: *hypothesis, PR: *pr, Carrier: *carrier,
 		Adversarial:   &curation.Adversarial{Eval: evalName, Verdict: verdictPos},
-		LastValidated: *lastValidated, Expires: *expires, Digest: curation.Digest(at)}
+		LastValidated: fm["last-validated"], Expires: fm["expires"], Digest: curation.Digest(at)}
 	payload := mustJSON(l)
 	if _, perr := curation.ParseLesson(subject, payload); perr != nil {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", perr.Error()), stdout, stderr)
