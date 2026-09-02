@@ -764,7 +764,29 @@ the escalation it answers. Waiting escalations surface as
 elapsed time and a position difference is event count wearing a clock's
 clothes.
 
-**Next action: Phase 9 item 4, the last in the phase.** Item 1 is COMPLETE: 1a
+**Next action: the Phase 9 exit record.** Item 4 is this card's task
+PR, and with item 3 (#205) every numbered item in the phase has an
+implementation. Both modes run the full loop to `done` on the remote
+posture, wakeless, with every convergence arm exercised. Three things
+this card settled are worth carrying forward.
+
+- **The terminal surface was missing, not merely local-only.**
+  `merge.requested` and `merge.observed` had no CLI verb at all,
+  existing only through `ledger append`, which runs no rules. All three
+  terminal verbs (with `verdict render --remote`) now reach both
+  postures, so the chain's last steps are drivable by a lane.
+- **The mode is purely the identity plan.** Both modes run remote:
+  fleet needs it for contention, and small-team could never have run
+  locally, because `claim take` is refused off the remote and a claim
+  is the loop's first act. Neither clause of III.J mentions transport.
+- **III.J's closing row is met, with one gap recorded rather than
+  hidden**: no shipped lane grants `supervise` or `observer`, which
+  `offer.published` and `merge.observed` require, so a deployment built
+  purely from the six lanes can neither publish its own offers nor
+  record its own merges. The fixtures stage both as background
+  identities; the gap is **os-d6a52784**.
+
+Item 1 is COMPLETE: 1a
 merged (#188), 1c merged (#191), 1b merged (#192), with its four review
 findings landing as os-378e44f3. III.J's first row is met; its second is
 **two-thirds met** and the spec says so — intents and tool output are

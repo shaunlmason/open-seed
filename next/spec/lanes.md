@@ -305,3 +305,15 @@ ordered fragment list prevents.
   for the input-handling half, **two-thirds met**: intents and tool
   output are covered and mirrors are not, because `request.*` is
   unlanded. Three residuals are named and pinned rather than closed.
+
+## A gap the mode fixtures surfaced
+
+No shipped manifest grants `supervise` or `observer`, while
+`offer.published` accepts only `supervise` or `operator` and
+`merge.observed` only `observer` or `operator`. A deployment assembled
+purely from these six lanes can therefore neither publish the offer its
+own workers poll for nor record the merge that ends the loop; only the
+maintenance lane reaches either, through `operator`, which is not its
+job. Carded as `os-d6a52784`; [`modes.md`](modes.md) records how the
+fixtures work around it and why that is a fixture's licence rather than
+a posture.

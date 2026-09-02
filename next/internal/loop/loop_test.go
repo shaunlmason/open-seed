@@ -10,6 +10,7 @@ import (
 	"crypto/ed25519"
 	"encoding/pem"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -1592,4 +1593,69 @@ func TestTheLastDitchExitDeclaresNoIdentity(t *testing.T) {
 	if take, ok := r.argsFor("claim take"); ok && flagValue(take, "--as") == "" {
 		t.Error("claim take is an ordinary act and must declare its identity")
 	}
+}
+
+// conformance: D5 — the loop is WAKELESS by construction, and that is
+// pinned by SURFACE rather than asserted by absence.
+//
+// "Runs with no wake channel at all" is a claim about something not
+// being there, and a drill cannot watch a thing fail to happen. What
+// it can do is pin the seams through which a wake would have to
+// arrive: Verbs is the loop's only way to reach the world, and the
+// options are its only configuration. A wake channel needs one of
+// them, so adding one fails here and the spec has to move with it —
+// which is what makes the one-inbox doctrine structural rather than
+// hoped for.
+func TestLoopSurfaceIsWakeless(t *testing.T) {
+	vt := reflect.TypeOf((*Verbs)(nil)).Elem()
+	if vt.NumMethod() != 1 || vt.Method(0).Name != "Run" {
+		var got []string
+		for i := 0; i < vt.NumMethod(); i++ {
+			got = append(got, vt.Method(i).Name)
+		}
+		t.Fatalf("Verbs is the single method Run — a second seam is where a wake channel would arrive: %v", got)
+	}
+	if sig := vt.Method(0).Type; sig.NumIn() != 1 || !sig.IsVariadic() {
+		t.Errorf("Run takes only the act's arguments: %v", sig)
+	}
+
+	// The exported option set: each is a value the caller supplies
+	// once, never a channel the loop listens on.
+	want := map[string]bool{"WithSince": true, "WithRepo": true, "WithBase": true, "WithObservations": true}
+	for _, name := range optionNames(t) {
+		if !want[name] {
+			t.Errorf("option %q is new: an option carrying a wake seam makes the loop wakeful, and "+
+				"next/spec/lanes.md's one-inbox doctrine would have to be amended with it", name)
+		}
+		delete(want, name)
+	}
+	for name := range want {
+		t.Errorf("option %q went missing; this pin lists the loop's whole configuration surface", name)
+	}
+}
+
+// optionNames reads the package's exported With* constructors out of
+// its own source. Deriving the list rather than restating it is what
+// stops the pin drifting: a new option appears here whether or not
+// anyone remembered this test.
+func optionNames(t *testing.T) []string {
+	t.Helper()
+	src, err := os.ReadFile("loop.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, line := range strings.Split(string(src), "\n") {
+		if !strings.HasPrefix(line, "func With") {
+			continue
+		}
+		name := line[len("func "):]
+		if i := strings.IndexByte(name, '('); i > 0 {
+			out = append(out, name[:i])
+		}
+	}
+	if len(out) == 0 {
+		t.Fatal("the pin found no options at all, so it is measuring nothing")
+	}
+	return out
 }

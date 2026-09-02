@@ -10,7 +10,6 @@
 package main
 
 import (
-	"crypto/ed25519"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -256,26 +255,35 @@ func artifactsDir(flagValue, repo string) string {
 func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("verdict render", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	dir := fs.String("ledger", "", "ledger directory")
-	subject := fs.String("subject", "", "contract in review")
+	// BOTH postures (plans/os-6a08b166.md D6.5). Rendering was
+	// local-only, so a fleet's verifier lane could not act against the
+	// shared ledger its workers claim on: the terminal half of the
+	// contract lifecycle had no reachable surface in the deployment
+	// the charter's fleet mode describes.
+	f := bindLoopFlags(fs)
 	repo := fs.String("repo", "", "source repository the submission range names")
-	keyPath := fs.String("key", "", "OpenSSH ed25519 private key of the verdict-granted verifier")
 	verdictFlag := fs.String("verdict", "", "pass or fail")
 	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
 	timeout := fs.Duration("timeout", 0, "per-command wall-clock bound (default 10m)")
-	if err := fs.Parse(args); err != nil || *dir == "" || *subject == "" || *repo == "" || *keyPath == "" ||
-		(*verdictFlag != "pass" && *verdictFlag != "fail") || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict render requires --ledger <dir> --subject <id> --repo <dir> --key <path> --verdict pass|fail [--artifacts <dir>] [--timeout <dur>]"), stdout, stderr)
+	parseErr := fs.Parse(args)
+	missing := ""
+	if *repo == "" || (*verdictFlag != "pass" && *verdictFlag != "fail") {
+		missing = "and --repo <dir> --verdict pass|fail [--artifacts <dir>] [--timeout <dur>]"
 	}
-	keyBytes, err := os.ReadFile(*keyPath)
-	if err != nil {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --key: %v", err)), stdout, stderr)
+	if env := f.usage("verdict render", parseErr, fs.NArg(), missing); env != nil {
+		return render(env, stdout, stderr)
 	}
-	signer, err := event.ParsePrivateKey(keyBytes)
-	if err != nil {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--key: %v", err)), stdout, stderr)
+	subject := f.subject
+	signer, env := loopSigner(*f.keyPath, *f.as)
+	if env != nil {
+		return render(env, stdout, stderr)
 	}
-	st, failEnv := loadVerdictState(*dir)
+	ls, env := openLoopSession(f)
+	if env != nil {
+		return render(env, stdout, stderr)
+	}
+	defer ls.done()
+	st, failEnv := ls.verdictState()
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
@@ -324,59 +332,72 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
-	payload, err := json.Marshal(map[string]string{
-		"verdict":      *verdictFlag,
-		"receipt":      digest,
+	// The submission citation is DERIVED, and on the remote path the
+	// tip can move between drafting and landing. `recheckDerivation`
+	// re-derives against each refreshed view and REFUSES on a change
+	// rather than re-pointing: a verdict bound to whatever submission
+	// happens to be current is the laundering shape, and binding is
+	// the whole point of the field (plans/os-9b3f3ef3.md D1).
+	//
+	// The receipt is NOT re-derived. It is content-derived from the
+	// repository, not from the ledger view, so a moving tip cannot
+	// change it and re-running acceptance per attempt would buy
+	// nothing.
+	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
+		return verdictPayload(ctx, *subject, *verdictFlag, digest)
+	}
+	payload, env := derive(ls.ctx)
+	if env != nil {
+		return render(stampTip(env, st.count), stdout, stderr)
+	}
+	summary := receiptSummary(*subject, r, digest)
+	return ls.commit(f, loopAct{verb: transition.VerdictRenderedVerb, payload: payload, derive: derive,
+		resultAt: func(int) map[string]any {
+			out := map[string]any{}
+			for k, v := range summary {
+				out[k] = v
+			}
+			out["verdict"] = *verdictFlag
+			out["submission"] = strconv.Itoa(s.Submission.Pos)
+			return out
+		}}, signer, stdout, stderr)
+}
+
+// verdictPayload binds a rendered verdict to the submission that
+// produced the review state, read from the view being judged against.
+func verdictPayload(ctx *admit.Context, subject, v, receipt string) ([]byte, *envelope.Envelope) {
+	if ctx == nil || ctx.Lifecycle == nil {
+		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", "no lifecycle view to bind the verdict to")
+	}
+	s, ok := ctx.Lifecycle.State(subject)
+	if !ok || s.Submission == nil {
+		return nil, envelope.Fail(envelope.ExitNotFound, "not_found",
+			fmt.Sprintf("no submission stands on %s — a verdict judges exactly the submission that produced the review state", subject))
+	}
+	b, err := json.Marshal(map[string]string{
+		"verdict":      v,
+		"receipt":      receipt,
 		"submission":   strconv.Itoa(s.Submission.Pos),
 		"independence": "L1",
 	})
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
 	}
-	fp, err := event.Fingerprint(signer.Public().(ed25519.PublicKey))
+	return b, nil
+}
+
+// verdictState builds the read model from whichever posture the
+// session opened, so the view a verdict is computed against is the
+// same one its act is judged against.
+func (ls *loopSession) verdictState() (*verdictState, *envelope.Envelope) {
+	if ls.remote != nil {
+		return verdictStateAt(ls.remote.store, ls.remote.resolve, ls.remote.vopts...)
+	}
+	resolve, _, err := genesis.Bootstrap(ls.store)
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
+		return nil, envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
 	}
-	rec, err := event.Sign(event.Event{
-		V:       st.active,
-		TS:      time.Now().UTC().Format(time.RFC3339),
-		Actor:   fp,
-		Verb:    transition.VerdictRenderedVerb,
-		Subject: *subject,
-		Payload: json.RawMessage(payload),
-		Prev:    st.tip,
-	}, signer)
-	if err != nil {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot sign verdict: %v", err)), stdout, stderr)
-	}
-	// The cooperative posture: the render verb self-validates through
-	// the full admission rule set (capability, L1 independence, state,
-	// shape) before anything is written, so a doomed verdict never
-	// leaves the client.
-	store, failEnv := openStore(*dir)
-	if failEnv != nil {
-		return render(failEnv, stdout, stderr)
-	}
-	ctx, err := admit.ContextAt(store)
-	if err != nil {
-		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
-	}
-	if err := admit.Check(ctx, rec); err != nil {
-		return render(journalAttempt(stampTip(stampAffordances(remoteFailureEnvelope(err), *dir, signer, *subject), ctx.Count), *dir, signer, "verdict.rendered", *subject), stdout, stderr)
-	}
-	pos, err := store.Append(rec, ctx.Resolve)
-	if err != nil {
-		return render(stampAffordances(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), *dir, signer, *subject), stdout, stderr)
-	}
-	hash, err := rec.Event.Hash()
-	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
-	}
-	result := receiptSummary(*subject, r, digest)
-	result["appended"] = hash
-	result["verdict"] = *verdictFlag
-	result["submission"] = strconv.Itoa(s.Submission.Pos)
-	return render(journalAttempt(stampTip(stampAffordances(envelope.OK(result), *dir, signer, *subject), pos+1), *dir, signer, "verdict.rendered", *subject), stdout, stderr)
+	return verdictStateAt(ls.store, resolve)
 }
 
 func runVerdictCheck(args []string, stdout, stderr io.Writer) int {

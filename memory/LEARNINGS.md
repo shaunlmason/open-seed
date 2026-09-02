@@ -964,6 +964,41 @@ recorded on #202 — a mutation that changes nothing means the drill
 never reached the code — has a second half: it may equally mean the
 mutation never reached the code, and the two are told apart only by
 making the mutation land.
+## Two workers stepped in sequence do not race (os-6a08b166)
+
+The fleet fixture's middle arm needed a genuinely refused `claim take`.
+The obvious construction — step worker A, then step worker B — produces
+no refusal at all: B polls after A has claimed, finds nothing offered,
+and goes idle at the POLL with an empty `Cause`. The drill would have
+counted an empty poll as refusal convergence.
+
+The fix is the shape #202 established for a different race: plant the
+rival **from inside the seam**, on the wrapper's first sight of `claim
+take`, so the lane is in the window by construction. A race reproduced
+by sleeping passes green on a slower runner; a race reproduced by
+ordering the calls is not a race at all.
+
+The general form: **when a drill needs contention, ask what the second
+actor SEES, not what it does.** Sequential actors observe sequential
+worlds and never contend.
+
+## Capability absence is not disjointness (os-6a08b166)
+
+The small-team drill asserted that the implementing key cannot render
+the verdict, and it passed — with `out_of_grant`, because that key held
+`claim` and not `verdict`. It was proving that a key without the grant
+cannot render, which is true of every key and says nothing about
+independence.
+
+The charter's claim is that disjointness holds **when one person runs
+everything**, and a principal running everything can grant themselves
+everything. So the drill now grants the implementing actor `verdict`
+first, and the refusal becomes `not_independent`.
+
+`admit.go` says this in its own words — "distinct from `out_of_grant`,
+which is capability absence" — and the drill still walked into it. When
+a refusal has a near neighbour, assert the CODE, and pick the fixture
+that makes the neighbour impossible.
 
 ## A matrix that counts its rows is not a matrix that covers its cases
 

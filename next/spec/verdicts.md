@@ -235,3 +235,19 @@ and disjointness checks above.
 - Part II §6 (sandbox with declared, minimal capability) — the runner
   profile, declared per receipt, with the stronger boundary at the
   Phase 7 adapter seam.
+
+## Rendering reaches both postures
+
+`seed verdict render` takes `--ledger` or `--remote`. It was local-only
+until Phase 9 item 4, which meant a fleet's verifier lane could not act
+against the shared ledger its workers claim on: the terminal half of
+the contract lifecycle had no reachable surface in the deployment the
+charter's fleet mode describes ([`modes.md`](modes.md)).
+
+The payload's `submission` is a chain POSITION, so on the remote path
+it is re-derived against each refreshed tip and REFUSED on a change
+rather than re-pointed — a verdict bound to whatever submission happens
+to be current is the laundering shape, and binding is the whole point
+of the field. The receipt is not re-derived: it is content-derived from
+the repository rather than from the ledger view, so a moving tip cannot
+change it.
