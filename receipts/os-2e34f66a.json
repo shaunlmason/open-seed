@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "task": "os-2e34f66a",
+  "merge_base": "43937beceaad4455edce32ae4d0b79522f0bac89",
+  "head": "eb9300e3a48bfebf72b98ca4aef7481f91315af0",
+  "plan_path": "plans/os-2e34f66a.md",
+  "plan_sha256": "2d1b71378eeb2949be7e2354a42a1b11124f0c701293a18a96a9b02cdbcd42e3",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/calibration_cli_test.go",
+    "next/cmd/seed/eval.go",
+    "next/cmd/seed/level_cli_test.go",
+    "next/cmd/seed/level_modes_e2e_test.go",
+    "next/cmd/seed/remote.go",
+    "next/cmd/seed/rubric_cli_test.go",
+    "next/cmd/seed/rubric_modes_e2e_test.go",
+    "next/cmd/seed/verdict.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/affordances_test.go",
+    "next/internal/admit/level_test.go",
+    "next/internal/admit/rubric_test.go",
+    "next/internal/eval/calibration_test.go",
+    "next/internal/eval/eval.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/obligation/human_test.go",
+    "next/internal/obligation/obligation.go",
+    "next/internal/plan/plan.go",
+    "next/internal/plan/rubric_test.go",
+    "next/internal/reconcile/evidence.go",
+    "next/internal/reconcile/reconcile.go",
+    "next/internal/reconcile/scorecard_test.go",
+    "next/internal/transition/transition.go",
+    "next/internal/verdict/scorecard.go",
+    "next/internal/verdict/scorecard_test.go",
+    "next/lanes/fragments/lane/verifier.md",
+    "next/lanes/verifier.json",
+    "next/spec/acceptance.md",
+    "next/spec/actors.md",
+    "next/spec/envelope.md",
+    "next/spec/evals.md",
+    "next/spec/lanes.md",
+    "next/spec/obligations.md",
+    "next/spec/protocol.md",
+    "next/spec/qualification.md",
+    "next/spec/reconciliation.md",
+    "next/spec/tiers.md",
+    "next/spec/verdicts.md"
+  ],
+  "diff_sha256": "bf3ee76d5cfdf9e0ca747947bec5381d7e4b67e44b5c2e0e8e1a52c32f3dcdf6",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/plan/ ./internal/verdict/ ./internal/transition/ ./internal/admit/ ./internal/keyring/ ./internal/obligation/ ./internal/reconcile/ ./internal/envelope/ ./internal/eval/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
