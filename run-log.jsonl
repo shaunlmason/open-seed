@@ -997,3 +997,4 @@
 {"actor":"shaunlmason","data":{"title":"next: Phase 10 item 2 — eval contracts through the production machinery; grants cite passing tuples; scheduled spot-checks; suspension on failure"},"task":"os-03e47abb","ts":"2026-09-02T08:46:01Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-03e47abb","ts":"2026-09-02T08:46:04Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T10:46:07Z"},"task":"os-03e47abb","ts":"2026-09-02T08:46:07Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-03e47abb","ts":"2026-09-02T08:54:45Z","verb":"transition"}
