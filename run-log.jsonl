@@ -964,3 +964,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T07:07:27Z"},"task":"os-d6a52784","ts":"2026-09-02T06:07:27Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-f9a045da","kind":"pr"},"task":"os-d6a52784","ts":"2026-09-02T06:45:48Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-2b963285","kind":"receipt"},"task":"os-d6a52784","ts":"2026-09-02T06:45:52Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-91315cda","kind":"check"},"task":"os-d6a52784","ts":"2026-09-02T06:45:54Z","verb":"attach-evidence"}
