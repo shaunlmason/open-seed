@@ -1039,6 +1039,36 @@ constant whose wire name did not match the row it had. **A drill that
 must be updated by hand to catch a regression cannot catch that
 regression**, and it reads exactly like one that can.
 
+## A frontier line is a claim, and it can disagree with its own document
+
+`next/docs/progress.md` said Phase 9's next action was the exit record,
+"every numbered item in the phase has an implementation". Two other
+paragraphs **in the same file** said item 5(b) was PARTIALLY MET, and
+the build plan said it in its own item text. So the frontier line and
+the body of the document disagreed, and the frontier is the line an
+agent reads to decide what to do next.
+
+The disagreement survived because nothing forced the two to move
+together. A phase's item list lives in the build plan, its per-item
+status lives in prose scattered through progress.md, and the "next
+action" line is a third copy written by whoever last touched it. Three
+copies of one claim, none of them derived.
+
+It was caught by trying to *write* the exit record, which meant
+enumerating the items — the first thing in weeks that read the list as
+a list rather than as background. One item too late to be free: two
+cards had already been planned and merged against a frontier that was
+wrong about what remained.
+
+**The habit that would have caught it earlier:** when a document states
+a status per item AND a summary over those items, treat the summary as
+derived and re-derive it, rather than reading it. The cheap version is
+to enumerate before believing — five seconds of listing 1, 2, 3, 4, 5(a),
+5(b), 5(c) against their write-ups would have shown the gap any week.
+
+This is the same shape as the two drill lessons already recorded here,
+one level up from code: a hand-maintained summary cannot notice what it
+was never told, and it reads exactly like one that can.
 ## The count you were given is the count someone found, not the count there is
 
 The card for the lane-grants gap said two capabilities were ungranted.

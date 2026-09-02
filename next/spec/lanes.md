@@ -263,7 +263,7 @@ residual and one that cannot see it.
 | --- | --- |
 | `intent.filed` | the filed `tier` is presence-only data, and the single string `"trivial"` exempts **both** the plan gate and the sealed-checks lint. Every other value fails safe, so the residual is exactly one string wide. Owner: Phase 10's tier system |
 | `claim.reaped` | admitted on a live claim with no liveness evidence consulted at all. Its two preconditions are freshness and attribution, not authorization: the fence citation (readable from any position-stamped read) and a packet. Owner: Phase 9 item 3 |
-| `message.sent` | **no capability at all** — standing-only, so any enrolled active actor appends it. This is the one that RELAYS. Bounded by the classification lint at 512 bytes per string, which is a SIZE bound: the sixty-byte instruction that matters sails through |
+| `message.sent` | **no capability at all** — standing-only, so any enrolled active actor appends it. This is the one that RELAYS. Bounded by the classification lint at 512 bytes per string, which is a SIZE bound: the sixty-byte instruction that matters sails through. Since os-8451d939 it reaches one more surface, and deliberately only as far as a NOTICE: `seed situation` reports that mail exists (sender, contract, position, size) and carries no payload text, because the orienting read is taken on every wake unbidden. The body is reached by `seed message read --at <position>`, which is the reader choosing to look ([`obligations.md`](obligations.md)) |
 
 Each is pinned by a characterization drill asserting the behavior in the
 residual's own words, so closing one fails the suite and forces this
@@ -279,9 +279,14 @@ does not exist. The command string itself is carried verbatim, and the
 drill says so: what is proven is that *output* is not carried, not that
 the transcript is text-free.
 
-**Worker-facing reads carry no intent prose.** `situation` and `offer
+**Worker-facing reads carry no hostile prose.** `situation` and `offer
 list` are swept by marker, in their serialized form so a field added
-later is covered.
+later is covered. The sweep covers two sources now, not one: an
+intent's free text, and a `message.sent` payload addressed to the
+reading worker — which is the sharper arm, since an intent needs a
+persuaded dispatcher and a message needs only an enrolled actor. Both
+addressed and broadcast messages are planted, because they reach the
+caller through different paths in the filter.
 
 **The projections carry every payload verbatim, by design** — a
 projection that could not show what was appended would not be an audit
