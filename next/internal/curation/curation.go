@@ -1323,18 +1323,61 @@ func DeadEndStanding(records []*event.Record, table *transition.Table, c Citatio
 			environment = d.Environment
 		}
 	}
+	// One forward pass (review finding on the task PR): each act is
+	// judged through its acceptance (shape, the signer's grant at its
+	// prefix) and the standing rule against the state tracked so far,
+	// never by re-validating every earlier act's own prefix, which
+	// alternating acts would make exponential.
 	for pos := 0; pos < before; pos++ {
 		e := &records[pos].Event
 		if (e.Verb != DeadEndRetireVerb && e.Verb != DeadEndUnretireVerb) || e.Subject != c.Contract {
 			continue
 		}
-		d, ok := DeadEndRetirementValid(records, table, pos)
-		if !ok || d.DeadEnd != c.String() {
+		d, ok := deadEndActAccepted(records, table, pos)
+		if !ok || d.DeadEnd != c.String() || standingRefuses(e.Verb, retired, environment, d.Environment) {
 			continue
 		}
 		retired, environment, at = e.Verb == DeadEndRetireVerb, d.Environment, pos
 	}
 	return retired, environment, at
+}
+
+// standingRefuses is the standing rule over one act given the state
+// before it: a retirement needs no standing retirement and an
+// environment other than the recorded one, an un-retirement a
+// standing retirement and an environment other than the one it named
+// (plans/os-0d537fbd.md D3). The one rule both DeadEndStanding and
+// CheckDeadEndRetirement apply.
+func standingRefuses(verb string, retired bool, environment, declared string) bool {
+	switch verb {
+	case DeadEndRetireVerb:
+		return retired || declared == environment
+	case DeadEndUnretireVerb:
+		return !retired || declared == environment
+	}
+	return true
+}
+
+// deadEndActAccepted is the part of a dead-end act's validity that
+// needs no standing: the shape, and a signer holding curate at the
+// act's own prefix.
+func deadEndActAccepted(records []*event.Record, table *transition.Table, pos int) (*DeadEndRetirement, bool) {
+	if table == nil || pos < 0 || pos >= len(records) {
+		return nil, false
+	}
+	e := &records[pos].Event
+	if (e.Verb != DeadEndRetireVerb && e.Verb != DeadEndUnretireVerb) || !keyring.Applies(e.V) {
+		return nil, false
+	}
+	d, err := ParseDeadEndRetirement(e.Verb, e.Subject, e.Payload)
+	if err != nil {
+		return nil, false
+	}
+	ring, _, err := keyring.StateAt(records[:pos])
+	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(e.Verb)) {
+		return nil, false
+	}
+	return d, true
 }
 
 // CheckDeadEndRetirement judges a dead-end retirement or un-retirement
@@ -1378,23 +1421,12 @@ func CheckDeadEndRetirement(records []*event.Record, table *transition.Table, ve
 // holding curate at that prefix and passing CheckDeadEndRetirement
 // there.
 func DeadEndRetirementValid(records []*event.Record, table *transition.Table, pos int) (*DeadEndRetirement, bool) {
-	if table == nil || pos < 0 || pos >= len(records) {
+	d, ok := deadEndActAccepted(records, table, pos)
+	if !ok {
 		return nil, false
 	}
 	e := &records[pos].Event
-	if (e.Verb != DeadEndRetireVerb && e.Verb != DeadEndUnretireVerb) || !keyring.Applies(e.V) {
-		return nil, false
-	}
-	d, err := ParseDeadEndRetirement(e.Verb, e.Subject, e.Payload)
-	if err != nil {
-		return nil, false
-	}
-	prefix := records[:pos]
-	ring, _, err := keyring.StateAt(prefix)
-	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(e.Verb)) {
-		return nil, false
-	}
-	if err := CheckDeadEndRetirement(prefix, table, e.Verb, e.Subject, d); err != nil {
+	if err := CheckDeadEndRetirement(records[:pos], table, e.Verb, e.Subject, d); err != nil {
 		return nil, false
 	}
 	return d, true

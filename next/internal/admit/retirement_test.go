@@ -403,3 +403,38 @@ func TestRetirementAffordanceFollowsTheStandingPromotion(t *testing.T) {
 		t.Fatal("a new promotion of the path lists the retirement again")
 	}
 }
+
+// conformance: the refold class again (review finding on the task
+// PR): folding many alternating dead-end retirements and
+// un-retirements is linear passes, never a replay per act, so a dead
+// end whose environment moved a few dozen times still folds at once.
+func TestFoldingManyDeadEndActsNeverReplays(t *testing.T) {
+	st := curationFixture(t)
+	de := cite("c-1", st.deadEnd1b)
+	for i := 0; i < 24; i++ {
+		verb := curation.DeadEndRetireVerb
+		if i%2 == 1 {
+			verb = curation.DeadEndUnretireVerb
+		}
+		st.ctx = st.step(st.curator, st.v, verb, "c-1", fmt.Sprintf(`{"deadend": %q, "environment": "env-%d", "reason": "moved"}`, de, i))
+	}
+	done := make(chan *curation.State, 1)
+	go func() { done <- curation.Fold(st.ctx.Records) }()
+	select {
+	case fold := <-done:
+		var flagged *curation.DeadEndFact
+		for i := range fold.DeadEnds["c-1"] {
+			if fold.DeadEnds["c-1"][i].Pos == st.deadEnd1b {
+				flagged = &fold.DeadEnds["c-1"][i]
+			}
+		}
+		if flagged == nil || flagged.Retired || flagged.RetiredEnvironment != "env-23" || fold.Anomalies != 0 {
+			t.Fatalf("twenty-four alternating acts all admit and the last stands: %+v anomalies %d", flagged, fold.Anomalies)
+		}
+	case <-time.After(20 * time.Second):
+		t.Fatal("folding twenty-four dead-end acts did not finish in twenty seconds: the replay recurses")
+	}
+	if got := gate(t, Check(st.ctx, draftV(t, st.curator, st.v, curation.DeadEndRetireVerb, "c-1", fmt.Sprintf(`{"deadend": %q, "environment": "env-23", "reason": "moved"}`, de), st.ctx.Tip))); got != curation.GateDeadEndRetireEnv {
+		t.Fatalf("the boundary judges the twenty-fifth act against the standing state: %s", got)
+	}
+}
