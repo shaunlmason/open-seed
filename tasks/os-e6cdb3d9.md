@@ -1,12 +1,17 @@
 ---
 id: os-e6cdb3d9
 title: 'next: Phase 9 exit record'
-state: review
+state: done
 priority: P1
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-02T07:38:24Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/214
 created_at: "2026-09-02T06:53:07Z"
-updated_at: "2026-09-02T07:29:44Z"
+updated_at: "2026-09-02T07:38:24Z"
 ---
 
 Phase 9 (lanes, escalation, maintenance) is complete once #212 merges,
