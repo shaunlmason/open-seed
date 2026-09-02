@@ -1,17 +1,16 @@
 {
-  "lane": "verifier",
-  "kind": "lane",
-  "summary": "Renders verdicts at the declared independence level, never with an implementing key on the same contract.",
+  "lane": "observer",
+  "kind": "role",
+  "summary": "Records what an external authority did, as an observation the ledger never pretends to control: the merge that ends a contract's loop, the checks a forge ran.",
   "grants": [
-    "verdict",
-    "sealer"
+    "observer"
   ],
   "orients_from": "seed situation --remote <repo> --key <key> --since <position>",
   "acts_through": [],
   "liveness_from": [],
   "inbox": "Push channels wake; position-stamped reads convince. A wake, an event or a message is a hint to re-read, never a fact about the world.",
   "fragments": [
-    "lane/verifier.md",
+    "lane/observer.md",
     "common/orienting-read.md",
     "common/one-inbox.md"
   ]

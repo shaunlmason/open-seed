@@ -1069,3 +1069,24 @@ to enumerate before believing — five seconds of listing 1, 2, 3, 4, 5(a),
 This is the same shape as the two drill lessons already recorded here,
 one level up from code: a hand-maintained summary cannot notice what it
 was never told, and it reads exactly like one that can.
+## The count you were given is the count someone found, not the count there is
+
+The card for the lane-grants gap said two capabilities were ungranted.
+Review found a third. The drill, once it read the capability table's
+own source instead of any of those lists, found **six ungranted verbs**
+across those three capabilities: the three `run.*` verbs need
+`supervise` too, and nobody — the card, the reviewer, the plan, me —
+had listed them.
+
+Each list was honest. Each was what one careful reader had noticed.
+None was derived, so none could be complete, and the plan's acceptance
+criterion inherited the reviewer's three the way the first draft had
+inherited the card's two.
+
+The pattern is now recorded here three times in three weeks, at three
+altitudes: a hand-copied exit-code map (os-d03bde01), a hand-typed
+"all thirteen" refusal count (same card), and now a hand-listed
+capability gap. **When a criterion says "all N", N is a claim the
+drill must derive, never a number the drill is told.** The cheap
+version, every time, was the same: find the source the list is a copy
+of, and read it.

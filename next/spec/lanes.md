@@ -20,7 +20,53 @@ A lane is **a manifest plus an ordered list of prose fragments**:
 
 `seed lane show <name>` resolves the fragments by concatenating them
 **in the order the manifest declares**, and `seed lane list` names the
-six.
+six lanes and the two roles beside them.
+
+## Six lanes, and two roles that are not lanes
+
+`next/lanes/` holds eight manifests, and the number is not a
+contradiction of the charter's six. Every manifest declares a **`kind`**:
+`lane` for one of §II.11's closed enumeration, `role` for a part the
+charter defines **outside** the work loop. The field is required rather
+than defaulted, so the six say what they are in their own files and the
+enumeration is a property of the manifests rather than of this
+sentence.
+
+The two roles are the charter's own. The **supervisor** is §II.9, its
+own section: it publishes offers and initiates, settles and preempts
+runs, and it never takes work. The **observer** is §8's governed
+observer: it records what an external authority did — the merge that
+ends a contract's loop, the checks a forge ran — and can do nothing
+else, which is what makes its observations trustworthy. Neither holds
+`claim`; neither appears in a fleet as a worker.
+
+They exist as manifests because the capability table required them and
+nothing supplied them (`plans/os-d6a52784.md`). `offer.published`
+accepts `[supervise, operator]`, `merge.observed` accepts `[observer,
+operator]`, the three `run.*` verbs accept `[supervise, operator]`, and
+`check.sealed` accepts **`[sealer]` alone** — and before this card no
+manifest granted `supervise`, `observer` or `sealer`. A deployment
+assembled from the shipped set could neither publish the offer its own
+workers poll for nor record the merge that ends the loop, and for
+sealed checks had no escape hatch at all, `sealer` being disjoint from
+`claim` and `operator` at admission. `sealer` now rides the verifier:
+the charter's isolation requirement is from *implementation* grants
+(§7), and the check bodies are already encrypted to the verifier
+keyring, so a separate authoring identity would be one that cannot read
+back what it wrote.
+
+Two things enforce the shape. `internal/lane` refuses a manifest of kind
+`lane` whose name is not one of the six, citing §II.11, so a directory
+anyone can drop a file into does not become the place a normative
+enumeration is edited by implication; the shipped-set drill asserts all
+six are present. And a drill reads the verb literals out of
+`keyring.AcceptedCapabilities`' own source and requires every
+capability they accept — **`operator` excluded**, since it satisfies
+everything by construction — to be granted by some shipped manifest.
+Run against the pre-fix tree it names six verbs across the three
+capabilities, three more than the card that filed the gap had found;
+that is the argument for deriving the list rather than writing it
+down.
 
 ## Why the split, and why the order is declared
 

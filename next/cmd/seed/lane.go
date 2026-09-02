@@ -58,6 +58,7 @@ func runLaneList(args []string, stdout, stderr io.Writer) int {
 	for _, m := range ms {
 		rows = append(rows, map[string]any{
 			"lane":      m.Lane,
+			"kind":      m.Kind,
 			"summary":   m.Summary,
 			"grants":    m.Grants,
 			"fragments": fmt.Sprintf("%d", len(m.Fragments)),
@@ -122,10 +123,23 @@ func runLaneValidate(args []string, stdout, stderr io.Writer) int {
 	if len(findings) > 0 {
 		env := envelope.Fail(envelope.ExitLaneInvalid, "lane_invalid",
 			fmt.Sprintf("%d lane finding(s): %s", len(findings), findings[0]))
-		env.Result = map[string]any{"findings": rows, "lanes": fmt.Sprintf("%d", len(ms))}
+		env.Result = map[string]any{"findings": rows, "lanes": fmt.Sprintf("%d", countKind(ms, lane.KindLane)), "roles": fmt.Sprintf("%d", countKind(ms, lane.KindRole))}
 		return render(env, stdout, stderr)
 	}
-	return render(envelope.OK(map[string]any{"lanes": fmt.Sprintf("%d", len(ms)), "findings": rows}), stdout, stderr)
+	return render(envelope.OK(map[string]any{"lanes": fmt.Sprintf("%d", countKind(ms, lane.KindLane)), "roles": fmt.Sprintf("%d", countKind(ms, lane.KindRole)), "findings": rows}), stdout, stderr)
+}
+
+// countKind is the validate read's split: the charter's six lanes and
+// its non-loop roles are reported apart, because "eight manifests" is
+// the wrong answer to "how many lanes" (plans/os-d6a52784.md D1).
+func countKind(ms []lane.Manifest, kind string) int {
+	n := 0
+	for _, m := range ms {
+		if m.Kind == kind {
+			n++
+		}
+	}
+	return n
 }
 
 // splitOperand lifts the first non-flag argument out of args, so a

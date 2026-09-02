@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "task": "os-d6a52784",
+  "merge_base": "46ad48db25f7aee1e83b3bd150fa41b17398e2fd",
+  "head": "b3772edbc51f7eeb46781607a8faf68ff8e1a432",
+  "plan_path": "plans/os-d6a52784.md",
+  "plan_sha256": "cc9c5edf3059a21ec8dc85d13dd9b2935eceb1f751a11e168c06be02e9a2a7b3",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/lane.go",
+    "next/cmd/seed/lane_cli_test.go",
+    "next/cmd/seed/modes_e2e_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/lane/lane.go",
+    "next/internal/lane/lane_test.go",
+    "next/lanes/curator.json",
+    "next/lanes/dispatcher.json",
+    "next/lanes/fragments/lane/observer.md",
+    "next/lanes/fragments/lane/supervisor.md",
+    "next/lanes/implementer.json",
+    "next/lanes/maintenance.json",
+    "next/lanes/observer.json",
+    "next/lanes/planner.json",
+    "next/lanes/supervisor.json",
+    "next/lanes/verifier.json",
+    "next/spec/lanes.md"
+  ],
+  "diff_sha256": "e7bd491e176b9843d7a0e5710ff27219f71694f6b88e9f1ffa421a7d0079017e",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/lane/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
