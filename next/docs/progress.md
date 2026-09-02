@@ -836,6 +836,7 @@ PR (an administrative card, not a Phase 9 item).
   `next/spec/evals.md` and eight spec edits. Ranking waits on item 5's
   metrics; calibration is item 4.)
 - 10.3 independence levels L2/L3 declared per tier and recorded in
+  verdicts — not started; its table is built: **the tier vocabulary**
   verdicts — **in review** (os-99829835, task PR against plan #223:
   `seed/4` activates the ordered level vocabulary, `verdict.rendered`'s
   `independence` widening from the literal `L1` to `L1`/`L2`/`L3` and
@@ -882,6 +883,18 @@ PR (an administrative card, not a Phase 9 item).
 - 10.5 trajectory-prefix regression harness; dispatcher re-triage rate
   and planner unedited-approval rate (III.J row 3's metrics half,
   routed here by the Phase 9 exit record) — not started
+
+- out of item: the client's private git dir and the verifier's clone
+  arm auto-gc in production — os-711b3028 — **in review** (task PR
+  against plan #224: `gitref.NewClient` writes `gc.auto=0`,
+  `gc.autoDetach=false` and `receive.autoGC=false` into its git dir on
+  every construction, so a state dir an older build created is
+  hardened the first time a newer build opens it; `verdict.NewWorkspace`
+  writes the same three keys into its clone between the clone and the
+  checkout; the drills assert the repository-local property with `git
+  config --local`, which the test binary's global config cannot
+  satisfy, and an older-build drill proves the write happens on the
+  no-init path and that a second open changes nothing).
 
 ## Frontier
 

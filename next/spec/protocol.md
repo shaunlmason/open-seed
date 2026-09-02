@@ -158,7 +158,12 @@ the tip hash; the artifact store rides `refs/seed/artifacts` (git-addressed)
 with a filesystem fallback. These are
 build-plan fixed defaults for the reference implementation, not protocol
 requirements; any storage satisfying the canonical form, ordering, and
-admission rules conforms.
+admission rules conforms. The client's private transport git dir under
+its state directory carries auto-gc disabled, written on every open
+rather than only at init, so a state dir an older build created is
+hardened the first time a newer one opens it and no repository the
+engine creates for itself is mutated by a collector after the process
+that armed it has exited.
 
 ## Verb namespace catalog
 

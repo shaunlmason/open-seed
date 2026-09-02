@@ -145,7 +145,12 @@ object store) — and deliberately not a `git worktree` checkout, whose
 `.git` link shares the parent repository's refs and object store and
 would hand a hostile spec command `git update-ref` reach back into the
 host. Both holes are drilled. Parallel runs never collide (unique
-dirs); cleanup fires pass or fail.
+dirs); cleanup fires pass or fail. The clone carries auto-gc disabled
+in its own config from the moment it exists (`gc.auto`,
+`gc.autoDetach`, `receive.autoGC`, written between the clone and the
+checkout), so nothing the engine made mutates after the engine exits:
+a collector git detaches after a checkout would otherwise race the
+cleanup that follows it.
 
 The charter's "sandbox with declared, minimal capability" lands as a
 **runner capability profile, declared in the receipt**. v0 ships the

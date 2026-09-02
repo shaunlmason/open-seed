@@ -1166,6 +1166,14 @@ last, and the failure ("the cited contract is not in the fold") names
 the symptom two subjects late. Return a struct the closures write and
 the assertions read, and there is no copy to go stale.
 
+- **An effective-value assertion can pass for the wrong reason.**
+  `git config --get` reads every scope, so a drill asserting a
+  repository-local property against it is satisfied by a process-wide
+  global the test harness installed for other reasons (os-711b3028:
+  the client's git dir drill passed before the client wrote anything).
+  Assert the scope you mean (`--local`), and for a write that must
+  happen on every open, stage the state an older build would leave and
+  prove the second open changes nothing.
 - The receipt binds the approved plan's bytes at the MERGE-BASE, not at
   the commit the anchor names. A drill on a planned tier must cite a
   file the fixture repository actually holds at the base of the
