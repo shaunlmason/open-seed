@@ -899,7 +899,7 @@ PR (an administrative card, not a Phase 9 item).
 
 - 11.1 staged curation stores (observations → hypotheses → validated
   lessons → policy) with grant-gated boundaries; workers append
-  candidates only — os-f30ee0d3 — **in review** (task PR against plan
+  candidates only — os-f30ee0d3 — **merged** (#234 against plan
   #226: `internal/curation` with the three facts, `curation.deadend.recorded`
   on the contract inside the holder's window (the packet finding's
   shape plus the charter's failure condition and environment),
@@ -920,8 +920,8 @@ PR (an administrative card, not a Phase 9 item).
   standing-only relay; `next/spec/curation.md` and six spec edits).
 - 11.2 promotion gate (≥2-trajectory support, applies-when,
   provenance, last-validated; adversarial evaluation; contested state;
-  lessons at claim time) — os-96850e5a — **in review** (task PR against
-  plan #228, stacked on item 1's: `applies_when` is a predicate over
+  lessons at claim time) — os-96850e5a — **merged** (#235 against
+  plan #228: `applies_when` is a predicate over
   record-derivable fields (`routing`, which the fold now reads, `tier`,
   `paths`), one implementation for the boundary, the lint and the
   delivery; the support rule gains the actor arm, two distinct holders
@@ -947,8 +947,8 @@ PR (an administrative card, not a Phase 9 item).
   the unverified reported as such; `lesson_unverified` at evidence
   grade; the projection's `contested` stage and per-lesson
   `surfaces`).
-- 11.3 poisoning drill — os-e2f1ad23 — **in review** (task PR against
-  plan #229, stacked on item 2's: `internal/admit/testdata/poisoning/`
+- 11.3 poisoning drill — os-e2f1ad23 — **in review** (task PR #236
+  against plan #229: `internal/admit/testdata/poisoning/`
   declares forty-seven poisons over the thirty-two registered gates and
   five residuals; `poisoning_test.go` derives coverage from
   `curation.Gates()` pinned to the spec table both ways, scripts every
@@ -960,8 +960,50 @@ PR (an administrative card, not a Phase 9 item).
   `worker-proposes` and `smuggled-role-lesson` through `seed knowledge`
   in the small-team fixture; `curation.md` gains "The poisoning
   drill" and `lanes.md` records III.K row 4 as met)
-- 11.4 expiry, retirement, rollback by revert — os-0d537fbd — planned
-  (#230 merged)
+- 11.4 expiry, retirement (evidence kept), rollback by revert; dead
+  ends un-retired on environment change; staleness flags, dedup and
+  structure lint (III.K rows 6, 7 and 9) — os-0d537fbd — **in review**
+  (task PR against plan #230, stacked on item 3's: expiry derived at a
+  declared instant (`curation.Expired`, at-or-past) and never a fact;
+  the fold keeps the latest admitted promotion per lesson path, keyed
+  by path, and a re-promotion refuses at `promotion.revalidation`
+  unless its `last_validated` moved forward (`LatestPromotionBefore`,
+  one forward pass, never a refold); `curation.lesson.retired` from
+  `observer` or `operator` with `regression` (the revert's `pr`),
+  `superseded` (`superseded_by`, a later admitted promotion) or
+  `expired` (neither), each field required by one reason and refused
+  by the others, the cited promotion the latest of its path and
+  unretired, the fold moving the path to `retired` while the file, the
+  hypothesis and the observations stay, a new promotion clearing it;
+  `curation.deadend.retired` and `unretired` from `curate` alone on an
+  environment that differs from the one the previous act named, a
+  retirement needing no standing one and an un-retirement needing one,
+  applicability by string equality with the run's declared environment
+  (`DeadEndFact.Applies`), the fold flagging and never deleting, the
+  held-out listing excluding retired dead ends; the surfacing set's
+  three new arms (latest per path, not retired, not expired at the
+  read's instant: `claim take --now`, `seed situation --now`, the wall
+  clock otherwise, admission reading no clock); the `knowledge`
+  projection at the declared inputs' `as_of` (version 3, input
+  consumption declared) flagging `stale` and listing the retirements,
+  saying so when no instant is declared, the report at version 12
+  counting both; `lint.structure` and `lint.duplicate` under `seed
+  knowledge lint` and `make check`; the `lesson_stale` maintenance
+  lint (`maintain run --stale-after`), the finding's subject
+  `<path>@<promotion position>` so one stale cycle files once and a
+  re-promotion that expires files new work; `seed knowledge retire`,
+  `deadend retire | unretire`, `validate --environment`, `show --now`;
+  eleven new gates, each with a poison in item 3's corpus; drilled at
+  the boundary (every D1 to D3 row), in the fold, the projection, the
+  reconcile and maintenance packages, at the terminal, and end to end
+  in the modes fixture (the revert observed, the claim after carrying
+  nothing, the revalidation surfacing again, the dead end retired and
+  un-retired with the listing changing); `curation.md` gains "Expiry,
+  retirement and applicability" and "Bloat" with III.K rows 6, 7 and 9
+  in its mapping, `lanes.md` records them met, `protocol.md`,
+  `actors.md`, `projections.md`, `maintenance.md`,
+  `reconciliation.md` and `loop-verbs.md` follow, and the build plan
+  names row 9 at Phase 11 item 4)
 - 11.5 flywheel v0 — os-9075c308 — plan in review (#231)
 
 ## Frontier
@@ -1004,12 +1046,15 @@ review, and `actor.qualified` is now defined. The frontier is item 2's
 merge, then item 3 (independence levels per tier), whose tier
 vocabulary is carded as os-be12ac16 with its plan in review (#219).
 Phase 11 has opened in parallel, depending on Phase 9 alone: item 1
-(os-f30ee0d3, the staged curation stores) is implemented against plan
-#226 and in review, so the curator holds its proposal grant and the
-curation verbs exist; item 2 (os-96850e5a, the promotion gate, the
+(os-f30ee0d3, the staged curation stores) is merged (#234 against
+plan #226), so the curator holds its proposal grant and the curation
+verbs exist; item 2 (os-96850e5a, the promotion gate, the
 contested state and delivery at claim time) is implemented against
-plan #228 on top of item 1 and in review; items 3 and 4 are planned
-(#229, #230) and item 5's plan is in review (#231).
+plan #228 and merged (#235); item 3 (os-e2f1ad23, the poisoning
+drill) is implemented against plan #229 and in review (#236); item 4
+(os-0d537fbd, expiry, retirement, dead-end applicability and bloat)
+is implemented against plan #230 on top of item 3 and in review; item
+5 (os-9075c308, the flywheel) is planned (#231) and next.
 Phase 9 was under way: item 5's derivation and read merged (#171) and
 its loop verbs merged (#173), so the lane-facing surface is whole in
 shape — `seed situation` says what is true and what is owed, and the

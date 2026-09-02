@@ -527,3 +527,49 @@ func TestBloatLintsAtTheTerminal(t *testing.T) {
 		t.Fatalf("the shipped store passes the dedup lint: %v", err)
 	}
 }
+
+// retention: D7 — no bump. A chain carrying the three verbs raw-pushed
+// under active standing by a key the verbs do not accept verifies, and
+// the fold counts each an anomaly: verification takes a verb it has no
+// rule for on standing alone, which is what an older validator did with
+// lesson.retired already in the catalog; only admission's answer
+// changed, and the surfacing set, the flags and the stages move for
+// none of them.
+func TestRawPushedRetirementsVerifyAndFoldAsAnomalies(t *testing.T) {
+	st := newRetirementStand(t)
+	v := version.Seed3
+	before, code := runEnv(t, "ledger", "verify", "--ledger", st.ld)
+	if code != 0 {
+		t.Fatalf("the chain verifies: %d %+v", code, before)
+	}
+	for _, step := range []struct{ verb, subject, payload string }{
+		{curation.RetireVerb, st.id, `{"lesson": "` + st.anchor + `", "hypothesis": "` + st.cited + `", "reason": "expired"}`},
+		{curation.DeadEndRetireVerb, "c-1", fmt.Sprintf(`{"deadend": "c-1@%d", "environment": "moved", "reason": "x"}`, st.p1b)},
+		{curation.DeadEndUnretireVerb, "c-1", fmt.Sprintf(`{"deadend": "c-1@%d", "environment": "moved-again", "reason": "x"}`, st.p1b)},
+	} {
+		rawAppendAt(t, st.ld, workerRawKey(22), v, step.verb, step.subject, step.payload)
+	}
+	after, code := runEnv(t, "ledger", "verify", "--ledger", st.ld)
+	if code != 0 || after.Result["count"].(float64) != before.Result["count"].(float64)+3 {
+		t.Fatalf("the chain carrying the three raw-pushed verbs verifies, three records longer: %d %+v", code, after)
+	}
+	view := st.show(t, "2026-10-01T00:00:00Z")
+	if view["anomalies"] != 3.0 {
+		t.Fatalf("each raw-pushed act is an anomaly, never a stage: %+v", view["anomalies"])
+	}
+	if stages, _ := view["stages"].(map[string]any); stages["retired"] != nil || stages["lessons"] != 1.0 {
+		t.Fatalf("nothing retired: %+v", stages)
+	}
+	if row := st.lessonRow(t, view, st.pp); row["surfaces"] != true || row["retired"] != nil {
+		t.Fatalf("the promotion stands and surfaces: %+v", row)
+	}
+	ends, _ := view["dead_ends"].(map[string]any)
+	for _, d := range ends["c-1"].([]any) {
+		if m, _ := d.(map[string]any); m["retired"] != nil {
+			t.Fatalf("no dead end is flagged: %+v", m)
+		}
+	}
+	if st.situationLessons(t, "2026-10-01T00:00:00Z") != 1 {
+		t.Fatal("the orienting read still carries the lesson")
+	}
+}
