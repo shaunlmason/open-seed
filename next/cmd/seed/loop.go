@@ -64,6 +64,7 @@ type loopFlags struct {
 	keyPath   *string
 	subject   *string
 	supported *string
+	as        *string
 }
 
 func bindLoopFlags(fs *flag.FlagSet) *loopFlags {
@@ -75,6 +76,11 @@ func bindLoopFlags(fs *flag.FlagSet) *loopFlags {
 		keyPath:   fs.String("key", "", "OpenSSH ed25519 private key of the acting lane"),
 		subject:   fs.String("subject", "", "the contract acted on"),
 		supported: fs.String("supported", "", "comma-separated supported protocol versions (default: this build's)"),
+		// The identity the caller DECLARES it is acting as. Checked
+		// against the key at the signing site, so a key replaced after
+		// the caller last looked cannot sign in its place
+		// (plans/os-9a89245c.md).
+		as: fs.String("as", "", "fingerprint the --key must have: refuses if it changed under the caller"),
 	}
 }
 
@@ -465,7 +471,7 @@ func runClaimTake(args []string, stdout, stderr io.Writer) int {
 	if *f.dir != "" {
 		return render(exclusiveOnlineOnly(claimTakenVerb), stdout, stderr)
 	}
-	signer, env := loopSigner(*f.keyPath)
+	signer, env := loopSigner(*f.keyPath, *f.as)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
@@ -519,7 +525,7 @@ func runClaimExit(args []string, verb, name string, stdout, stderr io.Writer) in
 			return render(qenv, stdout, stderr)
 		}
 	}
-	signer, env := loopSigner(*f.keyPath)
+	signer, env := loopSigner(*f.keyPath, *f.as)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
@@ -576,7 +582,7 @@ func runSubmission(args []string, stdout, stderr io.Writer) int {
 	if env := f.usage("submission make", parseErr, fs.NArg(), missing); env != nil {
 		return render(env, stdout, stderr)
 	}
-	signer, env := loopSigner(*f.keyPath)
+	signer, env := loopSigner(*f.keyPath, *f.as)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
@@ -658,7 +664,7 @@ func runBudgetLoop(args []string, verb, name string, stdout, stderr io.Writer) i
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
 			fmt.Sprintf("%s records no spend — --actuals belongs to budget settle, the verb that does", name)), stdout, stderr)
 	}
-	signer, env := loopSigner(*f.keyPath)
+	signer, env := loopSigner(*f.keyPath, *f.as)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
@@ -716,7 +722,7 @@ func runBudgetLoop(args []string, verb, name string, stdout, stderr io.Writer) i
 }
 
 // loopSigner reads the acting lane's key.
-func loopSigner(path string) (ed25519.PrivateKey, *envelope.Envelope) {
+func loopSigner(path, expect string) (ed25519.PrivateKey, *envelope.Envelope) {
 	keyBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --key: %v", err))
@@ -724,6 +730,32 @@ func loopSigner(path string) (ed25519.PrivateKey, *envelope.Envelope) {
 	signer, err := event.ParsePrivateKey(keyBytes)
 	if err != nil {
 		return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--key: %v", err))
+	}
+	// The identity check happens HERE, on the bytes just read, because
+	// this is where the signature is taken (plans/os-9a89245c.md).
+	// internal/loop fingerprints the key file before every act, and
+	// this function reopens the same path independently: an atomic
+	// replacement between those two reads is observed by only one of
+	// them. Comparing at the signing site closes that, because check
+	// and signature then see the SAME bytes from the same read; making
+	// two reads atomic across a process boundary was never the fix.
+	//
+	// Optional at the seam: the loop verbs are also reachable by hand,
+	// and an operator acting once has no loop to race with. A
+	// fingerprint is public - it is the actor field of every record in
+	// the chain - so carrying it costs no confidentiality.
+	if expect == "" {
+		return signer, nil
+	}
+	fp, err := event.Fingerprint(signer.Public().(ed25519.PublicKey))
+	if err != nil {
+		return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot fingerprint --key: %v", err))
+	}
+	if fp != expect {
+		return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf(
+			"--as %s but --key %s now holds %s: the key changed under the caller, and signing as an identity it did not declare "+
+				"is what --as exists to prevent — restart the loop to pick up the new key",
+			expect, path, fp))
 	}
 	return signer, nil
 }

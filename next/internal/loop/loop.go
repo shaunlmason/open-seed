@@ -312,6 +312,22 @@ func (d *Driver) actGated(name, subject string, lastDitch bool, extra ...string)
 	args := []string{a.Group, a.Sub}
 	args = append(args, d.posture...)
 	args = append(args, "--key", d.keyPath, "--subject", subject)
+	// The identity the loop DECLARES it is acting as, checked at the
+	// signing site so a key replaced between checkIdentity above and
+	// the CLI's own read cannot sign in its place
+	// (plans/os-9a89245c.md).
+	//
+	// The last-ditch exit carries none, and that is the same exemption
+	// lastDitch already names rather than a caveat on it: strand
+	// attempts the exit precisely so it reaches the ADMISSION
+	// BOUNDARY, where the fence rule gives the authoritative refusal.
+	// Passing the cached actor here would reinstate the identity gate
+	// one layer lower, inside loopSigner, and the exit would stop with
+	// usage at the seam instead — re-creating the blockage the strand
+	// path exists to remove.
+	if !lastDitch {
+		args = append(args, "--as", d.actor)
+	}
 	res := d.verbs.Run(append(args, extra...)...)
 	if !res.Refused() {
 		// An act that opens a window NAMES the fence it opened, and the
@@ -602,7 +618,22 @@ func (d *Driver) strand(subject, step string, cause error) (StepResult, error) {
 // escalation: the next worker is given the refusal rather than this
 // lane's paraphrase of it.
 func (d *Driver) park(subject, step string, cause Result) (StepResult, error) {
-	return d.parkGated(subject, step, cause, false)
+	res, err := d.parkGated(subject, step, cause, false)
+	if err == nil {
+		return res, nil
+	}
+	// The exit itself could not be made. A key rotated between the
+	// refusal that stopped the work and this park is the case that
+	// reaches here, and returning now would leave the window open with
+	// no packet — the silent abandonment strand exists to prevent,
+	// arrived at by a different route than an errored act.
+	//
+	// #196 routed errored ACTS through strand; a park triggered by a
+	// REFUSAL was still returned directly, and this drill found it
+	// (review finding on #202). So the last-ditch attempt is made here
+	// too, and what it reports is the same: the exit was tried, and
+	// whether it landed.
+	return d.strand(subject, step, err)
 }
 
 func (d *Driver) parkGated(subject, step string, cause Result, lastDitch bool) (StepResult, error) {

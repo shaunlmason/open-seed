@@ -100,6 +100,24 @@ submit → deliberate exit:
 | `budget settle` | `budget.settle` | fence, reservation | `--actuals` |
 | `budget release` | `budget.release` | fence, reservation | — |
 
+Each also takes an optional **`--as <fingerprint>`**: the identity the
+caller declares it is acting as, compared against the key **at the
+signing site**. `internal/loop` fingerprints the key file before every
+act, and the CLI reopens that path independently, so a replacement
+between those two reads is observed by only one of them; comparing
+where the signature is taken closes it, because check and signature
+then see the same bytes from the same read. Optional, because these
+verbs are also reachable by hand and an operator acting once has no
+loop to race with; a fingerprint is public (it is the `actor` field of
+every record) so carrying it costs no confidentiality.
+
+**The last-ditch exit carries none**, and that is the same exemption
+`lastDitch` already names rather than a caveat on it: `strand` attempts
+the exit precisely so it reaches the admission boundary, where the
+fence rule gives the authoritative refusal. Passing the cached actor
+there would reinstate the identity gate one layer lower and stop the
+exit at the seam instead.
+
 Each takes `--ledger` **xor** `--remote` (with `--ref` and `--state`),
 exactly as `ledger append` does and through the same client
 machinery, because a lane in any real posture works against a remote

@@ -107,7 +107,7 @@ func runEscalationRaise(args []string, stdout, stderr io.Writer) int {
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
-	signer, env := loopSigner(*f.keyPath)
+	signer, env := loopSigner(*f.keyPath, *f.as)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}
@@ -166,7 +166,7 @@ func runDecisionRecord(args []string, stdout, stderr io.Writer) int {
 	if env := f.usage("decision record", parseErr, fs.NArg(), missing); env != nil {
 		return render(env, stdout, stderr)
 	}
-	signer, env := loopSigner(*f.keyPath)
+	signer, env := loopSigner(*f.keyPath, *f.as)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}

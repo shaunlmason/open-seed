@@ -805,6 +805,50 @@ The general form: when a passing result and a botched setup produce the
 same output, add an assertion that fails when the setup is wrong. Here
 that was checking the two runs reported different tree paths before
 trusting that their contents matched.
+## The guard fired; the drill was looking somewhere else
+
+Closing the key-file TOCTOU (os-9a89245c), the interleaving drill failed
+with what looked like the fix not working: the error was the loop's own
+`ErrKeyRotated`, not the signing site's refusal. The obvious reading was
+that `--as` had not taken effect.
+
+It had. The rotated act refused at the seam exactly as designed, the
+loop then ACTED on that refusal, and its next `checkIdentity` produced
+the error the drill happened to inspect. The guard's refusal was real
+and simply not the last thing that happened.
+
+The fix was to capture the result of the very call the rotation landed
+inside — the wrapper already had it in hand — rather than asserting on
+the iteration's final error. What made this worth recording is that the
+failure mode is inverted from the usual one: not a drill passing for the
+wrong reason, but a drill FAILING while the code was right, which is the
+kind that tempts you to "fix" working code. The tell was that the error
+message described a real thing correctly; nothing in it was false, it
+just answered a different question than the one being asked.
+
+## A catalog sweep is only as wide as the thing it enumerates
+
+Criterion 5 of os-9a89245c asked for a sweep "over the act catalog
+rather than a hand-listed subset, so an act added later without `--as`
+fails". Two versions shipped that wording while not providing it:
+
+1. The first swept the acts one `Step` happened to reach — four of
+   seven — and `continue`d past the rest.
+2. The second swept the acts the TEST FIXTURE's manifest declared. That
+   looked like a catalog sweep and read like one, but the fixture
+   declares five acts while the shipped manifest declares seven.
+
+Both passed. Both would have let a new act ship without `--as`.
+
+The tell was that the mutation did nothing: deleting `--as` for
+`budget release` left the drill green. A mutation that changes nothing
+means the drill never reached the code, and that is worth more than the
+drill's own green.
+
+What the property actually belongs to decides what to enumerate: `--as`
+is attached in `actGated`, not by any manifest, so the sweep is over
+`loopverb.Names()` with a manifest constructed to declare all of them —
+never over whatever subset a fixture happens to carry.
 
 ## A drill that reads the report is not a drill that reads the chain (os-8a5f14bb)
 

@@ -22,6 +22,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/lane"
+	"github.com/shaunlmason/open-seed/next/internal/loopverb"
 )
 
 // recorder is the verb seam as a double: it records every invocation
@@ -62,6 +63,17 @@ func verb(args []string) string {
 		return args[0]
 	}
 	return ""
+}
+
+// argsFor returns the recorded argument vector for a verb, so a drill
+// can assert on what an act DECLARED, not merely that it happened.
+func (r *recorder) argsFor(want string) ([]string, bool) {
+	for _, c := range r.calls {
+		if verb(c) == want {
+			return c, true
+		}
+	}
+	return nil, false
 }
 
 func (r *recorder) verbs() []string {
@@ -1473,5 +1485,111 @@ func TestAnIdleDriverStillCatchesARotation(t *testing.T) {
 	}
 	if step.Step != "identity" {
 		t.Errorf("the refusal names the identity check: %+v", step)
+	}
+}
+
+// conformance: every ORDINARY act declares the identity it is acting
+// as, and the last-ditch exit declares none (plans/os-9a89245c.md).
+//
+// The sweep is over the act CATALOG rather than a hand-listed subset,
+// so an act added later without --as fails here rather than shipping
+// a signing site with no declared identity.
+func TestEveryOrdinaryActDeclaresItsIdentity(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeSeededKey(t, keyPath, 3)
+	fp, err := actorOf(keyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// EVERY declared act is invoked directly, not merely those one
+	// iteration happens to reach. A sweep that skipped unobserved acts
+	// would pass with a future act added without --as, which is the
+	// guarantee criterion 5 actually asks for — and the first version
+	// of this drill did exactly that: a Step exercises four of the
+	// implementer's seven acts, so three were never checked (review
+	// finding on #202).
+	// EVERY act in the CATALOG, performed directly. Two narrower
+	// sweeps were wrong before this one, and both would have shipped
+	// the guarantee criterion 5 asks for while not providing it
+	// (review finding on #202):
+	//
+	//   - sweeping only the acts one Step happens to reach checked
+	//     four of them;
+	//   - sweeping the acts this file's implementer() fixture declares
+	//     checked five, while the SHIPPED manifest declares seven.
+	//
+	// --as is attached in actGated, not by any manifest, so the
+	// property belongs to the catalog: an act added to loopverb later
+	// must fail here whatever lane happens to declare it.
+	all := implementer()
+	all.ActsThrough = loopverb.Names()
+	r := &recorder{}
+	d, err := New(all, r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) { return 1, nil }), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(loopverb.Names()) == 0 {
+		t.Fatal("the catalog must not be empty")
+	}
+	for _, name := range loopverb.Names() {
+		if _, err := d.act(name, "c-1"); err != nil {
+			t.Fatalf("%q: %v", name, err)
+		}
+		args, ran := r.argsFor(name)
+		if !ran {
+			t.Fatalf("%q did not reach the seam", name)
+		}
+		if got := flagValue(args, "--as"); got != fp {
+			t.Errorf("%q must declare --as %s, got %q — every catalog act declares the identity it acts as", name, fp, got)
+		}
+	}
+}
+
+// The last-ditch exit carries NO --as on the strand path.
+//
+// This drill runs against the DOUBLE, so it proves only what the loop
+// EMITS. That the omission actually lets the act reach the admission
+// boundary is a different claim, and a double cannot make it: the
+// recorder manufactures the refusal without loopSigner or admission
+// running at all. cmd/seed carries the real-CLI drill for that
+// (review finding on #202), and this one is named for what it covers.
+func TestTheLastDitchExitDeclaresNoIdentity(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	writeSeededKey(t, keyPath, 3)
+
+	r := &recorder{answer: offers("c-1", func(args []string) (Result, bool) {
+		if verb(args) == "claim park" {
+			return Result{Exit: 6, OK: false, Code: "fenced_out",
+				Message: "event on c-1 must cite the active fence held by the original actor"}, true
+		}
+		return Result{}, false
+	})}
+	d, err := New(implementer(), r, []string{"--remote", "/repo"}, keyPath,
+		WorkFunc(func(string, Situation) (int, error) {
+			writeSeededKey(t, keyPath, 9)
+			return 4, nil
+		}), WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Step(5); !errors.Is(err, ErrKeyRotated) {
+		t.Fatalf("the drill needs the rotation path: %v", err)
+	}
+	park, ok := r.argsFor("claim park")
+	if !ok {
+		t.Fatal("this drill is vacuous unless the exit was attempted")
+	}
+	if got := flagValue(park, "--as"); got != "" {
+		t.Errorf("the last-ditch exit must declare no identity, got --as %q: passing one would stop it at the SEAM "+
+			"with usage instead of at the boundary with the fence rule's own refusal", got)
+	}
+	// The ordinary act that opened the window did declare one, so the
+	// exemption is scoped rather than a blanket opt-out.
+	if take, ok := r.argsFor("claim take"); ok && flagValue(take, "--as") == "" {
+		t.Error("claim take is an ordinary act and must declare its identity")
 	}
 }
