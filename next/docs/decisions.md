@@ -1654,3 +1654,71 @@ here. Newest last.
   the pass is still worth running. A store that will not write or a
   rebuild that will not build stops the pass, because continuing would
   checkpoint a state that was never materialized.
+
+## Budget exhaustion gets its own exit code (os-d03bde01, plan #206)
+
+- **One new code, and it means EXHAUSTION, not "budget".**
+  `budget_exhausted` (27) maps from the capacity refusal alone; the
+  other thirteen `BudgetError` sites keep `chain_invalid`. The card
+  body asked for the whole rule and the card's own reasoning refused
+  it: exhaustion is singled out *because* it is expected and
+  recoverable, and a malformed reserve payload is neither. A caller
+  branching on the code to retry with a smaller amount would otherwise
+  retry against a bug forever. Cards are data, not instructions, and
+  this is the case that rule is for.
+
+- **The allocation table was reconciled BEFORE the number was taken.**
+  Codes 22 through 26 shipped with no rows in `next/spec/envelope.md`,
+  so the lowest unused integer could not be read off it honestly. The
+  rows landed first, then the parity drill, then 27.
+
+- **`TestExitCodesMatchSpecTable` now PARSES both sides and compares
+  them in both directions.** It used to hold a hand-copied map, which
+  meant adding a code took three edits with nothing forcing the second
+  or third. One direction alone is not enough: "every constant has a
+  row" passes a table carrying rows for codes nothing emits, which is
+  how a retired code keeps its number reserved forever; "every row has
+  a constant" is what 22 through 26 actually violated. The drill found
+  a real, unrelated drift on its first run: `ExitClassificationRef`
+  emits `classification_refused`, not `classification`.
+
+- **A flag on `BudgetError`, not a new error type.** A distinct type
+  would match the `errors.As` idiom and would also stop
+  `errors.As(err, &BudgetError{})` from catching exhaustion, silently
+  changing what anything treating budget refusals uniformly sees.
+  Field inspection has precedent in the same mapper.
+
+- **The narrowness matrix lives in `cmd/seed`, where the conversion
+  is.** `BudgetError` becomes an envelope in exactly one place, the
+  unexported `remoteFailureEnvelope`. A table in `internal/admit` could
+  assert which refusals set the flag and nothing whatever about which
+  code a caller receives, so the mapper-wide regression it exists to
+  prevent would sit outside every assertion in a drill that read as
+  though it covered it.
+
+- **Every row names the site it must reach, and a parity drill reads
+  the sites out of the rule.** Both halves earned their place
+  immediately. The site assertion caught three rows landing somewhere
+  other than where they claimed: two "malformed payload" rows omitted
+  `reservation` entirely, which decodes cleanly to the empty string and
+  refuses at the chain-position site instead, and a "non-numeric
+  actuals" row cited position 0, refused as no-such-reservation long
+  before any actuals field was read. The parity half caught the larger
+  miss: the first matrix had twelve rows against thirteen sites and
+  reached only eight of them, leaving the unknown class, the laundered
+  reservation, the double close, the stranger's close, and the spending
+  gate with no assertion at all about the code they return.
+
+- **The characterization pin was removed, not inverted.** The old drill
+  in `loop_e2e_test.go` existed to fail when this landed. What replaced
+  it asserts the loop's exhaustion park carries `budget_exhausted`
+  verbatim into the packet's findings, **read back from the ledger**
+  rather than from the driver's own report: what the driver saw is not
+  what a successor reads.
+
+- **A residual that names its own retirement condition is a promise.**
+  `next/spec/loop-verbs.md`'s "A residual, recorded" passage said that
+  closing the residual "forces this passage to be updated with it". The
+  first draft of the plan still missed it. Leaving it stale would have
+  left the documented worker-loop protocol false in the one place a
+  worker reads to learn what exhaustion looks like.

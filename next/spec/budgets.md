@@ -110,8 +110,12 @@ initiates through it, so no run provisions outside the reservation
 gate. The budget rule refuses any listed verb on
 a subject with no open valid reservation; the gate is additionally
 drilled through test injection in isolation.
-Exhaustion produces a structured refusal the worker can act on. The
-parking mechanics the park invokes — the `claim.parked` exit with
+Exhaustion produces a structured refusal the worker can act on, and
+it is the code, not just the message, that says so:
+`budget_exhausted` (exit 27, [`envelope.md`](envelope.md)) is
+allocated for this one refusal out of the budget rule's fourteen, so
+a lane can answer "the class is spent" by asking for less without
+first parsing prose. The parking mechanics the park invokes — the `claim.parked` exit with
 its packet at a safe point — landed with 7.4, the envelope's
 `{reserved, remaining}` block is Phase 8's, and the worker-lane
 loop that answers exhaustion by taking that exit is named in
@@ -123,8 +127,13 @@ docs/next-build-plan.md Phase 9 item 1.
   view: class, capacity (when the class is known), open
   reservations, settled actuals, effective closes, remaining.
   Reserve, settle, and release append through `seed ledger append`
-  and the library admission path; refusals reuse the established
-  admission exits, no new exit codes.
+  and the library admission path. Refusals reuse the established
+  admission exits with a single exception: capacity exhaustion at
+  `budget.reserve` carries `budget_exhausted` (exit 27). Every
+  other refusal in the rule — malformed payloads, wrong signers,
+  unknown classes, bad citations, double closes — stays
+  `chain_invalid`, since none of them is answered by reserving a
+  smaller amount.
 - Projections ([`projections.md`](projections.md)): the contracts
   view serializes the derived budget object and reservations only
   beside budget facts, so budget-inactive chains keep byte-identical

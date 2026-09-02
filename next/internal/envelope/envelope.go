@@ -58,8 +58,17 @@ const (
 	// posture_invalid, which judges the deployment's posture
 	// declaration rather than a role definition.
 	ExitLaneInvalid = 26
-	ExitUsage       = 64
-	ExitUnreadable  = 66
+	// ExitBudgetExhausted is capacity exhaustion at budget.reserve
+	// (plans/os-d03bde01.md): a first-class, EXPECTED, recoverable
+	// condition in the reservation model, and the one budget refusal a
+	// caller can act on by asking for less. It is deliberately narrow:
+	// the rule's other thirteen refusals - malformed payloads, wrong
+	// signers, unknown classes, double closes, the laundering refusal -
+	// keep chain_invalid, because a caller that retried with a smaller
+	// amount against a malformed payload would retry forever.
+	ExitBudgetExhausted = 27
+	ExitUsage           = 64
+	ExitUnreadable      = 66
 )
 
 // Error is the machine-branchable half of a refusal: a stable code to

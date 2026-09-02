@@ -964,3 +964,42 @@ recorded on #202 — a mutation that changes nothing means the drill
 never reached the code — has a second half: it may equally mean the
 mutation never reached the code, and the two are told apart only by
 making the mutation land.
+
+## A matrix that counts its rows is not a matrix that covers its cases
+
+The narrowness drill for `budget_exhausted` had to prove that thirteen
+other refusals in one admission rule still returned the old code. The
+first version had twelve rows, every row passed, and it reached **eight**
+of the thirteen. The five it never touched were the ones needing a chain
+shaped a particular way rather than just a bad payload: a subject whose
+budget class the table does not know, a reservation staged raw so it
+never passed the authoring boundary, one already closed, one closed by a
+stranger, and a spend with nothing reserved. Twelve rows all landed on
+the eight easy sites, several of them twice.
+
+Then three of the twelve turned out to be testing the wrong site
+outright. Two "malformed payload" rows omitted the `reservation` field
+to make the payload bad; a missing field decodes cleanly to the empty
+string, so both refused at the chain-position site, not the strict-decode
+one. A "non-numeric actuals" row cited position 0, which is refused as
+no-such-reservation long before any actuals field is read.
+
+Every one of those rows was green. Green meant only "some refusal in
+this rule happened", which is the assertion a row is least useful for.
+
+**Two cheap habits fix the whole class.** First, each row states the
+site it must reach and the drill asserts the refusal's own message
+against it — the row stops being able to pass by landing somewhere
+convenient. Second, the drill reads the rule's refusal sites **out of
+the source** and fails when one has no row, so the count in its name is
+derived rather than typed, and a fourteenth site added later cannot ship
+with nothing asserting the code it returns.
+
+That second habit is the same one this card applied to
+`next/spec/envelope.md`: the exit-code drill used to hold a hand-copied
+map, so adding a code took three edits with nothing forcing the last
+two. Parsing both sides and comparing them in both directions found a
+real drift on its first run — five constants with no rows, and one
+constant whose wire name did not match the row it had. **A drill that
+must be updated by hand to catch a regression cannot catch that
+regression**, and it reads exactly like one that can.

@@ -291,6 +291,14 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	if errors.As(err, &itr) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
 	}
+	var be *admit.BudgetError
+	if errors.As(err, &be) && be.Exhausted {
+		// Exhaustion only. Every other budget refusal falls through to
+		// the catch-all below and keeps chain_invalid: a caller that
+		// answers this code by asking for less must not also be
+		// answering a malformed payload (plans/os-d03bde01.md D1).
+		return envelope.Fail(envelope.ExitBudgetExhausted, "budget_exhausted", err.Error())
+	}
 	var ce *admit.ContentionError
 	if errors.As(err, &ce) {
 		return envelope.Fail(envelope.ExitContention, "contention", err.Error())

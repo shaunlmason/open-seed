@@ -257,6 +257,18 @@ func (e *OfferError) Error() string {
 type BudgetError struct {
 	Subject string
 	Reason  string
+	// Exhausted marks the ONE refusal a caller can act on: capacity
+	// spent. It is a field rather than a distinct type so that
+	// errors.As(err, &BudgetError{}) still catches every budget
+	// refusal - anything treating them uniformly keeps working - and
+	// field inspection has precedent in the same mapper, where
+	// failureEnvelope maps *ledger.Failure by looking inside it.
+	//
+	// What makes the narrowness safe is not this comment but the
+	// matrix in cmd/seed: the other thirteen refusals are asserted to
+	// still come back as chain_invalid, through the CLI, where the
+	// conversion actually happens.
+	Exhausted bool
 }
 
 func (e *BudgetError) Error() string {
@@ -757,7 +769,11 @@ func Default() []Rule {
 					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("budget class %q has no capacity in the class table — absent knowledge is never fudged into spendable units", s.Budget)}
 				}
 				if amount > view.Remaining {
-					return &BudgetError{Subject: subject, Reason: fmt.Sprintf("amount %d exceeds remaining %d of capacity %d — reservations are checked and decremented at admission, the serialized view", amount, view.Remaining, view.Capacity)}
+					// The ONE exhaustion site out of this rule's
+					// fourteen refusals, and the only one a caller
+					// can act on by asking for less
+					// (plans/os-d03bde01.md D1).
+					return &BudgetError{Subject: subject, Exhausted: true, Reason: fmt.Sprintf("amount %d exceeds remaining %d of capacity %d — reservations are checked and decremented at admission, the serialized view", amount, view.Remaining, view.Capacity)}
 				}
 				return nil
 			default:
