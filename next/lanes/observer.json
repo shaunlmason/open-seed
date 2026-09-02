@@ -1,7 +1,7 @@
 {
   "lane": "observer",
   "kind": "role",
-  "summary": "Records what an external authority did, as an observation the ledger never pretends to control: the merge that ends a contract's loop, the checks a forge ran.",
+  "summary": "Records what an external authority did, as an observation the ledger never pretends to control: the merge that ends a contract's loop, the checks a forge ran, the lesson PR whose merge promotes a hypothesis.",
   "grants": [
     "observer"
   ],

@@ -88,7 +88,7 @@ attributed to it.
 | `enrolled` (suspended key) | standing suspended | reinstated: standing active, kind/name updated |
 | `enrolled` (active key) | — | **refuses** (already enrolled) |
 | `enrolled`/`suspended`/`granted` (revoked key) | — | **refuses**: revocation is terminal |
-| `granted` | subject enrolled, not revoked, and the grant keeps sealer disjoint from claim and operator in both directions (a root's implicit operator standing included; sealed-checks.md) | capability appended |
+| `granted` | subject enrolled, not revoked, and the grant keeps sealer disjoint from claim and operator in both directions (a root's implicit operator standing included; sealed-checks.md), and curate likewise (curation.md) | capability appended |
 | `suspended` | subject active | standing suspended |
 | `revoked` | subject not already revoked | standing revoked |
 
@@ -127,7 +127,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `claim.parked` | `claim`, `operator` |
 | `submission.made` | `claim`, `operator` |
 | `contract.cancelled` | `operator` (until a real need appears) |
-| `escalation.raised` | `claim`, `dispatch`, `verdict`, `supervise`, `operator` (any lane may raise blocked(needs-you) per the charter, and breadth is safe because raising a question grants nothing: the offer.published argument. A raised contract leaves blocked only through decision.recorded or a citing cancellation, so a raiser can stop work and hand a human the decision, never move it, escalation.md) |
+| `escalation.raised` | `claim`, `dispatch`, `verdict`, `supervise`, `operator`, `curate` (any lane may raise blocked(needs-you) per the charter, and breadth is safe because raising a question grants nothing: the offer.published argument. A raised contract leaves blocked only through decision.recorded or a citing cancellation, so a raiser can stop work and hand a human the decision, never move it, escalation.md; the curator joined the row with its proposal grant, curation.md) |
 | `decision.recorded` | `operator` (the fourth no-fallback row: the charter names escalations a gate humans hold, so a dispatch fallback would let a machine lane answer a human gate, escalation.md) |
 | `plan.proposed` | `claim`, `operator` (the claim holder plans; the fence matrix applies) |
 | `plan.approved` | `operator` (an external-fact observation, the merge.observed posture) |
@@ -146,6 +146,9 @@ ending standing is deferred until the catalog grows a verb for it.
 | `run.started` | `supervise`, `operator` (the gated spend initiation that fences a run to its reservation before any executor provisions; the spending-verb table's first entry, executors.md) |
 | `run.settled` | `supervise`, `operator` (the once-per-fence metering aggregate at run end; telemetry, never authority — budget.settle carries the actuals, executors.md) |
 | `run.interrupted` | `supervise`, `operator` (the safe-point preemption request, once per active fence; conforming workers poll it and park deliberately with their packet — executors.md's Preemption section) |
+| `curation.deadend.recorded` | `claim`, `operator` (the window holder's candidate observation: failure condition and environment beside what was tried, inside the window, the fence matrix applying; a candidate has no field a conclusion could live in, curation.md) |
+| `curation.hypothesis.proposed` | `curate` (the fifth no-fallback row: operator already reaches claim.taken and the deliberate exits, so an operator fallback would let one key write a trajectory's observations and then conclude from them; the proposal is reachable through curate alone, and curate is disjoint from claim and operator at the grant, curation.md) |
+| `curation.lesson.promoted` | `observer`, `operator` (the observation that a lesson file landed by PR, citing the admitted hypothesis it promotes: the merge.observed posture, curation.md) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.

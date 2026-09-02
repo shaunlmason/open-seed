@@ -93,6 +93,15 @@ const (
 	// claim it invites settles at admission like any claim — so the
 	// row keeps the standard operator fallback.
 	CapSupervise = "supervise"
+	// CapCurate is the curator lane's proposal grant
+	// (plans/os-f30ee0d3.md; SEED-NEXT.md §II.12): proposing
+	// hypotheses from the observations workers appended. The fifth
+	// no-fallback row: operator already reaches claim.taken and the
+	// deliberate exits, so an operator fallback here would let one key
+	// write a trajectory's observations and then conclude from them.
+	// Disjoint from claim and operator at the grant, both directions,
+	// so a worker promoting its own runs is refused at the grant.
+	CapCurate = "curate"
 )
 
 // Capabilities is the whole vocabulary, in declaration order: the one
@@ -102,7 +111,7 @@ const (
 func Capabilities() []string {
 	return []string{
 		CapOperator, CapMaintenance, CapDispatch, CapObserver,
-		CapVerdict, CapClaim, CapSealer, CapSupervise,
+		CapVerdict, CapClaim, CapSealer, CapSupervise, CapCurate,
 	}
 }
 
@@ -166,7 +175,7 @@ func AcceptedCapabilities(verb string) []string {
 	// attributable human judgement (§I.3, humans hold gates), and a
 	// dispatch fallback would let a machine lane answer a human gate.
 	case "escalation.raised":
-		return []string{CapClaim, CapDispatch, CapVerdict, CapSupervise, CapOperator}
+		return []string{CapClaim, CapDispatch, CapVerdict, CapSupervise, CapOperator, CapCurate}
 	case "decision.recorded":
 		return []string{CapOperator}
 	// The reconciliation chain (plans/os-6cdc15be.md): asking for the
@@ -226,6 +235,17 @@ func AcceptedCapabilities(verb string) []string {
 	// only, no operator fallback — the one such row, see CapVerdict.
 	case "verdict.rendered":
 		return []string{CapVerdict}
+	// The staged curation stores (plans/os-f30ee0d3.md): a dead end is
+	// the window holder's candidate observation (the fence matrix
+	// applies); the proposal is the curator's alone, the fifth
+	// no-fallback row; the promotion is the observation of a lesson
+	// PR's merge, the merge.observed posture.
+	case "curation.deadend.recorded":
+		return []string{CapClaim, CapOperator}
+	case "curation.hypothesis.proposed":
+		return []string{CapCurate}
+	case "curation.lesson.promoted":
+		return []string{CapObserver, CapOperator}
 	}
 	return nil
 }
@@ -483,6 +503,16 @@ func sealerDisjoint(cur *Entry, granting string) error {
 	}
 	if implLane[granting] && has(CapSealer) {
 		return fmt.Errorf("%s cannot be granted to a key holding sealer — sealed checks are authored under a grant disjoint from implementation grants (plans/os-3128535a.md)", granting)
+	}
+	// Curation-proposal isolation (plans/os-f30ee0d3.md D2): the
+	// sealer rule one capability over, against both lanes it names. A
+	// worker promoting its own runs, and a root concluding from its
+	// own, are refused at the grant, not at the proposal.
+	if granting == CapCurate && (has(CapClaim) || has(CapOperator)) {
+		return errors.New("curate cannot be granted to a key holding claim or operator — hypotheses are proposed under a grant disjoint from the lanes that write observations (plans/os-f30ee0d3.md)")
+	}
+	if implLane[granting] && has(CapCurate) {
+		return fmt.Errorf("%s cannot be granted to a key holding curate — hypotheses are proposed under a grant disjoint from the lanes that write observations (plans/os-f30ee0d3.md)", granting)
 	}
 	return nil
 }

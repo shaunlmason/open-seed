@@ -47,6 +47,13 @@ func injectionDir(t *testing.T) string {
 	return filepath.Join("testdata", "injection")
 }
 
+func readInjectionFile(t *testing.T, name string) ([]byte, error) {
+	t.Helper()
+	return os.ReadFile(filepath.Join(injectionDir(t), name))
+}
+
+func jsonUnmarshal(b []byte, into any) error { return json.Unmarshal(b, into) }
+
 func loadResiduals(t *testing.T) []residual {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join(injectionDir(t), "residuals.json"))

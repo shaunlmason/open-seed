@@ -1189,4 +1189,34 @@ the assertions read, and there is no copy to go stale.
   that wants reconcile to reproduce a receipt without a key uses the
   trivial tier: the one tier whose subjects are unsealed and whose
   executable gated spec still reaches L3.
+- A test fixture's resolver must know every key that will sign in the
+  drill: the store's resolver answers genesis keys only, and a lane key
+  enrolled on the chain still fails "actor fingerprint not in the
+  keyring" at append. Build the loose resolver over the drill's own
+  key list rather than reusing a fixture that closes over another
+  drill's.
+- When a probe must be signed on a subject the caller did not name (a
+  fact on a derived subject), map the override by verb beside the
+  catalog rather than adding a field to the catalog's anonymous
+  struct: every positional literal in the table breaks otherwise.
+- Adding a registered projection moves every count pin of the registry
+  (`len(results)`, `len(list)`); grep for the old number across the
+  packages before running the suite.
 
+- A tolerant lifecycle fold reports windows, verdicts and proposals
+  whoever signed them. Every curation check that reads a folded fact
+  (a window's holder, the latest verdict, an earlier proposal) must
+  re-judge it at its own prefix (`WindowAdmitted`, `FailedAt`,
+  `AdmittedProposalBefore`) or raw history launders past the boundary.
+  Drill each with an enrolled, grantless key: the store appends
+  anything the resolver can verify, and the fold applies the legal
+  transition regardless of the signer.
+- An "admitted before" check that recurses through full validity
+  (which itself asks "admitted before") is exponential in the number
+  of duplicates on one subject. The earliest proposal that passes the
+  grant and the support is the admitted one, so one forward scan
+  settles the duplicate question in linear time.
+- A lexical prefix test on an anchored path is not containment:
+  require `path.Clean(p) == p` and refuse an absolute path before the
+  prefix test, or `<store>/../x` passes the anchor grammar and the
+  prefix both.

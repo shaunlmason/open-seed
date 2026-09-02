@@ -68,18 +68,18 @@ fourth no-fallback row, after `verdict.rendered`, `check.sealed` and
 answer a human gate, which is the exact inversion of §I.3's "humans
 hold gates, not queues".
 
-**One lane cannot raise, and it is the curator.** `next/lanes/curator.json`
-declares `"grants": []` and `"acts_through": []` — in v0 it "proposes
-everything, approves nothing, and holds no ledger-writing grant". So
-the charter's "any lane can raise" does not reach it, and the reason
-is the curator's own posture rather than anything about this channel:
-it cannot append *at all*. Granting it an escalation row would make
-freezing contracts the single write authority of the one lane designed
-to hold none, which is a worse answer than the gap. When the curator
-gains its curation-proposal rights (the row `internal/keyring` already
-anticipates), this row is the one to revisit with it — recorded here
-so the tension is inherited rather than rediscovered
-(review finding on #200).
+**The curator raises too, since it gained its proposal grant.** Until
+Phase 11 item 1 the curator held no ledger-writing grant at all, so
+the charter's "any lane can raise" did not reach it, and this
+paragraph recorded the tension for the moment the curator gained its
+curation-proposal rights: granting an escalation row to a lane holding
+no other write would have made freezing contracts its single write
+authority. That moment came with `curate`
+([`curation.md`](curation.md)): the raise row now accepts it, sixth
+beside the five above, and breadth stays safe by the same
+`offer.published` argument. The curator's residual is exactly every
+raiser's: freezing, attributable, reversible (review finding on #200,
+answered by plans/os-f30ee0d3.md D2).
 
 The residual is recorded rather than hidden: a persuaded lane holding
 any of those capabilities can **freeze** a contract. That is denial of

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
@@ -34,6 +35,9 @@ import (
 // refuse, so illegality is judged by the rule set, never by the
 // synthesizer.
 type probeView struct {
+	// support and hypothesis are the curation probes' citations
+	// (curationProbes).
+	support, hypothesis string
 	// version is the chain's active protocol version: a probe must
 	// synthesize the payload shape THAT version admits, or the
 	// affordance list would say a verb is unavailable because the
@@ -155,6 +159,68 @@ func (v *probeView) fenceKV() string {
 // and honestly empty refs and findings (next/spec/packets.md).
 const probePacket = `{"acceptance": ["probe"], "decisions": [], "base": "0000000000000000000000000000000000000000..0000000000000000000000000000000000000000", "refs": [], "findings": []}`
 
+// probeClaim is the claim the hypothesis probe proposes; its subject is
+// the id the claim derives, so the probe is signed where the rule
+// looks. The two defaults are what the probes cite when the record
+// holds nothing citable: shape-valid, and refused.
+const (
+	probeClaim      = "probe"
+	probeSupport    = `["probe@0", "probe@0"]`
+	probeHypothesis = "h-000000000000@0"
+)
+
+func (v *probeView) supportOr() string {
+	if v.support == "" {
+		return probeSupport
+	}
+	return v.support
+}
+
+func (v *probeView) hypothesisOr() string {
+	if v.hypothesis == "" {
+		return probeHypothesis
+	}
+	return v.hypothesis
+}
+
+// curationProbes derives the citations the curation probes make: two
+// admitted observations on two distinct non-failed contracts (the
+// support a proposal needs) and the latest admitted hypothesis (the
+// citation a promotion needs). Where the record holds none the probe
+// cites what the rules refuse, so the affordance is invisible exactly
+// when the act is not yet legal.
+func curationProbes(ctx *Context) (support, hypothesis string) {
+	support, hypothesis = probeSupport, probeHypothesis
+	if ctx == nil || ctx.Table == nil || ctx.Lifecycle == nil {
+		return
+	}
+	byContract := map[string]string{}
+	var cited []string
+	for pos, rec := range ctx.Records {
+		e := &rec.Event
+		if _, ok := byContract[e.Subject]; ok || len(cited) >= curation.SupportMinimum {
+			continue
+		}
+		cit := curation.Citation{Contract: e.Subject, Position: pos}
+		if _, ok := curation.ObservationAt(ctx.Records, ctx.Table, cit); !ok || curation.FailedAt(ctx.Records, ctx.Table, e.Subject) {
+			continue
+		}
+		byContract[e.Subject] = fmt.Sprintf("%s@%d", e.Subject, pos)
+		cited = append(cited, fmt.Sprintf("%q", byContract[e.Subject]))
+	}
+	if len(cited) >= curation.SupportMinimum {
+		support = "[" + strings.Join(cited, ", ") + "]"
+	}
+	fold := curation.Fold(ctx.Records)
+	for _, id := range fold.HypothesisIDs() {
+		h, _ := fold.Hypothesis(id)
+		if _, ok := curation.HypothesisValid(ctx.Records, ctx.Table, curation.Citation{Contract: id, Position: h.Pos}); ok {
+			hypothesis = fmt.Sprintf("%s@%d", id, h.Pos)
+		}
+	}
+	return
+}
+
 // probeEscalation is the minimal shape-valid question: one sentence
 // and the two-option floor a minimal decision needs
 // (next/spec/escalation.md).
@@ -177,6 +243,18 @@ const probeTuple = `{"principal": "probe", "harness": "probe/0", "model": "probe
 // ephemeral key is refused by the keyring's subject binding on any
 // subject whose key the caller does not hold (recorded decision;
 // the enrollment surface knows its key out of band).
+// probeSubjects names, for the verbs that live on a derived subject,
+// the subject the probe is signed on instead of the caller's: the
+// curation facts (a hypothesis on the id its claim derives, a
+// promotion on the hypothesis it cites) are legal on no contract.
+var probeSubjects = map[string]func(v *probeView) string{
+	"curation.hypothesis.proposed": func(v *probeView) string { return curation.HypothesisID(probeClaim) },
+	"curation.lesson.promoted": func(v *probeView) string {
+		h, _ := curation.ParseCitation(v.hypothesisOr())
+		return h.Contract
+	},
+}
+
 var affordanceCatalog = []struct {
 	verb  string
 	synth func(v *probeView) string
@@ -255,6 +333,15 @@ var affordanceCatalog = []struct {
 	}},
 	{"submission.made", func(v *probeView) string {
 		return `{"fence": "` + v.fence + `", "packet": ` + v.packet + `}`
+	}},
+	{"curation.deadend.recorded", func(v *probeView) string {
+		return `{"fence": "` + v.fence + `", "tried": "probe", "outcome": "probe", "condition": "probe", "environment": "probe"}`
+	}},
+	{"curation.hypothesis.proposed", func(v *probeView) string {
+		return `{"claim": "` + probeClaim + `", "applies_when": "probe", "support": ` + v.supportOr() + `, "exceptions": [], "provenance": []}`
+	}},
+	{"curation.lesson.promoted", func(v *probeView) string {
+		return `{"lesson": "` + curation.LessonsDir + `/probe.md @ 0000000000000000000000000000000000000000", "hypothesis": "` + v.hypothesisOr() + `", "pr": "pr/0 @ 0000000000000000000000000000000000000000"}`
 	}},
 	{"plan.proposed", func(v *probeView) string {
 		return `{` + v.fenceKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000"}`
@@ -344,6 +431,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 	}
 	v.version = ctx.Active
 	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
+	v.support, v.hypothesis = curationProbes(ctx)
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			if s.Claim != nil {
@@ -372,8 +460,14 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 	var out []string
 	seen := map[string]bool{}
 	for _, p := range affordanceCatalog {
+		on := subject
+		if derive, ok := probeSubjects[p.verb]; ok {
+			if derived := derive(v); derived != "" {
+				on = derived
+			}
+		}
 		rec, err := event.Sign(event.Event{
-			V: ctx.Active, TS: v.now, Actor: fp, Verb: p.verb, Subject: subject,
+			V: ctx.Active, TS: v.now, Actor: fp, Verb: p.verb, Subject: on,
 			Payload: []byte(p.synth(v)), Prev: ctx.Tip,
 		}, key)
 		if err != nil {

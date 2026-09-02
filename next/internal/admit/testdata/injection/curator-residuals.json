@@ -1,0 +1,20 @@
+{
+  "_comment": "Acts a curate-only key can perform, each with why it is admitted and what a persuaded lane can inflict with it (plans/os-f30ee0d3.md AC5). The reachability drill derives the set from admit.Affordances over the pinned catalog and fails on any verb not listed here, in either direction.",
+  "residuals": [
+    {
+      "verb": "curation.hypothesis.proposed",
+      "why_admitted": "proposing hypotheses is the curator's job, and the proposal is the one write its grant reaches",
+      "consequence": "bounded by the support floor: a proposal cites at least two admitted observations on two distinct non-failed contracts, re-judged from the record, so a persuaded curator can propose only what the trajectories already carry, and a proposal concludes nothing until a lesson PR the governance root reviews lands (next/spec/curation.md)"
+    },
+    {
+      "verb": "escalation.raised",
+      "why_admitted": "any lane may raise blocked(needs-you) per the charter; the curator joined the row with its proposal grant",
+      "consequence": "freezes a contract until a human answers: denial of progress, never escalation of authority, attributable and reversible (next/spec/escalation.md)"
+    },
+    {
+      "verb": "message.sent",
+      "why_admitted": "standing-only: any enrolled active actor appends it",
+      "consequence": "RELAYS text, bounded by the classification lint at 512 bytes per string; the same residual the dispatcher's table names"
+    }
+  ]
+}

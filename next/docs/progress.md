@@ -895,6 +895,36 @@ PR (an administrative card, not a Phase 9 item).
   config --local`, which the test binary's global config cannot
   satisfy, and an older-build drill proves the write happens on the
   no-init path and that a second open changes nothing).
+## Phase 11 — Curation and the flywheel (docs/next-build-plan.md Phase 11; deps: 9 ✓)
+
+- 11.1 staged curation stores (observations → hypotheses → validated
+  lessons → policy) with grant-gated boundaries; workers append
+  candidates only — os-f30ee0d3 — **in review** (task PR against plan
+  #226: `internal/curation` with the three facts, `curation.deadend.recorded`
+  on the contract inside the holder's window (the packet finding's
+  shape plus the charter's failure condition and environment),
+  `curation.hypothesis.proposed` on `h-<12 hex>` derived from the
+  claim, citing at least two admitted observations on two distinct
+  non-failed contracts re-judged from the record, refusing a
+  re-proposal as a duplicate, and `curation.lesson.promoted` on the
+  hypothesis subject citing an admitted proposal, a promotion citing
+  none folding `unbound`; the `curate` capability, the fifth
+  no-fallback row, disjoint from `claim` and `operator` at the grant in
+  both directions, a root included, held by the curator manifest and
+  nothing else; the raise row's sixth capability; the `knowledge`
+  projection and the report's `knowledge` section, present only when a
+  curation fact stands; `seed knowledge deadend | propose | promote |
+  show`; the lessons store `next/knowledge/lessons/` with its
+  frontmatter contract and lint; the curator's reachable set derived
+  from the boundary and pinned: the proposal, the raise and the
+  standing-only relay; `next/spec/curation.md` and six spec edits).
+- 11.2 promotion gate (≥2-trajectory support, applies-when,
+  provenance, last-validated; adversarial evaluation; contested state;
+  lessons at claim time) — os-96850e5a — planned (#228 merged)
+- 11.3 poisoning drill — os-e2f1ad23 — planned (#229 merged)
+- 11.4 expiry, retirement, rollback by revert — os-0d537fbd — planned
+  (#230 merged)
+- 11.5 flywheel v0 — os-9075c308 — plan in review (#231)
 
 ## Frontier
 
@@ -931,6 +961,15 @@ records and held to its tier. The plans for item 4 (#225), item 5
 for Phase 11 items 3, 4 and 5 (#229, #230, #231) are in review. The
 frontier is item 3's merge, then item 4 (rubric verdicts and the
 calibration harness).
+#215); item 2 (os-03e47abb) is implemented against plan #217 and in
+review, and `actor.qualified` is now defined. The frontier is item 2's
+merge, then item 3 (independence levels per tier), whose tier
+vocabulary is carded as os-be12ac16 with its plan in review (#219).
+Phase 11 has opened in parallel, depending on Phase 9 alone: item 1
+(os-f30ee0d3, the staged curation stores) is implemented against plan
+#226 and in review, so the curator holds its proposal grant and the
+three curation verbs exist; items 2 through 4 are planned (#228,
+#229, #230) and item 5's plan is in review (#231).
 Phase 9 was under way: item 5's derivation and read merged (#171) and
 its loop verbs merged (#173), so the lane-facing surface is whole in
 shape — `seed situation` says what is true and what is owed, and the

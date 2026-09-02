@@ -204,8 +204,12 @@ admission).
 - `message.*` — `sent`, `acked`.
 - `request.*` — inbound proposals from projection surfaces (mirror edits,
   dashboard actions).
-- `curation.*` — `hypothesis.proposed`, `lesson.promoted` (PR observation),
-  `lesson.retired`, `deadend.recorded`.
+- `curation.*` — `deadend.recorded` (the holder's candidate
+  observation, on the contract), `hypothesis.proposed` (the curator's,
+  on the subject its claim derives), `lesson.promoted` (the PR
+  observation, on the hypothesis), all three from
+  [`curation.md`](curation.md) as additive catalog growth, active from
+  `seed/1`; `lesson.retired` waits on Phase 11 item 4.
 
 ## Data classification (summary)
 

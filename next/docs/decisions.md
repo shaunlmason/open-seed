@@ -2333,4 +2333,57 @@ here. Newest last.
   lands, at which point it becomes a named list, which is the lesson
   `EvalApplies` teaches in this PR. The next register entry owes
   `LevelsApply` the same edit.
+## Phase 11 item 1 — the staged curation stores (os-f30ee0d3, plan #226)
+
+- **The curator's reachable set is three verbs, not two** (os-f30ee0d3,
+  AC5 refined). The plan named the proposal and the raise; the boundary
+  derives one more, `message.sent`, which any enrolled active key
+  appends and which the dispatcher's residual table already names as
+  the relay. The curator's residual table names all three, the
+  reachability drill pins the set in both directions, and the relay
+  row repeats the dispatcher's bound (the classification lint's 512
+  bytes per string). Listing two would have made the drill assert what
+  the boundary does not do.
+
+- **The window and the fence are the fence rule's; the curation rule
+  refuses the non-holder** (os-f30ee0d3, AC1 refined). A dead end
+  always cites a fence, so on an unclaimed contract the fence rule,
+  which runs before the curation rule per the charter's check order,
+  has already refused it as `fenced_out` ("no claim is active"), and a
+  stale citation too. The first draft re-derived both in the curation
+  rule, which made two refusals for one fact; what the fence rule lets
+  through, a claim key that is not the holder citing the right fence,
+  is the curation rule's one refusal. The drill asserts the refusal
+  the boundary actually gives at each row.
+
+- **Citations are re-judged from the record, at their own prefix**
+  (os-f30ee0d3, D1). `curation.ObservationAt` folds the prefix before
+  the cited position and requires the record to be the holder's (a
+  prior claimant's, for exits) dead end or finding-bearing exit citing
+  the fence active there; `curation.HypothesisValid` requires the
+  cited proposal's signer to have held `curate` at that prefix and its
+  support to pass there. Fold presence is never proof of admission
+  (`RunStartValid`'s posture), so a raw-pushed dead end supports
+  nothing and a raw-pushed proposal promotes nothing: no stage skips,
+  by citation, even against a hostile writer on the raw seam.
+
+- **The probes for derived subjects sign on the derived subject.** The
+  affordance catalog probes every verb on the subject the caller asks
+  about; a hypothesis lives on the id its claim derives and a
+  promotion on the hypothesis it cites, so those two probes are signed
+  on their derived subject (`probeSubjects`) and cite what the record
+  holds (`curationProbes`: two admitted observations on two distinct
+  non-failed contracts, the latest admitted hypothesis), or, holding
+  none, what the rules refuse. The proposal therefore appears in the
+  curator's orientation read exactly when it is legal, and the
+  injection suite's reachable-set derivation keeps working over one
+  catalog.
+
+- **A parked contract is blocked, so the ready contract the curator
+  raises on is one never claimed.** The plan's AC5 says "a `ready` or
+  `review` contract"; the fixture's parked contract folds `blocked`
+  (a park asks the queue to reconsider), which refuses the raise from
+  every raiser alike. The drill raises on a specified, never-claimed
+  contract and asserts parity with the dispatcher on the held and the
+  blocked one.
 

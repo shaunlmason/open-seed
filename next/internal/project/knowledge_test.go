@@ -1,0 +1,90 @@
+package project_test
+
+// The knowledge projection and the report's section
+// (plans/os-f30ee0d3.md AC6, step 8): the stages published from the
+// fold, and the report byte-identical on a chain carrying no curation
+// fact.
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/shaunlmason/open-seed/next/internal/curation"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/project"
+	"github.com/shaunlmason/open-seed/next/internal/version"
+)
+
+func currentView(t *testing.T, out, name string) string {
+	t.Helper()
+	cur, err := os.ReadFile(filepath.Join(out, name, "CURRENT"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(out, name, "builds", strings.TrimSpace(string(cur)), name+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+func TestKnowledgeProjectionPublishesTheStages(t *testing.T) {
+	root, worker, curator := pKey(t, 1), pKey(t, 2), pKey(t, 5)
+	dir, resolve, add := fixtureChain(t, root, worker, curator)
+	add(root, version.Protocol, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
+	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, worker), enrollJSON(t, worker, "agent", "worker"))
+	add(root, version.Seed1, keyring.VerbGranted, pFP(t, worker), `{"capability": "claim"}`)
+	add(root, version.Seed1, keyring.VerbEnrolled, pFP(t, curator), enrollJSON(t, curator, "agent", "curator"))
+	add(root, version.Seed1, keyring.VerbGranted, pFP(t, curator), `{"capability": "curate"}`)
+
+	// Before any curation fact the report carries no knowledge
+	// section, so builds of such chains stay byte-identical.
+	out := lockedTempOut(t, "before")
+	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(currentView(t, out, "report"), `"knowledge"`) {
+		t.Fatal("a chain with no curation fact gets no knowledge section")
+	}
+	if view := currentView(t, out, "knowledge"); !strings.Contains(view, `"observations": 0`) || !strings.Contains(view, `"hypotheses": []`) {
+		t.Fatalf("the empty view counts zero and renders empty lists: %s", view)
+	}
+
+	for _, subject := range []string{"c-1", "c-2"} {
+		add(root, version.Seed1, "intent.filed", subject, `{"intent": "drill", "tier": "trivial", "budget": "small", "routing": "core"}`)
+		add(root, version.Seed1, "contract.specified", subject, `{"acceptance": {"ref": "specs/thing.md @ abc1234", "executable": false}}`)
+		add(worker, version.Seed1, "claim.taken", subject, `{}`)
+	}
+	// The claims stand at 8 and 11, the dead ends at 12 and 13: the
+	// projection's fold re-judges each citation, so the fixture's
+	// observations are real ones inside admitted windows.
+	add(worker, version.Seed1, curation.DeadEndVerb, "c-1", `{"fence": "8", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
+	add(worker, version.Seed1, curation.DeadEndVerb, "c-2", `{"fence": "11", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
+	claim := "retry once"
+	id := curation.HypothesisID(claim)
+	add(curator, version.Seed1, curation.HypothesisVerb, id, fmt.Sprintf(`{"claim": %q, "applies_when": "flaky", "support": ["c-1@12", "c-2@13"], "exceptions": [], "provenance": []}`, claim))
+	add(worker, version.Seed1, curation.HypothesisVerb, "h-000000000000", `{"claim": "x"}`)
+	add(root, version.Seed1, curation.LessonVerb, "h-ffffffffffff", `{"lesson": "next/knowledge/lessons/x.md @ 0123456", "hypothesis": "h-ffffffffffff@3", "pr": "pr/1 @ 0123456"}`)
+
+	out2 := lockedTempOut(t, "after")
+	if _, err := project.Rebuild(dir, out2, project.Default(), resolve); err != nil {
+		t.Fatal(err)
+	}
+	view := currentView(t, out2, "knowledge")
+	for _, want := range []string{`"observations": 2`, `"hypotheses": 1`, `"promoted": 0`, `"lessons": 0`, `"unbound": 1`, `"anomalies": 1`, `"id": "` + id + `"`, `"stage": "proposed"`} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the knowledge view carries %s: %s", want, view)
+		}
+	}
+	report := currentView(t, out2, "report")
+	if !strings.Contains(report, `"knowledge"`) || !strings.Contains(report, `"hypotheses": 1`) {
+		t.Fatalf("the report counts the stages once a curation fact stands: %s", report)
+	}
+	if !strings.Contains(currentView(t, out, "report"), `"position": 6`) {
+		t.Fatal("the earlier build is the earlier prefix's")
+	}
+}

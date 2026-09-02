@@ -311,9 +311,14 @@ closed: intents and tool output are covered, mirrors are not.
 
 **The vocabulary has an honest edge.** The sweep covers
 `admit.affordanceCatalog`, whose completeness against the spec table is
-enforced in both directions. `message.acked`, `request.*` and
-`curation.*` are named in [`protocol.md`](protocol.md) but appear in
-neither, being unimplemented, so the suite cannot speak about them.
+enforced in both directions. `message.acked` and `request.*` are named
+in [`protocol.md`](protocol.md) but appear in neither, being
+unimplemented, so the suite cannot speak about them. The `curation.*`
+edge closed with Phase 11 item 1: the three implemented verbs are in
+the catalog and the table, and the curator's own reachable set (the
+proposal, the raise, the standing-only relay) is derived from the
+boundary and pinned against its residual table exactly as the
+dispatcher's is ([`curation.md`](curation.md)).
 
 ## The loop-verb registry
 

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -124,6 +125,10 @@ type ReportView struct {
 	Reconciliation *ReportReconciliation `json:"reconciliation"`
 	Observation    *ReportObservation    `json:"observation"`
 	Refusals       *ReportRefusals       `json:"refusals"`
+	// Knowledge counts the curation stages (plans/os-f30ee0d3.md D3),
+	// present only when the prefix carries a curation fact, so builds
+	// of chains that carry none stay byte-identical.
+	Knowledge *KnowledgeStages `json:"knowledge,omitempty"`
 }
 
 // ReportReconciliation is the record-derivable half of divergence
@@ -231,6 +236,10 @@ func reportView(records []*event.Record) (*ReportView, error) {
 			rec.ByClass[f.Class]++
 		}
 		view.Reconciliation = rec
+	}
+	if curation.Fold(records).Any() {
+		stages := DeriveKnowledge(records).Stages
+		view.Knowledge = &stages
 	}
 	return &view, nil
 }

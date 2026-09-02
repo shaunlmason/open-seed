@@ -55,7 +55,7 @@ func TestProjectRebuildCLI(t *testing.T) {
 		t.Fatalf("the envelope must stamp the tip position, got %+v", e.Position)
 	}
 	list, ok := e.Result["projections"].([]any)
-	if !ok || len(list) != 7 {
+	if !ok || len(list) != 8 {
 		t.Fatalf("the result must list all seven registered projections, got %+v", e.Result)
 	}
 	row := list[0].(map[string]any)
