@@ -1036,3 +1036,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-99829835","ts":"2026-09-02T11:26:08Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T13:26:34Z"},"task":"os-711b3028","ts":"2026-09-02T11:26:34Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-711b3028","ts":"2026-09-02T11:29:27Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"next: Phase 10 item 4 — rubric verdicts (per-item, evidence-cited, uncertainty-marked); calibration harness with authority suspension on drift"},"task":"os-2e34f66a","ts":"2026-09-02T11:30:21Z","verb":"create"}
