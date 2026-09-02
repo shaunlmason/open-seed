@@ -878,8 +878,46 @@ PR (an administrative card, not a Phase 9 item).
   replaced by the vocabulary drill, with mis-tiering (filing the valid
   `trivial`) kept pinned as tier provenance's residual. Item 3 added
   the `independence` column.
-- 10.4 rubric verdicts; calibration harness with authority suspension
-  on drift — not started
+- 10.4 rubric verdicts (per-item, evidence-cited, uncertainty-marked);
+  calibration harness with authority suspension on drift —
+  os-2e34f66a — **in review** (task PR against plan #225: the
+  `## Rubric` section of the acceptance spec read at the anchor as the
+  commands are (`plan.Rubric`, a duplicate or empty id refusing
+  `spec_unrunnable`); the scorecard artifact (items with score,
+  cited evidence, explicit two-valued uncertainty, a bounded note)
+  validated against the rubric, the receipt and the repository, its
+  derivation-bearing half on `verdict.rendered` as `scorecard`
+  (`seed/4`); `transition.DeriveScores` at render (`rubric_red`,
+  `human_verdict` under exit 20), at admission (a verdict whose own
+  items refute it never lands) and along the merge chain
+  (`scoreBoundary`); `verdict.deferred` from a verdict key under L1,
+  citing the receipt it computed and the items at high uncertainty,
+  the whole verdict deferring on a human-review tier, creating
+  `verdict.human` owed by the operator lane; the human as a key with
+  a verdict grant beside operator standing, rendering over the
+  deferral's receipt because sealed checks encrypt to keys without
+  operator standing; the tier table's `human review` column
+  consumed; `scorecard_unverified` at evidence grade; calibration
+  definitions (`kind: calibration`, the gold committed to by digest
+  and held outside the tree, `--gold` supplying it, the floor pinned
+  to `evals.md` and raisable never lowerable), agreement at low
+  uncertainty, the `verdict` qualification for the verifier's
+  declared tuple, drift's tuple-wide disqualification and the
+  dispatcher's idempotent defect filing, the set rule at render
+  (`out_of_grant` under a drifted configuration until re-calibrated),
+  spot-checks aging verdict qualifications; `seed verdict render
+  --scorecard`, `seed verdict defer`, `seed eval status|act --gold`;
+  drilled at the boundary (every D3 and D4 row, the chain, the
+  qualification, the set rule, `seed/3` refusing each), in the fold,
+  the obligation, reconcile and eval packages, at the terminal
+  (scorecards, the deferral and the human's render, the situation
+  read's debt, lost scorecards classifying, the calibration lifecycle
+  with drift and re-qualification) and end to end in small-team mode
+  (a rubric contract and a deferred one reaching done); no shipped
+  calibration definition; the verifier lane's summary and fragment;
+  `verdicts.md`, `evals.md`, `qualification.md`, `obligations.md`,
+  `reconciliation.md`, `acceptance.md`, `envelope.md`, `tiers.md`,
+  `actors.md`, `protocol.md`, `lanes.md`)
 - 10.5 trajectory-prefix regression harness; dispatcher re-triage rate
   and planner unedited-approval rate (III.J row 3's metrics half,
   routed here by the Phase 9 exit record) — not started
@@ -984,9 +1022,10 @@ Phase 10 is under way: item 1 (os-8e53ffd9) merged (#216 against plan
 plan #223 and in review, so a verdict's level is computed from the
 records and held to its tier. The plans for item 4 (#225), item 5
 (#227) and Phase 11 items 1 (#226) and 2 (#228) are merged; the plans
-for Phase 11 items 3, 4 and 5 (#229, #230, #231) are in review. The
-frontier is item 3's merge, then item 4 (rubric verdicts and the
-calibration harness).
+for Phase 11 items 3, 4 and 5 (#229, #230, #231) are in review. Item 3
+merged (#233); item 4 (os-2e34f66a, rubric verdicts and the
+calibration harness) is implemented against plan #225 and in review.
+The frontier is item 5 (the trajectory-prefix regression harness).
 #215); item 2 (os-03e47abb) is implemented against plan #217 and in
 review, and `actor.qualified` is now defined. The frontier is item 2's
 merge, then item 3 (independence levels per tier), whose tier

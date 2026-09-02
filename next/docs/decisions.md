@@ -2471,3 +2471,52 @@ moved tip; the act now carries a derivation that recomputes the set
 against every refreshed view (the payload holds nothing derived, so
 the re-derivation cannot diverge and only refreshes the result), and
 the response reports the set at the tip the claim landed on.
+
+## Phase 10 item 4 — rubric verdicts, the human verdict, calibration (os-2e34f66a)
+
+**With a rubric, the verdict is the derivation's, both ways.** D3
+names the pass rule (every item pass at low), the fail item forbidding
+pass, and the high item forbidding both. The implementation adds the
+symmetric half: `fail` over a scorecard whose every item passes at low
+refuses too. Without it a raw fail with an all-pass scorecard would be
+authentic, and AC5's "the lockout ignores a raw fail whose items are
+all pass" could not hold; with it every boundary asks one question of
+a scored verdict, whether it equals what its own items derive.
+
+**The human renders over the deferral's receipt.** D4 makes a human a
+key with operator standing. Sealed checks encrypt to verdict keys
+disjoint from claim and operator (`sealed-checks.md`), so such a key
+is never a recipient and can compute no receipt on any sealed
+subject, which is every tier above trivial. Rather than loosen the
+recipient rule (authoring isolation is its whole point), the deferral
+carries the receipt the machine verifier computed (`{"receipt",
+"submission", "scorecard"?, "items"?}`), and `seed verdict render`
+from a key with operator standing over a standing deferral retrieves
+that receipt intact from the store instead of recomputing; it
+validates its own scorecard against it and cites the same digest, so
+`verdict check` and reconcile recompute it under a capable key as for
+any verdict. On a human-review tier the whole verdict therefore
+defers (no rubric, no items) and the deferral is the machine's one
+act, which D4 already said in words.
+
+**A calibration cites its verdict whichever way it went.** The gold
+may score an item `fail`, so an agreeing verifier renders `fail`; the
+verdict qualification cites the calibration's authenticated verdict,
+pass or fail, where a claim qualification cites the pass that proved
+the configuration. The drill's first cut asked for a pass and refused
+its own mint.
+
+**Drift disqualifies tuple-wide under `verdict`, and files once.** The
+defect's id is the maintenance loop's shape (class and contract
+hashed), derived in the eval package rather than imported from
+`maintain` to keep the dependency one-directional; the derivation
+skips a defect the fold already holds, so a second pass owes nothing
+even before the boundary refuses the duplicate.
+
+**Drift in the modes fixture is drilled at the terminal.** AC7's
+"drifted verifier refused until re-calibrated" runs on a local ledger
+in `calibration_cli_test.go` through the same verbs the modes drive
+(`eval file`, `eval act --gold`, `verdict render`); the small-team
+drill carries the rubric and deferred contracts to done. The modes
+fixture would need a second full eval work cycle per calibration to
+say nothing the terminal drill does not.

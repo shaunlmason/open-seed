@@ -1243,3 +1243,13 @@ the assertions read, and there is no copy to go stale.
   loop retries against a refreshed one; carry the derivation in the
   act so every attempt recomputes it, even when the payload itself
   holds nothing derived.
+- Before designing a human's act, check what the human's key can and
+  cannot hold. The sealed-checks recipient set excludes operator
+  standing, so a "human = verdict + operator" key can never compute a
+  receipt on a sealed subject; the deferral had to carry the receipt.
+  The drills that first went red were the existing critical-tier ones,
+  which is what they are for.
+- A shadowed `rep :=` inside an `if` is invisible until an act cites
+  the wrong payload two steps later; when a derivation "re-owes"
+  something already performed, check which payload was appended
+  before suspecting the derivation.

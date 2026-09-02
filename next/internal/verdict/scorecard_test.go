@@ -25,9 +25,7 @@ func scoreRepo(t *testing.T) (repo, commit string) {
 		return strings.TrimSpace(string(out))
 	}
 	git("init", "--quiet", "-b", "main")
-	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"}} {
-		git("config", kv[0], kv[1])
-	}
+	hardenGitRepo(t, repo)
 	if err := os.WriteFile(filepath.Join(repo, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,8 @@ package eval_test
 // agrees, drifts, or is re-tested.
 
 import (
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,6 +19,7 @@ import (
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/eval"
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
@@ -265,11 +268,25 @@ func TestCalibrationOwesMintsDriftAndTheDefect(t *testing.T) {
 		t.Fatalf("agreement at the floor qualifies: %s / %+v", kinds(rep.Acts), rep.Notes)
 	}
 	s.add4("supervisor", keyring.VerbQualified, s.fps["verifier"], rep.Acts[0].Payload)
+	// A second verifier granted the same configuration by hand: drift
+	// is tuple-wide, so the disqualification names it too.
+	otherKey := keyOf(7)
+	otherPub := otherKey.Public().(ed25519.PublicKey)
+	otherFP, _ := event.Fingerprint(otherPub)
+	s.keys["verifierB"], s.fps["verifierB"] = otherKey, otherFP
+	s.add4("root", keyring.VerbEnrolled, otherFP, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "verifierB"}`, hex.EncodeToString(otherPub)))
+	s.add4("root", keyring.VerbGranted, otherFP, `{"capability": "verdict", "tuple": `+verifierTuple+`}`)
 	e3 := s.file4(def, anchor, 2)
 	driftPos := s.score(e3, "holderA", verifierTuple, map[string]string{"tone": "pass", "taste": "pass", "clarity": "pass", "brevity": "fail", "care": "pass"})
 	rep = s.due4(now, 0, defs, repo, gold)
-	if kinds(rep.Acts) != "disqualify:"+s.fps["verifier"]+" defect:"+eval.DriftDefectID(e3) {
-		t.Fatalf("drift owes the tuple-wide disqualification and the defect filing: %s", kinds(rep.Acts))
+	got := kinds(rep.Acts)
+	want1 := "disqualify:" + s.fps["verifier"] + " disqualify:" + otherFP + " defect:" + eval.DriftDefectID(e3)
+	want2 := "disqualify:" + otherFP + " disqualify:" + s.fps["verifier"] + " defect:" + eval.DriftDefectID(e3)
+	if got != want1 && got != want2 {
+		t.Fatalf("drift owes the tuple-wide disqualification (every verifier holding the configuration) and the defect filing: %s", got)
+	}
+	if rep.Acts[0].Subject != s.fps["verifier"] {
+		rep.Acts[0], rep.Acts[1] = rep.Acts[1], rep.Acts[0]
 	}
 	var drop map[string]any
 	if err := json.Unmarshal([]byte(rep.Acts[0].Payload), &drop); err != nil {
@@ -278,13 +295,14 @@ func TestCalibrationOwesMintsDriftAndTheDefect(t *testing.T) {
 	if drop["capability"] != keyring.CapVerdict || drop["verdict"] != fmt.Sprint(driftPos) || !strings.Contains(drop["reason"].(string), "taste, brevity") || rep.Acts[0].Lane != eval.LaneSupervise {
 		t.Fatalf("the disqualification cites the fail and names the disagreeing items: %+v", drop)
 	}
-	if rep.Acts[1].Verb != "intent.filed" || rep.Acts[1].Lane != eval.LaneDispatch || !strings.Contains(rep.Acts[1].Payload, "taste, brevity") || !strings.Contains(rep.Acts[1].Payload, e3) {
-		t.Fatalf("the defect filing is the dispatcher's, naming the contract and the items: %+v", rep.Acts[1])
+	if rep.Acts[2].Verb != "intent.filed" || rep.Acts[2].Lane != eval.LaneDispatch || !strings.Contains(rep.Acts[2].Payload, "taste, brevity") || !strings.Contains(rep.Acts[2].Payload, e3) {
+		t.Fatalf("the defect filing is the dispatcher's, naming the contract and the items: %+v", rep.Acts[2])
 	}
 	s.add4("supervisor", keyring.VerbDisqualified, s.fps["verifier"], rep.Acts[0].Payload)
-	s.add4("root", "intent.filed", rep.Acts[1].Subject, rep.Acts[1].Payload)
+	s.add4("supervisor", keyring.VerbDisqualified, otherFP, rep.Acts[1].Payload)
+	s.add4("root", "intent.filed", rep.Acts[2].Subject, rep.Acts[2].Payload)
 	if rep := s.due4(now, 0, defs, repo, gold); len(rep.Acts) != 0 {
-		t.Fatalf("the performed disqualification and the filed defect are not owed again: %s", kinds(rep.Acts))
+		t.Fatalf("the performed disqualifications and the filed defect are not owed again: %s", kinds(rep.Acts))
 	}
 	// Re-qualification by the same road, then the spot-check ages it.
 	e4 := s.file4(def, anchor, 3)
