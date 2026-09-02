@@ -29,6 +29,7 @@ var specCatalogVerbs = []string{
 	"system.halt.declared", "system.halt.lifted", "system.protocol.upgraded",
 	"system.checkpoint",
 	"actor.enrolled", "actor.granted", "actor.suspended", "actor.revoked",
+	"actor.qualified", "actor.disqualified",
 	"intent.filed", "contract.specified", "contract.blocked",
 	"contract.unblocked", "contract.cancelled", "contract.returned",
 	"escalation.raised", "decision.recorded",
@@ -164,16 +165,62 @@ func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
 		walkStep{"root", version.Seed1, "contract.blocked", "c-3", static(`{}`), "blocked-c3"},
 		walkStep{"root", version.Seed1, "system.halt.declared", "system", static(`{"reason": "walk"}`), "halted"},
 		walkStep{"root", version.Seed1, "system.halt.lifted", "system", static(`{}`), "lifted"},
+		// Qualification (plans/os-03e47abb.md): the chain reaches
+		// seed/3, an eval passes on the holder's window and the
+		// supervisor may mint; a second eval fails under the same
+		// configuration and the supervisor may disqualify. The
+		// remaining steps carry seed/3.
+		walkStep{"root", version.Seed1, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed2 + `"}`), ""},
+		walkStep{"root", version.Seed2, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed3 + `"}`), ""},
+		walkStep{"root", version.Seed3, "intent.filed", "c-4", static(evalFiledBody), ""},
+		walkStep{"root", version.Seed3, "contract.specified", "c-4", static(specBody), ""},
+		walkStep{"holder", version.Seed3, "claim.taken", "c-4", static(`{}`), ""},
+		walkStep{"holder", version.Seed3, "budget.reserve", "c-4", func(t *testing.T, ctx *Context) string {
+			return reserveBody("2", fenceOf(t, ctx, "c-4"))
+		}, ""},
+		walkStep{"supervisor", version.Seed3, "run.started", "c-4", func(t *testing.T, ctx *Context) string {
+			return startBodyAt(fenceOf(t, ctx, "c-4"), reservationOf(t, ctx, "c-4"), tupleJSON(t, nil))
+		}, ""},
+		walkStep{"holder", version.Seed3, "submission.made", "c-4", func(t *testing.T, ctx *Context) string {
+			return `{"fence": "` + fenceOf(t, ctx, "c-4") + `", "packet": ` + minPacket + `}`
+		}, ""},
+		walkStep{"verifier", version.Seed3, "verdict.rendered", "c-4", func(t *testing.T, ctx *Context) string {
+			return `{"verdict": "pass", "receipt": "` + zeros64 + `", "submission": "` + submissionOf(t, ctx, "c-4") + `", "independence": "L1"}`
+		}, "eval-passed-c4"},
+		walkStep{"supervisor", version.Seed3, keyring.VerbQualified, fpOf(t, lanes["holder"]), func(t *testing.T, ctx *Context) string {
+			return `{"capability": "claim", "tuple": ` + tupleJSON(t, nil) + `, "contract": "c-4", "verdict": "` + verdictOf(t, ctx, "c-4") + `"}`
+		}, "qualified"},
+		walkStep{"root", version.Seed3, "intent.filed", "c-5", static(evalFiledBody), ""},
+		walkStep{"root", version.Seed3, "contract.specified", "c-5", static(specBody), ""},
+		walkStep{"holder", version.Seed3, "claim.taken", "c-5", static(`{}`), ""},
+		walkStep{"holder", version.Seed3, "budget.reserve", "c-5", func(t *testing.T, ctx *Context) string {
+			return reserveBody("2", fenceOf(t, ctx, "c-5"))
+		}, ""},
+		walkStep{"supervisor", version.Seed3, "run.started", "c-5", func(t *testing.T, ctx *Context) string {
+			return startBodyAt(fenceOf(t, ctx, "c-5"), reservationOf(t, ctx, "c-5"), tupleJSON(t, nil))
+		}, ""},
+		walkStep{"holder", version.Seed3, "submission.made", "c-5", func(t *testing.T, ctx *Context) string {
+			return `{"fence": "` + fenceOf(t, ctx, "c-5") + `", "packet": ` + minPacket + `}`
+		}, ""},
+		walkStep{"verifier", version.Seed3, "verdict.rendered", "c-5", func(t *testing.T, ctx *Context) string {
+			return `{"verdict": "fail", "receipt": "` + zeros64 + `", "submission": "` + submissionOf(t, ctx, "c-5") + `", "independence": "L1"}`
+		}, "eval-failed-c5"},
+		walkStep{"supervisor", version.Seed3, keyring.VerbDisqualified, fpOf(t, lanes["holder"]), func(t *testing.T, ctx *Context) string {
+			return `{"capability": "claim", "tuple": ` + tupleJSON(t, nil) + `, "contract": "c-5", "verdict": "` + verdictOf(t, ctx, "c-5") + `", "reason": "the eval failed"}`
+		}, "disqualified"},
 		// Standing ends last, on the lane whose reservation on c-1 is
 		// still open (plans/os-d6963652.md D6): a walk of only active
 		// actors can never reach the positions where an obligation's
 		// usual owner has lost the power to discharge it, and those
 		// are exactly the positions the standing-aware attribution
 		// exists for.
-		walkStep{"root", version.Seed1, keyring.VerbSuspended, fpOf(t, lanes["holder"]), static(`{"reason": "walk"}`), "suspended"},
-		walkStep{"root", version.Seed1, keyring.VerbRevoked, fpOf(t, lanes["holder"]), static(`{"reason": "walk"}`), "revoked"},
+		walkStep{"root", version.Seed3, keyring.VerbSuspended, fpOf(t, lanes["holder"]), static(`{"reason": "walk"}`), "suspended"},
+		walkStep{"root", version.Seed3, keyring.VerbRevoked, fpOf(t, lanes["holder"]), static(`{"reason": "walk"}`), "revoked"},
 	)
 }
+
+// evalFiledBody is a filing marked as an eval (plans/os-03e47abb.md D1).
+const evalFiledBody = `{"intent": "eval", "tier": "trivial", "budget": "small", "routing": "core", "eval": {"name": "walk"}}`
 
 // runWalkStep synthesizes the step's payload from the standing
 // context and appends the signed record.
@@ -366,6 +413,37 @@ func TestAffordancesWalk(t *testing.T) {
 			}
 		},
 		"lifted": func() {},
+		"eval-passed-c4": func() {
+			// The eval passed on the holder's window: the supervisor
+			// lists the mint on the holder, and nobody else does (the
+			// verifier holds no supervise; the holder cannot qualify
+			// itself).
+			if l := list(keys["supervisor"], fpOf(t, keys["holder"])); !has(l, "actor.qualified") || has(l, "actor.disqualified") {
+				t.Fatalf("the supervisor lists the mint on the holder after the eval's pass: %v", l)
+			}
+			if l := list(keys["holder"], fpOf(t, keys["holder"])); has(l, "actor.qualified") {
+				t.Fatalf("the holder cannot qualify itself: %v", l)
+			}
+			if l := list(keys["verifier"], fpOf(t, keys["holder"])); has(l, "actor.qualified") {
+				t.Fatalf("the verifier holds no supervise: %v", l)
+			}
+		},
+		"qualified": func() {
+			// One verdict, one consequence: the mint is spent.
+			if l := list(keys["supervisor"], fpOf(t, keys["holder"])); has(l, "actor.qualified") {
+				t.Fatalf("a verdict already cited mints no second time: %v", l)
+			}
+		},
+		"eval-failed-c5": func() {
+			if l := list(keys["supervisor"], fpOf(t, keys["holder"])); !has(l, "actor.disqualified") {
+				t.Fatalf("the supervisor lists the disqualification on a holder of the failed configuration: %v", l)
+			}
+		},
+		"disqualified": func() {
+			if l := list(keys["supervisor"], fpOf(t, keys["holder"])); has(l, "actor.disqualified") {
+				t.Fatalf("a configuration no longer held cannot be disqualified again: %v", l)
+			}
+		},
 		"suspended": func() {
 			// A suspended lane holds nothing: HasAnyCapability is
 			// standing-aware, so the grant rule refuses every verb and

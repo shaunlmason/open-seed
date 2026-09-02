@@ -213,7 +213,11 @@ func subjectRows(subject string, s transition.SubjectState, table *transition.Ta
 	if s.Submission != nil && (s.Verdict == nil || s.Verdict.Submission != s.Submission.Pos) {
 		add(KindSubmissionPending, LaneVerifier, s.Submission.Pos, "", factDischargers[KindSubmissionPending])
 	}
-	if s.Verdict != nil && s.Verdict.Verdict == "pass" && s.Merged == nil {
+	// An eval's chain ends at its verdict (plans/os-03e47abb.md D10):
+	// it is never merged, its consequence is a qualification or a
+	// disqualification, and a merge owed forever would be a debt
+	// nobody can pay.
+	if s.Verdict != nil && s.Verdict.Verdict == "pass" && s.Merged == nil && s.Eval == nil {
 		// One kind, two shapes, because the merge chain is two
 		// events: until a request cites the verdict the debt is the
 		// operator's and merge.requested pays it; after that the

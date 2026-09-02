@@ -159,7 +159,12 @@ by name, drilled on planted tables.
 The charter's birth rule — a contract becomes claimable only when it
 carries intent prose, an acceptance spec, and tier/budget/routing —
 is enforced at the shape level: `intent.filed` must carry non-empty
-`intent`, `tier`, `budget`, and `routing`; `contract.specified` must
+`intent`, `tier`, `budget`, and `routing`, and from `seed/3` may carry
+the optional **`eval`** marker `{"name", "tuple"?}` that makes the
+contract an eval ([`evals.md`](evals.md)): folded to the subject's
+`Eval`, refused at an earlier tip, and changing no row (an eval's
+lifecycle is the lifecycle, its verdict its terminal fact, and no
+merge is owed); `contract.specified` must
 carry the **structured acceptance field** — commit-anchored `ref`,
 the `executable` flag, and gate evidence bound to the ref's revision
 for ALL executable content ([`acceptance.md`](acceptance.md)). The

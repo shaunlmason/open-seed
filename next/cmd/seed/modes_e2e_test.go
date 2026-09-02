@@ -19,12 +19,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/eval"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/lane"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/loop"
@@ -722,5 +725,265 @@ func TestSmallTeamQualifiedWorkerIsOfferedAndHeldToItsConfiguration(t *testing.T
 	}
 	if refused != 1 || admitted != 1 {
 		t.Fatalf("inside the window the drifted start refused once and the cited one admitted once: %d %d", refused, admitted)
+	}
+}
+
+// materialize folds the remote's own chain into a local ledger
+// directory, for the verbs that read a ledger rather than a posture.
+func (m *modeStand) materialize(t *testing.T) string {
+	t.Helper()
+	c, err := gitref.NewClient(t.TempDir(), m.remote, "refs/seed/ledger")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tip, err := c.Fetch()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := c.Materialize(tip, dir); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// ringOf replays the remote chain's keyring.
+func (m *modeStand) ringOf(t *testing.T) *keyring.State {
+	t.Helper()
+	st, failEnv := loadVerdictState(m.materialize(t))
+	if failEnv != nil {
+		t.Fatalf("the remote chain must verify: %+v", failEnv)
+	}
+	ring, _, err := keyring.StateAt(st.records)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ring
+}
+
+// conformance: plans/os-03e47abb.md AC2, AC4, AC5 — in small-team mode
+// an eval filed by the dispatcher runs through the production
+// machinery end to end: the supervisor's act publishes the offer, the
+// loop claims and reserves, the supervisor's start declares the
+// worker's configuration, the work applies the solution in the
+// worker's own clone (the loop deriving the submission range from it),
+// an L1-disjoint verifier passes it with a receipt verdict check
+// reproduces, and the supervisor's act mints the HOLDER's
+// qualification for the DECLARED tuple. Afterwards an ordinary run
+// under that tuple admits and one differing in a field is out of
+// grant; a failed eval disqualifies the configuration and the bridge
+// stays closed; a stale qualification owes the dispatcher a spot-check
+// the supervisor then offers.
+func TestSmallTeamEvalQualifiesAndDisqualifiesThroughTheProductionMachinery(t *testing.T) {
+	m := buildMode(t, append(append([]identity{}, smallTeam...), identity{lane: "dispatcher", actor: "dispatch", seed: 53}))
+	m.appendRaw(ledger.UpgradeVerb, "system", `{"to": "`+version.Seed2+`"}`)
+	m.appendRaw(ledger.UpgradeVerb, "system", `{"to": "`+version.Seed3+`"}`)
+
+	// The shipped definitions land in the source repository under a
+	// squash-merge subject: the reviewed revision every filing anchors.
+	gitSrc := func(args ...string) string {
+		t.Helper()
+		full := append([]string{"-C", m.src, "-c", "user.name=t", "-c", "user.email=t@example.invalid"}, args...)
+		out, err := exec.Command("git", full...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	copyTree(t, filepath.Join("..", "..", "evals"), filepath.Join(m.src, eval.Root))
+	gitSrc("add", ".")
+	gitSrc("commit", "--quiet", "-m", "evals: the shipped definitions (#1)")
+	anchor := gitSrc("rev-parse", "HEAD")
+
+	// The worker's clone: the loop derives the submission range from
+	// it, and the work step pushes its branch back so the verifier's
+	// checkout can reach the head.
+	clone := filepath.Join(t.TempDir(), "worker")
+	if out, err := exec.Command("git", "clone", "--quiet", m.src, clone).CombinedOutput(); err != nil {
+		t.Fatalf("clone: %v %s", err, out)
+	}
+	hardenGitRepo(t, clone)
+	gitClone := func(args ...string) string {
+		t.Helper()
+		full := append([]string{"-C", clone, "-c", "user.name=impl", "-c", "user.email=impl@example.invalid"}, args...)
+		out, err := exec.Command("git", full...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	work := 0
+	apply := func(fix bool) {
+		t.Helper()
+		work++
+		branch := fmt.Sprintf("work-%d", work)
+		gitClone("checkout", "--quiet", "-B", branch, anchor)
+		if fix {
+			b, err := os.ReadFile(filepath.Join(clone, eval.Root, "fix-the-check", "solution", "greet.sh"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(clone, eval.Root, "fix-the-check", "fixture", "greet.sh"), b, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		} else if err := os.WriteFile(filepath.Join(clone, eval.Root, "fix-the-check", "fixture", "NOTES"), []byte("tried\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		gitClone("add", ".")
+		gitClone("commit", "--quiet", "-m", "the work")
+		gitClone("push", "--quiet", "origin", branch)
+	}
+
+	act := func(who string, extra ...string) ledgerEnv {
+		t.Helper()
+		args := append(append([]string{"eval", "act"}, m.posture()...), "--repo", m.src, "--key", m.keys[who])
+		e, code := runEnv(t, append(args, extra...)...)
+		if code != 0 {
+			t.Fatalf("eval act as %s: %d %+v", who, code, e.Error)
+		}
+		return e
+	}
+	performed := func(e ledgerEnv, want string) {
+		t.Helper()
+		rows, _ := e.Result["performed"].([]any)
+		var got []string
+		for _, r := range rows {
+			got = append(got, fmt.Sprint(r.(map[string]any)["kind"]))
+		}
+		if strings.Join(got, " ") != want {
+			t.Fatalf("performed %q, want %q (%+v)", strings.Join(got, " "), want, e.Result)
+		}
+	}
+	file := func() string {
+		t.Helper()
+		e, code := runEnv(t, append(append([]string{"eval", "file"}, m.posture()...), "--repo", m.src, "--key", m.keys["dispatch"], "--eval", "fix-the-check")...)
+		if code != 0 {
+			t.Fatalf("the dispatcher files the eval: %d %+v", code, e.Error)
+		}
+		subject, _ := e.Result["subject"].(string)
+		return subject
+	}
+	start := func(subject, model string) (ledgerEnv, int) {
+		t.Helper()
+		return runEnv(t, append(append([]string{"run", "start"}, m.posture()...),
+			"--key", m.keys["supervisor"], "--subject", subject,
+			"--principal", "acme", "--model", model, "--tool-policy", "default")...)
+	}
+	// worker runs one loop iteration whose work step has the
+	// supervisor declare the configuration and then applies (or does
+	// not apply) the solution in the clone.
+	worker := func(fix bool) string {
+		t.Helper()
+		d, err := loop.New(implementerManifest(t), loopVerbs{}, m.posture(), m.keys["impl"],
+			loop.WorkFunc(func(s string, sit loop.Situation) (int, error) {
+				if e, code := start(s, "fable/5.1"); code != 0 {
+					return 0, fmt.Errorf("the supervisor's start on the eval: %d %+v", code, e.Error)
+				}
+				apply(fix)
+				return 2, nil
+			}), loop.WithRepo(clone))
+		if err != nil {
+			t.Fatal(err)
+		}
+		step, err := d.Step(5)
+		if err != nil || step.Outcome != loop.Submitted {
+			t.Fatalf("the loop claims, works and submits: %+v %v", step, err)
+		}
+		return step.Subject
+	}
+	render := func(subject, verdict string) (ledgerEnv, int) {
+		t.Helper()
+		return runEnv(t, append(append([]string{"verdict", "render"}, m.posture()...),
+			"--subject", subject, "--repo", m.src, "--key", m.keys["verify"], "--verdict", verdict)...)
+	}
+
+	// AC2: the eval end to end, and the mint.
+	e1 := file()
+	performed(act("supervisor"), "offer")
+	if got := worker(true); got != e1 {
+		t.Fatalf("the loop took the eval: %s", got)
+	}
+	if e, code := render(e1, "pass"); code != 0 {
+		t.Fatalf("the disjoint verifier passes the solved eval: %d %+v", code, e.Error)
+	}
+	if e, code := runEnv(t, "verdict", "check", "--ledger", m.materialize(t), "--subject", e1, "--repo", m.src); code != 0 {
+		t.Fatalf("verdict check reproduces the receipt: %d %+v", code, e.Error)
+	}
+	performed(act("supervisor"), "mint")
+	if cited := m.ringOf(t).GrantTuples(m.fps["impl"], keyring.CapClaim); len(cited) != 1 || cited[0].Model != "fable/5.1" || cited[0].Principal != "acme" {
+		t.Fatalf("the mint qualifies the HOLDER for the DECLARED configuration: %+v", cited)
+	}
+	if owed, _ := act("supervisor").Result["owed"].([]any); len(owed) != 0 {
+		t.Fatalf("one verdict, one consequence: %+v", owed)
+	}
+
+	// AC2's consequence on an ordinary contract, inside the worker's
+	// own window: a start differing in one field is out of grant, the
+	// cited configuration admits.
+	ordinary := func(subject, model, wantCode, wantMessage string) {
+		t.Helper()
+		m.contract(t, subject, "supervisor")
+		d, err := loop.New(implementerManifest(t), loopVerbs{}, m.posture(), m.keys["impl"],
+			loop.WorkFunc(func(s string, sit loop.Situation) (int, error) {
+				e, code := start(s, "fable/9.9")
+				if code != 14 || e.Error == nil || e.Error.Code != "out_of_grant" {
+					return 0, fmt.Errorf("a start under a configuration the set does not cite is out of grant: %d %+v", code, e.Error)
+				}
+				e, code = start(s, model)
+				if fmt.Sprint(code) != wantCode || (wantMessage != "" && (e.Error == nil || !strings.Contains(e.Error.Message, wantMessage))) {
+					return 0, fmt.Errorf("start under %s: want %s %q, got %d %+v", model, wantCode, wantMessage, code, e.Error)
+				}
+				return 2, nil
+			}), loop.WithBase(m.base+".."+m.head))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if step, err := d.Step(5); err != nil || step.Outcome != loop.Submitted || step.Subject != subject {
+			t.Fatalf("%s: %+v %v", subject, step, err)
+		}
+	}
+	ordinary("c-ord", "fable/5.1", "0", "")
+
+	// AC4: the unsolved eval fails, the configuration is disqualified,
+	// and the bridge does not reopen: on the next ordinary contract
+	// even the once-cited configuration is out of grant.
+	e2 := file()
+	performed(act("supervisor"), "offer")
+	worker(false)
+	if e, code := render(e2, "pass"); code != 20 {
+		t.Fatalf("pass is not renderable over red checks: %d %+v", code, e.Error)
+	}
+	if e, code := render(e2, "fail"); code != 0 {
+		t.Fatalf("the fail renders: %d %+v", code, e.Error)
+	}
+	performed(act("supervisor"), "disqualify")
+	ring := m.ringOf(t)
+	if len(ring.GrantTuples(m.fps["impl"], keyring.CapClaim)) != 0 || !ring.EverCited(m.fps["impl"], keyring.CapClaim) {
+		t.Fatal("the disqualification empties the set and leaves the mark")
+	}
+	ordinary("c-ord2", "fable/5.1", "14", "every cited configuration is disqualified")
+
+	// A passing eval re-qualifies (D6), and AC5: past the interval the
+	// dispatcher's act files and specifies the spot-check, reporting
+	// its offer as the supervisor's, who publishes it.
+	e3 := file()
+	performed(act("supervisor"), "offer")
+	worker(true)
+	if e, code := render(e3, "pass"); code != 0 {
+		t.Fatalf("the re-test passes: %d %+v", code, e.Error)
+	}
+	performed(act("supervisor"), "mint")
+	later := time.Now().UTC().Add(25 * time.Hour).Format(time.RFC3339)
+	e := act("dispatch", "--spot-check-after", "24h", "--as-of", later)
+	performed(e, "spot-check spot-check")
+	if owed, _ := e.Result["owed"].([]any); len(owed) != 0 {
+		t.Fatalf("the dispatcher's act owes nothing further at that instant: %+v", owed)
+	}
+	e = act("supervisor", "--spot-check-after", "24h", "--as-of", later)
+	performed(e, "offer")
+	e = act("dispatch", "--spot-check-after", "24h", "--as-of", later)
+	performed(e, "")
+	if owed, _ := e.Result["owed"].([]any); len(owed) != 0 {
+		t.Fatalf("with the spot-check open and offered nothing is owed: %+v", owed)
 	}
 }

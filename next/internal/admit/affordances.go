@@ -16,14 +16,17 @@ package admit
 
 import (
 	"crypto/ed25519"
+	"encoding/json"
 	"fmt"
-	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 )
 
 // probeView is the context snapshot the synthesizers fill templates
@@ -57,6 +60,82 @@ type probeView struct {
 	// the position it would actually materialize rather than a
 	// constant the rule would have to be loosened to accept.
 	position string
+	// qualify and disqualify are the qualification verbs' payloads
+	// for the queried subject read as an ACTOR (plans/os-03e47abb.md):
+	// the eval pass this actor's window earned and the configuration
+	// it ran, or the eval fail whose configuration this actor still
+	// holds. A citation the rules would refuse when none stands, so
+	// the list says "you may mint this now" only when it is true.
+	qualify    string
+	disqualify string
+}
+
+// qualificationProbes derives the qualification verbs' payloads for
+// the queried subject read as an actor: the first eval subject whose
+// authenticated pass sits on a window this actor held, with the
+// configuration that window's admitted start declared, and the first
+// eval fail whose declared configuration this actor still holds. Where
+// none stands the probe cites a contract and position the rules
+// refuse, so illegality is judged by the rule set, never here.
+// probeQualify and probeDisqualify are the citations that stand when
+// no eval does: well-formed, and refused by the qualification rule.
+const (
+	probeQualify    = `{"capability": "claim", "tuple": ` + probeTuple + `, "contract": "probe", "verdict": "0"}`
+	probeDisqualify = `{"capability": "claim", "tuple": ` + probeTuple + `, "contract": "probe", "verdict": "0", "reason": "probe"}`
+)
+
+func qualificationProbes(ctx *Context, actor string) (qualify, disqualify string) {
+	qualify, disqualify = probeQualify, probeDisqualify
+	if ctx == nil || ctx.Lifecycle == nil || ctx.Keyring == nil {
+		return qualify, disqualify
+	}
+	foundQ, foundD := false, false
+	for _, subject := range ctx.Lifecycle.Subjects() {
+		s, ok := ctx.Lifecycle.State(subject)
+		if !ok || s.Eval == nil {
+			continue
+		}
+		if !foundQ {
+			if fact := authenticPass(ctx, subject, s); fact != nil {
+				if fence, holder, ok := submissionWindow(ctx.Records, subject, fact.Submission); ok && holder == actor {
+					if declared := windowDeclaration(ctx, subject, s, fence); declared != nil {
+						b, _ := json.Marshal(declared)
+						qualify = fmt.Sprintf(`{"capability": "claim", "tuple": %s, "contract": %q, "verdict": "%d"}`, b, subject, fact.Pos)
+						foundQ = true
+					}
+				}
+			}
+		}
+		if !foundD {
+			if fact := authenticFail(ctx, subject, s); fact != nil {
+				if fence, _, ok := submissionWindow(ctx.Records, subject, fact.Submission); ok {
+					if declared := windowDeclaration(ctx, subject, s, fence); declared != nil {
+						for _, held := range ctx.Keyring.GrantTuples(actor, keyring.CapClaim) {
+							if held.Equal(*declared) {
+								b, _ := json.Marshal(declared)
+								disqualify = fmt.Sprintf(`{"capability": "claim", "tuple": %s, "contract": %q, "verdict": "%d", "reason": "the eval failed"}`, b, subject, fact.Pos)
+								foundD = true
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return qualify, disqualify
+}
+
+// windowDeclaration is the tuple the admitted run.started in the
+// window at fence declared, nil when no valid start declared one.
+func windowDeclaration(ctx *Context, subject string, s transition.SubjectState, fence int) *tuple.Tuple {
+	for i := range s.RunStarts {
+		st := s.RunStarts[i]
+		if st.Fence == fence && RunStartValid(ctx.Records, ctx.Table, subject, st) {
+			return st.Tuple
+		}
+	}
+	return nil
 }
 
 // fenceKV is the optional fence citation: on a held subject the
@@ -125,6 +204,18 @@ var affordanceCatalog = []struct {
 		return fmt.Sprintf(`{"key": "%x", "kind": "agent", "name": "probe"}`, []byte(pub))
 	}},
 	{"actor.granted", func(v *probeView) string { return `{"capability": "claim"}` }},
+	{"actor.qualified", func(v *probeView) string {
+		if v.qualify == "" {
+			return probeQualify
+		}
+		return v.qualify
+	}},
+	{"actor.disqualified", func(v *probeView) string {
+		if v.disqualify == "" {
+			return probeDisqualify
+		}
+		return v.disqualify
+	}},
 	{"actor.suspended", func(v *probeView) string { return `{"reason": "probe"}` }},
 	{"actor.revoked", func(v *probeView) string { return `{"reason": "probe"}` }},
 	{"intent.filed", func(v *probeView) string {
@@ -252,6 +343,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		position:    fmt.Sprintf("%d", ctx.Count),
 	}
 	v.version = ctx.Active
+	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			if s.Claim != nil {

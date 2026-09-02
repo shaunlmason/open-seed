@@ -294,8 +294,8 @@ func TestUnseededKeyringRefusesActorEvents(t *testing.T) {
 func TestAppliesAtSeed1AndLater(t *testing.T) {
 	// A named list, never an ordering: a version this build has not
 	// registered applies nothing, however it sorts (plans/os-8e53ffd9.md D8).
-	if keyring.Applies(version.Protocol) || !keyring.Applies(version.Seed1) || !keyring.Applies(version.Seed2) || keyring.Applies("seed/9") {
-		t.Fatal("keyring semantics activate at seed/1 and stay on at seed/2")
+	if keyring.Applies(version.Protocol) || !keyring.Applies(version.Seed1) || !keyring.Applies(version.Seed2) || !keyring.Applies(version.Seed3) || keyring.Applies("seed/9") {
+		t.Fatal("keyring semantics activate at seed/1 and stay on at every later registered version")
 	}
 	if !keyring.IsActorVerb("actor.enrolled") || keyring.IsActorVerb("message.sent") {
 		t.Fatal("actor verb detection is namespace-based")

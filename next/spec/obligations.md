@@ -58,7 +58,10 @@ with its fact:
   merge chain is **two events**, so this kind has two shapes: until a
   request cites the verdict the debt is the operator's and
   `merge.requested` pays it; after that the forge fact is the
-  observer's to record with `merge.observed`.
+  observer's to record with `merge.observed`. Not projected for an
+  eval subject ([`evals.md`](evals.md)): its verdict is its terminal
+  fact, and what it owes is a qualification, which `seed eval status`
+  derives rather than this projection.
 - **`run.unsettled`** — an admitted `run.started` whose fence carries
   no `run.settled`. **Position-anchored**: flagged only once the
   subject has taken a subsequent claim window or reached a terminal

@@ -2037,3 +2037,69 @@ here. Newest last.
   run-start fold now treat a malformed tuple as a malformed payload:
   no fact, one anomaly, the `run.settled` posture the tree already
   had.
+
+## Phase 10 item 2 — eval contracts and the qualification verbs (os-03e47abb, plan #217)
+
+- **A key holding no eval lane refuses `out_of_grant`; a lane key is
+  owed the other lane's acts** (os-03e47abb, AC7 refined). The plan's
+  criterion says the supervisor performs its subset and reports the
+  rest as owed by the other lane, and that "a key holding none refuses
+  each `out_of_grant` with nothing appended, reported, never retried".
+  Both read literally: `seed eval act` classifies by the key. One
+  holding `supervise`, `dispatch` or `operator` performs what its
+  grants admit and reports the rest under `owed` with the lane that
+  owns it, exit 0; one holding none of the three gets every act under
+  `refused` with code `out_of_grant`, nothing signed, exit 14. A
+  verifier running the act is the drilled case. Attempting the append
+  and letting the boundary refuse would have produced the same rows at
+  the cost of a session per act.
+
+- **Each act is one derivation at one instant** (os-03e47abb, AC5
+  refined). A spot-check the dispatcher files becomes `ready`, and the
+  offer it then owes is the supervisor's. The criterion phrases the
+  two as separate invocations ("under the dispatcher's key files and
+  specifies … reporting the offer as owed by the supervisor, and under
+  the supervisor's key publishes it"), and the implementation keeps it
+  so rather than looping to a fixpoint inside one act: `Due` is read
+  once, at the declared `--as-of`, and what the performed acts make
+  due next surfaces on the next act. A fixpoint loop would have had
+  one invocation sign acts the derivation it reported never listed.
+
+- **The eval marker is refused at an earlier tip, not merely unread**
+  (os-03e47abb, D8 refined). The plan gates the field in the fold at
+  `seed/3`. Admission gates it too, on presence read raw, for the
+  reason item 1 gated the offer's `tuples`: a `seed/2` validator's fold
+  would read a marked filing as an ordinary contract, so admitting one
+  at a `seed/2` tip would have two validators agree the chain is valid
+  and disagree on what the contract is. The refusal names the version.
+
+- **A duplicate disqualification refuses as "nothing to disqualify"**
+  (os-03e47abb, D4 refined). The rule's one-verdict-one-consequence
+  check is reached only for a tuple still admissible; the keyring's
+  preview runs first in the grant rule and finds the tuple already
+  removed. Same outcome, earlier rule, and the message is the more
+  useful one: the actor holds no admissible grant citing that tuple.
+
+- **`authenticPass` reads the fold's latest verdict, so a later raw
+  verdict shadows an earlier authenticated pass** (os-03e47abb). The
+  fold keeps one verdict per subject, the latest, and the rule
+  authenticates that one. A raw-pushed pass by the implementer after a
+  real pass therefore makes the mint refuse rather than admit: the
+  shadowing fails closed, which is the direction that matters, and a
+  chain carrying such a push is what `verdict_unverified` surfaces.
+
+- **The recomputation seam is `verdict.InputFor`, and sealed evals
+  mint nothing yet** (os-03e47abb, step 6). `seed verdict check`'s
+  input assembly moved from `cmd/seed` into the package so `Due` calls
+  the same function; the CLI delegates. A subject carrying a sealed
+  commitment is noted `receipt_unchecked` rather than unsealed, because
+  the derivation holds no identity to unseal with; every shipped eval
+  is trivial-tier and unsealed, and the note names the gap.
+
+- **The fixture returns a stand, not a context** (os-03e47abb, review
+  of the admit drills). The item 1 drills return `ctx` and a `step`
+  closure and reassign `ctx` from each step's return. The eval fixture
+  drives several subjects from inside closures the test never sees
+  return values from, and the first draft read a stale context two
+  subjects behind. The fixture now returns a struct whose `ctx` every
+  step rewrites and every assertion reads through.

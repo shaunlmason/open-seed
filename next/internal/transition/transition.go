@@ -327,6 +327,15 @@ type AcceptanceInfo struct {
 	Gated      bool
 }
 
+// EvalInfo is intent.filed's optional eval object: Name is the shipped
+// definition under next/evals/, and Tuple, present on a spot-check, is
+// the configuration under re-test, advisory (the mint reads what the
+// run DECLARED, never this).
+type EvalInfo struct {
+	Name  string
+	Tuple *tuple.Tuple
+}
+
 // Claim is the active claim on an in_progress subject: the fence is
 // the chain position of the admitted claim.taken record — derived,
 // never asserted (plans/os-5dc16a7c.md) — and the holder its signer.
@@ -353,6 +362,12 @@ type SubjectState struct {
 	// distinguished value, "trivial", exempts the plan gate;
 	// plans/os-16c1d142.md).
 	Tier string
+	// Eval is the eval marker the filing carried at a seed/3 position
+	// (plans/os-03e47abb.md D1): the contract is synthetic work with a
+	// known verdict, whose pass mints a qualification for the tuple its
+	// run declared and whose fail suspends one. Nil for every ordinary
+	// contract.
+	Eval *EvalInfo
 	// Acceptance is the folded acceptance spec from the last admitted
 	// contract.specified: the artifact anchor, the executable flag,
 	// and whether gate evidence bound to the revision is present (or
@@ -1099,10 +1114,29 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			var filed struct {
 				Tier   string `json:"tier"`
 				Budget string `json:"budget"`
+				Eval   *struct {
+					Name  string          `json:"name"`
+					Tuple json.RawMessage `json:"tuple"`
+				} `json:"eval"`
 			}
 			if json.Unmarshal(e.Payload, &filed) == nil {
 				s.Tier = filed.Tier
 				s.Budget = filed.Budget
+				// The marker is read at seed/3 positions only, where
+				// admission defines it; an advisory tuple that does
+				// not parse is dropped and counted, never folded as
+				// a partial configuration.
+				if filed.Eval != nil && filed.Eval.Name != "" && version.EvalApplies(e.V) {
+					info := &EvalInfo{Name: filed.Eval.Name}
+					if len(filed.Eval.Tuple) > 0 {
+						if tu, terr := tuple.Parse(filed.Eval.Tuple); terr == nil {
+							info.Tuple = &tu
+						} else {
+							s.Anomalies++
+						}
+					}
+					s.Eval = info
+				}
 			}
 		}
 		if e.Verb == "contract.specified" {

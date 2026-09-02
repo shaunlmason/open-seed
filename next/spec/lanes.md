@@ -34,7 +34,13 @@ sentence.
 
 The two roles are the charter's own. The **supervisor** is §II.9, its
 own section: it publishes offers and initiates, settles and preempts
-runs, and it never takes work. The **observer** is §8's governed
+runs, and it never takes work; from `seed/3` it also mints
+qualifications from eval passes, disqualifies the configurations eval
+fails name, and publishes the offers waiting evals need, all through
+`seed eval act` under its own `supervise` grant
+([`evals.md`](evals.md)). The **dispatcher** gains the matching act on
+the same surface: filing and specifying the spot-check evals a stale
+qualification owes, which is queue management like any filing. The **observer** is §8's governed
 observer: it records what an external authority did — the merge that
 ends a contract's loop, the checks a forge ran — and can do nothing
 else, which is what makes its observations trustworthy. Neither holds

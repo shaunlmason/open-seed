@@ -113,7 +113,9 @@ func Subject(id string, s transition.SubjectState) []Finding {
 		out = append(out, Finding{Subject: id, Class: ClassChainSkipped,
 			Detail: fmt.Sprintf("the merge was observed with no merge.requested citing the pass verdict at position %d — each chain step is its own event", s.Verdict.Pos)})
 	}
-	if !merged && passVerdict {
+	// A judged eval is complete, never unreconciled: its verdict is its
+	// terminal fact and no merge is owed (plans/os-03e47abb.md D10).
+	if !merged && passVerdict && s.Eval == nil {
 		out = append(out, Finding{Subject: id, Class: ClassUnreconciled,
 			Detail: fmt.Sprintf("the pass verdict at position %d has no observed merge yet — pending or diverged is an age judgment for maintenance, not this classifier", s.Verdict.Pos)})
 	}

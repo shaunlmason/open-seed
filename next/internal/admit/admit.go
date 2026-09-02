@@ -183,6 +183,10 @@ type Drift struct {
 }
 
 func (e *OutOfGrantError) Error() string {
+	if e.Drift != nil && len(e.Drift.Cited) == 0 {
+		return fmt.Sprintf("actor %s has been qualified for %s and every cited configuration is disqualified: no admissible runtime tuple remains, and a disqualified holder never falls back to the bridge — a passing eval re-qualifies it (next/spec/evals.md)",
+			e.Drift.Holder, e.Verb)
+	}
 	if e.Drift != nil {
 		return fmt.Sprintf("actor %s is qualified for %s under %d cited tuple(s) and the run declares a materially different configuration: %s is %q, and no cited tuple carries it (the closest cites %s) — an actor invoking a different configuration than its grant cites is out of grant (SEED-NEXT.md §II.5; next/spec/qualification.md)",
 			e.Drift.Holder, e.Verb, len(e.Drift.Cited), e.Drift.Field, e.Drift.Have, strings.Join(e.Drift.Cited, " | "))
@@ -980,7 +984,7 @@ func Default() []Rule {
 				// supervisor signs the start, the work executes under
 				// the holder's window.
 				if s.Claim != nil {
-					if d := tupleDrift(c.Keyring, s.Claim.Holder, declared); d != nil {
+					if d := tupleDrift(c.Keyring, s.Claim.Holder, declared, s.Eval != nil); d != nil {
 						return &OutOfGrantError{Actor: rec.Event.Actor, Verb: verb,
 							Accepted: keyring.AcceptedCapabilities(verb), Drift: d}
 					}
@@ -1023,6 +1027,111 @@ func Default() []Rule {
 				n, err := strconv.Atoi(strings.TrimSpace(v))
 				if err != nil || n < 0 {
 					return &RunError{Subject: subject, Reason: fmt.Sprintf("%s %q is not a non-negative integer", name, v)}
+				}
+			}
+			return nil
+		}},
+		{Name: "qualification", Check: func(c *Context, rec *event.Record) error {
+			// The qualification verbs' cross-references
+			// (plans/os-03e47abb.md D2, D4; next/spec/evals.md). The
+			// keyring previewed the shape and standing legality in the
+			// grant rule; this rule reads the lifecycle: the cited
+			// contract is an eval, the cited verdict is the eval's
+			// authenticated pass (or fail), the run admitted in that
+			// verdict's window declared exactly the cited tuple, the
+			// qualified actor is that window's holder, the record's ts
+			// does not precede the verdict's, and no earlier
+			// qualification cites the same verdict.
+			verb := rec.Event.Verb
+			if verb == "intent.filed" && !version.EvalApplies(c.Active) {
+				// The marker is defined at seed/3 (D8): presence is the
+				// gate, read raw, so a filing a seed/2 validator's fold
+				// would silently drop is refused rather than admitted
+				// as an ordinary contract.
+				var filed struct {
+					Eval json.RawMessage `json:"eval"`
+				}
+				if json.Unmarshal(rec.Event.Payload, &filed) == nil && len(filed.Eval) > 0 {
+					return &transition.ChainError{Subject: rec.Event.Subject, Verb: verb,
+						Reason: fmt.Sprintf("the filing carries an eval marker and the chain is at %s: eval semantics activate at %s (next/spec/evals.md)", c.Active, version.Seed3)}
+				}
+				return nil
+			}
+			if verb != keyring.VerbQualified && verb != keyring.VerbDisqualified {
+				return nil
+			}
+			if c.Lifecycle == nil || c.Keyring == nil {
+				return nil
+			}
+			var p struct {
+				Capability string          `json:"capability"`
+				Tuple      json.RawMessage `json:"tuple"`
+				Contract   string          `json:"contract"`
+				Verdict    string          `json:"verdict"`
+				Reason     string          `json:"reason,omitempty"`
+			}
+			if err := json.Unmarshal(rec.Event.Payload, &p); err != nil {
+				return nil // the keyring preview refused the shape already
+			}
+			cited, err := tuple.Parse(p.Tuple)
+			if err != nil {
+				return nil
+			}
+			pos, err := strconv.Atoi(strings.TrimSpace(p.Verdict))
+			if err != nil {
+				return nil
+			}
+			refuse := func(reason string) error {
+				return &transition.ChainError{Subject: p.Contract, Verb: verb, Reason: reason}
+			}
+			s, ok := c.Lifecycle.State(p.Contract)
+			if !ok {
+				return refuse("the cited contract is not in the fold")
+			}
+			if s.Eval == nil {
+				return refuse("the cited contract is not an eval: only synthetic work with a known verdict qualifies or disqualifies a configuration")
+			}
+			if pos < 0 || pos >= len(c.Records) {
+				return refuse(fmt.Sprintf("the cited verdict position %d is not on the chain", pos))
+			}
+			var fact *transition.VerdictFact
+			if verb == keyring.VerbQualified {
+				if fact = authenticPass(c, p.Contract, s); fact == nil || fact.Pos != pos {
+					return refuse(fmt.Sprintf("position %d is not the eval's authenticated pass verdict: a qualification cites the pass that proved the configuration, rendered by a verdict-granted key disjoint from the implementer", pos))
+				}
+			} else {
+				if fact = windowFail(s, pos); fact == nil || verdictBoundary(c, p.Contract, "", s, *fact) != nil {
+					return refuse(fmt.Sprintf("position %d is not an authenticated fail verdict on the eval: a disqualification cites the fail that ended the configuration", pos))
+				}
+			}
+			fence, holder, ok := submissionWindow(c.Records, p.Contract, fact.Submission)
+			if !ok {
+				return refuse(fmt.Sprintf("the verdict's submission at position %d cites no claim window", fact.Submission))
+			}
+			var declared *tuple.Tuple
+			for i := range s.RunStarts {
+				st := s.RunStarts[i]
+				if st.Fence == fence && RunStartValid(c.Records, c.Table, p.Contract, st) {
+					declared = st.Tuple
+					break
+				}
+			}
+			if declared == nil {
+				return refuse(fmt.Sprintf("the claim window at fence %d carries no admitted run.started declaring a tuple: the configuration that ran is what qualifies, and nothing declared one", fence))
+			}
+			if !declared.Equal(cited) {
+				field, _, want, _ := cited.Diff(*declared)
+				return refuse(fmt.Sprintf("the cited tuple differs from the configuration the run declared: %s was %q in the run — a qualification is for the configuration that ran, never another", field, want))
+			}
+			if verb == keyring.VerbQualified && rec.Event.Subject != holder {
+				return refuse(fmt.Sprintf("the qualified actor %s is not the holder of the window that ran (%s): the supervisor declares, the holder executes, and the holder is who the eval qualifies", rec.Event.Subject, holder))
+			}
+			if !tsNotBefore(rec.Event.TS, c.Records[pos].Event.TS) {
+				return refuse(fmt.Sprintf("the record's ts %s precedes the cited verdict's %s: a qualification cannot predate the verdict it cites", rec.Event.TS, c.Records[pos].Event.TS))
+			}
+			for _, q := range c.Keyring.Qualifications(rec.Event.Subject) {
+				if q.Contract == p.Contract && q.Verdict == pos && q.Disqualified == (verb == keyring.VerbDisqualified) {
+					return refuse(fmt.Sprintf("the verdict at position %d is already cited by an earlier %s on this actor: one verdict, one consequence", pos, verb))
 				}
 			}
 			return nil
@@ -1395,6 +1504,62 @@ func verdictBoundary(c *Context, subject, verb string, s transition.SubjectState
 // red-verdict lockout consults only authenticated fails, and scanning
 // the window means a later raw verdict can never bury one
 // (plans/os-d2497eb7.md).
+// submissionWindow reads the claim window a submission closed: the
+// fence its holder-signed payload cites and the holder, the signer of
+// the claim.taken at that fence. Both are record facts, so a raw
+// submission citing no fence, or a fence that is no claim on the
+// subject, yields nothing.
+func submissionWindow(records []*event.Record, subject string, submission int) (fence int, holder string, ok bool) {
+	if submission < 0 || submission >= len(records) {
+		return 0, "", false
+	}
+	var p struct {
+		Fence string `json:"fence"`
+	}
+	if err := json.Unmarshal(records[submission].Event.Payload, &p); err != nil {
+		return 0, "", false
+	}
+	fence, err := strconv.Atoi(strings.TrimSpace(p.Fence))
+	if err != nil || fence < 0 || fence >= len(records) {
+		return 0, "", false
+	}
+	claim := records[fence].Event
+	if claim.Verb != "claim.taken" || claim.Subject != subject {
+		return 0, "", false
+	}
+	return fence, claim.Actor, true
+}
+
+// tsNotBefore reports whether a is at or after b as RFC3339 instants;
+// an unparseable pair is never "not before".
+func tsNotBefore(a, b string) bool {
+	ta, err := time.Parse(time.RFC3339, a)
+	if err != nil {
+		return false
+	}
+	tb, err := time.Parse(time.RFC3339, b)
+	if err != nil {
+		return false
+	}
+	return !ta.Before(tb)
+}
+
+// authenticPass is the pass half (plans/os-03e47abb.md D2): the
+// subject's latest admitted verdict, when it is a pass whose signer
+// held the verdict capability and was no implementing key. This is the
+// admission-side check; the mint decision additionally recomputes the
+// receipt, because admission cannot tell an invented digest from a real
+// one (next/spec/evals.md).
+func authenticPass(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {
+	if s.Verdict == nil || s.Verdict.Verdict != "pass" {
+		return nil
+	}
+	if verdictBoundary(c, subject, "", s, *s.Verdict) != nil {
+		return nil
+	}
+	return s.Verdict
+}
+
 func authenticFail(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {
 	for i := range s.SubmissionFails {
 		if verdictBoundary(c, subject, "", s, s.SubmissionFails[i]) == nil {
@@ -1571,12 +1736,26 @@ func declaredTuple(v string, raw json.RawMessage) (*tuple.Tuple, string) {
 // supervisor signs the start, the work executes under the holder's
 // window. A nil ring or a nil declaration (a seed/1 start) drifts
 // nothing.
-func tupleDrift(ring *keyring.State, holder string, declared *tuple.Tuple) *Drift {
+func tupleDrift(ring *keyring.State, holder string, declared *tuple.Tuple, eval bool) *Drift {
 	if declared == nil || ring == nil {
+		return nil
+	}
+	// An eval subject is where a configuration proves itself, so the
+	// rule qualification feeds cannot gate the act that mints it: any
+	// declared tuple runs there, a disqualified one included
+	// (plans/os-03e47abb.md D6).
+	if eval {
 		return nil
 	}
 	cited := ring.GrantTuples(holder, keyring.CapClaim)
 	if len(cited) == 0 {
+		// Two empty sets (plans/os-03e47abb.md D4): a holder never
+		// cited is unqualified and bridges; a holder whose every
+		// cited configuration was disqualified admits nothing. The
+		// bridge does not reopen.
+		if ring.EverCited(holder, keyring.CapClaim) {
+			return &Drift{Holder: holder}
+		}
 		return nil
 	}
 	for _, t := range cited {
@@ -1649,7 +1828,7 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 	if !ok || prior.Claim == nil || prior.Claim.Fence != st.Fence {
 		return false
 	}
-	if tupleDrift(ring, prior.Claim.Holder, declared) != nil {
+	if tupleDrift(ring, prior.Claim.Holder, declared, prior.Eval != nil) != nil {
 		return false
 	}
 	for _, r := range prior.Reservations {

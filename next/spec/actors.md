@@ -61,11 +61,22 @@ attributed to it.
   bridge) and admits any run.
 - **`actor.suspended`** / **`actor.revoked`** — subject: an enrolled
   fingerprint. Payload `{"reason": "<non-empty>"}`.
-- **`actor.qualified`** — cataloged, undefined until eval contracts land
-  (build plan Phase 10 item 2: it cites eval results, and there are
-  none to cite before them); every chain refuses it by name, at
-  `seed/2` as at `seed/1`. Item 1 gave grants the tuple field instead
-  ([`qualification.md`](qualification.md)).
+- **`actor.qualified`** / **`actor.disqualified`** — subject: an
+  enrolled fingerprint; defined at `seed/3` positions only
+  ([`evals.md`](evals.md)), and at `seed/1` or `seed/2` positions
+  unknown-and-refused at the position as `bad_actor_event`. Payload
+  `{"capability": "<non-empty>", "tuple": {…}, "contract": "<eval
+  subject>", "verdict": "<chain position>"}`, plus `"reason":
+  "<non-empty>"` required on a disqualification and refused on a
+  qualification (the cited verdict is the reason). A qualification is a
+  grant with evidence: it grants the capability if absent, adds the
+  tuple to the admissible set the qualification rule reads, and marks
+  the capability as ever cited; a disqualification removes the tuple
+  and refuses when the actor holds no admissible grant citing it. The
+  cross-references (the eval, the authenticated verdict, the window's
+  declaration, the holder, the `ts` ordering, the duplicate) are
+  admission policy in the qualification rule; the shape and standing
+  legality here are chain validity like every actor verb's.
 
 ## Standing transitions
 
@@ -102,7 +113,8 @@ ending standing is deferred until the catalog grows a verb for it.
 | `system.halt.lifted` | `operator` (the charter: only an operator's lift may append) |
 | `system.protocol.upgraded` | `operator` |
 | `system.checkpoint` | `maintenance`, `operator` (the charter names checkpoints as signed by the maintenance actor or an operator) |
-| `actor.*` (every lifecycle verb) | `operator` |
+| `actor.*` (enrolled, granted, suspended, revoked) | `operator` |
+| `actor.qualified`, `actor.disqualified` | `supervise`, `operator` (the first non-operator actor rows: SEED-NEXT.md §5 makes suspension of a failing configuration the supervisor's attributable act with no operator ceremony, and a mint is the same act with the opposite sign; operator stays the standing override, evals.md) |
 | `intent.filed` | `dispatch`, `operator` |
 | `contract.specified` | `dispatch`, `operator` |
 | `contract.blocked` | `dispatch`, `operator` |
