@@ -372,7 +372,7 @@ ordered fragment list prevents.
   curator poisoning drill ([`curation.md`](curation.md), "The
   poisoning drill"): this suite's shape turned on the curation gates,
   a corpus of scripted poisons derived from the gate registry, each
-  asserted to fail at both ends, six residuals named and pinned, and a
+  asserted to fail at both ends, five residuals named and pinned, and a
   CLI arm in the modes fixture; `make check` runs it.
 
 ## A gap the mode fixtures surfaced

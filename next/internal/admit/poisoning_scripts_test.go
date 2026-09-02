@@ -235,29 +235,34 @@ var poisonScripts = map[string]func(t *testing.T) *poisonRun{
 	},
 	"frontmatter-missing": func(t *testing.T) *poisonRun {
 		return lintPoison(t, func(ls *lintStand) ([]byte, curation.LessonFact, *curation.HypothesisFact, time.Time) {
-			return []byte("# Retry once\n"), ls.fact, ls.h, ls.now
+			bent := "# Retry once\n"
+			return []byte(bent), ls.promote(t, bent), ls.h, ls.now
 		})
 	},
 	"frontmatter-drift": func(t *testing.T) *poisonRun {
 		return lintPoison(t, func(ls *lintStand) ([]byte, curation.LessonFact, *curation.HypothesisFact, time.Time) {
-			return []byte(withFrontmatter(ls.body, "hypothesis", curation.HypothesisID("retry twice", nil)+"@4")), ls.fact, ls.h, ls.now
+			bent := withFrontmatter(ls.body, "hypothesis", curation.HypothesisID("retry twice", nil)+"@4")
+			return []byte(bent), ls.promote(t, bent), ls.h, ls.now
 		})
 	},
 	"predicate-drift": func(t *testing.T) *poisonRun {
 		return lintPoison(t, func(ls *lintStand) ([]byte, curation.LessonFact, *curation.HypothesisFact, time.Time) {
-			return []byte(withFrontmatter(ls.body, "applies-when", `{"tier": "standard"}`)), ls.fact, ls.h, ls.now
+			bent := withFrontmatter(ls.body, "applies-when", `{"tier": "standard"}`)
+			return []byte(bent), ls.promote(t, bent), ls.h, ls.now
 		})
 	},
 	"support-drift": func(t *testing.T) *poisonRun {
 		return lintPoison(t, func(ls *lintStand) ([]byte, curation.LessonFact, *curation.HypothesisFact, time.Time) {
-			return []byte(withFrontmatter(ls.body, "support", "c-1@4, c-3@9")), ls.fact, ls.h, ls.now
+			bent := withFrontmatter(ls.body, "support", "c-1@4, c-3@9")
+			return []byte(bent), ls.promote(t, bent), ls.h, ls.now
 		})
 	},
 	"fabricated-provenance": func(t *testing.T) *poisonRun {
 		return lintPoison(t, func(ls *lintStand) ([]byte, curation.LessonFact, *curation.HypothesisFact, time.Time) {
 			h := *ls.h
 			h.Provenance = []string{"plans/never.md @ " + ls.planCommit}
-			return []byte(withFrontmatter(ls.body, "provenance", "plans/never.md @ "+ls.planCommit)), ls.fact, &h, ls.now
+			bent := withFrontmatter(ls.body, "provenance", "plans/never.md @ "+ls.planCommit)
+			return []byte(bent), ls.promote(t, bent), &h, ls.now
 		})
 	},
 	"digest-drift": func(t *testing.T) *poisonRun {

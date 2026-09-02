@@ -2424,19 +2424,17 @@ knowledge lint` under `make check`, which gates the lesson PR. The
 drill asserts the refusal at the gate and says so, rather than
 pretending a claim-time check the delivery does not make.
 
-**A sixth residual, `raw-pushed-promotion`.** Scripting the promotion
-poisons showed that a promotion pushed past the boundary binds in the
-fold and is a delivery candidate: the fold re-judges proposals at their
-position (item 1's review fixes) but cannot re-judge the adversarial
-arm, whose pass authentication lives in admission. The plan's D5 says a
-poison that gets through is fixed in the gate; this one is not a gate
-admitting it (the boundary refuses it) but the fold binding what the
-boundary refused, and moving the adversarial arm into the fold would
-move `authenticPass` out of admission, out of this card's scope guard.
-It is named and pinned instead: what stands in the way is the boundary
-at append (the pre-receive hook and the client's `AppendLoop` run the
-same rules), and the entry says so. Item 4 or a later hardening card
-may decide the fold should carry admission-accurate promotions.
+**A residual that closed while the drill was being written.**
+Scripting the promotion poisons showed that a promotion pushed past the
+boundary bound in the fold and was a delivery candidate, and the same
+held for a contest. Both were named as this drill's sixth residual for
+a day, then fixed where the plan's D5 says such a thing is fixed: in
+the gate's own package, by item 2's review (the fold re-judges contests
+and promotions through the same `CheckContest` and `CheckPromotion`
+the boundary runs, which moved the adversarial arm into `curation`).
+The residual became two poisons, `raw-pushed-promotion` and
+`raw-pushed-contest`, each pushing the refused fact past the boundary
+and asserting the fold bound nothing.
 
 **The CLI arm reads the hypothesis position from `knowledge show`.**
 The propose envelope stamps the tip, not the fact's position; the

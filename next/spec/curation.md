@@ -410,7 +410,7 @@ registered gate, on a declared poison with no script, on a script with
 no declaration, on an empty corpus and on an empty residual table. A
 gate added to the rules without a corpus entry is therefore a red test,
 which is what makes "full coverage" a claim the drill derives rather
-than one it is told. At landing the corpus holds forty-two poisons over
+than one it is told. At landing the corpus holds forty-six poisons over
 the thirty-two gates: among them `single-success`, `self-replay`,
 `forged-support`, `grantless-window`, `failed-support`,
 `worker-proposes`, `worker-granted-curate`, `root-proposes`,
@@ -418,8 +418,14 @@ the thirty-two gates: among them `single-success`, `self-replay`,
 `unchanged-reproposal`, `held-out-forgery`, `contested-promotion`,
 `promotion-traversal`, `promotion-of-raw-proposal`,
 `smuggled-role-lesson`, `raw-pass`, `borrowed-pass`, `stale-pass`,
-`fail-as-survival`, `support-failed-later`, `ungated-eval`,
-`fabricated-provenance`, `frontmatter-drift`, `unmerged-anchor`.
+`pass-at-another-position`, `fail-as-survival`, `support-failed-later`,
+`contested-surfacing`, `raw-pushed-promotion`, `raw-pushed-contest`,
+`ungated-eval`, `fabricated-provenance`, `frontmatter-drift`,
+`unmerged-anchor`. The two raw-pushed poisons push the refused fact
+past the boundary anyway and assert the fold re-judged it: the
+promotion binds nothing and the contest moves nothing, because the
+fold runs `PromotionValid` and `ContestValid` at each fact's own
+position.
 
 ### The residuals, named
 
@@ -436,7 +442,6 @@ what replaced it.
 | `persuaded-curator` | a `curate` key proposing a false claim over genuine observations satisfies every gate; the contest from another `curate` key, the adversarial evaluation and the reviewer stand behind it, and there is no model to test the persuasion itself |
 | `reviewed-vacuous-eval` | `seed eval check` refuses a vacuous definition, but a reviewer can merge one, and the anchor rule then binds a pass on it to the gated revision; the review gates the definition |
 | `cosmetic-reproposal` | a reworded claim is a new subject judged on its own support; the contest follows the observations, which are the same ones |
-| `raw-pushed-promotion` | the boundary refuses it, and a promotion pushed past the boundary (bypassing the hook and the client's append loop) still binds in the fold, which re-judges proposals at their position but not the promotion's adversarial arm; the pre-receive hook and `AppendLoop` run the same rules, so the push must bypass both |
 
 ### The CLI arm
 
@@ -445,7 +450,8 @@ knowledge propose` and `seed knowledge promote` in the small-team
 fixture (`cmd/seed/modes_e2e_test.go`), proving the refusal reaches an
 operator's terminal with the code the boundary gave (`out_of_grant`;
 the gate's name in the refusal), and that the next claim on a matching
-contract carries no lesson.
+contract carries no lesson. The lint poisons promote each bent file as
+its own anchor, since the file half judges the promoted bytes.
 
 ### A poison that gets through is a defect in the gate
 
@@ -454,7 +460,11 @@ the gate's own package with the poison as its regression drill, and
 `next/docs/decisions.md` records the row it changed; the corpus never
 accommodates the gate. Item 1's review found four such gaps before
 this drill landed (a raw window, a raw pass, a raw proposal reserving
-its subject, a traversal path), and each is a poison here.
+its subject, a traversal path), and item 2's review found two more
+while this drill was being written (a raw-pushed promotion bound in
+the fold and surfaced; a raw-pushed contest disabled a lesson); each
+is a poison here, and the second pair began as a residual of this
+drill before the fold learned to re-judge both facts.
 
 ## Conformance mapping
 

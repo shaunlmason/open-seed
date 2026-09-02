@@ -441,6 +441,24 @@ func newLintStand(t *testing.T) *lintStand {
 	return ls
 }
 
+// promote commits a bent body as its own anchor on main and returns
+// the fact a promotion of it would carry: the lint judges the bytes
+// at the promoted anchor, so a bent file is a bent promotion.
+func (ls *lintStand) promote(t *testing.T, body string) curation.LessonFact {
+	t.Helper()
+	if body == ls.body {
+		return ls.fact
+	}
+	if err := os.WriteFile(filepath.Join(ls.repo, ls.path), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ls.git("commit", "--quiet", "-am", "bent")
+	fact := ls.fact
+	fact.Lesson = ls.path + " @ " + ls.git("rev-parse", "HEAD")
+	fact.Digest = curation.Digest([]byte(body))
+	return fact
+}
+
 // lintPoison runs the file half over a bent stand and reports the
 // refusal as a lint attempt.
 func lintPoison(t *testing.T, bend func(ls *lintStand) (body []byte, fact curation.LessonFact, h *curation.HypothesisFact, now time.Time)) *poisonRun {
