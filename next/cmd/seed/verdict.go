@@ -28,7 +28,6 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
-	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
 )
@@ -121,24 +120,17 @@ func (st *verdictState) verdictInput(subject, repo string, timeout time.Duration
 		return verdict.Input{}, s, envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition",
 			(&transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: transition.VerdictRenderedVerb}).Error())
 	}
-	if s.Submission == nil || s.Submission.Pos < 0 || s.Submission.Pos >= len(st.records) {
+	// The construction is the verifier's own (verdict.InputFor), shared
+	// with the qualification derivation that recomputes receipts.
+	in, err := verdict.InputFor(st.records, st.fold, s, subject, repo, timeout)
+	if errors.Is(err, verdict.ErrNoSubmission) {
 		return verdict.Input{}, s, envelope.Fail(envelope.ExitNotFound, "not_found",
 			fmt.Sprintf("no bound submission recorded for %s", subject))
 	}
-	sub := st.records[s.Submission.Pos]
-	p, err := packet.FromPayload(subject, sub.Event.Payload)
 	if err != nil {
 		return verdict.Input{}, s, envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
 	}
-	anchor, _ := st.fold.PlanApproved(subject)
-	return verdict.Input{
-		RepoDir:    repo,
-		Contract:   subject,
-		Base:       p.Base,
-		PlanAnchor: anchor,
-		Acceptance: s.Acceptance,
-		Runner:     verdict.Runner{Timeout: timeout},
-	}, s, nil
+	return in, s, nil
 }
 
 func verdictFailEnvelope(err error) *envelope.Envelope {

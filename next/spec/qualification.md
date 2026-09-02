@@ -182,15 +182,32 @@ the start IS the moment the configuration is committed to.
 - `seed offer publish ... [--tuple <json>]...` and `seed offer list`:
   [`offers.md`](offers.md).
 
-## What item 2 adds
+## What item 2 added
 
-`actor.qualified` stays cataloged and undefined here: it "cites eval
-results" ([`protocol.md`](protocol.md)), and eval results are item 2.
-Item 2 mints a qualified grant from a passing eval against a fixture
-repository through the production machinery, schedules spot-checks,
-and suspends on failure. This spec gives the grant somewhere to put the
-tuple, the start somewhere to declare it, and the boundary the rule
-that compares them.
+Item 2 ([`evals.md`](evals.md)) is what writes the set this spec reads.
+An eval is an ordinary contract with a known verdict, filed with the
+`eval` marker from `seed/3`; its authenticated pass, once the receipt
+recomputes green, mints `actor.qualified` for the window's HOLDER and
+the tuple the run DECLARED, which adds the tuple to the admissible set
+exactly as a hand grant does; its fail mints `actor.disqualified` for
+every holder of that tuple, which removes it. Two refinements to the
+rules above follow from that, and both are drilled beside item 1's
+rows:
+
+- **The set rule on eval subjects is exempt.** `run.started` on an
+  eval admits any declared tuple, a disqualified one included: the
+  eval is what a configuration passes to enter the set, so the set
+  cannot gate it. On a non-eval subject the rule stands unchanged.
+- **The bridge does not reopen.** An empty set is the bridge only
+  while it was never cited; an empty set that a mint or a hand grant
+  once populated admits nothing, and the refusal says every cited
+  configuration is disqualified. An actor whose only configuration
+  failed passes an eval again, which the exemption lets it do.
+
+This spec still gives the grant somewhere to put the tuple, the start
+somewhere to declare it, and the boundary the rule that compares them;
+spot-checks, the supervisor's acts and the dispatcher's filings are
+[`evals.md`](evals.md)'s.
 
 ## Conformance mapping
 

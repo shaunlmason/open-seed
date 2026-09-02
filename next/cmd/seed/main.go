@@ -85,6 +85,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runDoctor(args[1:], stdout, stderr)
 	case "run":
 		return runRun(args[1:], stdout, stderr)
+	case "eval":
+		return runEval(args[1:], stdout, stderr)
 	default:
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown verb %q — try 'seed version'", args[0])), stdout, stderr)
 	}

@@ -1141,3 +1141,27 @@ threads before implementing, answer each in the task PR's decisions,
 and let the implementation carry the corrections the plan's text
 lacks. Derive counts from the tree while you are at it: the card said
 two authority sites and the tree had three.
+
+## Run the guard suites before the unit suites feel done
+
+The tree carries guards that fire only under `go test ./...`: the
+envelope table guard refuses a wire code the spec's tables do not
+list, and the gitref fixture guard refuses a test that inits a git
+repository without hardening it against detached auto-gc. Both went
+red on item 2's first full run after every package under change was
+green in isolation, and both were one-line fixes once seen (the
+refinement row; `hardenGitRepo` after `git init`, with the helper
+copied into the package the way `internal/verdict` does). The lesson
+is cheap: **run the whole suite in the background as soon as the new
+packages compile**, not after the specs are written, so a guard's
+finding lands while the code it judges is still open.
+
+## A fixture that drives subjects inside closures must hand back a stand
+
+A fixture returning a context value plus a `step` closure works while
+the test reassigns the context from every call. It stops working the
+moment the fixture drives several subjects from inside its own
+closures, because the test's copy is whatever the fixture returned
+last, and the failure ("the cited contract is not in the fold") names
+the symptom two subjects late. Return a struct the closures write and
+the assertions read, and there is no copy to go stale.
