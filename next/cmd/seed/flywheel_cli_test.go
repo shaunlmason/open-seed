@@ -8,6 +8,7 @@ package main
 
 import (
 	"crypto/ed25519"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,7 +17,11 @@ import (
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/flywheel"
+	"github.com/shaunlmason/open-seed/next/internal/genesis"
+	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 // envText renders an envelope's refusal, or its result, for a failure.
@@ -114,10 +119,85 @@ type flywheelCLI struct {
 
 // raw stages one background fact through the library under the root's
 // key (the CLI refuses to draft exclusive verbs offline) and returns
-// its position.
+// its position. Acts whose signer the flywheel re-judges (the verdict
+// and the merge observation of a counted occurrence) are staged under
+// their own lane's key by rawAs, never here: a chore is counted from
+// admitted completions, so a fixture that signed them with the root
+// would be staging exactly the raw chain the boundary refuses to count.
 func (s *flywheelCLI) raw(t *testing.T, verb, subject, payload string) int {
 	t.Helper()
 	return verdictLibAppend(t, s.ld, s.rootKey, verb, subject, payload)
+}
+
+// rawAs stages one background fact under a named lane's key. It signs
+// and appends through the library rather than `ledger append`, because
+// claiming is online-only at the CLI and a local ledger has no remote
+// to claim against; the resolver knows the fixture's own lanes.
+func (s *flywheelCLI) rawAs(t *testing.T, lane, verb, subject, payload string) int {
+	t.Helper()
+	key := s.laneKey(t, lane)
+	store, err := ledger.Open(s.ld)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tip, count, err := store.Tip()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fp, err := event.Fingerprint(key.Public().(ed25519.PublicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec, err := event.Sign(event.Event{
+		V: version.Seed1, TS: "2026-09-02T00:00:00Z", Actor: fp,
+		Verb: verb, Subject: subject, Payload: json.RawMessage(payload), Prev: tip,
+	}, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisResolve, _, err := genesis.Bootstrap(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Append(rec, s.resolver(t, genesisResolve)); err != nil {
+		t.Fatalf("library append %s by %s: %v", verb, lane, err)
+	}
+	return count
+}
+
+// resolver resolves the fixture's own lane keys, falling back to the
+// genesis roster.
+func (s *flywheelCLI) resolver(t *testing.T, fallback ledger.Resolver) ledger.Resolver {
+	t.Helper()
+	known := map[string]ed25519.PublicKey{}
+	for lane := range s.keys {
+		pub := s.laneKey(t, lane).Public().(ed25519.PublicKey)
+		fp, err := event.Fingerprint(pub)
+		if err != nil {
+			t.Fatal(err)
+		}
+		known[fp] = pub
+	}
+	return func(fp string) (ed25519.PublicKey, bool) {
+		if pub, ok := known[fp]; ok {
+			return pub, true
+		}
+		return fallback(fp)
+	}
+}
+
+// laneKey parses a provisioned lane's private key.
+func (s *flywheelCLI) laneKey(t *testing.T, lane string) ed25519.PrivateKey {
+	t.Helper()
+	raw, err := os.ReadFile(s.keys[lane])
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := event.ParsePrivateKey(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
 }
 
 // flywheelStandCLI is a local ledger with the lanes enrolled and an
@@ -152,12 +232,12 @@ func (s *flywheelCLI) chore(t *testing.T, subject, intent, path string, gated bo
 	}
 	s.raw(t, "intent.filed", subject, fmt.Sprintf(`{"intent": %q, "tier": "trivial", "budget": "small", "routing": "core"}`, intent))
 	s.raw(t, "contract.specified", subject, fmt.Sprintf(`{"acceptance": {"ref": "%s @ %s", "executable": true%s}}`, path, s.spec, gate))
-	fence := s.raw(t, "claim.taken", subject, `{}`)
+	fence := s.rawAs(t, "workerA", "claim.taken", subject, `{}`)
 	packet := fmt.Sprintf(`{"acceptance": ["%s @ %s"], "decisions": [], "base": "%s..%s", "refs": [], "findings": []}`, path, s.spec, s.base, s.head)
-	sub := s.raw(t, "submission.made", subject, fmt.Sprintf(`{"fence": "%d", "packet": %s}`, fence, packet))
-	verdict := s.raw(t, "verdict.rendered", subject, fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, strings.Repeat("0", 64), sub))
-	s.raw(t, "merge.requested", subject, fmt.Sprintf(`{"verdict": "%d"}`, verdict))
-	return s.raw(t, "merge.observed", subject, fmt.Sprintf(`{"merged": %q, "pr": "pr/%s"}`, s.head, subject))
+	sub := s.rawAs(t, "workerA", "submission.made", subject, fmt.Sprintf(`{"fence": "%d", "packet": %s}`, fence, packet))
+	verdict := s.rawAs(t, "verifier", "verdict.rendered", subject, fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, strings.Repeat("0", 64), sub))
+	s.rawAs(t, "workerA", "merge.requested", subject, fmt.Sprintf(`{"verdict": "%d"}`, verdict))
+	return s.rawAs(t, "observer", "merge.observed", subject, fmt.Sprintf(`{"merged": %q, "pr": "pr/%s"}`, s.head, subject))
 }
 
 func (s *flywheelCLI) shapes(t *testing.T) []map[string]any {
@@ -290,11 +370,11 @@ func TestFlywheelShapesDraftAndStatusAtTheCLI(t *testing.T) {
 	changed := gitAt(t, s.src, "rev-parse", "HEAD")
 	s.raw(t, "intent.filed", "c-5", `{"intent": "x", "tier": "trivial", "budget": "small", "routing": "core"}`)
 	s.raw(t, "contract.specified", "c-5", fmt.Sprintf(`{"acceptance": {"ref": "accept.md @ %s", "executable": true, "gate": "pr/1 @ %s"}}`, changed, changed))
-	fence := s.raw(t, "claim.taken", "c-5", `{}`)
-	sub := s.raw(t, "submission.made", "c-5", fmt.Sprintf(`{"fence": "%d", "packet": {"acceptance": ["x"], "decisions": [], "base": "%s..%s", "refs": [], "findings": []}}`, fence, s.base, changed))
-	v := s.raw(t, "verdict.rendered", "c-5", fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, strings.Repeat("0", 64), sub))
-	s.raw(t, "merge.requested", "c-5", fmt.Sprintf(`{"verdict": "%d"}`, v))
-	s.raw(t, "merge.observed", "c-5", fmt.Sprintf(`{"merged": %q, "pr": "pr/5"}`, changed))
+	fence := s.rawAs(t, "workerA", "claim.taken", "c-5", `{}`)
+	sub := s.rawAs(t, "workerA", "submission.made", "c-5", fmt.Sprintf(`{"fence": "%d", "packet": {"acceptance": ["x"], "decisions": [], "base": "%s..%s", "refs": [], "findings": []}}`, fence, s.base, changed))
+	v := s.rawAs(t, "verifier", "verdict.rendered", "c-5", fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, strings.Repeat("0", 64), sub))
+	s.rawAs(t, "workerA", "merge.requested", "c-5", fmt.Sprintf(`{"verdict": "%d"}`, v))
+	s.rawAs(t, "observer", "merge.observed", "c-5", fmt.Sprintf(`{"merged": %q, "pr": "pr/5"}`, changed))
 	if e, code := runEnv(t, "flywheel", "draft", "--ledger", s.ld, "--shape", shape, "--repo", s.src); code != 9 || e.Error == nil || e.Error.Code != "classification_refused" || !strings.Contains(e.Error.Message, "divergent") {
 		t.Fatalf("occurrences whose gates differ refuse divergent: %d %s", code, envText(e))
 	}
@@ -528,9 +608,9 @@ func TestFlywheelRepairFromThePlantedBreakToTheCitedProposal(t *testing.T) {
 	gitAt(t, fixDir, "commit", "--quiet", "-m", "repair: restore the reviewer's harness")
 	fixed := gitAt(t, fixDir, "rev-parse", "HEAD")
 	gitAt(t, s.src, "worktree", "remove", "--force", fixDir)
-	fence := s.raw(t, "claim.taken", subject, `{}`)
+	fence := s.rawAs(t, "workerA", "claim.taken", subject, `{}`)
 	packet := fmt.Sprintf(`{"acceptance": [%q], "decisions": [], "base": "%s..%s", "refs": [], "findings": []}`, acceptance+" @ "+commit, s.head, fixed)
-	s.raw(t, "submission.made", subject, fmt.Sprintf(`{"fence": "%d", "packet": %s}`, fence, packet))
+	s.rawAs(t, "workerA", "submission.made", subject, fmt.Sprintf(`{"fence": "%d", "packet": %s}`, fence, packet))
 	e, code = runEnv(t, "verdict", "render", "--ledger", s.ld, "--subject", subject, "--repo", s.src, "--key", s.keys["verifier"], "--verdict", "pass")
 	if code != 0 || !e.OK {
 		t.Fatalf("the verifier's render runs the two commands green on the fixed branch: %d %s", code, envText(e))
@@ -554,8 +634,8 @@ func TestFlywheelRepairFromThePlantedBreakToTheCitedProposal(t *testing.T) {
 	}
 	// One merge closes both: the repair contract's observation and
 	// the workflow's.
-	s.raw(t, "merge.requested", subject, fmt.Sprintf(`{"verdict": "%s"}`, verdictPos))
-	s.raw(t, "merge.observed", subject, fmt.Sprintf(`{"merged": %q, "pr": "pr/8"}`, fixed))
+	s.rawAs(t, "workerA", "merge.requested", subject, fmt.Sprintf(`{"verdict": "%s"}`, verdictPos))
+	s.rawAs(t, "observer", "merge.observed", subject, fmt.Sprintf(`{"merged": %q, "pr": "pr/8"}`, fixed))
 	if e, code := runEnv(t, "flywheel", "observe", "--ledger", s.ld, "--key", s.keys["observer"], "--shape", shape, "--merged", fixed, "--pr", "pr/8"); code != 0 || !e.OK {
 		t.Fatalf("the merge is observed: %d %s", code, envText(e))
 	}

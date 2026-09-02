@@ -281,6 +281,107 @@ func TestShapesAreRecordDerivableAndRecurrenceIsCounted(t *testing.T) {
 	}
 }
 
+// conformance: review finding on the task PR — the lifecycle fold is
+// tolerant, so a chore is counted from AUTHENTIC completions only: two
+// chains of transition-legal events pushed past the boundary reach
+// "done" and manufacture no shape, whether the verdict was rendered by
+// a key holding no verdict grant, by the implementer itself, or the
+// merge observed by a key the row does not accept.
+func TestRawChainsManufactureNoChore(t *testing.T) {
+	// The worker renders its own pass and observes its own merge: every
+	// event is transition-legal and none of them passed a grant check.
+	self := newChain(t)
+	for _, id := range []string{"c-1", "c-2"} {
+		self.add("root", "intent.filed", id, `{"intent": "x", "tier": "trivial", "budget": "small", "routing": "core"}`)
+		self.add("root", "contract.specified", id, spec("accept.md", "aaaa111", true))
+		fence := self.add("worker", "claim.taken", id, `{}`)
+		sub := self.add("worker", "submission.made", id, fmt.Sprintf(`{"fence": "%d", "packet": %s}`, fence, packet))
+		v := self.add("worker", transition.VerdictRenderedVerb, id, fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, zeros64, sub))
+		self.add("worker", "merge.requested", id, fmt.Sprintf(`{"verdict": "%d"}`, v))
+		self.add("observer", "merge.observed", id, `{"merged": "`+zeros40+`", "pr": "pr/`+id+`"}`)
+	}
+	fold := foldOf(t, self)
+	for _, id := range []string{"c-1", "c-2"} {
+		if s, ok := fold.State(id); !ok || s.State != "done" {
+			t.Fatalf("the tolerant fold does reach done on %s, which is why the check is needed: %+v", id, s)
+		}
+	}
+	if shapes := Shapes(self.records, fold); len(shapes) != 0 {
+		t.Fatalf("a self-rendered pass is no authentic completion, so it folds to no shape: %+v", shapes)
+	}
+	if m := Derive(self.records, fold); m.Recurring != 0 || m.ConversionRate != nil {
+		t.Fatalf("and it counts toward no metric: %+v", m)
+	}
+
+	// The verdict is a granted verifier's, but the merge observation is
+	// the worker's, which the row does not accept.
+	obs := newChain(t)
+	for _, id := range []string{"c-1", "c-2"} {
+		obs.add("root", "intent.filed", id, `{"intent": "x", "tier": "trivial", "budget": "small", "routing": "core"}`)
+		obs.add("root", "contract.specified", id, spec("accept.md", "aaaa111", true))
+		fence := obs.add("worker", "claim.taken", id, `{}`)
+		sub := obs.add("worker", "submission.made", id, fmt.Sprintf(`{"fence": "%d", "packet": %s}`, fence, packet))
+		v := obs.add("verifier", transition.VerdictRenderedVerb, id, fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, zeros64, sub))
+		obs.add("worker", "merge.requested", id, fmt.Sprintf(`{"verdict": "%d"}`, v))
+		obs.add("worker", "merge.observed", id, `{"merged": "`+zeros40+`", "pr": "pr/`+id+`"}`)
+	}
+	if shapes := Shapes(obs.records, foldOf(t, obs)); len(shapes) != 0 {
+		t.Fatalf("a merge observed by a key the row does not accept is no authentic completion: %+v", shapes)
+	}
+
+	// The same chain with the observer's observation is one chore: the
+	// drill is not passing because everything is refused.
+	good := newChain(t)
+	good.done("c-1", "x", "core", "trivial", "accept.md", "aaaa111", true, false)
+	good.done("c-2", "x", "core", "trivial", "accept.md", "aaaa111", true, false)
+	if shapes := Shapes(good.records, foldOf(t, good)); len(shapes) != 1 || !shapes[0].Recurring() {
+		t.Fatalf("the admitted chain is the chore: %+v", shapes)
+	}
+}
+
+// conformance: review finding on the task PR — a repair's pass is
+// re-judged at its position, so a transition-legal pass raw-pushed by
+// the implementer leaves the repair OPEN and the proposal refused;
+// citing it is refused too.
+func TestRawRepairVerdictLeavesTheRepairOpen(t *testing.T) {
+	c := newChain(t)
+	c.done("c-1", "x", "core", "trivial", "accept.md", "aaaa111", true, false)
+	c.done("c-2", "x", "core", "trivial", "accept.md", "aaaa111", true, false)
+	chore := Shapes(c.records, foldOf(t, c))[0]
+	subject := RepairSubject(chore)
+	c.add("dispatcher", "intent.filed", subject, fmt.Sprintf(`{"intent": "repair", "tier": "trivial", "budget": "small", "routing": %q}`, chore.Routing))
+	c.add("dispatcher", "contract.specified", subject, fmt.Sprintf(`{"acceptance": {"ref": "%s @ %s", "executable": true, "gate": "seed/flywheel-%s @ %s"}}`, RepairAcceptancePath(chore.ID), zeros40, chore.ID, zeros40))
+	fence := c.add("worker", "claim.taken", subject, `{}`)
+	sub := c.add("worker", "submission.made", subject, fmt.Sprintf(`{"fence": "%d", "packet": %s}`, fence, packet))
+	// The implementer renders its own pass: legal by the table, and no
+	// verifier grant, no disjointness, nothing scored.
+	raw := c.add("worker", transition.VerdictRenderedVerb, subject, fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, zeros64, sub))
+	fold := foldOf(t, c)
+	if s, _ := fold.State(subject); s.Verdict == nil || s.Verdict.Verdict != "pass" {
+		t.Fatal("the tolerant fold does carry the raw pass, which is why the check is needed")
+	}
+	open, passed := Repairs(c.records, fold, chore.ID)
+	if len(open) != 1 || open[0] != subject || len(passed) != 0 {
+		t.Fatalf("a raw pass leaves the repair open: %v %v", open, passed)
+	}
+	if err := CheckProposal(c.records, fold, chore.ID, proposal(chore, "wf-1", "")); gateOf(t, err) != GateRepairOpen {
+		t.Fatalf("and the proposal stays refused: %v", err)
+	}
+	if err := CheckProposal(c.records, fold, chore.ID, proposal(chore, "wf-1", fmt.Sprintf("%s@%d", subject, raw))); gateOf(t, err) != GateRepairOpen {
+		t.Fatalf("citing it changes nothing: %v", err)
+	}
+	// The verifier's pass, at the same position in a second chain, is
+	// authentic and clears it.
+	ok := newChain(t)
+	ok.done("c-1", "x", "core", "trivial", "accept.md", "aaaa111", true, false)
+	ok.done("c-2", "x", "core", "trivial", "accept.md", "aaaa111", true, false)
+	okSubject, verdict := ok.repair(chore, true)
+	okFold := foldOf(t, ok)
+	if _, passed := Repairs(ok.records, okFold, chore.ID); len(passed) != 1 || passed[0].Subject != okSubject || passed[0].Verdict != verdict {
+		t.Fatalf("the verifier's pass is authentic: %v", passed)
+	}
+}
+
 // conformance: AC1 — the recurrence figure is the charter's, pinned to
 // the sentence in the spec as the tier table is pinned to tiers.md.
 func TestRecurringAfterIsTheCharterFigure(t *testing.T) {
@@ -755,6 +856,10 @@ func TestProposalAndMergeParseStrictly(t *testing.T) {
 		"off subject":   `{"workflow": "a @ b", "shape": "s-2", "pr": "p @ c"}`,
 		"bad workflow":  `{"workflow": "a", "shape": "s-1", "pr": "p @ c"}`,
 		"bad pr":        `{"workflow": "a @ b", "shape": "s-1", "pr": "p"}`,
+		// One observation names one merged revision (review finding on
+		// the task PR): a file at one commit and a PR at another
+		// describes no merge that happened.
+		"two revisions": `{"workflow": "a @ b", "shape": "s-1", "pr": "p @ c"}`,
 	} {
 		if _, err := ParseMerge("s-1", []byte(raw)); gateOf(t, err) != GateMerge {
 			t.Fatalf("%s: refuses at the merge gate: %v", name, err)

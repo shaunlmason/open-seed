@@ -198,7 +198,7 @@ func flywheelProbes(ctx *Context) (shape, occurrences, standing, path, repair st
 			shape, occurrences = s.ID, "["+strings.Join(cites, ", ")+"]"
 			// A passed repair is cited, as the proposal must; an open
 			// one leaves the probe refused, as the proposal is.
-			if _, passed := flywheel.Repairs(ctx.Lifecycle, s.ID); len(passed) > 0 {
+			if _, passed := flywheel.Repairs(ctx.Records, ctx.Lifecycle, s.ID); len(passed) > 0 {
 				repair = passed[0].Cite()
 			}
 		}

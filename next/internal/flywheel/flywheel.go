@@ -35,6 +35,7 @@ import (
 
 	"github.com/gowebpki/jcs"
 
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/plan"
@@ -124,13 +125,43 @@ func isWork(verb string) bool {
 	return !strings.HasPrefix(verb, "system.") && !strings.HasPrefix(verb, "actor.")
 }
 
+// MergeObservedVerb is the observation that makes a contract done: the
+// verb whose admission a counted occurrence must have passed.
+const MergeObservedVerb = "merge.observed"
+
+// authenticDone reports that a subject's completion is the boundary's
+// and not a raw push's (review finding on the task PR): the lifecycle
+// fold is tolerant by design, so a chain of transition-legal events
+// pushed past the boundary reaches "done" without any capability check
+// ever running, and two such chains would otherwise manufacture a
+// chore. A counted occurrence therefore needs the merge observation
+// signed by a key the row accepts at that position, over an authentic
+// pass verdict: a granted verifier, disjoint from the implementer, at
+// the level the record supports (curation.AuthenticPass, the same
+// derivation the promotion gate and the reconciler read).
+func authenticDone(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState) bool {
+	if s.Merged == nil || s.Merged.Pos < 0 || s.Merged.Pos >= len(records) {
+		return false
+	}
+	e := &records[s.Merged.Pos].Event
+	if e.Verb != MergeObservedVerb || e.Subject != subject || !keyring.Applies(e.V) {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:s.Merged.Pos])
+	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(MergeObservedVerb)) {
+		return false
+	}
+	return curation.AuthenticPass(records, table, subject, s) != nil
+}
+
 // Shapes derives every shape from the record (D1): for every done
-// subject the routing, tier and acceptance path from the fold and the
-// subject's verbs in chain order with positions, actors, payloads and
-// instants dropped. Shapes are listed in the order their first
-// occurrence was filed; occurrences within a shape in the order they
-// were done.
+// subject whose completion is authentic the routing, tier and
+// acceptance path from the fold and the subject's verbs in chain order
+// with positions, actors, payloads and instants dropped. Shapes are
+// listed in the order their first occurrence was filed; occurrences
+// within a shape in the order they were done.
 func Shapes(records []*event.Record, fold *transition.Fold) []Shape {
+	table, terr := transition.Default()
 	sequences := map[string][]string{}
 	intents := map[string]string{}
 	for _, rec := range records {
@@ -153,6 +184,9 @@ func Shapes(records []*event.Record, fold *transition.Fold) []Shape {
 	for _, subject := range fold.Subjects() {
 		s, ok := fold.State(subject)
 		if !ok || s.State != "done" || s.Acceptance == nil || s.Merged == nil {
+			continue
+		}
+		if terr != nil || !authenticDone(records, table, subject, s) {
 			continue
 		}
 		path, commit, ok := anchorParts(s.Acceptance.Ref)
@@ -845,8 +879,15 @@ func ParseMerge(subject string, raw []byte) (*Merge, error) {
 	if _, _, ok := anchorParts(m.Workflow); !ok {
 		return nil, &Error{Gate: GateMerge, Verb: MergedVerb, Subject: subject, Reason: fmt.Sprintf("workflow %q is not \"<path> @ <merged-commit>\"", m.Workflow)}
 	}
-	if _, _, ok := anchorParts(m.PR); !ok {
+	_, prCommit, ok := anchorParts(m.PR)
+	if !ok {
 		return nil, &Error{Gate: GateMerge, Verb: MergedVerb, Subject: subject, Reason: fmt.Sprintf("pr %q is not \"<pr> @ <merged-commit>\"", m.PR)}
+	}
+	// One observation names one merge, so its two anchors name one
+	// revision (review finding on the task PR): a file anchored at one
+	// commit and a PR at another describes no merge that happened.
+	if _, fileCommit, _ := anchorParts(m.Workflow); fileCommit != prCommit {
+		return nil, &Error{Gate: GateMerge, Verb: MergedVerb, Subject: subject, Reason: fmt.Sprintf("the workflow is anchored at %s and the pr at %s: one observation names one merged revision", fileCommit, prCommit)}
 	}
 	return &m, nil
 }
@@ -902,7 +943,7 @@ func CheckProposal(records []*event.Record, fold *transition.Fold, subject strin
 	if standing, ok := Fold(records).Standing(p.Shape); ok {
 		return &Error{Gate: GateDuplicate, Verb: ProposedVerb, Subject: subject, Reason: fmt.Sprintf("a proposal for shape %s stands unmerged at position %d", p.Shape, standing.Pos)}
 	}
-	open, passed := Repairs(fold, p.Shape)
+	open, passed := Repairs(records, fold, p.Shape)
 	if len(open) > 0 {
 		return &Error{Gate: GateRepairOpen, Verb: ProposedVerb, Subject: subject, Reason: fmt.Sprintf("repair contract %s stands short of a passed verdict: the implementer's fix passes its verdict before the proposal cites it", open[0])}
 	}
@@ -935,9 +976,16 @@ type Repair struct {
 func (r Repair) Cite() string { return fmt.Sprintf("%s@%d", r.Subject, r.Verdict) }
 
 // Repairs lists the shape's repair contracts, by their acceptance
-// path: open ones short of a passed verdict, in subject order, and
-// passed ones with their verdict positions.
-func Repairs(fold *transition.Fold, shape string) (open []string, passed []Repair) {
+// path: open ones short of an AUTHENTIC passed verdict, in subject
+// order, and passed ones with their verdict positions. The verdict is
+// re-judged at its own position (review finding on the task PR): a
+// transition-legal pass raw-pushed by an ungranted or implementing key
+// populates the tolerant fold's Verdict, and citing it would clear
+// proposal.repair_open without the verifier grant, the independence
+// rule or the scoring the boundary applies. A repair carrying such a
+// verdict stays open, which is the safe direction.
+func Repairs(records []*event.Record, fold *transition.Fold, shape string) (open []string, passed []Repair) {
+	table, terr := transition.Default()
 	for _, contract := range fold.Subjects() {
 		s, ok := fold.State(contract)
 		if !ok {
@@ -946,7 +994,7 @@ func Repairs(fold *transition.Fold, shape string) (open []string, passed []Repai
 		if id, isRepair := IsRepair(s); !isRepair || id != shape {
 			continue
 		}
-		if s.Verdict != nil && s.Verdict.Verdict == "pass" {
+		if terr == nil && curation.AuthenticPass(records, table, contract, s) != nil {
 			passed = append(passed, Repair{Subject: contract, Verdict: s.Verdict.Pos})
 		} else {
 			open = append(open, contract)

@@ -308,7 +308,7 @@ func flywheelPrecheck(ls *loopSession, signer ed25519.PrivateKey, shape flywheel
 		p.Occurrences = append(p.Occurrences, occ.Cite())
 	}
 	p.Validated.Run = "wf-precheck"
-	if _, passed := flywheel.Repairs(ls.ctx.Lifecycle, shape.ID); len(passed) > 0 {
+	if _, passed := flywheel.Repairs(ls.ctx.Records, ls.ctx.Lifecycle, shape.ID); len(passed) > 0 {
 		p.Repair = passed[0].Cite()
 	}
 	rec, err := event.Sign(event.Event{
@@ -327,7 +327,7 @@ func flywheelPrecheck(ls *loopSession, signer ed25519.PrivateKey, shape flywheel
 // repairFor finds the shape's repair contract in the fold: the one
 // filed, whether short of or past its verdict.
 func repairFor(ctx *admit.Context, shape string) (subject string, passedAt int, found, passed bool) {
-	open, done := flywheel.Repairs(ctx.Lifecycle, shape)
+	open, done := flywheel.Repairs(ctx.Records, ctx.Lifecycle, shape)
 	switch {
 	case len(open) > 0:
 		return open[0], 0, true, false
