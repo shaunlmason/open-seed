@@ -21,6 +21,11 @@ v0 budgets are per-contract).
 A contract carries its budget **class** at filing (`intent.filed`
 requires the `budget` field, charter §II.6). The normative class
 table, mirrored in code and pinned by test:
+The class is validated at filing: `intent.filed` refuses a value outside
+this table naming the members (`VocabularyError`, the completeness
+family; [`tiers.md`](tiers.md)), so a contract nobody could reserve
+against is never filed rather than discovered stuck by the worker who
+claims it.
 
 | class | capacity (units) |
 |---|---|

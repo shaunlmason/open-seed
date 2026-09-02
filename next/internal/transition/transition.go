@@ -105,6 +105,24 @@ func (e *IncompleteError) Error() string {
 	return fmt.Sprintf("%s on %s is incomplete: missing non-empty %s (the charter's completeness rule, presence-checked at admission)", e.Verb, e.Subject, strings.Join(e.Missing, ", "))
 }
 
+// VocabularyError is the completeness family's value refusal
+// (plans/os-be12ac16.md D2, D3; next/spec/tiers.md): a field that is
+// present but names no member of the table it is declared against.
+// It rides IncompleteError's exit and wire code, and it names the
+// field, the value and the known members, because a refusal says what
+// IS legal.
+type VocabularyError struct {
+	Verb    string
+	Subject string
+	Field   string
+	Value   string
+	Known   []string
+}
+
+func (e *VocabularyError) Error() string {
+	return fmt.Sprintf("%s on %s names %s %q, which is not in the vocabulary: the known members are %s, byte for byte (next/spec/tiers.md)", e.Verb, e.Subject, e.Field, e.Value, strings.Join(e.Known, ", "))
+}
+
 // Parse parses and self-validates a table. Every invariant violation
 // refuses by name: an invalid table never loads.
 func Parse(b []byte) (*Table, error) {
@@ -1306,6 +1324,33 @@ func CheckCompleteness(verb, subject string, payload []byte) error {
 	if len(missing) > 0 {
 		return &IncompleteError{Verb: verb, Subject: subject, Missing: missing}
 	}
+	// The vocabularies, after presence (plans/os-be12ac16.md D2, D3):
+	// the filed tier and budget class must be table members, byte for
+	// byte. A filing outside either table shipped a contract every gate
+	// treated as strictly as any, or one no worker could reserve
+	// against; both are refused here naming what is legal.
+	if verb == "intent.filed" {
+		// Each field is decoded on its own: a value that is not a JSON
+		// string (a number, an array) is no member of any table, and a
+		// decode failure must refuse rather than skip the check (review
+		// finding on the task PR).
+		for _, f := range []struct {
+			name  string
+			known func() []string
+			has   func(string) bool
+		}{
+			{"tier", Tiers, func(v string) bool { _, ok := Tier(v); return ok }},
+			{"budget", BudgetClasses, func(v string) bool { _, ok := BudgetCapacity(v); return ok }},
+		} {
+			var v string
+			if err := json.Unmarshal(m[f.name], &v); err != nil {
+				return &VocabularyError{Verb: verb, Subject: subject, Field: f.name, Value: strings.TrimSpace(string(m[f.name])), Known: f.known()}
+			}
+			if !f.has(v) {
+				return &VocabularyError{Verb: verb, Subject: subject, Field: f.name, Value: v, Known: f.known()}
+			}
+		}
+	}
 	return nil
 }
 
@@ -1344,6 +1389,70 @@ const (
 	// own term for the tier whose contracts submit without a plan.
 	TrivialTier = "trivial"
 )
+
+// TierRow is what one tier answers at each gate (next/spec/tiers.md):
+// the table Phase 10's tier system declares against, mirrored from the
+// spec and pinned by test. HumanReview is declared and consumed by
+// nobody yet: it is the column item 3 and the verdict pipeline's
+// human-verdict routing read.
+type TierRow struct {
+	PlanRequired         bool
+	SealedChecksRequired bool
+	HumanReview          bool
+}
+
+// tierTable mirrors the normative table in next/spec/tiers.md. The
+// three names are the charter's own words made concrete: trivial is its
+// term, standard the ordinary contract every gate applies to, critical
+// the "high-consequence" tier humans review.
+var tierTable = map[string]TierRow{
+	TrivialTier: {PlanRequired: false, SealedChecksRequired: false, HumanReview: false},
+	"standard":  {PlanRequired: true, SealedChecksRequired: true, HumanReview: false},
+	"critical":  {PlanRequired: true, SealedChecksRequired: true, HumanReview: true},
+}
+
+// strictestRow is what every reader of a missing row takes: plan
+// required, sealed checks required, human review. Absent knowledge is
+// never fudged into a relaxation, the BudgetCapacity posture applied to
+// authority, and the reason a raw-pushed unknown tier is judged exactly
+// as it was before the vocabulary existed.
+var strictestRow = TierRow{PlanRequired: true, SealedChecksRequired: true, HumanReview: true}
+
+// Tier resolves a filed tier to its row. An unknown tier has no row.
+func Tier(name string) (TierRow, bool) {
+	r, ok := tierTable[name]
+	return r, ok
+}
+
+// Tiers lists the vocabulary, sorted: what a refusal names as legal.
+func Tiers() []string {
+	out := make([]string, 0, len(tierTable))
+	for name := range tierTable {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// TierGates resolves a tier to the row its readers consult, the
+// strictest row for a tier the table does not know: the one accessor
+// the three authority sites (the plan gate, the reconcile unsealed lint,
+// verdict render's unsealed refusal) read, so none of them re-derives
+// the rule from the constant.
+func TierGates(name string) TierRow {
+	if r, ok := Tier(name); ok {
+		return r
+	}
+	return strictestRow
+}
+
+// InjectTier adds a row to the tier table and returns a restore func:
+// the spec-mirror pin's hook for a planted code row the spec lacks.
+// Production code never calls it.
+func InjectTier(name string, row TierRow) func() {
+	tierTable[name] = row
+	return func() { delete(tierTable, name) }
+}
 
 // The observation summarization vocabulary (plans/os-2ff8dbf1.md;
 // SEED-NEXT.md Part II §5): the ephemeral channel is summarized into
@@ -1409,6 +1518,22 @@ var budgetClasses = map[string]int{
 	"small":  100,
 	"medium": 1000,
 	"large":  10000,
+}
+
+// BudgetClasses lists the class vocabulary in capacity order: what a
+// filing refusal names as legal.
+func BudgetClasses() []string {
+	out := make([]string, 0, len(budgetClasses))
+	for class := range budgetClasses {
+		out = append(out, class)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if budgetClasses[out[i]] != budgetClasses[out[j]] {
+			return budgetClasses[out[i]] < budgetClasses[out[j]]
+		}
+		return out[i] < out[j]
+	})
+	return out
 }
 
 // BudgetCapacity resolves a filed budget class to its capacity.
@@ -1601,7 +1726,7 @@ func (e *PlanRequiredError) Error() string {
 // (the implementation actually built on the approved plan) is
 // Phase 6's receipt computation, the named closing item.
 func (f *Fold) CheckPlanGate(subject, tier string, payload []byte) error {
-	if tier == TrivialTier {
+	if !TierGates(tier).PlanRequired {
 		return nil
 	}
 	approved, ok := f.PlanApproved(subject)

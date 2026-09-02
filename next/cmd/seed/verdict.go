@@ -297,7 +297,7 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	// verifier boundary (plans/os-3128535a.md): above the trivial
 	// tier a subject with no commitment does not render; the trivial
 	// tier is exempt.
-	if s.Sealed == nil && s.Tier != transition.TrivialTier {
+	if s.Sealed == nil && transition.TierGates(s.Tier).SealedChecksRequired {
 		return render(stampTip(envelope.Fail(envelope.ExitUnsealed, "unsealed",
 			fmt.Sprintf("contract %s (tier %q) carries no sealed-checks commitment — above the trivial tier contracts carry sealed checks, sealed before the first claim (next/spec/sealed-checks.md)", *subject, s.Tier)), st.count), stdout, stderr)
 	}

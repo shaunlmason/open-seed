@@ -124,9 +124,9 @@ func Subject(id string, s transition.SubjectState) []Finding {
 			Detail: fmt.Sprintf("the merge chain ran through the operator override at position %d (reason: %s) — an attributable substitute for a pass verdict, surfaced by name, never a disguised verdict", s.Override.Pos, s.Override.Reason)})
 	}
 	pastClaim := s.State == "in_progress" || s.State == "review" || s.State == "done"
-	if pastClaim && s.Tier != transition.TrivialTier && s.Sealed == nil {
+	if pastClaim && transition.TierGates(s.Tier).SealedChecksRequired && s.Sealed == nil {
 		out = append(out, Finding{Subject: id, Class: ClassUnsealed,
-			Detail: fmt.Sprintf("tier %q with implementation under way and no sealed-checks commitment — above the trivial tier contracts carry sealed checks, and render refuses a verdict without one", s.Tier)})
+			Detail: fmt.Sprintf("tier %q with implementation under way and no sealed-checks commitment — the tier table requires sealed checks here (an unknown tier takes the strictest row), and render refuses a verdict without one", s.Tier)})
 	}
 	return out
 }

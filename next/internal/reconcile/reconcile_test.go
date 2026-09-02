@@ -65,6 +65,15 @@ func TestSubjectClassifiesInducedDivergences(t *testing.T) {
 				Sealed: &transition.SealedFact{Pos: 3, Commitment: "c"}}, nil},
 		"above-trivial still ready is not yet flagged": {
 			transition.SubjectState{State: "ready", Tier: "standard"}, nil},
+		"critical implementation with no commitment": {
+			// The lint reads the tier table (plans/os-be12ac16.md D4).
+			transition.SubjectState{State: "in_progress", Tier: "critical"}, []string{ClassUnsealed}},
+		"an unknown tier takes the strictest row": {
+			transition.SubjectState{State: "review", Tier: "wizard"}, []string{ClassUnsealed}},
+		"trivial by the table, not the constant": {
+			transition.SubjectState{State: "review", Tier: "trivial"}, nil},
+		"a planted row saying no sealed checks is exempt too": {
+			transition.SubjectState{State: "review", Tier: "sandbox"}, nil},
 		"override-backed chain is sanctioned, by name": {
 			transition.SubjectState{State: "done", Tier: triv, Verdict: fail, Merged: merged,
 				Override:  &transition.OverrideFact{Pos: 12, Reason: "r", CitedVerdict: 9},
@@ -73,6 +82,8 @@ func TestSubjectClassifiesInducedDivergences(t *testing.T) {
 			transition.SubjectState{State: "done", Tier: triv, Verdict: fail, Merged: merged,
 				Override: &transition.OverrideFact{Pos: 12, Reason: "r", CitedVerdict: 9}}, []string{ClassMergeWithoutVerdict}},
 	}
+	restore := transition.InjectTier("sandbox", transition.TierRow{})
+	defer restore()
 	for name, c := range cases {
 		got := Subject("c-x", c.state)
 		if len(got) != len(c.want) {

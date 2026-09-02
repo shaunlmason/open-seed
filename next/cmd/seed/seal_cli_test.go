@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -35,10 +36,24 @@ func writeChecks(t *testing.T, lines ...string) string {
 // what the drills need). Returns the commitment ("" when unsealed).
 func driveToReview(t *testing.T, ld, src, sealerKey string, rootKey ed25519.PrivateKey, subject, specCommit, rng, checksFile string) string {
 	t.Helper()
+	return driveToReviewAt(t, ld, src, sealerKey, rootKey, subject, specCommit, rng, checksFile, "standard", false)
+}
+
+// driveToReviewAt is driveToReview at a named tier. raw files the
+// intent on the library seam rather than through admission: the only
+// way a tier outside the vocabulary reaches the fold now that filing
+// validates it (plans/os-be12ac16.md D2), and what the strictest-row
+// drills need.
+func driveToReviewAt(t *testing.T, ld, src, sealerKey string, rootKey ed25519.PrivateKey, subject, specCommit, rng, checksFile, tier string, raw bool) string {
+	t.Helper()
 	for _, step := range [][]string{
-		{"intent.filed", `{"intent": "sealed drill", "tier": "standard", "budget": "small", "routing": "core"}`},
+		{"intent.filed", fmt.Sprintf(`{"intent": "sealed drill", "tier": %q, "budget": "small", "routing": "core"}`, tier)},
 		{"contract.specified", fmt.Sprintf(`{"acceptance": {"ref": "accept.md @ %s", "executable": false}}`, specCommit)},
 	} {
+		if raw {
+			verdictLibAppend(t, ld, rootKey, step[0], subject, step[1])
+			continue
+		}
 		if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", ld+"/../id_ed25519",
 			"--verb", step[0], "--subject", subject, "--payload", step[1]); code != 0 {
 			t.Fatalf("%s %s: %d %+v", subject, step[0], code, e)
@@ -124,6 +139,26 @@ func TestSealEndToEndCLI(t *testing.T) {
 	if e, code := runEnv(t, "verdict", "render", "--ledger", ld, "--subject", "c-3", "--repo", src,
 		"--key", v1Key, "--verdict", "pass"); code != 24 {
 		t.Fatalf("an above-trivial unsealed subject refuses render at 24 unsealed: %d %+v", code, e)
+	}
+	// The gate reads the tier table (plans/os-be12ac16.md D4): critical
+	// requires sealed checks like standard, and an unknown tier, which
+	// only a raw push can file now, takes the strictest row.
+	driveToReviewAt(t, ld, src, "", rootKey, "c-6", specCommit, rng, "", "critical", false)
+	driveToReviewAt(t, ld, src, "", rootKey, "c-7", specCommit, rng, "", "wizard", true)
+	for _, subject := range []string{"c-6", "c-7"} {
+		if e, code := runEnv(t, "verdict", "render", "--ledger", ld, "--subject", subject, "--repo", src,
+			"--key", v1Key, "--verdict", "pass"); code != 24 {
+			t.Fatalf("%s: the unsealed refusal reads the tier table, strictest row for an unknown tier: %d %+v", subject, code, e)
+		}
+	}
+	// And a planted row saying no sealed checks renders unsealed: the
+	// refusal reads the table, not the constant.
+	restoreTier := transition.InjectTier("sandbox", transition.TierRow{})
+	defer restoreTier()
+	driveToReviewAt(t, ld, src, "", rootKey, "c-8", specCommit, rng, "", "sandbox", false)
+	if e, code := runEnv(t, "verdict", "render", "--ledger", ld, "--subject", "c-8", "--repo", src,
+		"--key", v1Key, "--verdict", "pass"); code != 0 {
+		t.Fatalf("a table row saying no sealed checks renders without a commitment: %d %+v", code, e)
 	}
 
 	// c-1 renders: the sealed check runs into the receipt.
@@ -276,7 +311,7 @@ func TestSealEndToEndCLI(t *testing.T) {
 	}
 	fresh := writeChecks(t, "true")
 	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "intent.filed", "--subject", "c-5", "--payload", `{"intent": "fresh", "tier": "standard", "budget": "s", "routing": "core"}`); code != 0 {
+		"--verb", "intent.filed", "--subject", "c-5", "--payload", `{"intent": "fresh", "tier": "standard", "budget": "small", "routing": "core"}`); code != 0 {
 		t.Fatalf("c-5 file: %d %+v", code, e)
 	}
 	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,

@@ -274,7 +274,7 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 		{"claim contention", "already claimed", func(dir string, store *ledger.Store) {
 			appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"to": "seed/1"}`, tipOf(t, store)))
 			appendRaw(t, store, resolve, signedV(t, "seed/1", "intent.filed", "c-0009",
-				`{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`, tipOf(t, store)))
+				`{"intent": "fix", "tier": "standard", "budget": "small", "routing": "core"}`, tipOf(t, store)))
 			appendRaw(t, store, resolve, signedV(t, "seed/1", "contract.specified", "c-0009",
 				`{"acceptance": {"ref": "specs/c9.md @ abc1234", "executable": false}}`, tipOf(t, store)))
 			appendRaw(t, store, resolve, signedV(t, "seed/1", "claim.taken", "c-0009", `{}`, tipOf(t, store)))
@@ -335,7 +335,7 @@ func TestHookAdmitsValidAndRefusesInvalid(t *testing.T) {
 	if err := craftPush(t, remote, resolve, func(dir string, store *ledger.Store) {
 		appendRaw(t, store, resolve, signed(t, ledger.UpgradeVerb, "system", `{"to": "seed/1"}`, tipOf(t, store)))
 		appendRaw(t, store, resolve, signedV(t, "seed/1", "intent.filed", "c-0005",
-			`{"intent": "fix", "tier": "standard", "budget": "s", "routing": "core"}`, tipOf(t, store)))
+			`{"intent": "fix", "tier": "standard", "budget": "small", "routing": "core"}`, tipOf(t, store)))
 		appendRaw(t, store, resolve, signedV(t, "seed/1", "contract.specified", "c-0005",
 			`{"acceptance": {"ref": "specs/c5.md @ abc1234", "executable": false}}`, tipOf(t, store)))
 	}); err != nil {
