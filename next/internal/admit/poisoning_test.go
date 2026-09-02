@@ -408,9 +408,7 @@ func newLintStand(t *testing.T) *lintStand {
 		return strings.TrimSpace(string(out))
 	}
 	git("init", "--quiet", "-b", "main")
-	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"}} {
-		git("config", kv[0], kv[1])
-	}
+	hardenGitRepo(t, repo)
 	for _, dir := range []string{curation.LessonsDir, "plans"} {
 		if err := os.MkdirAll(filepath.Join(repo, dir), 0o755); err != nil {
 			t.Fatal(err)
@@ -457,6 +455,18 @@ func (ls *lintStand) promote(t *testing.T, body string) curation.LessonFact {
 	fact.Lesson = ls.path + " @ " + ls.git("rev-parse", "HEAD")
 	fact.Digest = curation.Digest([]byte(body))
 	return fact
+}
+
+// hardenGitRepo disables auto-gc in a fixture repository so a detached
+// collector never outlives the test that made it (the fixture guard in
+// internal/gitref sweeps every git init for this call).
+func hardenGitRepo(t testing.TB, repo string) {
+	t.Helper()
+	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"}} {
+		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
+			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
+		}
+	}
 }
 
 // lintPoison runs the file half over a bent stand and reports the
