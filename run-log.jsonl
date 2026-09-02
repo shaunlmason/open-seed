@@ -1066,3 +1066,4 @@
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:225","to":"ready"},"task":"os-2e34f66a","ts":"2026-09-02T12:39:24Z","verb":"plan-unblock"}
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:224","to":"ready"},"task":"os-711b3028","ts":"2026-09-02T12:39:29Z","verb":"plan-unblock"}
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:223","to":"ready"},"task":"os-99829835","ts":"2026-09-02T12:39:34Z","verb":"plan-unblock"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-9075c308","ts":"2026-09-02T12:39:36Z","verb":"transition"}
