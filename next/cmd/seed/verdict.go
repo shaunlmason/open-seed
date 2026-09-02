@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -24,6 +25,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/executor"
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
@@ -347,6 +349,19 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 		return render(stampTip(sealFail, st.count), stdout, stderr)
 	}
 	in.Sealed = sealedIn
+	// The bound eval's carrier (plans/os-96850e5a.md D5): a
+	// counter-trajectory judged without the candidate applied proves
+	// nothing about it, so a subject whose marker names a carrier
+	// renders only when the carrier commit is an ancestor of the
+	// submission head.
+	if s.Eval != nil && s.Eval.Carrier != "" {
+		_, carrierCommit, _ := curation.AnchorParts(s.Eval.Carrier)
+		_, head, _ := strings.Cut(in.Base, "..")
+		if !gitIsAncestor(*repo, carrierCommit, head) {
+			return render(stampTip(envelope.Fail(envelope.ExitChecksRed, "carrier_absent",
+				fmt.Sprintf("the eval is bound to carrier %s and the submission head %s does not descend from it — the lesson was never applied, so its survival cannot be judged (next/spec/evals.md)", s.Eval.Carrier, head)), st.count), stdout, stderr)
+		}
+	}
 	r, err := verdict.Compute(in)
 	if err != nil {
 		return render(stampTip(verdictFailEnvelope(err), st.count), stdout, stderr)
@@ -571,4 +586,13 @@ func renderLocked(st *verdictState, s transition.SubjectState) *transition.Verdi
 		return f
 	}
 	return nil
+}
+
+// gitIsAncestor reports whether ancestor reaches descendant in the
+// repository.
+func gitIsAncestor(repo, ancestor, descendant string) bool {
+	if ancestor == "" || descendant == "" {
+		return false
+	}
+	return exec.Command("git", "-C", repo, "merge-base", "--is-ancestor", ancestor, descendant).Run() == nil
 }

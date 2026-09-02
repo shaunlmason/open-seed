@@ -1220,3 +1220,26 @@ the assertions read, and there is no copy to go stale.
   require `path.Clean(p) == p` and refuse an absolute path before the
   prefix test, or `<store>/../x` passes the anchor grammar and the
   prefix both.
+- When a stacked card widens a function that an earlier card's drills
+  call (`HypothesisID(claim)` gaining exceptions), grep every test
+  file in the tree for the old arity before running the suite; `go
+  vet` reports the first file per package and hides the rest.
+- A projection build is input-free: anything that needs a repository
+  (ancestry, a file's digest) belongs to the readers that hold one,
+  and the projection carries only the record half with a note saying
+  so. Trying to verify in the build would have made `project rebuild`
+  depend on a checkout it is not given.
+- Every stage a fold binds from a raw fact is a stage an attacker with
+  raw ledger access can plant. The test for each fold arm is the same:
+  raw-push the fact the boundary would refuse and assert the fold
+  changed nothing. Sharing one check function between the admission
+  rule and the fold (proposals, contests, promotions all do now) is
+  what keeps the two from drifting.
+- A verifier that reads one thing from a caller and hashes another
+  from a store judges two revisions. Read the stored bytes first,
+  require the caller's copy to equal them, then judge the stored bytes
+  alone.
+- A result derived from a view is stale the moment the optimistic
+  loop retries against a refreshed one; carry the derivation in the
+  act so every attempt recomputes it, even when the payload itself
+  holds nothing derived.

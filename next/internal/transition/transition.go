@@ -364,6 +364,12 @@ func EvalFixturePrefix(name string) string { return EvalRoot + "/" + name + "/fi
 type EvalInfo struct {
 	Name  string
 	Tuple *tuple.Tuple
+	// Lesson and Carrier bind an adversarial evaluation to the
+	// hypothesis it was filed for and the candidate revision it runs
+	// against (plans/os-96850e5a.md D5); both empty on an ordinary
+	// eval.
+	Lesson  string
+	Carrier string
 }
 
 // Claim is the active claim on an in_progress subject: the fence is
@@ -392,6 +398,9 @@ type SubjectState struct {
 	// distinguished value, "trivial", exempts the plan gate;
 	// plans/os-16c1d142.md).
 	Tier string
+	// Routing is the squad the intent named, read by the curation
+	// predicate (plans/os-96850e5a.md D1).
+	Routing string
 	// Eval is the eval marker the filing carried at a seed/3 position
 	// (plans/os-03e47abb.md D1): the contract is synthetic work with a
 	// known verdict, whose pass mints a qualification for the tuple its
@@ -1166,22 +1175,26 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		}
 		if e.Verb == t.birth {
 			var filed struct {
-				Tier   string `json:"tier"`
-				Budget string `json:"budget"`
-				Eval   *struct {
-					Name  string          `json:"name"`
-					Tuple json.RawMessage `json:"tuple"`
+				Tier    string `json:"tier"`
+				Budget  string `json:"budget"`
+				Routing string `json:"routing"`
+				Eval    *struct {
+					Name    string          `json:"name"`
+					Tuple   json.RawMessage `json:"tuple"`
+					Lesson  string          `json:"lesson"`
+					Carrier string          `json:"carrier"`
 				} `json:"eval"`
 			}
 			if json.Unmarshal(e.Payload, &filed) == nil {
 				s.Tier = filed.Tier
 				s.Budget = filed.Budget
+				s.Routing = filed.Routing
 				// The marker is read at seed/3 positions only, where
 				// admission defines it; an advisory tuple that does
 				// not parse is dropped and counted, never folded as
 				// a partial configuration.
 				if filed.Eval != nil && filed.Eval.Name != "" && version.EvalApplies(e.V) {
-					info := &EvalInfo{Name: filed.Eval.Name}
+					info := &EvalInfo{Name: filed.Eval.Name, Lesson: filed.Eval.Lesson, Carrier: filed.Eval.Carrier}
 					if len(filed.Eval.Tuple) > 0 {
 						if tu, terr := tuple.Parse(filed.Eval.Tuple); terr == nil {
 							info.Tuple = &tu

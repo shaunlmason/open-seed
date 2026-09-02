@@ -189,6 +189,24 @@ func TestDisposabilityDrill(t *testing.T) {
 	if b, err := os.ReadFile(filepath.Join(run.Workspace(), ".seed-run", "packet.json")); err != nil || string(b) != `{"drill": "packet"}` {
 		t.Fatalf("the packet lands in the workspace: %v %q", err, b)
 	}
+	// The lessons ride beside the packet (plans/os-96850e5a.md D6): an
+	// empty list when the caller derived none, the given bytes when
+	// it did.
+	if b, err := os.ReadFile(filepath.Join(run.Workspace(), ".seed-run", "lessons.json")); err != nil || string(b) != "[]\n" {
+		t.Fatalf("an empty lessons.json lands beside the packet: %v %q", err, b)
+	}
+	if err := run.Dispose(); err != nil {
+		t.Fatal(err)
+	}
+	withLessons := spec
+	withLessons.Lessons = []byte(`[{"lesson": "next/knowledge/lessons/x.md @ 0123456"}]`)
+	run, err = lw.Provision(withLessons)
+	if err != nil {
+		t.Fatalf("Provision with lessons: %v", err)
+	}
+	if b, err := os.ReadFile(filepath.Join(run.Workspace(), ".seed-run", "lessons.json")); err != nil || string(b) != string(withLessons.Lessons) {
+		t.Fatalf("the derived lessons land beside the packet: %v %q", err, b)
+	}
 	if got := lw.Tuple(); got.Harness != executor.LocalHarness || got.Environment != executor.LocalEnvironment {
 		t.Fatalf("the local adapter's static report: %+v", got)
 	}

@@ -162,11 +162,16 @@ type ReportReconciliation struct {
 // (plans/os-0f718b4e.md) likewise; Version "10" adds the refusals
 // section from the declared attempts journal (plans/os-edf73d66.md),
 // null on builds that declare none, so version, not content, is
-// what republishes existing input-free prefixes. Inputs marks it as
-// the one input-consuming projection, everything else staying
-// byte-identical with and without inputs by construction.
+// what republishes existing input-free prefixes. Version "11" adds
+// the knowledge section (plans/os-f30ee0d3.md) and its contested
+// count (plans/os-96850e5a.md): the section changes the bytes of
+// every prefix carrying a curation fact, so an unchanged tip
+// republishes under a new build id rather than keeping a tree without
+// it (review finding on the item 3 PR). Inputs marks it as the one
+// input-consuming projection, everything else staying byte-identical
+// with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "10", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "11", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the

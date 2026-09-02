@@ -242,7 +242,7 @@ func AcceptedCapabilities(verb string) []string {
 	// PR's merge, the merge.observed posture.
 	case "curation.deadend.recorded":
 		return []string{CapClaim, CapOperator}
-	case "curation.hypothesis.proposed":
+	case "curation.hypothesis.proposed", "curation.hypothesis.contested":
 		return []string{CapCurate}
 	case "curation.lesson.promoted":
 		return []string{CapObserver, CapOperator}

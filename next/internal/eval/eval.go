@@ -277,11 +277,34 @@ type Filing struct {
 // File shapes the filing for a definition at its anchor; tu is the
 // configuration under re-test on a spot-check, nil on a first eval.
 func File(def Definition, anchor Anchor, tu *tuple.Tuple, prior int) (Filing, error) {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("%s\x00%s\x00%d", def.Name, tupleKey(tu), prior)))
+	return FileBound(def, anchor, tu, prior, "", "")
+}
+
+// FileBound is File with the marker bound to the hypothesis the eval
+// is a counter-trajectory for and the candidate revision it runs
+// against (plans/os-96850e5a.md D5): both or neither. The subject
+// folds the binding in, so an eval filed for one candidate and one
+// filed for another are two contracts.
+func FileBound(def Definition, anchor Anchor, tu *tuple.Tuple, prior int, lesson, carrier string) (Filing, error) {
+	if (lesson == "") != (carrier == "") {
+		return Filing{}, errors.New("a bound eval names both the lesson and the carrier, or neither")
+	}
+	// An unbound eval keeps its id derivation exactly: the binding
+	// joins the hash only when present, so every existing subject
+	// and fixture is unchanged.
+	key := fmt.Sprintf("%s\x00%s\x00%d", def.Name, tupleKey(tu), prior)
+	if lesson != "" {
+		key += fmt.Sprintf("\x00%s\x00%s", lesson, carrier)
+	}
+	sum := sha256.Sum256([]byte(key))
 	id := "eval-" + hex.EncodeToString(sum[:6])
 	marker := map[string]any{"name": def.Name}
 	if tu != nil {
 		marker["tuple"] = *tu
+	}
+	if lesson != "" {
+		marker["lesson"] = lesson
+		marker["carrier"] = carrier
 	}
 	intent, err := json.Marshal(map[string]any{
 		"intent":  fmt.Sprintf("eval %s: %s", def.Name, def.Summary),

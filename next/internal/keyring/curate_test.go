@@ -72,10 +72,11 @@ func TestCurationRowsAndTheRaise(t *testing.T) {
 		t.Fatal("curate is in the vocabulary")
 	}
 	for verb, want := range map[string][]string{
-		"curation.deadend.recorded":    {keyring.CapClaim, keyring.CapOperator},
-		"curation.hypothesis.proposed": {keyring.CapCurate},
-		"curation.lesson.promoted":     {keyring.CapObserver, keyring.CapOperator},
-		"escalation.raised":            {keyring.CapClaim, keyring.CapDispatch, keyring.CapVerdict, keyring.CapSupervise, keyring.CapOperator, keyring.CapCurate},
+		"curation.deadend.recorded":     {keyring.CapClaim, keyring.CapOperator},
+		"curation.hypothesis.proposed":  {keyring.CapCurate},
+		"curation.hypothesis.contested": {keyring.CapCurate},
+		"curation.lesson.promoted":      {keyring.CapObserver, keyring.CapOperator},
+		"escalation.raised":             {keyring.CapClaim, keyring.CapDispatch, keyring.CapVerdict, keyring.CapSupervise, keyring.CapOperator, keyring.CapCurate},
 	} {
 		if got := keyring.AcceptedCapabilities(verb); fmt.Sprint(got) != fmt.Sprint(want) {
 			t.Errorf("%s accepts %v, want %v", verb, got, want)

@@ -246,6 +246,17 @@ func (e *LevelShortError) Error() string {
 	return fmt.Sprintf("verdict on %s refused: tier %q requires independence %s and the record supports %s — a verifier's configuration that cannot separate from the work's cannot judge a high-consequence contract (next/spec/verdicts.md, next/spec/tiers.md)", e.Subject, e.Tier, e.Required, e.Achieved)
 }
 
+// The level half of a pass's authentication is installed into the
+// curation package at init (plans/os-96850e5a.md, review fixes): the
+// fold's promotion replay authenticates the adversarial pass through
+// curation.AuthenticPass, and the level rule must be the same one the
+// verdict rule and the merge chain apply, not a second copy.
+func init() {
+	curation.PassLevelCheck = func(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState, fact transition.VerdictFact) bool {
+		return levelBoundary(&Context{Records: records, Table: table}, subject, "", s, fact) == nil
+	}
+}
+
 // LevelAchieved computes the independence level the record supports
 // for a verdict on the subject (plans/os-99829835.md D1, D3): the
 // highest that holds. L3 when the acceptance is executable and gated,
@@ -1165,19 +1176,22 @@ func Default() []Rule {
 			// does not precede the verdict's, and no earlier
 			// qualification cites the same verdict.
 			verb := rec.Event.Verb
-			if verb == "intent.filed" && !version.EvalApplies(c.Active) {
-				// The marker is defined at seed/3 (D8): presence is the
-				// gate, read raw, so a filing a seed/2 validator's fold
-				// would silently drop is refused rather than admitted
-				// as an ordinary contract.
+			if verb == "intent.filed" {
 				var filed struct {
 					Eval json.RawMessage `json:"eval"`
 				}
-				if json.Unmarshal(rec.Event.Payload, &filed) == nil && len(filed.Eval) > 0 {
+				if json.Unmarshal(rec.Event.Payload, &filed) != nil || len(filed.Eval) == 0 {
+					return nil
+				}
+				if !version.EvalApplies(c.Active) {
+					// The marker is defined at seed/3 (D8): presence is
+					// the gate, read raw, so a filing a seed/2
+					// validator's fold would silently drop is refused
+					// rather than admitted as an ordinary contract.
 					return &transition.ChainError{Subject: rec.Event.Subject, Verb: verb,
 						Reason: fmt.Sprintf("the filing carries an eval marker and the chain is at %s: eval semantics activate at %s (next/spec/evals.md)", c.Active, version.Seed3)}
 				}
-				return nil
+				return checkEvalMarker(rec.Event.Subject, filed.Eval)
 			}
 			if verb != keyring.VerbQualified && verb != keyring.VerbDisqualified {
 				return nil
@@ -1566,16 +1580,6 @@ func Default() []Rule {
 	}
 }
 
-// CurationError is a curation fact's refusal at the boundary: the
-// window, the support, the duplicate, or the citation.
-type CurationError struct {
-	Verb, Subject, Reason string
-}
-
-func (e *CurationError) Error() string {
-	return fmt.Sprintf("%s on %s: %s", e.Verb, e.Subject, e.Reason)
-}
-
 func checkCuration(c *Context, rec *event.Record) error {
 	subject := rec.Event.Subject
 	switch rec.Event.Verb {
@@ -1595,7 +1599,7 @@ func checkCuration(c *Context, rec *event.Record) error {
 			return &FenceError{Subject: subject, Cited: d.Fence, Active: -1}
 		}
 		if rec.Event.Actor != s.Claim.Holder {
-			return &CurationError{rec.Event.Verb, subject, fmt.Sprintf("signer %s is not the window's holder %s: a candidate observation is the holder's own", rec.Event.Actor, s.Claim.Holder)}
+			return curation.NewGateError(curation.GateDeadEndHolder, rec.Event.Verb, subject, fmt.Sprintf("signer %s is not the window's holder %s: a candidate observation is the holder's own", rec.Event.Actor, s.Claim.Holder))
 		}
 		return nil
 	case curation.HypothesisVerb:
@@ -1604,20 +1608,35 @@ func checkCuration(c *Context, rec *event.Record) error {
 			return err
 		}
 		if prior, dup := curation.Fold(c.Records).Hypothesis(subject); dup {
-			return &CurationError{rec.Event.Verb, subject, fmt.Sprintf("the claim was proposed at position %d: one claim derives one subject, and a re-proposal changes nothing", prior.Pos)}
+			return curation.NewGateError(curation.GateSupportDuplicate, rec.Event.Verb, subject, fmt.Sprintf("the claim was proposed at position %d: one claim with one exception set derives one subject, and a re-proposal changes nothing", prior.Pos))
 		}
 		_, err = curation.CheckSupport(c.Records, c.Table, c.Lifecycle, subject, h)
 		return err
+	case curation.ContestVerb:
+		// The contested state (plans/os-96850e5a.md D3): held-out
+		// evidence, by construction, on contracts the predicate
+		// selects, against an admitted hypothesis on its own subject.
+		ct, err := curation.ParseContest(subject, rec.Event.Payload)
+		if err != nil {
+			return err
+		}
+		_, err = curation.CheckContest(c.Records, c.Table, c.Lifecycle, subject, ct)
+		return err
 	case curation.LessonVerb:
+		// The promotion gate's ledger half (plans/os-96850e5a.md D4):
+		// an admitted, uncontested hypothesis whose support still
+		// satisfies the arms, and an adversarial evaluation that is an
+		// authenticated pass, replayed at its own position, on an eval
+		// filed after the hypothesis and bound to it and to this
+		// lesson anchor (D5).
 		l, err := curation.ParseLesson(subject, rec.Event.Payload)
 		if err != nil {
 			return err
 		}
-		cit, _ := curation.ParseCitation(l.Hypothesis)
-		if _, ok := curation.HypothesisValid(c.Records, c.Table, cit); !ok {
-			return &CurationError{rec.Event.Verb, subject, fmt.Sprintf("%s is not an admitted hypothesis: a lesson promotes a proposal that passed the boundary, and no stage skips", l.Hypothesis)}
-		}
-		return nil
+		// One implementation for the boundary and the fold: the
+		// promotion is judged here exactly as the fold re-judges it at
+		// its own position (review finding on the task PR).
+		return curation.CheckPromotion(c.Records, c.Table, c.Lifecycle, subject, l)
 	}
 	return nil
 }
@@ -2352,4 +2371,38 @@ func strictJSON(raw []byte, into any) error {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	return dec.Decode(into)
+}
+
+// checkEvalMarker is the marker's shape at filing (plans/os-96850e5a.md
+// D5): {name, tuple?, lesson?, carrier?}, lesson and carrier both
+// present or both absent, the lesson a hypothesis citation and the
+// carrier an anchored path. A bound marker names the hypothesis and
+// the exact candidate revision the eval is for, on the record at
+// filing.
+func checkEvalMarker(subject string, raw json.RawMessage) error {
+	var m struct {
+		Name    string          `json:"name"`
+		Tuple   json.RawMessage `json:"tuple"`
+		Lesson  string          `json:"lesson"`
+		Carrier string          `json:"carrier"`
+	}
+	if err := strictJSON(raw, &m); err != nil {
+		return &transition.ChainError{Subject: subject, Verb: "intent.filed",
+			Reason: fmt.Sprintf("the eval marker is the strict object {name, tuple?, lesson?, carrier?}: %v", err)}
+	}
+	if (m.Lesson == "") != (m.Carrier == "") {
+		return &transition.ChainError{Subject: subject, Verb: "intent.filed",
+			Reason: "a bound eval marker names both the lesson (\"<h-id>@<position>\") and the carrier (\"<path> @ <commit>\"), or neither"}
+	}
+	if m.Lesson != "" {
+		if cit, ok := curation.ParseCitation(m.Lesson); !ok || !curation.IsHypothesisSubject(cit.Contract) {
+			return &transition.ChainError{Subject: subject, Verb: "intent.filed",
+				Reason: fmt.Sprintf("the eval marker's lesson %q is not \"<h-id>@<position>\"", m.Lesson)}
+		}
+		if _, _, ok := curation.AnchorParts(m.Carrier); !ok {
+			return &transition.ChainError{Subject: subject, Verb: "intent.filed",
+				Reason: fmt.Sprintf("the eval marker's carrier %q is not \"<path> @ <commit>\"", m.Carrier)}
+		}
+	}
+	return nil
 }

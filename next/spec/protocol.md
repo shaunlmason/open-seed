@@ -206,10 +206,12 @@ admission).
   dashboard actions).
 - `curation.*` — `deadend.recorded` (the holder's candidate
   observation, on the contract), `hypothesis.proposed` (the curator's,
-  on the subject its claim derives), `lesson.promoted` (the PR
-  observation, on the hypothesis), all three from
-  [`curation.md`](curation.md) as additive catalog growth, active from
-  `seed/1`; `lesson.retired` waits on Phase 11 item 4.
+  on the subject its claim and exceptions derive),
+  `hypothesis.contested` (the curator's held-out counter-evidence, on
+  the hypothesis), `lesson.promoted` (the PR observation, on the
+  hypothesis, citing the adversarial evaluation it survived), all four
+  from [`curation.md`](curation.md) as additive catalog growth, active
+  from `seed/1`; `lesson.retired` waits on Phase 11 item 4.
 
 ## Data classification (summary)
 

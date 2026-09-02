@@ -81,7 +81,18 @@ it would at render.
   `{"name": "<definition>"}`, or `{"name", "tuple": {…}}` when the
   filing is a spot-check of one configuration. The tuple is advisory:
   it names what the re-test is *for*, and the run declares what
-  actually ran.
+  actually ran. From Phase 11 item 2 the marker may be **bound**:
+  `{"name", "tuple"?, "lesson": "<h-id>@<position>", "carrier":
+  "<path> @ <commit>"}`, both fields or neither, filed with `seed eval
+  file --for-lesson --carrier` ([`curation.md`](curation.md)): the
+  eval is a counter-trajectory constructed against a candidate lesson
+  at an exact revision, and the promotion boundary requires the pass
+  it cites to carry exactly that binding. A bound subject renders only
+  when the carrier commit is an ancestor of the submission head, else
+  `seed verdict render` refuses **`carrier_absent`** (a refinement
+  under `checks_red`, [`envelope.md`](envelope.md)): a
+  counter-trajectory judged without the candidate applied proves
+  nothing about it.
 - `contract.specified` with `{"acceptance": {"ref", "executable":
   true, "gate"}}` at the anchor.
 

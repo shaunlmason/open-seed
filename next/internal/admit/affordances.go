@@ -35,9 +35,9 @@ import (
 // refuse, so illegality is judged by the rule set, never by the
 // synthesizer.
 type probeView struct {
-	// support and hypothesis are the curation probes' citations
-	// (curationProbes).
-	support, hypothesis string
+	// support, hypothesis and contest are the curation probes'
+	// citations (curationProbes).
+	support, hypothesis, contest string
 	// version is the chain's active protocol version: a probe must
 	// synthesize the payload shape THAT version admits, or the
 	// affordance list would say a verb is unavailable because the
@@ -167,7 +167,15 @@ const (
 	probeClaim      = "probe"
 	probeSupport    = `["probe@0", "probe@0"]`
 	probeHypothesis = "h-000000000000@0"
+	probeContest    = `["probe@0"]`
 )
+
+func (v *probeView) contestOr() string {
+	if v.contest == "" {
+		return probeContest
+	}
+	return v.contest
+}
 
 func (v *probeView) supportOr() string {
 	if v.support == "" {
@@ -189,8 +197,8 @@ func (v *probeView) hypothesisOr() string {
 // citation a promotion needs). Where the record holds none the probe
 // cites what the rules refuse, so the affordance is invisible exactly
 // when the act is not yet legal.
-func curationProbes(ctx *Context) (support, hypothesis string) {
-	support, hypothesis = probeSupport, probeHypothesis
+func curationProbes(ctx *Context) (support, hypothesis, contest string) {
+	support, hypothesis, contest = probeSupport, probeHypothesis, probeContest
 	if ctx == nil || ctx.Table == nil || ctx.Lifecycle == nil {
 		return
 	}
@@ -216,6 +224,11 @@ func curationProbes(ctx *Context) (support, hypothesis string) {
 		h, _ := fold.Hypothesis(id)
 		if _, ok := curation.HypothesisValid(ctx.Records, ctx.Table, curation.Citation{Contract: id, Position: h.Pos}); ok {
 			hypothesis = fmt.Sprintf("%s@%d", id, h.Pos)
+			// The contest probe cites one held-out observation on a
+			// selected contract, where the record holds one.
+			if held := curation.HeldOut(ctx.Records, ctx.Table, ctx.Lifecycle, h); len(held) > 0 {
+				contest = fmt.Sprintf(`["%s@%d"]`, held[0].Contract, held[0].Position)
+			}
 		}
 	}
 	return
@@ -248,7 +261,11 @@ const probeTuple = `{"principal": "probe", "harness": "probe/0", "model": "probe
 // curation facts (a hypothesis on the id its claim derives, a
 // promotion on the hypothesis it cites) are legal on no contract.
 var probeSubjects = map[string]func(v *probeView) string{
-	"curation.hypothesis.proposed": func(v *probeView) string { return curation.HypothesisID(probeClaim) },
+	"curation.hypothesis.proposed": func(v *probeView) string { return curation.HypothesisID(probeClaim, nil) },
+	"curation.hypothesis.contested": func(v *probeView) string {
+		h, _ := curation.ParseCitation(v.hypothesisOr())
+		return h.Contract
+	},
 	"curation.lesson.promoted": func(v *probeView) string {
 		h, _ := curation.ParseCitation(v.hypothesisOr())
 		return h.Contract
@@ -338,10 +355,13 @@ var affordanceCatalog = []struct {
 		return `{"fence": "` + v.fence + `", "tried": "probe", "outcome": "probe", "condition": "probe", "environment": "probe"}`
 	}},
 	{"curation.hypothesis.proposed", func(v *probeView) string {
-		return `{"claim": "` + probeClaim + `", "applies_when": "probe", "support": ` + v.supportOr() + `, "exceptions": [], "provenance": []}`
+		return `{"claim": "` + probeClaim + `", "applies_when": {"routing": "probe"}, "support": ` + v.supportOr() + `, "exceptions": [], "provenance": []}`
+	}},
+	{"curation.hypothesis.contested", func(v *probeView) string {
+		return `{"hypothesis": "` + v.hypothesisOr() + `", "evidence": ` + v.contestOr() + `, "reason": "probe"}`
 	}},
 	{"curation.lesson.promoted", func(v *probeView) string {
-		return `{"lesson": "` + curation.LessonsDir + `/probe.md @ 0000000000000000000000000000000000000000", "hypothesis": "` + v.hypothesisOr() + `", "pr": "pr/0 @ 0000000000000000000000000000000000000000"}`
+		return `{"lesson": "` + curation.LessonsDir + `/probe.md @ 0000000000000000000000000000000000000000", "hypothesis": "` + v.hypothesisOr() + `", "pr": "pr/0 @ 0000000000000000000000000000000000000000", "carrier": "knowledge", "adversarial": {"eval": "probe", "verdict": "0"}, "last_validated": "2026-01-01T00:00:00Z", "expires": "2026-02-01T00:00:00Z", "digest": "` + strings.Repeat("0", 64) + `"}`
 	}},
 	{"plan.proposed", func(v *probeView) string {
 		return `{` + v.fenceKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000"}`
@@ -431,7 +451,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 	}
 	v.version = ctx.Active
 	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
-	v.support, v.hypothesis = curationProbes(ctx)
+	v.support, v.hypothesis, v.contest = curationProbes(ctx)
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			if s.Claim != nil {

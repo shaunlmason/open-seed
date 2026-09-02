@@ -20,6 +20,7 @@ import (
 	"os/exec"
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -143,6 +144,21 @@ func gitResolves(repo, rev string) bool {
 
 func gitAncestor(repo, ancestor, descendant string) bool {
 	return exec.Command("git", "-C", repo, "merge-base", "--is-ancestor", ancestor, descendant).Run() == nil
+}
+
+// Lessons is the evidence-grade check over the curation stores
+// (plans/os-96850e5a.md D6): every promoted, uncontested lesson whose
+// fact does not resolve in the repository is lesson_unverified, on the
+// hypothesis subject, with the reason.
+func Lessons(records []*event.Record, fold *transition.Fold, repo string) []Finding {
+	var out []Finding
+	_, unresolved := curation.Surfacing(records, fold, repo, "")
+	for _, u := range unresolved {
+		c, _ := curation.ParseCitation(u.Hypothesis)
+		out = append(out, Finding{Subject: c.Contract, Class: ClassLessonUnverified,
+			Detail: fmt.Sprintf("the promotion of %s does not resolve in the repository: %s — a fact a worker would be handed must verify before it surfaces", u.Lesson, u.Reason)})
+	}
+	return out
 }
 
 // reproduce recomputes the receipt for the subject's bound submission

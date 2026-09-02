@@ -2387,3 +2387,87 @@ here. Newest last.
   contract and asserts parity with the dispatcher on the held and the
   blocked one.
 
+## Phase 11 item 2 — the promotion gate, the contested state, delivery (os-96850e5a, plan #228)
+
+- **The projection's `surfaces` is the record half only** (os-96850e5a,
+  D7 refined). The plan asked the `knowledge` projection to carry per
+  lesson `surfaces: true|false` with the reason. A projection build is
+  input-free and holds no repository, so the repository half of
+  surfacing (the anchor's ancestry and the file's digest) cannot be
+  computed there; the projection renders the record half (promoted and
+  not contested, the reason `contested` when false) and the readers
+  that hold a repository (`claim take --repo`, `seed situation --repo`,
+  `Provision`, `seed reconcile`) apply the rest. The spec says which
+  half is whose.
+
+- **A lint refusal is `lint_refused` under `checks_red`**
+  (os-96850e5a, D4 refined). The file half's refusal is a gate gone
+  red on content rather than on a command, and the plan allocates no
+  exit; `checks_red`'s family ("the verdict derives from what was
+  checked, and a red check forbids pass") is the one it belongs to, so
+  the refinement rides exit 20 with the gate in its message, beside
+  `carrier_absent` for the render's bound-eval refusal.
+
+- **The lint reads the fact for the file's repository-relative path**
+  (os-96850e5a, D4 refined). `seed knowledge lint <file>` must know
+  which promotion the file is, and a file names nothing but its
+  frontmatter's hypothesis; the verb resolves the file's path relative
+  to `--repo` and picks the admitted promotion on that hypothesis whose
+  anchor path equals it, refusing `not_found` for a file outside the
+  store or one no promotion cites. The frontmatter is judged against
+  THAT fact, so a lesson file cannot vouch for itself.
+
+- **The eval id keeps its derivation for unbound filings**
+  (os-96850e5a, D5 refined). The bound marker joins the subject hash
+  only when present, so every existing eval subject, fixture and
+  drill is unchanged, and an eval filed for one candidate and one for
+  another are two contracts.
+
+- **`seed reconcile --subject <h-id>` walks the promotions.** A
+  hypothesis subject is not a contract, so the fold-state lookup that
+  refuses an unknown contract would have refused it; the verb treats a
+  hypothesis-shaped subject as a request for its lesson findings alone.
+
+**Review fixes from item 1, carried into item 2.** The item 1 PR's
+review found four places where a curation check read a folded fact as
+an admitted one; the fixes (`WindowAdmitted`, `FailedAt`, the
+admitted-only fold with `AdmittedProposalBefore`, `UnderLessonsDir`)
+are in item 1's branch and ported here unchanged, with the same drills
+against the item 2 fixture (a grantless stranger key raw-pushing a
+claim, a dead end, a proposal and a pass). The contest and the
+promotion gates read the admitted fold, so an unadmitted proposal can
+be neither contested nor promoted.
+
+**Review fixes on the task PR: the fold re-judges contests and
+promotions, the lint judges the anchored bytes, the claim derives its
+lessons at the landing tip.** Four findings, one root: a fact the fold
+read as admitted because it was well-shaped. (1) A raw-pushed contest
+moved the stage to contested and disabled a legitimate lesson on every
+delivery surface; the fold now binds a contest only when
+`curation.ContestValid` passes at its position (the signer held
+`curate`, the citations pass `CheckContest`). (2) A raw-pushed
+promotion bound in the fold and surfaced once its file resolved; the
+fold now binds a promotion only when `curation.PromotionValid` passes
+at its position, and `CheckPromotion` is the ONE implementation the
+boundary and the fold share, which moved the adversarial arm and the
+L1 pass authentication (`curation.AuthenticPass`, the same rule
+`FailedAt` replays) out of `admit` into `curation`, so the two cannot
+disagree by construction. Phase 10 item 3's levels landed on main
+while this was in review, and the promotion's pass authentication
+gained the level rule with them: `admit` installs its `levelBoundary`
+into `curation.PassLevelCheck` at init, so the fold's promotion replay
+applies the same level rule the verdict rule and the merge chain
+apply, from seed/4, with no second copy of `LevelAchieved`; a pass
+pushed past the verdict boundary at a level the record does not
+support is not survival, and the drill pins both the installation and
+the refusal. (3) `LintFile` validated the caller's
+working-tree body and hashed the anchored bytes separately, so a valid
+frontmatter in a later edit could stand in for the invalid promoted
+one; the lint now reads the bytes at the anchor first, refuses at
+`lint.digest` when the working file differs from them, and judges
+those bytes alone. (4) `claim take --remote` derived the surfacing set
+at the session's opening view and reported it after a retry against a
+moved tip; the act now carries a derivation that recomputes the set
+against every refreshed view (the payload holds nothing derived, so
+the re-derivation cannot diverge and only refreshes the result), and
+the response reports the set at the tip the claim landed on.

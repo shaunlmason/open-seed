@@ -67,7 +67,12 @@ it does.
 
 Provision creates a **detached git worktree** of the contract
 repository at the packet's base revision, writes the handoff packet
-to `.seed-run/packet.json` inside the workspace, and ensures the
+to `.seed-run/packet.json` inside the workspace, writes the surfacing
+lessons the caller derived at claim time to `.seed-run/lessons.json`
+beside it (an empty list when nothing matches; a sibling file rather
+than a fifth packet key, because the ledger packet's four-part shape
+refuses unknown keys and the provisioned directory is the handoff, not
+the fact — [`curation.md`](curation.md)), and ensures the
 per-run observation directory. Git runs with fixed argument vectors;
 nothing is interpolated into a shell. Wake is the documented no-op
 returning nil: the wakeless poll-only drill proved polling loses
