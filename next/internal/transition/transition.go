@@ -884,11 +884,26 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 					Expires string `json:"expires"`
 				}
 				if json.Unmarshal(e.Payload, &o) == nil && o.Eligibility != nil && strings.TrimSpace(o.Expires) != "" {
+					// A malformed member makes the whole offer fold to
+					// nothing, counted as an anomaly (review finding on
+					// the task PR): dropping the member alone would
+					// turn a raw-pushed unparseable scope into an
+					// UNSCOPED offer every eligible worker sees, and a
+					// malformed policy must never widen into a broader
+					// one.
 					var tuples []tuple.Tuple
+					malformed := false
 					for _, raw := range o.Eligibility.Tuples {
-						if t, err := tuple.Parse(raw); err == nil {
-							tuples = append(tuples, t)
+						t, err := tuple.Parse(raw)
+						if err != nil {
+							malformed = true
+							break
 						}
+						tuples = append(tuples, t)
+					}
+					if malformed {
+						s.Anomalies++
+						continue
 					}
 					s.Offers = append(s.Offers, OfferFact{
 						Pos:          pos,
@@ -1010,11 +1025,17 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 							break
 						}
 					}
+					// A malformed declaration is a malformed payload: no
+					// fact, an anomaly (the run.settled posture), never a
+					// start that merely lost its tuple.
 					var declared *tuple.Tuple
 					if len(p.Tuple) > 0 {
-						if t, err := tuple.Parse(p.Tuple); err == nil {
-							declared = &t
+						t, err := tuple.Parse(p.Tuple)
+						if err != nil {
+							s.Anomalies++
+							continue
 						}
+						declared = &t
 					}
 					s.RunStarts = append(s.RunStarts, RunStartFact{Pos: pos, Signer: e.Actor, Fence: fence, Reservation: res, Tuple: declared})
 				} else {

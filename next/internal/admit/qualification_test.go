@@ -17,6 +17,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -222,5 +223,78 @@ func TestDriftReadsTheHolderNotTheSigner(t *testing.T) {
 		if !errors.As(err, &oog) || oog.Drift == nil || oog.Drift.Holder != holder || oog.Drift.Field != "principal" || oog.Drift.Have != "acme" {
 			t.Fatalf("%s signing: the check reads the holder's set, so a holder mismatch refuses whatever the signer holds: %v", name, err)
 		}
+	}
+}
+
+// conformance: review finding on the task PR — fold presence is never
+// proof of admission, and that includes the declaration. RunStartValid
+// re-judges a raw-pushed seed/2 start's tuple under the record's own
+// version and against the holder's cited set at its prefix, so a start
+// with no tuple, a malformed one, or a drifting one provisions nothing
+// (Provision reads this same derivation), launders no settle, and
+// blocks no legitimate start; the matching one is valid.
+func TestRunStartValidReappliesTupleAdmission(t *testing.T) {
+	ctx, k, step, fence, res := qualifiedFixture(t)
+	holder := fpOf(t, k.holder)
+	ctx = step(k.signer, version.Seed2, keyring.VerbGranted, holder, grantBody(tupleJSON(t, nil)))
+	legit := draftV(t, k.supervisor, version.Seed2, "run.started", "c-1", startBodyAt(fence, res, tupleJSON(t, nil)), ctx.Tip)
+	if err := Check(ctx, legit); err != nil {
+		t.Fatalf("the matching start admits before any raw push: %v", err)
+	}
+	lastStart := func(ctx *Context) (transition.RunStartFact, int) {
+		s, _ := ctx.Lifecycle.State("c-1")
+		if len(s.RunStarts) == 0 {
+			return transition.RunStartFact{}, 0
+		}
+		return s.RunStarts[len(s.RunStarts)-1], len(s.RunStarts)
+	}
+	for name, body := range map[string]string{
+		"no tuple": startBodyAt(fence, res, ""),
+		"drifting": startBodyAt(fence, res, tupleJSON(t, map[string]string{"model": "other/9"})),
+	} {
+		// The raw seam: signed by the supervisor, judged by nothing.
+		ctx = step(k.supervisor, version.Seed2, "run.started", "c-1", body)
+		st, n := lastStart(ctx)
+		if n == 0 || st.Pos != ctx.Count-1 {
+			t.Fatalf("%s: the raw start folds as a fact: %+v", name, st)
+		}
+		if RunStartValid(ctx.Records, ctx.Table, "c-1", st) {
+			t.Fatalf("%s: a raw start whose declaration the boundary would refuse is not a valid start", name)
+		}
+		legit = draftV(t, k.supervisor, version.Seed2, "run.started", "c-1", startBodyAt(fence, res, tupleJSON(t, nil)), ctx.Tip)
+		if err := Check(ctx, legit); err != nil {
+			t.Fatalf("%s: the raw start blocks no legitimate start: %v", name, err)
+		}
+	}
+	// A malformed declaration is no fact at all, and an anomaly.
+	before, nBefore := lastStart(ctx)
+	ctx = step(k.supervisor, version.Seed2, "run.started", "c-1", startBodyAt(fence, res, `{"principal": "x"}`))
+	if after, n := lastStart(ctx); n != nBefore || after.Pos != before.Pos {
+		t.Fatalf("a malformed declaration folds to nothing: %+v", after)
+	}
+	if s, _ := ctx.Lifecycle.State("c-1"); s.Anomalies == 0 {
+		t.Fatal("a malformed declaration counts an anomaly")
+	}
+	// The matching start, raw-pushed, is exactly as valid as an admitted
+	// one: the derivation reads the record, not the path it took.
+	ctx = step(k.supervisor, version.Seed2, "run.started", "c-1", startBodyAt(fence, res, tupleJSON(t, nil)))
+	st, _ := lastStart(ctx)
+	if !RunStartValid(ctx.Records, ctx.Table, "c-1", st) || st.Tuple == nil {
+		t.Fatalf("the matching start is valid and carries its declaration: %+v", st)
+	}
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed2, "run.started", "c-1", startBodyAt(fence, res, tupleJSON(t, nil)), ctx.Tip)); err == nil || !strings.Contains(err.Error(), "one run per claim window") {
+		t.Fatalf("and it is the one run the window carries: %v", err)
+	}
+
+	// A seed/1 chain: a raw start carrying a tuple is judged under the
+	// record's own version, and is not a valid start there either.
+	ctx1, k1, step1 := runFixture(t)
+	fence1 := fenceOf(t, ctx1, "c-1")
+	ctx1 = step1(k1.holder, version.Seed1, "budget.reserve", "c-1", reserveBody("10", fence1))
+	res1 := fmt.Sprintf("%d", ctx1.Count-1)
+	ctx1 = step1(k1.supervisor, version.Seed1, "run.started", "c-1", startBodyAt(fence1, res1, tupleJSON(t, nil)))
+	s1, _ := ctx1.Lifecycle.State("c-1")
+	if len(s1.RunStarts) != 1 || RunStartValid(ctx1.Records, ctx1.Table, "c-1", s1.RunStarts[0]) {
+		t.Fatalf("a seed/1 start carrying a tuple is not a valid start: %+v", s1.RunStarts)
 	}
 }

@@ -2007,3 +2007,33 @@ here. Newest last.
   session and derivations (`activeFence`, `soleOpenReservation`, which
   now names the citing act in its refusal) and refuses an unknown
   subverb the way `maintain` and `merge` do.
+
+- **A raw-pushed start's declaration is re-judged where its fence and
+  reservation are** (review finding on #216). `RunStartValid` decoded
+  the tuple as optional and checked only signer, fence and reservation,
+  so a raw `seed/2` start with no tuple, a malformed one, or a drifting
+  one counted as admitted: `Provision` would have skipped the
+  resolved-tuple comparison on a nil declaration, and the
+  one-run-per-window check would have let it block the legitimate
+  start. The decode (`declaredTuple`) and the set rule (`tupleDrift`)
+  are now one function each, called by the run rule at the tip and by
+  `RunStartValid` at the record's own prefix under the record's own
+  version. Same shape as the earlier "fold presence is never proof of
+  admission" finding, one field later.
+
+- **A version gate on a field reads presence, not value** (review
+  finding on #216). The offer rule refused `tuples` before `seed/2` only
+  when the decoded slice was non-empty, so `"tuples": []` passed on a
+  `seed/1` chain while a `seed/1` validator, which strictly decodes
+  eligibility as `{capabilities, tiers}`, refuses it: two admission
+  points disagreeing on a record still labeled `seed/1`, which is
+  exactly what the bump exists to prevent. The field is decoded raw and
+  its presence is the gate; its value is parsed after.
+
+- **A malformed scope folds to nothing, never to a wider one** (review
+  finding on #216). The offer fold dropped unparseable tuple members
+  and kept the offer, so an all-malformed scope became an UNSCOPED
+  offer every eligible worker saw. Both the offer fold and the
+  run-start fold now treat a malformed tuple as a malformed payload:
+  no fact, one anomaly, the `run.settled` posture the tree already
+  had.

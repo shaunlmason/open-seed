@@ -49,7 +49,14 @@ contention refusal), not at offer time.
   standing satisfies this scope as it satisfies the rest. This is
   III.J row 3's "strongest tuples by policy" as a scheduling INPUT
   the supervisor writes, not a scheduler: ranking configurations is
-  Phase 10 item 2's eval results turned into offers.
+  Phase 10 item 2's eval results turned into offers. The field's
+  PRESENCE is what the version gate reads: an explicit `"tuples": []`
+  or `null` before `seed/2` refuses exactly as a populated list does,
+  because a `seed/1` validator strictly decodes eligibility as
+  `{capabilities, tiers}` and the two must agree on every `seed/1`
+  record. A raw-pushed offer with a malformed member folds to
+  **nothing** (an anomaly), never to an unscoped offer: a malformed
+  policy must not widen into a broader one.
 - `expires` is required RFC3339 and must lie **strictly after the
   event's own `ts`**: admission never reads a wall clock, so a
   born-dead offer refuses deterministically.

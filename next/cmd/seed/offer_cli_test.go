@@ -419,6 +419,16 @@ func TestOfferTuplesScopeQualifiedWorkers(t *testing.T) {
 		t.Fatalf("the poll and the listing disagree: polled %v, listed %v", polled, listed)
 	}
 
+	// A raw-pushed offer whose every tuple member is malformed is
+	// listed to NOBODY (review finding on the task PR): a malformed
+	// scope folds to nothing, never to an unscoped offer.
+	beforeA, beforeB := count(fps["workerA"]), count(fps["workerB"])
+	rawAppendAt(t, ld, workerRawKey(21), version.Seed2, "offer.published", "c-2",
+		`{"eligibility": {"tuples": [{"principal": "x"}]}, "expires": "2027-01-01T00:00:00Z"}`)
+	if count(fps["workerA"]) != beforeA || count(fps["workerB"]) != beforeB || count(fps["verifier"]) != 1 {
+		t.Fatalf("a malformed tuple scope widens nothing: A %d B %d verifier %d", count(fps["workerA"]), count(fps["workerB"]), count(fps["verifier"]))
+	}
+
 	// A malformed --tuple refuses as usage at the door, before anything
 	// is signed.
 	if e, code := publish("c-2", `{"principal": "x"}`); code != 64 || e.Error == nil || !strings.Contains(e.Error.Message, "tuple") {

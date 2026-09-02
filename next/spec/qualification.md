@@ -138,6 +138,16 @@ did not admit. The check is the adapter's, inside `Provision`, because
 that is the one place the resolved value exists and execution has not
 yet started.
 
+Fold presence is never proof of admission, and that includes the
+declaration: `RunStartValid`, the derivation `Provision`, the
+one-run-per-window check and settlement all read, re-judges a start's
+tuple under the record's own version and against the holder's cited set
+at the record's prefix. A raw-pushed `seed/2` start with no tuple, a
+malformed one, or one the holder's grants do not cite is not an admitted
+start: it provisions nothing, launders no settle, and blocks no
+legitimate start. A malformed declaration folds to no fact at all, as an
+anomaly.
+
 The v0 local adapter is honest about its limit: it provisions a
 worktree, and a worktree cannot see which model a lane process will
 call. It resolves `harness` (`local-worktree/v0`) and `environment`

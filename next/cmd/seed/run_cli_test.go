@@ -577,11 +577,24 @@ func TestRunStartDeclaresTheTupleAndDriftIsOutOfGrant(t *testing.T) {
 	}
 
 	// AC2, the bridge: workerB's only claim grant cites no tuple, so the
-	// set is empty and any declaration admits.
+	// set is empty and any declaration admits. Before it lands, a raw
+	// seed/2 start with no declaration is pushed past the boundary
+	// (review finding on the task PR): it is no admitted start, so it
+	// provisions nothing and blocks nothing.
 	offerFile(t, ld, priv, specCommit, "c-4")
-	openWindow(t, ld, 23, keys["workerB"], "c-4")
+	fence4, reservation4 := openWindow(t, ld, 23, keys["workerB"], "c-4")
+	rawPos := rawAppendAt(t, ld, workerRawKey(21), version.Seed2, "run.started", "c-4",
+		`{"fence": "`+fence4+`", "reservation": "`+reservation4+`"}`)
+	fence4Pos, _ := strconv.Atoi(fence4)
+	rawSpec := executor.ProvisionSpec{
+		Ledger: ld, Repo: src, Base: base, Subject: "c-4", Actor: fps["workerB"],
+		Fence: fence4Pos, Started: rawPos, Packet: []byte(`{}`), ObsDir: filepath.Join(t.TempDir(), "obs"),
+	}
+	if _, err := (executor.LocalWorktree{}).Provision(rawSpec); !errors.Is(err, executor.ErrNoAdmittedStart) {
+		t.Fatalf("a raw seed/2 start with no declaration provisions nothing: %v", err)
+	}
 	if e, code := start("c-4", declare(map[string]string{"model": "anything/0", "principal": "anyone"})...); code != 0 {
-		t.Fatalf("an unqualified holder admits any declared configuration: %d %+v", code, e.Error)
+		t.Fatalf("an unqualified holder admits any declared configuration, the raw start notwithstanding: %d %+v", code, e.Error)
 	}
 }
 
