@@ -47,11 +47,17 @@ with its fact:
 | `submission.pending` | `verdict.rendered` | [`verdicts.md`](verdicts.md) |
 | `verdict.unmerged` (unrequested) | `merge.requested` | [`reconciliation.md`](reconciliation.md) |
 | `escalation.pending` | `decision.recorded`, `contract.cancelled` | [`escalation.md`](escalation.md) |
+| `verdict.human` | `verdict.rendered` | [`verdicts.md`](verdicts.md) |
 
 ## The kinds
 
 - **`claim.held`** — an active claim window; owed by its holder;
   discharged by the verbs leaving `in_progress`.
+- **`verdict.human`** — a `verdict.deferred` on the current
+  submission window with no render after it; owed by the operator
+  lane, since a human is a key with operator standing, and discharged
+  by the `verdict.rendered` such a key makes on the same submission
+  ([`verdicts.md`](verdicts.md), "The rubric and the scorecard").
 - **`submission.pending`** — a submission no verdict cites; owed by
   the verifier lane.
 - **`verdict.unmerged`** — a pass verdict with no observed merge. The

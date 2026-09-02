@@ -214,3 +214,53 @@ func itoa(n int) string {
 	}
 	return string(b)
 }
+
+// conformance: review finding on plans/os-2e34f66a.md's task PR — a
+// verifier holding verdict by a bare grant renders under the bridge,
+// and its first failed calibration closes it: disqualifying a tuple
+// nothing had cited admits for verdict alone, marks the capability
+// cited with an empty admissible set, and a second disqualification
+// then finds nothing to remove. For claim the refusal stands as
+// before: an eval's fail disqualifies a configuration a qualification
+// cited.
+func TestFirstFailedCalibrationClosesTheBareGrantsBridge(t *testing.T) {
+	root, _, _, base := seed3Chain(t)
+	verifier := key(t, 4)
+	vfp := fp(t, verifier)
+	at := func(verb, subject, payload string) *event.Record {
+		return recAt(t, root, version.Seed4, verb, subject, payload)
+	}
+	base = append(base,
+		recAt(t, root, version.Seed3, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed4+`"}`),
+		at(keyring.VerbEnrolled, vfp, enrollPayload(t, verifier, "agent", "verifier")),
+		at(keyring.VerbGranted, vfp, `{"capability": "verdict"}`),
+	)
+	drop := `{"capability": "verdict", "tuple": ` + qualifiedTuple + `, "contract": "eval-1", "verdict": "9", "reason": "drift"}`
+	s, _, err := keyring.StateAt(append(append([]*event.Record{}, base...), at(keyring.VerbDisqualified, vfp, drop)))
+	if err != nil {
+		t.Fatalf("the first failed calibration's disqualification admits for a bare verdict grant: %v", err)
+	}
+	if !s.EverCited(vfp, keyring.CapVerdict) || len(s.GrantTuples(vfp, keyring.CapVerdict)) != 0 || !s.HasAnyCapability(vfp, []string{keyring.CapVerdict}) {
+		t.Fatal("the bridge closes: cited, with an empty admissible set, the grant's string view kept")
+	}
+	if qs := s.Qualifications(vfp); len(qs) != 1 || !qs[0].Disqualified {
+		t.Fatalf("the disqualification is recorded: %+v", qs)
+	}
+	second := strings.Replace(drop, `"verdict": "9"`, `"verdict": "12"`, 1)
+	if _, _, err := keyring.StateAt(append(append([]*event.Record{}, base...), at(keyring.VerbDisqualified, vfp, drop), at(keyring.VerbDisqualified, vfp, second))); err == nil || !strings.Contains(err.Error(), "nothing to disqualify") {
+		t.Fatalf("once cited, the bridge is closed and a second disqualification finds nothing: %v", err)
+	}
+	// Claim keeps the refusal: the bridge closes on calibration alone.
+	claimDrop := strings.Replace(drop, `"capability": "verdict"`, `"capability": "claim"`, 1)
+	withClaim := append(append([]*event.Record{}, base...), at(keyring.VerbGranted, vfp, `{"capability": "claim"}`))
+	if _, _, err := keyring.StateAt(append(withClaim, at(keyring.VerbDisqualified, vfp, claimDrop))); err == nil || !strings.Contains(err.Error(), "nothing to disqualify") {
+		t.Fatalf("a bare claim grant is not closed by a disqualification: %v", err)
+	}
+	// A key without the capability at all has nothing to close.
+	other := key(t, 5)
+	ofp := fp(t, other)
+	withOther := append(append([]*event.Record{}, base...), at(keyring.VerbEnrolled, ofp, enrollPayload(t, other, "agent", "other")))
+	if _, _, err := keyring.StateAt(append(withOther, at(keyring.VerbDisqualified, ofp, drop))); err == nil || !strings.Contains(err.Error(), "nothing to disqualify") {
+		t.Fatalf("no grant, no bridge, nothing to disqualify: %v", err)
+	}
+}

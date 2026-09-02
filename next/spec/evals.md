@@ -141,9 +141,13 @@ and the runtime tuple") and its inverse, both defined at `seed/3`
 | `actor.qualified` | an enrolled fingerprint | `{"capability", "tuple", "contract", "verdict"}` |
 | `actor.disqualified` | an enrolled fingerprint | `{"capability", "tuple", "contract", "verdict", "reason"}` |
 
-`capability` is **`claim` and nothing else**: an eval proves a
-configuration for work, never another authority, so a supervise key
-cannot mint operator or verdict standing through a green eval. `tuple`
+`capability` is **`claim`**, or from `seed/4` **`verdict`** for a
+calibration ("Calibration" below), and nothing else: an eval proves a
+configuration for work or for judgment, never another authority, so a
+supervise key cannot mint operator standing through a green eval. A
+`verdict` qualification cites the calibration's verdict, names the
+verifier that rendered it and the tuple the render declared, never a
+window's holder or a window's declaration. `tuple`
 is the strict five-field runtime tuple; `contract` is the eval subject;
 `verdict` is the cited verdict's chain position as a string; `reason`
 is required on a disqualification and refused on a qualification (the
@@ -215,6 +219,88 @@ set rule reads an empty set as the bridge. Refined here: an empty set
 that was **ever cited** admits nothing, and the refusal says every cited
 configuration is disqualified. An actor whose only cited configuration
 failed must pass an eval again, which the exemption above lets it do.
+
+## Calibration
+
+A **calibration** is an eval for verifier keys (plans/os-2e34f66a.md
+D5; the charter's "rubric calibration runs against a human-scored gold
+set with automatic authority suspension on drift"). Its `eval.json`
+carries `"kind": "calibration"` and `"calibration": {"gold":
+"sha256:<digest>", "floor"?}`: the digest of the human-scored gold
+scorecard (`{"items": [{"id", "score"}]}`, JCS-canonical), its
+`fixture/` a rubric spec ([`acceptance.md`](acceptance.md), "The
+rubric"), its `solution/` as any eval's; `seed eval check` proves the
+fixture red and the solution green as for any definition. **The gold
+is never in the repository**: the verifier under calibration works in
+a clone of the whole tree, so a checked-in gold would be readable from
+its workspace, and a drifting verifier could copy it and always meet
+the floor. The operator lane holds the gold outside the tree and
+supplies it to the derivation (`seed eval status|act --gold <dir>`,
+one `<name>.json` per calibration definition). With none supplied the
+contract owes nothing and the derivation notes `gold_missing`; a gold
+whose canonical digest is not the definition's commitment refuses to
+score, `gold_mismatch`, and performs nothing. Neither offers the
+calibration either (review finding on the task PR): a ready
+calibration whose gold the derivation cannot see is not offered, so
+`seed eval act` never dispatches work whose verdict nothing could
+compare, and the note is what is owed.
+
+A calibration's filing marks itself: `seed eval file` writes `"kind":
+"calibration"` into the eval marker (`{name, tuple?, lesson?,
+carrier?, kind?}`, the kind a `seed/4` field, neither absent nor
+`calibration` refusing), the fold carries it, and the boundary holds a
+`verdict` qualification to it: a qualification citing an ordinary
+eval's verdict refuses, because an ordinary eval proves a
+configuration for work and says nothing about the verifier's judgment,
+so citing one would mint verdict authority past the calibration gate
+(review finding on the task PR). A calibration filed without the mark
+owes nothing and the derivation notes `kind_unmarked`.
+
+Filed with `seed eval file` and worked like any eval (the solution
+applied, the submission made), a calibration is judged by the verifier
+under calibration, rendering with its scorecard
+([`verdicts.md`](verdicts.md), "The rubric and the scorecard"), and
+`eval.Due` compares the payload's items to the gold item by item,
+whichever way the verdict went. **Agreement** is the fraction of gold
+items the verifier scored the same at `low` uncertainty; `high` is not
+agreement, since the verifier declined to decide. **The floor is
+policy on this spec surface, never a runtime argument**: the floor is
+`0.8`; `eval.CalibrationFloor` mirrors it and a drill pins the two as
+the tier table is pinned to [`tiers.md`](tiers.md); a definition may
+raise it (`"floor"`) and never lower it (a definition below the
+spec's floor refuses at `Load`); nothing an invoker of `seed eval
+act` passes can move it. At or above the floor `Due` owes
+`actor.qualified` for capability **`verdict`** on the verifier's
+declared tuple; below it, **drift**: `actor.disqualified` for
+`verdict` on that tuple, tuple-wide (every verifier holding it) and
+always the verifier that rendered, even on its first calibration when
+nothing cites its tuple yet: a verifier holding `verdict` by a bare
+grant renders under the bridge, the keyring admits that one
+disqualification as the act that closes it (`EverCited`, an empty
+admissible set), and the verifier renders nothing declared until a
+calibration passes again (review finding on the task PR), and
+a defect contract filed by the dispatcher naming the contract and the
+disagreeing items, `intent.filed` under the stable id
+`d-<sha256(calibration_drift, contract)[:16]>` (the maintenance loop's
+idempotent shape: filed once per contract, and the boundary refuses
+the duplicate). That is **automatic authority suspension on drift**:
+the set rule applies to `verdict.rendered`'s declared tuple exactly as
+to `run.started`'s ([`qualification.md`](qualification.md), "The set
+rule at render"), so the verifier's renders under the drifted
+configuration refuse `out_of_grant` until a calibration passes again,
+while a calibration eval itself still admits any declared tuple, being
+where a configuration proves itself. Spot-checks age `verdict`
+qualifications exactly as `claim` ones, re-filing the calibration at
+the interval.
+
+Refused: `actor.suspended` from a machine lane. Suspension ends a key's
+standing across every contract and is operator-only; withdrawing the
+`verdict` set for one configuration is the shape item 2 built, and it
+re-qualifies by the same road. **No calibration definition is
+shipped**: one whose gold the tree carries is the leak above, one
+whose gold the implementer discards is unusable; a deployment commits
+the definition with the digest and holds the gold, and the drills
+build theirs in temporary repositories with the gold outside them.
 
 ## What the chain owes: `seed eval status` and `seed eval act`
 

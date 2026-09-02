@@ -2563,3 +2563,92 @@ an input, and a build at another instant is another build; the stale
 flags ride the declared observation inputs' `as_of`, the one family
 that carries one, so a bare `AsOf` with no declared family declares
 nothing and the build id never collides across instants.
+
+## Phase 10 item 4 — rubric verdicts, the human verdict, calibration (os-2e34f66a)
+
+**With a rubric, the verdict is the derivation's, both ways.** D3
+names the pass rule (every item pass at low), the fail item forbidding
+pass, and the high item forbidding both. The implementation adds the
+symmetric half: `fail` over a scorecard whose every item passes at low
+refuses too. Without it a raw fail with an all-pass scorecard would be
+authentic, and AC5's "the lockout ignores a raw fail whose items are
+all pass" could not hold; with it every boundary asks one question of
+a scored verdict, whether it equals what its own items derive.
+
+**The human renders over the deferral's receipt.** D4 makes a human a
+key with operator standing. Sealed checks encrypt to verdict keys
+disjoint from claim and operator (`sealed-checks.md`), so such a key
+is never a recipient and can compute no receipt on any sealed
+subject, which is every tier above trivial. Rather than loosen the
+recipient rule (authoring isolation is its whole point), the deferral
+carries the receipt the machine verifier computed (`{"receipt",
+"submission", "scorecard"?, "items"?}`), and `seed verdict render`
+from a key with operator standing over a standing deferral retrieves
+that receipt intact from the store instead of recomputing; it
+validates its own scorecard against it and cites the same digest, so
+`verdict check` and reconcile recompute it under a capable key as for
+any verdict. On a human-review tier the whole verdict therefore
+defers (no rubric, no items) and the deferral is the machine's one
+act, which D4 already said in words.
+
+**A calibration cites its verdict whichever way it went.** The gold
+may score an item `fail`, so an agreeing verifier renders `fail`; the
+verdict qualification cites the calibration's authenticated verdict,
+pass or fail, where a claim qualification cites the pass that proved
+the configuration. The drill's first cut asked for a pass and refused
+its own mint.
+
+**Drift disqualifies tuple-wide under `verdict`, and files once.** The
+defect's id is the maintenance loop's shape (class and contract
+hashed), derived in the eval package rather than imported from
+`maintain` to keep the dependency one-directional; the derivation
+skips a defect the fold already holds, so a second pass owes nothing
+even before the boundary refuses the duplicate.
+
+**Drift in the modes fixture is drilled at the terminal.** AC7's
+"drifted verifier refused until re-calibrated" runs on a local ledger
+in `calibration_cli_test.go` through the same verbs the modes drive
+(`eval file`, `eval act --gold`, `verdict render`); the small-team
+drill carries the rubric and deferred contracts to done. The modes
+fixture would need a second full eval work cycle per calibration to
+say nothing the terminal drill does not.
+
+### Review findings on the task PR (os-2e34f66a)
+
+**A verdict qualification cites a calibration and nothing else.** The
+boundary held the qualification to a bound eval with an authenticated
+tuple-declaring verdict, and an ordinary eval satisfies both; a
+supervisor could mint verdict authority from a green ordinary eval
+with no gold and no agreement anywhere. `EvalInfo` had no kind, and
+the boundary cannot read the definition. The filing now says: `seed
+eval file` writes `kind: calibration` into the marker (a `seed/4`
+field, neither absent nor `calibration` refusing), the fold carries
+it, and the qualification rule for `verdict` requires it. The
+derivation notes `kind_unmarked` on a calibration filed without it
+rather than owing a mint the boundary refuses.
+
+**The first failed calibration closes the bridge.** Drift was
+tuple-wide over the actors whose `verdict` grants cited the tuple, and
+a verifier holding `verdict` by a bare grant (every shipped verifier
+does) cited none: its first failed calibration disqualified nobody,
+and the empty-set bridge kept admitting the configuration that had
+just drifted. The keyring admits, for `verdict` alone, a
+disqualification of a tuple a bare-grant verifier never had cited, as
+the act that closes the bridge (cited, empty set), and the derivation
+owes it for the verifier that rendered. `claim` keeps the refusal:
+item 2's bridge is the never-qualified worker's, and an eval's fail
+was never meant to close it.
+
+**`verdict check` reads both artifacts.** It retrieved the receipt and
+recomputed it, and never read the scorecard the same verdict cites, so
+a deleted or altered scorecard checked green until someone ran
+reconcile. It now runs the same check reconcile classifies as
+`scorecard_unverified` and refuses `receipt_mismatch` naming the
+scorecard.
+
+**A calibration the derivation cannot score is not offered.** The
+offer act preceded the gold lookup, so `eval act` without `--gold`
+offered a ready calibration whose verdict nothing could compare. The
+gold is looked for first; without it the note is the whole of what is
+owed.
+

@@ -276,6 +276,7 @@ func runEvalDue(args []string, perform bool, stdout, stderr io.Writer) int {
 	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
 	asOf := fs.String("as-of", "", "declared instant (RFC3339; defaults to now)")
 	after := fs.Duration("spot-check-after", 168*time.Hour, "re-test a qualification older than this (0 disables)")
+	goldDir := fs.String("gold", "", "directory of gold scorecards, <name>.json per calibration definition, held outside the tree")
 	timeout := fs.Duration("timeout", 0, "per-command wall-clock bound for receipt recomputation (default 10m)")
 	parseErr := fs.Parse(args)
 	if env := usage(parseErr, fs.NArg()); env != nil || *repo == "" {
@@ -303,13 +304,17 @@ func runEvalDue(args []string, perform bool, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
+	gold, err := eval.LoadGold(*goldDir, defs)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--gold: %v", err)), stdout, stderr)
+	}
 	ls, failEnv := openLoopSession(f)
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
 	rep := eval.Due(eval.Inputs{
 		Ctx: ls.ctx, Ring: ls.ctx.Keyring, Store: artifact.Open(artifactsDir(*artifacts, *repo)), Repo: *repo,
-		Now: now, After: *after, Evals: defs, Timeout: *timeout,
+		Now: now, After: *after, Evals: defs, Timeout: *timeout, Gold: gold,
 	})
 	count := ls.ctx.Count
 	ls.done()
