@@ -150,6 +150,7 @@ func TestPlanProposeAndApproveDeriveTheDigest(t *testing.T) {
 
 	// The report reads the figure: one approval, edited, rate 0.000.
 	out := filepath.Join(t.TempDir(), "views")
+	unlockForCleanup(t, out)
 	if e, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out); code != 0 {
 		t.Fatalf("rebuild: %d %+v", code, e)
 	}
