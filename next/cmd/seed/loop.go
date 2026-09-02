@@ -487,22 +487,36 @@ func runClaimTake(args []string, stdout, stderr io.Writer) int {
 	// the surfacing set for the subject, verified against the
 	// repository before anything surfaces; without one nothing
 	// surfaces and the count is reported unverified.
-	surfaced, unresolved := curation.Surfacing(ls.ctx.Records, ls.ctx.Lifecycle, *repo, subject)
-	lessons := []map[string]any{}
-	for _, l := range surfaced {
-		lessons = append(lessons, map[string]any{"lesson": l.Lesson, "hypothesis": l.Hypothesis, "applies_when": l.AppliesWhen, "carrier": l.Carrier, "digest": l.Digest})
+	// The set is derived from the view the claim is judged against,
+	// and re-derived against every refreshed view the optimistic loop
+	// retries at (review finding on the task PR): a promotion or a
+	// contest landing mid-flight changes what the claim receives, and
+	// the response must report the set at the tip the claim landed on,
+	// never the one the session opened at. The payload holds nothing
+	// derived, so the re-derivation can never diverge; it only refreshes
+	// the result.
+	var lessons, unresolvedRows []map[string]any
+	deriveLessons := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
+		surfaced, unresolved := curation.Surfacing(ctx.Records, ctx.Lifecycle, *repo, subject)
+		lessons = []map[string]any{}
+		for _, l := range surfaced {
+			lessons = append(lessons, map[string]any{"lesson": l.Lesson, "hypothesis": l.Hypothesis, "applies_when": l.AppliesWhen, "carrier": l.Carrier, "digest": l.Digest})
+		}
+		unresolvedRows = []map[string]any{}
+		for _, u := range unresolved {
+			unresolvedRows = append(unresolvedRows, map[string]any{"lesson": u.Lesson, "hypothesis": u.Hypothesis, "reason": u.Reason})
+		}
+		return []byte(`{}`), nil
 	}
-	unresolvedRows := []map[string]any{}
-	for _, u := range unresolved {
-		unresolvedRows = append(unresolvedRows, map[string]any{"lesson": u.Lesson, "hypothesis": u.Hypothesis, "reason": u.Reason})
-	}
+	deriveLessons(ls.ctx)
+	unresolvedCount := func() int { return len(unresolvedRows) }
 	// The fence IS the admitted position, so the response names it:
 	// every holder-signed event that follows cites this number, and
 	// deriving it here is what spares the lane a projection read.
-	return ls.commit(f, loopAct{verb: claimTakenVerb, payload: []byte(`{}`), resultAt: func(pos int) map[string]any {
+	return ls.commit(f, loopAct{verb: claimTakenVerb, payload: []byte(`{}`), derive: deriveLessons, resultAt: func(pos int) map[string]any {
 		out := map[string]any{"subject": subject, "fence": fmt.Sprintf("%d", pos), "lessons": lessons}
 		if *repo == "" {
-			out["lessons_unverified"] = fmt.Sprintf("%d", len(unresolved))
+			out["lessons_unverified"] = fmt.Sprintf("%d", unresolvedCount())
 		} else {
 			out["lessons_unresolved"] = unresolvedRows
 		}

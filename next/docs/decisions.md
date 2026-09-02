@@ -2377,3 +2377,33 @@ against the item 2 fixture (a grantless stranger key raw-pushing a
 claim, a dead end, a proposal and a pass). The contest and the
 promotion gates read the admitted fold, so an unadmitted proposal can
 be neither contested nor promoted.
+
+**Review fixes on the task PR: the fold re-judges contests and
+promotions, the lint judges the anchored bytes, the claim derives its
+lessons at the landing tip.** Four findings, one root: a fact the fold
+read as admitted because it was well-shaped. (1) A raw-pushed contest
+moved the stage to contested and disabled a legitimate lesson on every
+delivery surface; the fold now binds a contest only when
+`curation.ContestValid` passes at its position (the signer held
+`curate`, the citations pass `CheckContest`). (2) A raw-pushed
+promotion bound in the fold and surfaced once its file resolved; the
+fold now binds a promotion only when `curation.PromotionValid` passes
+at its position, and `CheckPromotion` is the ONE implementation the
+boundary and the fold share, which moved the adversarial arm and the
+L1 pass authentication (`curation.AuthenticPass`, the same rule
+`FailedAt` replays) out of `admit` into `curation`, so the two cannot
+disagree by construction. When Phase 10 item 3's levels land, the
+promotion's pass authentication must gain the level rule beside the
+grant and the disjointness, or a raw-pushed level-short pass on a
+high-tier eval would authenticate at promotion; that is the one
+follow-up this refactor leaves. (3) `LintFile` validated the caller's
+working-tree body and hashed the anchored bytes separately, so a valid
+frontmatter in a later edit could stand in for the invalid promoted
+one; the lint now reads the bytes at the anchor first, refuses at
+`lint.digest` when the working file differs from them, and judges
+those bytes alone. (4) `claim take --remote` derived the surfacing set
+at the session's opening view and reported it after a retry against a
+moved tip; the act now carries a derivation that recomputes the set
+against every refreshed view (the payload holds nothing derived, so
+the re-derivation cannot diverge and only refreshes the result), and
+the response reports the set at the tip the claim landed on.
