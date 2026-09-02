@@ -169,3 +169,24 @@ republishes under a new version-bearing build id at an unchanged tip.
 - Part II §8 ("maintenance surfaces and reconciles") — surfacing
   lands here as the report section and the reconcile verb; the
   scheduled, unattended runner is Phase 9 item 3.
+
+## The chain's surface
+
+`seed merge request` and `seed merge observe` reach both postures
+(`--ledger` or `--remote`), routed through the same optimistic push
+loop the loop verbs use. Before Phase 9 item 4 they had no CLI verb at
+all and existed only through `ledger append`, the raw dev seam that
+runs no rules: the chain's terminal steps had no admitted surface a
+lane could drive ([`modes.md`](modes.md)).
+
+The request's `verdict` citation is a chain POSITION, so it is
+**derived** and re-examined against each refreshed tip. A citation the
+refreshed view disagrees with REFUSES rather than being re-pointed: a
+different citation is a different decision, not a better argument. The
+observation carries no derived citation — `{merged, pr}` are the
+caller's observations of the forge, and the request it follows is
+checked against the fold rather than named in the payload.
+
+Who signs which step is the keyring's: asking for the merge accepts
+`claim` or `operator` (the work lane's act), observing it accepts
+`observer` or `operator`.

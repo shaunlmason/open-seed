@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "task": "os-6a08b166",
+  "merge_base": "26c5acc9e210d79e4175c26d70c1ed87eda37dce",
+  "head": "49f37778dc0772a6cf4cd766b2328c607961fdcc",
+  "plan_path": "plans/os-6a08b166.md",
+  "plan_sha256": "de456dee1ded1d1f807cad172dd9c9bc158ef26c8d43b837004192bea01b0897",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/merge.go",
+    "next/cmd/seed/merge_cli_test.go",
+    "next/cmd/seed/modes_e2e_test.go",
+    "next/cmd/seed/verdict.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/loop/loop_test.go",
+    "next/spec/lanes.md",
+    "next/spec/modes.md",
+    "next/spec/reconciliation.md",
+    "next/spec/verdicts.md"
+  ],
+  "diff_sha256": "fc2093be3ee9d656cb06fae7df45b616b6d05848c1bff9da4f1c10f63121fd5b",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Mode|SmallTeam|Fleet' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

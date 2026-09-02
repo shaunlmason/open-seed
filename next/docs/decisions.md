@@ -1654,3 +1654,62 @@ here. Newest last.
   the pass is still worth running. A store that will not write or a
   rebuild that will not build stops the pass, because continuing would
   checkpoint a state that was never materialized.
+## Phase 9 item 4 — small-team and fleet fixtures (os-6a08b166, plan #204)
+
+- **The terminal reconciliation surface was missing, not merely
+  local-only.** The plan's first draft carded `verdict render --remote`
+  and stopped fleet mode at `submission.made`. Review established that
+  small-team stopped short too, and that **`merge.requested` and
+  `merge.observed` had no CLI verb at all** — only `ledger append`,
+  which runs no rules. A lane cannot drive a loop through verbs that do
+  not exist, so the surface came into scope: all three verbs now reach
+  both postures, reusing the loop verbs' transport without joining
+  `loopverb`'s catalog (that names the acts a LANE declares, and the
+  merge chain is the work lane's and the observer's).
+
+- **D6's posture split is void, and the reason is stronger than the one
+  that retired it.** It said fleet needs remote (true) and small-team
+  needs local because `verdict render` was local-only. This card fixed
+  that — but small-team could never have run locally anyway: `claim
+  take` is refused off the remote, and a claim is the loop's first act.
+  So the mode is **purely the identity plan**, which is what the
+  charter says it is; neither clause of III.J mentions transport.
+
+- **Disjointness is proven against the case that threatens it.** The
+  drill grants the implementing actor the `verdict` capability
+  deliberately. Ungranted it refuses `out_of_grant` — capability
+  absence, which `admit.go` is careful to call a different thing — and
+  the drill would have proven only that a key without the grant cannot
+  render. The charter's claim is that disjointness holds when one
+  person runs everything, and such a principal can grant themselves
+  everything. Granted, the key still refuses `not_independent`.
+
+- **The middle arm is a lost race, and the rival is planted inside the
+  window.** A concurrent reap reaches `Step`'s `!s.Holds` branch and
+  returns `Idle` with no verb refused, so it could only satisfy the arm
+  inventory by relabelling a successful claim. And two workers stepped
+  in sequence do not race — the second polls after the first claimed,
+  finds nothing offered, and goes idle at the poll. So the rival claim
+  lands from inside the seam, just before the lane's own `claim take`
+  reaches the boundary: in the race by construction rather than by
+  timing, the shape #202 established.
+
+- **Anti-vacuity is the criterion that makes the rest mean anything.**
+  Every convergence assertion is true of a run that met no refusal at
+  all. So the arm must be shown to have been exercised, and the
+  blind-retry detector is drilled against a known spin and four known
+  non-spins — a detector that has only seen converging runs has not
+  been shown to catch anything.
+
+- **Wakelessness is pinned by surface, not asserted by absence.** A
+  drill cannot watch a thing fail to happen. `Verbs` is one method and
+  the option set is four constructors, read out of the source rather
+  than restated, so a wake seam fails the pin and the spec moves with
+  it.
+
+- **The lane set cannot supply two identities the loop needs**
+  (`os-d6a52784`): no manifest grants `supervise` or `observer`, which
+  `offer.published` and `merge.observed` require. The fixtures stage
+  both as background identities kept out of the identity plan, so the
+  grants assertion still measures only lane-derived ones. Honest for a
+  fixture, wrong as a posture, and carded rather than papered over.
