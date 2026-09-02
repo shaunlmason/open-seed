@@ -63,7 +63,7 @@ Measured, not assumed:
   | stage | storage | fact | who appends |
   |---|---|---|---|
   | observations | the ledger, on the contract | packet `findings` (existing) and **`deadend.recorded`** | the window's holder (`claim`), `operator` |
-  | hypotheses | the ledger, on a hypothesis subject | **`hypothesis.proposed`** | **`curate`**, `operator` |
+  | hypotheses | the ledger, on a hypothesis subject | **`hypothesis.proposed`** | **`curate`** alone, no operator fallback |
   | validated lessons | `next/knowledge/lessons/<id>.md`, merged by PR, and the ledger | **`lesson.promoted`** (the PR observation) | `observer`, `operator` |
   | policy | role, skill and workflow patches on the protected surface, by PR | none in this item | the governance root, through gates |
 
@@ -102,18 +102,37 @@ Measured, not assumed:
   drills.
 
 - **D2 — `curate` is the proposal grant, disjoint from
-  implementation.** A new capability `curate` accepts
-  `hypothesis.proposed` (with `operator`). `curate` cannot be granted
-  to a key holding `claim`, nor `claim` to a key holding `curate`, the
-  `sealerDisjoint` rule one capability over: a worker promoting its own
-  runs is refused at the grant, not at the proposal. The curator
-  manifest gains `curate`, its summary changes from "holds no
-  ledger-writing grant" to "proposes hypotheses and promotes nothing",
-  and the lane audit that requires every accepted capability to be
-  granted by a shipped manifest stays green by that edit. The raise row
-  (`escalation.raised`) does **not** gain `curate`: a proposal grant is
-  not a freezing grant, and `escalation.md`'s recorded tension is
-  answered by leaving the curator unable to freeze anything.
+  implementation, with no operator fallback.** A new capability
+  `curate` accepts `hypothesis.proposed`, and nothing else does: the
+  fifth no-fallback row, beside `verdict.rendered`, `check.sealed`,
+  `decision.recorded` and `merge.overridden`. Governance roots hold
+  `operator` implicitly, and `operator` already reaches `claim.taken`,
+  `claim.parked` and `deadend.recorded`, so an operator fallback on
+  the proposal would let one key write a trajectory's observations and
+  then conclude from them without ever holding two conflicting grants;
+  the poisoning boundary is real only if the proposal is reachable
+  through `curate` alone (review finding on #226). `curate` cannot be
+  granted to a key holding `claim` or `operator` (a root's implicit
+  operator standing included), nor `claim` or `operator` to a key
+  holding `curate`: the `sealerDisjoint` rule one capability over,
+  against both lanes it names. A worker promoting its own runs, and a
+  root concluding from its own, are refused at the grant, not at the
+  proposal. The curator manifest gains `curate`, its summary changes
+  from "holds no ledger-writing grant" to "proposes hypotheses and
+  promotes nothing", and the lane audit that requires every accepted
+  capability to be granted by a shipped manifest stays green by that
+  edit.
+
+  **The raise row gains `curate`.** `escalation.raised` accepts
+  `claim`, `dispatch`, `verdict`, `supervise`, `operator` and now
+  `curate`: the charter says every lane can raise `blocked(needs-you)`,
+  and `escalation.md` reserved this row for exactly the moment the
+  curator gained a proposal grant. Breadth stays safe by the
+  `offer.published` argument (raising grants nothing, and a raised
+  contract leaves `blocked` only through the operator), so the
+  curator's residual is the one every raiser already has: freezing,
+  attributable, reversible. The affordance catalog's raise probe and
+  the injection suite's reachable sets carry the sixth capability.
 
 - **D3 — one fold and one projection.** `internal/curation` folds the
   three facts (dead ends by contract; hypotheses by id with claim,
@@ -149,19 +168,22 @@ Measured, not assumed:
   gives for free (item 3); no expiry, retirement or rollback (item 4);
   no flywheel (item 5); no surfacing of lessons in packets or envelopes
   at claim time (item 2's routed III.I row 5); no policy-stage fact; no
-  change to the escalation raise row, to `transitions.json`, or to the
-  v1 memory files.
+  change to the escalation channel beyond the raise row's sixth
+  capability, none to `transitions.json` or to the v1 memory files.
 
 ## Steps
 
 1. `next/internal/curation/` (new) — the three payload shapes, the
    hypothesis id derivation, the fold, `unbound`.
 2. `next/internal/keyring/` — `CapCurate`, the accepted-capability rows
-   for the three verbs, `curateDisjoint`.
+   for the three verbs (the proposal's `curate` alone), the raise
+   row's sixth capability, `curateDisjoint` against `claim` and
+   `operator` in both directions.
 3. `next/internal/admit/` — the `curation` rule (window and fence for
    dead ends; support citations, distinct non-failed contracts and the
    duplicate for hypotheses; the cited hypothesis for promotions);
-   affordance probes for the three verbs.
+   affordance probes for the three verbs and the raise probe from a
+   `curate` key.
 4. `next/internal/project/` — the `knowledge` projection and the
    report's section; `next/spec/projections.md`.
 5. `next/cmd/seed/knowledge.go` (new) — the four subverbs; `main.go`.
@@ -183,7 +205,8 @@ Measured, not assumed:
    its rows, the disjointness), `lanes.md` (the curator's grant, the
    vocabulary edge closed for `curation.*`), `packets.md` (findings are
    stage-one observations), `protocol.md`, `projections.md`,
-   `escalation.md` (the raise row's answer).
+   `escalation.md` (the raise row gains `curate`; the reserved
+   paragraph is answered).
 10. `next/docs/progress.md` (Phase 11 opened), `next/docs/decisions.md`,
     `memory/LEARNINGS.md`; receipt; evidence; review.
 
@@ -219,29 +242,39 @@ reading the fold, NOT `next/internal/version/**`, NOT `.seed/**`.
    a `claim` key (`out_of_grant`), on a subject not derived from the
    claim, citing one contract, citing two facts on one contract, citing
    a position that is no observation, citing a failed contract, and as
-   a duplicate of an admitted claim; the accepted set is
-   `[curate, operator]`.
-3. `curate` refuses to be granted to a key holding `claim`, and `claim`
-   to a key holding `curate`, both as chain validity at the position;
-   the curator manifest grants `curate` and the lane audit is green.
+   a duplicate of an admitted claim; the accepted set is `[curate]`
+   alone: a governance root's implicit operator standing does not
+   reach it and a root refuses `out_of_grant`.
+3. `curate` refuses to be granted to a key holding `claim` or
+   `operator` (a root included), and `claim` or `operator` to a key
+   holding `curate`, each as chain validity at the position; the
+   curator manifest grants `curate` and the lane audit is green.
 4. `lesson.promoted` admits from an `observer` key citing an admitted
    `hypothesis.proposed` by subject and position with an anchored
    lesson path and a `pr @ commit`; it refuses citing a position that is
    no hypothesis, a mismatched subject, a bare path, or from a `curate`
    key; a raw-pushed promotion citing no hypothesis folds `unbound`.
-5. The fold renders dead ends by contract, hypotheses with their stage,
+5. `escalation.raised` admits from a `curate` key on a `ready` or
+   `review` contract with the packet and the escalation, and refuses
+   from it elsewhere exactly as from any raiser; the affordance
+   catalog carries the row, and the injection suite's reachable set
+   for the curator is `hypothesis.proposed` and `escalation.raised`,
+   nothing else.
+6. The fold renders dead ends by contract, hypotheses with their stage,
    and lessons; a malformed raw fact counts an anomaly; the `knowledge`
    projection publishes it and the report's section counts the stages.
-6. `seed knowledge deadend|propose|promote|show` drive the three facts
+7. `seed knowledge deadend|propose|promote|show` drive the three facts
    against a real ledger with the fence and the id derived, refusing at
    usage what the boundary would refuse.
-7. **Mutation evidence.** Each must fail a drill: the support minimum
+8. **Mutation evidence.** Each must fail a drill: the support minimum
    read as one; the distinct-contract check dropped; the failed-contract
-   check dropped; the promotion admitted with no cited hypothesis; the
-   disjointness dropped in either direction; the dead end admitted
-   outside the window; the fold reading a lifecycle verb as a curation
-   fact; the projection omitting a stage.
-8. `make check` green with coverage measured **cold**, at least three
+   check dropped; the promotion admitted with no cited hypothesis; an
+   operator fallback restored on the proposal row; the disjointness
+   dropped in either direction or against `operator`; the raise row
+   without `curate`; the dead end admitted outside the window; the fold
+   reading a lifecycle verb as a curation fact; the projection omitting
+   a stage.
+9. `make check` green with coverage measured **cold**, at least three
    readings above the gate, and the suites pass **unprivileged** under
    `setpriv --reuid=65534`.
 
@@ -250,7 +283,8 @@ reading the fold, NOT `next/internal/version/**`, NOT `.seed/**`.
 - Every pre-existing fixture chain verifies byte for byte; no version
   bumps; no transition row moves; the four deliberate exits and their
   packets are unchanged.
-- The escalation raise row's accepted set is unchanged, and the
+- The escalation raise row's existing five capabilities keep their
+  drills and every other row of the channel is unchanged; the
   injection suite's reachable set for the dispatcher gains nothing.
 - The existing projections' builds are byte-identical on chains that
   carry no curation fact; the lane audit's existing rows stay green.
@@ -265,7 +299,9 @@ reading the fold, NOT `next/internal/version/**`, NOT `.seed/**`.
 ## Expected diff shape
 
 One new package with three payload shapes and a fold; one capability
-with three accepted-capability rows and one disjointness rule; one
+with three accepted-capability rows (the proposal's `curate` alone),
+the raise row widened by one, and one disjointness rule against `claim`
+and `operator`; one
 admission rule with three arms and three affordance probes; one
 projection and one report section; one CLI verb group with four
 subverbs; the curator's grant and fragment; an empty lessons store with
