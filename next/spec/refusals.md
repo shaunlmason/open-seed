@@ -62,6 +62,21 @@ journal nothing; read surfaces (`ledger show`/`verify`,
 admission boundary is a named extension point: the report builds
 locally, and the local journal is the local truth.
 
+## The journal's second reader
+
+The trajectory recorder ([`trajectories.md`](trajectories.md)) reads
+the journal beside a local ledger for the refused half of a lane's
+decision points: each refused line the lane's key journaled becomes a
+point framed at `records[:p+1]`, the stamp being the last record of
+the view the boundary judged the attempt against. The recorder reads
+refusals only (the chain is the record of what was admitted), skips
+and counts lines from other actors and lines stamped beyond the tip,
+and refuses a journal that does not load, the same strictness as the
+report build: a torn journal would silently omit decision points. The
+seams above are therefore also the seams a trajectory can see; a
+refusal a read surface never journals is a decision point the harness
+cannot record.
+
 ## The declared input and the report section
 
 `seed project rebuild --refusals <file>` loads the journal and

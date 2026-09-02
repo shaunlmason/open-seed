@@ -82,6 +82,17 @@
     the literal `L1` alone admits under a `seed/4` validator too, and
     the eval semantics of `seed/3` hold at `seed/4` alike (the gate is
     a named list), so every existing chain verifies byte for byte.
+    Two later additions ride the same entry (plans/os-6bd9ffff.md D4,
+    D5, D7; [`trajectories.md`](trajectories.md)): `contract.specified`
+    gains the `ready` origin, the dispatcher's re-specification of an
+    unclaimed contract ([`lifecycle.md`](lifecycle.md)), which a
+    `seed/3` validator's table refuses as an illegal transition where
+    this one applies it; and `plan.proposed` and `plan.approved`
+    carry the plan's content `digest` ([`plans.md`](plans.md)), which
+    a `seed/3` validator's shape has no field for. Each refuses at a
+    `seed/3` position by version, naming `seed/4`, and the fold reads
+    each at `seed/4` positions only, so every existing chain verifies
+    byte for byte.
 
 ## Canonical event form
 

@@ -173,6 +173,25 @@ for ALL executable content ([`acceptance.md`](acceptance.md)). The
 sealed commitment lands with Phase 6. Completeness refusals are shape
 refusals.
 
+**Re-specification** ([`trajectories.md`](trajectories.md), "The two
+lane-quality metrics"; plans/os-6bd9ffff.md D4): from `seed/4` the
+table carries `ready` as a second origin for `contract.specified`, the
+dispatcher revising its own draft acceptance of a contract nobody has
+claimed. The row is gated by version, not only by state: before
+`seed/4` a ready-origin specification refuses as an illegal transition
+naming the version that activates it (`re-specification activates at
+seed/4 and the chain is at seed/3`), because a validator of the
+earlier version judges the record by its own table; every other origin
+the table refuses stays the table's refusal, so a claimed, reviewed,
+blocked or finished contract is out of reach. The shape rule is the
+first specification's (the structured acceptance field, gate evidence
+for executable content), the fold applies a re-specification at
+`seed/4` positions only (an earlier one is a visible anomaly and the
+first acceptance stands), and the subject's `Specifications` count
+records how many applied. Not revised: `tier`, `budget` and `routing`
+stay the intent's. The record now carries the dispatcher's re-triage,
+which the report's `lanes` section counts ([`projections.md`](projections.md)).
+
 ## Capabilities
 
 Every lifecycle verb is capability-gated (the rows live in

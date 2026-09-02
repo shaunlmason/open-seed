@@ -882,7 +882,30 @@ PR (an administrative card, not a Phase 9 item).
   on drift — not started
 - 10.5 trajectory-prefix regression harness; dispatcher re-triage rate
   and planner unedited-approval rate (III.J row 3's metrics half,
-  routed here by the Phase 9 exit record) — not started
+  routed here by the Phase 9 exit record) — os-6bd9ffff — **in
+  review** (task PR against plan #227: `internal/trajectory` records a
+  lane's decision points at the frames it decided from, its admitted
+  records at `records[:p]` and its refused journal lines at
+  `records[:p+1]`, and replays them against the chain and the lane
+  configuration as they stand, five point classes and two
+  configuration classes, `seed trajectory record|replay` with exit 26
+  refining `trajectory_diverged`; the corpus under
+  `next/trajectories/lanes`, one file per shipped manifest, recorded by
+  a scenario that drives every lane through its own acts and one
+  refused attempt each, reproduced byte for byte and replayed green by
+  drill, planted rows failing with the named classes;
+  `contract.specified` gains the `ready` origin at `seed/4`
+  (re-specification, refused by version before it, `Specifications` on
+  the fold), the plan verbs carry the plan's content digest at `seed/4`
+  (`seed plan propose|approve` derive it from the repository; the fold
+  keeps the first proposal's and the approval's; unedited iff equal),
+  and the report's `lanes` section (version 13) carries the re-triage
+  and unedited-approval rates, null over nothing. III.J row 3 is met
+  by the metrics half; III.O row 3's recorded half is met, its
+  simulation-mode half stays Phase 13's, and the residual is stated in
+  `trajectories.md`: no decider re-runs at a point, so replay proves
+  the configuration still presents the same frame and permits the same
+  act, not that a model would choose it.)
 
 - out of item: the client's private git dir and the verifier's clone
   arm auto-gc in production — os-711b3028 — **in review** (task PR
@@ -1041,6 +1064,13 @@ records and held to its tier. The plans for item 4 (#225), item 5
 for Phase 11 items 3, 4 and 5 (#229, #230, #231) are in review. The
 frontier is item 3's merge, then item 4 (rubric verdicts and the
 calibration harness).
+Later: item 3 merged (#233); item 4 (os-2e34f66a, rubric verdicts and
+the calibration harness) is implemented against plan #225 and in
+review (#238); item 5 (os-6bd9ffff, the trajectory-prefix harness and
+the two lane-quality metrics) is implemented against plan #227 and in
+review. Phase 10's exit waits on those two merges and on the
+recorded-half caveat of III.O row 3 (`trajectories.md`), whose
+simulation-mode half is Phase 13's.
 #215); item 2 (os-03e47abb) is implemented against plan #217 and in
 review, and `actor.qualified` is now defined. The frontier is item 2's
 merge, then item 3 (independence levels per tier), whose tier

@@ -1268,3 +1268,24 @@ the assertions read, and there is no copy to go stale.
 - Two parallel shell calls share one working directory: a `cd` in one
   moves the other. Use absolute paths in every call that runs beside
   another, or a merge intended for one worktree lands in another.
+- A recorded corpus that replays against the boundary is only as
+  deterministic as its inputs: derive every key from a fixed seed, keep
+  every instant out of the recorded frame, and let the scenario fix
+  positions and verbs, or two recordings on two machines differ in a
+  fingerprint and the byte-for-byte drill is unwritable.
+- A class that judges a recorded point against the current
+  configuration must ask whether the point was ever inside it: a
+  refused attempt at an undeclared act is a decision point too, and a
+  class that holds it to the manifest fails the corpus on the day it
+  is recorded. Hold admitted points to the configuration; hold refused
+  ones to their frame.
+- Never run a mutation script that restores with a directory-wide
+  `git checkout -- <dir>` while the tree carries uncommitted edits
+  elsewhere in that directory: the restore reverts them too. Restore
+  the mutated files by name, and commit the docs before the mutations
+  run.
+- When a stacked or parallel card bumps the same projection version,
+  resolve the merge by taking the later number and saying so in the
+  merge commit; two "12"s with different meanings is a silent
+  republish under a wrong id.
+
