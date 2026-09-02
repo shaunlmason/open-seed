@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -353,4 +354,271 @@ func (m *modeStand) stateOf(t *testing.T, subject string) string {
 		t.Fatalf("no %s in the remote fold", subject)
 	}
 	return s.State
+}
+
+// attempt is one act the lane put through the seam, with the position
+// the envelope was stamped at and the refusal code if any.
+type attempt struct {
+	iter     int
+	act      string
+	position string
+	code     string
+}
+
+// transcript wraps the REAL verbs and only observes. Instrumenting a
+// loop by replacing the boundary it is being tested against proves
+// nothing about that boundary (#202), so this records and forwards.
+type transcript struct {
+	inner loop.Verbs
+	iter  int
+	log   []attempt
+}
+
+func (tr *transcript) Run(args ...string) loop.Result {
+	res := tr.inner.Run(args...)
+	act := args[0]
+	if len(args) > 1 && !strings.HasPrefix(args[1], "-") {
+		act += " " + args[1]
+	}
+	tr.log = append(tr.log, attempt{iter: tr.iter, act: act, position: res.Position, code: res.Code})
+	return res
+}
+
+// refusals returns the attempts the boundary declined.
+func (tr *transcript) refusals() []attempt {
+	var out []attempt
+	for _, a := range tr.log {
+		if a.code != "" {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// blindRetry reports the first spin: the SAME act refusing with the
+// SAME code on consecutive iterations from a position that did not
+// advance. Same act, same knowledge, same answer is the fourth
+// outcome the build plan forbids — a lane that learned nothing and
+// tried again.
+func (tr *transcript) blindRetry() (attempt, bool) {
+	prev := map[string]attempt{}
+	for _, a := range tr.refusals() {
+		key := a.act + "\x00" + a.code
+		if p, seen := prev[key]; seen && a.iter == p.iter+1 && a.position == p.position {
+			return a, true
+		}
+		prev[key] = a
+	}
+	return attempt{}, false
+}
+
+// racing lands a RIVAL claim inside the window, just before the lane's
+// own `claim take` reaches the boundary.
+//
+// Two workers stepped one after another do not race: the second polls
+// after the first has claimed, finds nothing offered, and goes idle at
+// the poll with no refusal at all. The middle arm answers a REFUSAL,
+// so a drill built that way would have had no refusal to answer and
+// would have counted an empty poll as convergence.
+//
+// Planting the rival inside the window puts the lane in the race BY
+// CONSTRUCTION rather than by timing, which is the same reason #202's
+// interleaving drill rotates a key from inside the seam: a race
+// reproduced by sleeping passes green on a slower runner.
+type racing struct {
+	*transcript
+	t     *testing.T
+	plant func()
+	fired bool
+}
+
+func (r *racing) Run(args ...string) loop.Result {
+	if !r.fired && len(args) > 1 && args[0] == "claim" && args[1] == "take" {
+		r.fired = true
+		r.plant()
+	}
+	return r.transcript.Run(args...)
+}
+
+// conformance: acceptance criteria 3, 4 and 5 — fleet mode, one
+
+// identity per shipped lane, two workers racing `claim take` against
+// one remote, reaching `done`; every convergence arm exercised; and
+// the blind-retry detector run over the whole transcript.
+func TestFleetModeConvergesAndReachesDone(t *testing.T) {
+	m := buildMode(t, fleetPlan(t))
+	const subject = "c-1"
+	m.contract(t, subject, "supervisor")
+
+	// Two workers, both eligible, both polling the same offer. Only
+	// one can hold the window: the loser's `claim take` is REFUSED for
+	// contention, which is the refusal the middle arm answers.
+	//
+	// The planner lane is the second worker rather than a second
+	// implementer, because it is the other shipped lane granted
+	// `claim` — the fleet races the lanes it actually has.
+	tr := &transcript{inner: loopVerbs{}}
+	r := &racing{transcript: tr, t: t, plant: func() {
+		// The rival: the OTHER shipped lane granted `claim`, taking
+		// the window through the same admitted verb.
+		if e, code := runEnv(t, append(append([]string{"claim", "take"}, m.posture()...),
+			"--subject", subject, "--key", m.keys["planner"])...); code != 0 {
+			t.Fatalf("the rival claim must land, or there is no race: %d %+v", code, e)
+		}
+	}}
+
+	lost, err := m.stepWith(t, r, "implementer", subject)
+	if err != nil {
+		t.Fatalf("losing a race is not an error: %v", err)
+	}
+	if lost.Outcome != loop.Idle {
+		t.Fatalf("the loser re-orients rather than parking what it never held: %s", lost.Outcome)
+	}
+	if lost.Step != "claim take" || lost.Cause.Code == "" {
+		t.Fatalf("the losing iteration must END on a REFUSED claim, carrying it: step=%q cause=%+v",
+			lost.Step, lost.Cause)
+	}
+	if lost.Cause.Code != "contention" {
+		t.Errorf("a lost race is ordinary contention, not %q: %s", lost.Cause.Code, lost.Cause.Message)
+	}
+
+	// THE MIDDLE ARM: that refusal answered on the next iteration by a
+	// refreshed position-stamped read showing the act is no longer
+	// owed. The lane takes no different work here because the fixture
+	// offers only one contract, which is the arm in its purest form.
+	tr.iter++
+	next, err := m.stepWith(t, tr, "implementer", subject)
+	if err != nil {
+		t.Fatalf("the next iteration must not error: %v", err)
+	}
+	if next.Outcome != loop.Idle {
+		t.Fatalf("the refreshed read shows the work is no longer owed: %s (%+v)", next.Outcome, next.Cause)
+	}
+	if spun, found := tr.blindRetry(); found {
+		t.Fatalf("a blind retry: %s refused %q twice from position %s with nothing learned",
+			spun.act, spun.code, spun.position)
+	}
+
+	// ANTI-VACUITY: the arm must have been EXERCISED. Every assertion
+	// above is true of a lane that met no refusal at all, which is
+	// exactly how this whole fixture could ship proving nothing.
+	armed := false
+	for _, a := range tr.refusals() {
+		if a.act == "claim take" && a.code == "contention" {
+			armed = true
+		}
+	}
+	if !armed {
+		t.Fatal("the middle arm is UNEXERCISED: no claim was refused, so the refreshed read answered nothing")
+	}
+
+	// And the rival drives the contract the rest of the way to done,
+	// which is the loop completing elsewhere from the shared ledger.
+	m.finish(t, subject, "planner")
+	if got := m.stateOf(t, subject); got != "done" {
+		t.Fatalf("fleet mode ends at done, got %q", got)
+	}
+}
+
+// finish drives a held contract through submission, verdict and the
+// merge chain, each step its own admitted act.
+func (m *modeStand) finish(t *testing.T, subject, holder string) {
+	t.Helper()
+	for _, act := range [][]string{
+		{"budget", "reserve", "--amount", "3"},
+		{"budget", "settle", "--actuals", "1"},
+		{"submission", "make", "--packet", m.packet(t, subject), "--base", m.base + ".." + m.head},
+	} {
+		call := append(append([]string{act[0], act[1]}, m.posture()...),
+			"--subject", subject, "--key", m.keys[holder])
+		call = append(call, act[2:]...)
+		if e, code := runEnv(t, call...); code != 0 {
+			t.Fatalf("%v: %d %+v", act[:2], code, e)
+		}
+	}
+	if e, code := runEnv(t, append(append([]string{"verdict", "render"}, m.posture()...),
+		"--subject", subject, "--repo", m.src, "--key", m.keys["verifier"], "--verdict", "pass")...); code != 0 {
+		t.Fatalf("verdict render: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, append(append([]string{"merge", "request"}, m.posture()...),
+		"--subject", subject, "--key", m.keys[holder])...); code != 0 {
+		t.Fatalf("merge request: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, append(append([]string{"merge", "observe"}, m.posture()...),
+		"--subject", subject, "--key", m.keys["observer"], "--merged", m.head, "--pr", "pr/2")...); code != 0 {
+		t.Fatalf("merge observe: %d %+v", code, e)
+	}
+}
+
+// step runs one loop iteration for a lane's actor through the given
+// transcript.
+func (m *modeStand) stepWith(t *testing.T, verbs loop.Verbs, laneName, subject string) (loop.StepResult, error) {
+	t.Helper()
+	var man lane.Manifest
+	for _, l := range mustLoad(t) {
+		if l.Lane == laneName {
+			man = l
+		}
+	}
+	d, err := loop.New(man, verbs, m.posture(), m.keys[laneName],
+		loop.WorkFunc(func(string, loop.Situation) (int, error) { return 1, nil }),
+		loop.WithBase(m.base+".."+m.head))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d.Step(3)
+}
+
+// packet writes the four-part handoff a deliberate exit carries. The
+// submission verb takes a file, so the fixture supplies one rather
+// than reaching for a flag that does not exist.
+func (m *modeStand) packet(t *testing.T, subject string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "packet.json")
+	body := fmt.Sprintf(`{"acceptance": [%q], "decisions": [], "base": %q, "refs": [], "findings": []}`,
+		"accept.md @ "+m.spec, m.base+".."+m.head)
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// conformance: acceptance criterion 5 — the blind-retry detector
+// detects. A detector that has only ever seen converging runs has not
+// been shown to catch anything, so it is fed a known spin and a known
+// non-spin directly.
+func TestBlindRetryDetector(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		log  []attempt
+		spin bool
+	}{
+		{"the same act, same code, same position on consecutive iterations", []attempt{
+			{iter: 1, act: "claim take", position: "9", code: "contention"},
+			{iter: 2, act: "claim take", position: "9", code: "contention"},
+		}, true},
+		{"the position advanced, so the lane learned something", []attempt{
+			{iter: 1, act: "claim take", position: "9", code: "contention"},
+			{iter: 2, act: "claim take", position: "11", code: "contention"},
+		}, false},
+		{"a different code is a different refusal", []attempt{
+			{iter: 1, act: "claim take", position: "9", code: "contention"},
+			{iter: 2, act: "claim take", position: "9", code: "fenced_out"},
+		}, false},
+		{"not consecutive: something else happened between", []attempt{
+			{iter: 1, act: "claim take", position: "9", code: "contention"},
+			{iter: 3, act: "claim take", position: "9", code: "contention"},
+		}, false},
+		{"successes are not retries", []attempt{
+			{iter: 1, act: "claim take", position: "9"},
+			{iter: 2, act: "claim take", position: "9"},
+		}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &transcript{log: tc.log}
+			if _, got := tr.blindRetry(); got != tc.spin {
+				t.Errorf("blindRetry = %v, want %v", got, tc.spin)
+			}
+		})
+	}
 }
