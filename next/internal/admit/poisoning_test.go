@@ -23,7 +23,6 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -383,49 +382,6 @@ var residualDrills = map[string]func(t *testing.T){
 			t.Fatalf("the reworded claim admits on the same support: %v", err)
 		}
 	},
-	// A promotion raw-pushed past the boundary binds in the fold and is
-	// a delivery candidate: what stands between it and a worker is the
-	// boundary at append (the hook and the client's loop), never the
-	// fold.
-	"raw-pushed-promotion": func(t *testing.T) {
-		st := curationFixture(t)
-		hp := st.admitHypothesis(t)
-		plain := plainPass(t, st)
-		body := strings.Replace(lessonBody(st.id, hp, "fix-the-check", plain), `"knowledge"`, `"role"`, 1)
-		if err := Check(st.ctx, draftV(t, st.observer, st.v, curation.LessonVerb, st.id, body, st.ctx.Tip)); err == nil || gate(t, err) != curation.GatePromotionAdversary {
-			t.Fatalf("the boundary refuses the smuggled lesson: %v", err)
-		}
-		st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, body)
-		fold := curation.Fold(st.ctx.Records)
-		if len(curation.Candidates(fold, st.ctx.Lifecycle, "c-4")) != 1 {
-			t.Fatal("the raw-pushed promotion is a candidate: the fold does not re-judge the adversarial arm")
-		}
-	},
-}
-
-// contestBody is a contest of the stand's hypothesis citing the given
-// evidence.
-func contestBody(st *curationStand, hp int, evidence ...string) string {
-	q := make([]string, len(evidence))
-	for i, e := range evidence {
-		q[i] = fmt.Sprintf("%q", e)
-	}
-	return fmt.Sprintf(`{"hypothesis": "%s", "evidence": [%s], "reason": "the mirror was warm and it still failed"}`, cite(st.id, hp), strings.Join(q, ", "))
-}
-
-// plainPass works an ordinary contract to an authenticated pass: a
-// verdict with no eval marker at all.
-func plainPass(t *testing.T, st *curationStand) int {
-	t.Helper()
-	v := st.v
-	st.ctx = st.step(st.root, v, "intent.filed", "c-plain", trivialFiling)
-	st.ctx = st.step(st.root, v, "contract.specified", "c-plain", specBody)
-	st.ctx = st.step(st.worker2, v, "claim.taken", "c-plain", `{}`)
-	sub := st.ctx.Count
-	st.ctx = st.step(st.worker2, v, "submission.made", "c-plain", `{"fence": "`+activeFence(t, st.ctx, "c-plain")+`", "packet": `+findingPacket+`}`)
-	pos := st.ctx.Count
-	st.ctx = st.step(st.verifier, v, "verdict.rendered", "c-plain", fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, strings.Repeat("0", 64), sub))
-	return pos
 }
 
 // lintStand is a repository holding a lesson that agrees with its

@@ -870,6 +870,185 @@ func AdmittedProposalBefore(records []*event.Record, table *transition.Table, su
 	return false
 }
 
+// CheckContest judges a contest against the record as the boundary
+// does: the cited hypothesis admitted on this subject, every evidence
+// citation an admitted observation on a contract the applies-when
+// selects, outside the support set. The fold re-judges every contest
+// through this same function at its own position (review finding on
+// the task PR), so a raw-pushed contest by a key holding no curate, or
+// one citing fabricated or support-set evidence, moves nothing to
+// contested.
+func CheckContest(records []*event.Record, table *transition.Table, fold *transition.Fold, subject string, ct *Contest) (*Hypothesis, error) {
+	cit, _ := ParseCitation(ct.Hypothesis)
+	h, ok := HypothesisValid(records, table, cit)
+	if !ok {
+		return nil, NewGateError(GateContestHypothesis, ContestVerb, subject, fmt.Sprintf("%s is not an admitted hypothesis: a contest judges a proposal that passed the boundary", ct.Hypothesis))
+	}
+	inSupport := map[string]bool{}
+	for _, s := range h.Support {
+		inSupport[s] = true
+	}
+	for _, raw := range ct.Evidence {
+		ec, _ := ParseCitation(raw)
+		if _, ok := ObservationAt(records, table, ec); !ok {
+			return nil, NewGateError(GateContestEvidence, ContestVerb, subject, fmt.Sprintf("evidence %s is not an admitted observation", raw))
+		}
+		st, ok := fold.State(ec.Contract)
+		if !ok || !h.Applies.Selects(st) {
+			return nil, NewGateError(GateContestSelected, ContestVerb, subject, fmt.Sprintf("evidence %s lies on a contract the applies-when does not select: counter-evidence is evidence the claim was supposed to hold over", raw))
+		}
+		if inSupport[raw] {
+			return nil, NewGateError(GateContestHeldOut, ContestVerb, subject, fmt.Sprintf("evidence %s is in the support set: a contest cites held-out evidence, never what the proposal already rested on", raw))
+		}
+	}
+	return h, nil
+}
+
+// ContestValid re-judges the record at the position as an admitted
+// contest: a contest on the subject whose signer held curate at that
+// prefix and whose citations pass CheckContest there.
+func ContestValid(records []*event.Record, table *transition.Table, pos int) (*Contest, bool) {
+	if table == nil || pos < 0 || pos >= len(records) {
+		return nil, false
+	}
+	e := &records[pos].Event
+	if e.Verb != ContestVerb || !keyring.Applies(e.V) {
+		return nil, false
+	}
+	ct, err := ParseContest(e.Subject, e.Payload)
+	if err != nil {
+		return nil, false
+	}
+	prefix := records[:pos]
+	ring, _, err := keyring.StateAt(prefix)
+	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(ContestVerb)) {
+		return nil, false
+	}
+	if _, err := CheckContest(prefix, table, table.FoldRecords(prefix), e.Subject, ct); err != nil {
+		return nil, false
+	}
+	return ct, true
+}
+
+// CheckPromotion judges a promotion's ledger half against the record
+// as the boundary does (plans/os-96850e5a.md D4, D5): an admitted,
+// uncontested hypothesis on this subject whose support still satisfies
+// the arms, and an adversarial evaluation that is an authenticated
+// pass, replayed at its own position, on an eval filed after the
+// hypothesis and bound to it and to this lesson anchor. The fold
+// re-judges every promotion through this same function at its own
+// position (review finding on the task PR), so a promotion raw-pushed
+// past the boundary binds nothing and surfaces nowhere.
+func CheckPromotion(records []*event.Record, table *transition.Table, fold *transition.Fold, subject string, l *Lesson) error {
+	cit, _ := ParseCitation(l.Hypothesis)
+	h, ok := HypothesisValid(records, table, cit)
+	if !ok {
+		return NewGateError(GatePromotionHypothesis, LessonVerb, subject, fmt.Sprintf("%s is not an admitted hypothesis: a lesson promotes a proposal that passed the boundary, and no stage skips", l.Hypothesis))
+	}
+	if Fold(records).Contested(subject) {
+		return NewGateError(GatePromotionContested, LessonVerb, subject, "the hypothesis stands contested: a contested hypothesis is never promoted or averaged back; a new proposal citing the counter-evidence as an exception is the road out")
+	}
+	if _, err := CheckSupport(records, table, fold, subject, h); err != nil {
+		return NewGateError(GatePromotionSupport, LessonVerb, subject, "the hypothesis's support no longer satisfies the arms at the tip: "+err.Error())
+	}
+	return adversarialSurvived(records, table, fold, subject, cit.Position, l)
+}
+
+// adversarialSurvived is the promotion's adversarial arm: the cited
+// verdict is the authenticated pass of an eval whose marker binds this
+// hypothesis and this lesson anchor, filed after the hypothesis.
+func adversarialSurvived(records []*event.Record, table *transition.Table, fold *transition.Fold, subject string, hypothesisPos int, l *Lesson) error {
+	refuse := func(reason string) error {
+		return NewGateError(GatePromotionAdversary, LessonVerb, subject, reason)
+	}
+	pos, _ := strconv.Atoi(l.Adversarial.Verdict)
+	if pos < 0 || pos >= len(records) {
+		return refuse(fmt.Sprintf("the cited verdict position %d is not on the chain", pos))
+	}
+	evalSubject := records[pos].Event.Subject
+	es, ok := fold.State(evalSubject)
+	if !ok || es.Eval == nil {
+		return refuse(fmt.Sprintf("position %d is not a verdict on an eval: survival is proven by a constructed counter-trajectory, filed with the eval marker", pos))
+	}
+	if es.Eval.Name != l.Adversarial.Eval {
+		return refuse(fmt.Sprintf("the verdict at position %d judges eval %q, the promotion names %q", pos, es.Eval.Name, l.Adversarial.Eval))
+	}
+	if !EvalBound(es) {
+		return refuse(fmt.Sprintf("the contract names eval %q but its acceptance spec is not that definition's fixture at a gated revision", es.Eval.Name))
+	}
+	if es.Eval.Lesson != l.Hypothesis || es.Eval.Carrier != l.Lesson {
+		return refuse(fmt.Sprintf("the eval's marker binds lesson %q and carrier %q, the promotion is for %q at %q: a pass on an eval filed for another hypothesis, another revision, or nothing in particular is not survival", es.Eval.Lesson, es.Eval.Carrier, l.Hypothesis, l.Lesson))
+	}
+	filed := -1
+	for i, rec := range records {
+		if rec.Event.Verb == "intent.filed" && rec.Event.Subject == evalSubject {
+			filed = i
+			break
+		}
+	}
+	if filed <= hypothesisPos {
+		return refuse(fmt.Sprintf("the eval was filed at position %d, before the hypothesis at %d: a counter-trajectory is constructed against the candidate, never before it existed", filed, hypothesisPos))
+	}
+	if fact := AuthenticPass(records, evalSubject, es); fact == nil || fact.Pos != pos {
+		return refuse(fmt.Sprintf("position %d is not the eval's authenticated pass verdict: survival is a pass rendered by a verdict-granted key disjoint from the implementer, replayed at its own position", pos))
+	}
+	return nil
+}
+
+// EvalBound reports whether the subject is an eval contract bound to
+// its definition: the marker names an eval and the acceptance is that
+// definition's fixture, executable, at a gated revision.
+func EvalBound(s transition.SubjectState) bool {
+	return s.Eval != nil && s.Acceptance != nil && s.Acceptance.Executable && s.Acceptance.Gated &&
+		strings.HasPrefix(s.Acceptance.Ref, transition.EvalFixturePrefix(s.Eval.Name))
+}
+
+// AuthenticPass is the subject's latest verdict when it is a pass
+// rendered by a key that held a verdict grant at the verdict's own
+// position and is disjoint from the implementer (the verifier
+// boundary's L1 rule, replayed to the position as FailedAt replays
+// it); nil otherwise.
+func AuthenticPass(records []*event.Record, subject string, s transition.SubjectState) *transition.VerdictFact {
+	if s.Verdict == nil || s.Verdict.Verdict != "pass" || s.Verdict.Pos < 0 || s.Verdict.Pos > len(records) {
+		return nil
+	}
+	ring, _, err := keyring.StateAt(records[:s.Verdict.Pos])
+	if err != nil || ring == nil || !ring.HasAnyCapability(s.Verdict.Signer, keyring.AcceptedCapabilities(transition.VerdictRenderedVerb)) {
+		return nil
+	}
+	if s.PriorClaimants[s.Verdict.Signer] || (s.Submission != nil && s.Verdict.Signer == s.Submission.Signer) {
+		return nil
+	}
+	return s.Verdict
+}
+
+// PromotionValid re-judges the record at the position as an admitted
+// promotion: a promotion on the subject whose signer held a capability
+// the promotion accepts at that prefix and whose citations pass
+// CheckPromotion there.
+func PromotionValid(records []*event.Record, table *transition.Table, pos int) (*Lesson, bool) {
+	if table == nil || pos < 0 || pos >= len(records) {
+		return nil, false
+	}
+	e := &records[pos].Event
+	if e.Verb != LessonVerb || !keyring.Applies(e.V) {
+		return nil, false
+	}
+	l, err := ParseLesson(e.Subject, e.Payload)
+	if err != nil {
+		return nil, false
+	}
+	prefix := records[:pos]
+	ring, _, err := keyring.StateAt(prefix)
+	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(LessonVerb)) {
+		return nil, false
+	}
+	if err := CheckPromotion(prefix, table, table.FoldRecords(prefix), e.Subject, l); err != nil {
+		return nil, false
+	}
+	return l, true
+}
+
 // DeadEndFact is a folded dead end.
 type DeadEndFact struct {
 	Pos         int    `json:"position"`
@@ -1030,7 +1209,17 @@ func Fold(records []*event.Record) *State {
 			}
 			cit, _ := ParseCitation(c.Hypothesis)
 			h, ok := s.Hypotheses[cit.Contract]
-			if !ok || h.Pos != cit.Position {
+			if !ok || h.Pos != cit.Position || terr != nil {
+				s.Anomalies++
+				continue
+			}
+			// A contest moves the stage only when it passed the
+			// boundary at its own position: a raw-pushed contest by a
+			// key holding no curate, or citing fabricated or
+			// support-set evidence, could otherwise disable a
+			// legitimate lesson on every delivery surface (review
+			// finding on the task PR).
+			if _, ok := ContestValid(records, table, pos); !ok {
 				s.Anomalies++
 				continue
 			}
@@ -1051,6 +1240,20 @@ func Fold(records []*event.Record) *State {
 			c, _ := ParseCitation(l.Hypothesis)
 			h, ok := s.Hypotheses[c.Contract]
 			if !ok || h.Pos != c.Position {
+				s.Unbound = append(s.Unbound, fact)
+				continue
+			}
+			// A promotion binds only when it passed the boundary at
+			// its own position: the signer's grant, the uncontested
+			// state, the support and the bound adversarial pass are
+			// all re-judged there, so a promotion raw-pushed past the
+			// boundary folds unbound and surfaces nowhere (review
+			// finding on the task PR).
+			if terr != nil {
+				s.Anomalies++
+				continue
+			}
+			if _, ok := PromotionValid(records, table, pos); !ok {
 				s.Unbound = append(s.Unbound, fact)
 				continue
 			}
@@ -1273,6 +1476,23 @@ func Lint(b []byte) error {
 // stamps hold at the declared instant. Every refusal is a GateError.
 func LintFile(repo string, body []byte, fact LessonFact, h *HypothesisFact, now time.Time) error {
 	subject := fact.Hypothesis
+	// Both halves judge one revision: the bytes at the promoted anchor.
+	// The working file is required to BE those bytes, so a valid
+	// frontmatter in an uncommitted or later revision cannot stand in
+	// for an invalid one the promotion recorded (review finding on the
+	// task PR).
+	path, commit, ok := AnchorParts(fact.Lesson)
+	if !ok {
+		return NewGateError(GateLintDigest, LessonVerb, subject, "the fact's lesson anchor is malformed")
+	}
+	at, err := gitShow(repo, commit, path)
+	if err != nil || Digest(at) != fact.Digest {
+		return NewGateError(GateLintDigest, LessonVerb, subject, fmt.Sprintf("the file's bytes at %s do not hash to the fact's digest %s", fact.Lesson, fact.Digest))
+	}
+	if !bytes.Equal(body, at) {
+		return NewGateError(GateLintDigest, LessonVerb, subject, fmt.Sprintf("the file differs from the promoted bytes at %s: the lint judges the revision the promotion recorded, and a later edit is a later promotion", fact.Lesson))
+	}
+	body = at
 	if err := Lint(body); err != nil {
 		return NewGateError(GateLintFrontmatter, LessonVerb, subject, err.Error())
 	}
@@ -1296,14 +1516,6 @@ func LintFile(repo string, body []byte, fact LessonFact, h *HypothesisFact, now 
 		if !ok || !gitResolves(repo, commit, path) {
 			return NewGateError(GateLintProvenance, LessonVerb, subject, fmt.Sprintf("provenance anchor %q does not resolve in the repository", anchor))
 		}
-	}
-	path, commit, ok := AnchorParts(fact.Lesson)
-	if !ok {
-		return NewGateError(GateLintDigest, LessonVerb, subject, "the fact's lesson anchor is malformed")
-	}
-	at, err := gitShow(repo, commit, path)
-	if err != nil || Digest(at) != fact.Digest {
-		return NewGateError(GateLintDigest, LessonVerb, subject, fmt.Sprintf("the file's bytes at %s do not hash to the fact's digest %s", fact.Lesson, fact.Digest))
 	}
 	if !gitAncestor(repo, commit, "HEAD") {
 		return NewGateError(GateLintAncestry, LessonVerb, subject, fmt.Sprintf("the anchor commit %s is not an ancestor of the repository's head: the promotion PR has not merged", commit))

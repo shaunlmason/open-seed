@@ -458,6 +458,15 @@ func TestPromotionCitesAnAdmittedHypothesisAndASurvivedEval(t *testing.T) {
 	otherBound := st.evalRun(t, "eval-other-hyp", cite(otherID, hp), anchor, "pass", nil)
 	otherCarrier := st.evalRun(t, "eval-other-carrier", cite(st.id, hp), curation.LessonsDir+"/retry.md @ 9999999", "pass", nil)
 	unbound := st.evalRun(t, "eval-unbound", "", "", "pass", nil)
+	// A pass signed by the eval's own implementer: L1 independence
+	// never held, whatever grant the key acquires.
+	selfPass := st.evalRun(t, "eval-self", cite(st.id, hp), anchor, "pass", st.worker2)
+	// The same with a verdict grant raw-pushed onto the implementer's
+	// key past the grant's disjointness: the grant alone would
+	// authenticate the pass, and disjointness at the verdict's
+	// position is what still refuses it.
+	st.ctx = st.step(st.root, v, keyring.VerbGranted, fpOf(t, st.worker2), `{"capability": "`+keyring.CapVerdict+`"}`)
+	selfGranted := st.evalRun(t, "eval-self-granted", cite(st.id, hp), anchor, "pass", st.worker2)
 	// A pass signed by a key granted verdict only afterwards.
 	late := fixtureKey(t, 16)
 	st.ctx = st.step(st.root, v, keyring.VerbEnrolled, fpOf(t, late), enrollBody(t, late, "agent", "late"))
@@ -502,6 +511,8 @@ func TestPromotionCitesAnAdmittedHypothesisAndASurvivedEval(t *testing.T) {
 		"filed before":       {lessonBody(st.id, hp, "fix-the-check", early), curation.GatePromotionAdversary},
 		"wrong position":     {lessonBody(st.id, hp, "fix-the-check", bound-1), curation.GatePromotionAdversary},
 		"later-granted key":  {lessonBody(st.id, hp, "fix-the-check", latePass), curation.GatePromotionAdversary},
+		"implementer's pass": {lessonBody(st.id, hp, "fix-the-check", selfPass), curation.GatePromotionAdversary},
+		"self-granted pass":  {lessonBody(st.id, hp, "fix-the-check", selfGranted), curation.GatePromotionAdversary},
 	} {
 		err := Check(ctx, draftV(t, st.observer, v, curation.LessonVerb, st.id, c.body, ctx.Tip))
 		if err == nil {
@@ -737,6 +748,126 @@ func TestARawPassClearsNoAuthenticFail(t *testing.T) {
 			t.Fatalf("the failed trajectory still supports nothing: %v", err)
 		}
 	}
+}
+
+// A contest or a promotion pushed past the boundary binds nothing:
+// the fold re-judges both at their own position through the same
+// checks admission runs (review findings on the task PR), so a
+// raw-pushed contest by a claim key, or by the curator citing the
+// support set, moves nothing to contested and every delivery keeps the
+// lesson; and a raw-pushed promotion refused at the adversarial gate,
+// or signed by a key holding no observer grant, folds unbound and
+// surfaces nowhere.
+func TestRawPushedContestsAndPromotionsBindNothing(t *testing.T) {
+	st := curationFixture(t)
+	v := st.v
+	hp, bound, _ := func() (int, int, string) {
+		hp := st.admitHypothesis(t)
+		anchor := curation.LessonsDir + "/retry.md @ 0123456"
+		return hp, st.evalRun(t, "eval-bound", cite(st.id, hp), anchor, "pass", nil), anchor
+	}()
+	good := lessonBody(st.id, hp, "fix-the-check", bound)
+	// A promotion the boundary refuses (a plain pass cited as the
+	// adversarial evaluation), raw-pushed: unbound, never a candidate.
+	plain := plainPass(t, st)
+	smuggled := lessonBody(st.id, hp, "fix-the-check", plain)
+	if err := Check(st.ctx, draftV(t, st.observer, v, curation.LessonVerb, st.id, smuggled, st.ctx.Tip)); err == nil || gate(t, err) != curation.GatePromotionAdversary {
+		t.Fatalf("the boundary refuses the smuggled promotion: %v", err)
+	}
+	st.ctx = st.step(st.observer, v, curation.LessonVerb, st.id, smuggled)
+	// A well-formed promotion signed by the curator, which holds no
+	// observer grant, raw-pushed: unbound too.
+	st.ctx = st.step(st.curator, v, curation.LessonVerb, st.id, good)
+	fold := curation.Fold(st.ctx.Records)
+	if len(fold.LessonsOf(st.id)) != 0 || len(fold.Unbound) != 2 || len(curation.Candidates(fold, st.ctx.Lifecycle, "c-4")) != 0 {
+		t.Fatalf("raw-pushed promotions fold unbound and are no candidates: %+v %+v", fold.LessonsOf(st.id), fold.Unbound)
+	}
+	if h, _ := fold.Hypothesis(st.id); h.Stage != curation.StageProposed {
+		t.Fatalf("the hypothesis stays proposed: %+v", h)
+	}
+	// The legitimate promotion admits and binds.
+	if err := Check(st.ctx, draftV(t, st.observer, v, curation.LessonVerb, st.id, good, st.ctx.Tip)); err != nil {
+		t.Fatalf("the observer's promotion citing the survived eval admits: %v", err)
+	}
+	promoted := st.ctx.Count
+	st.ctx = st.step(st.observer, v, curation.LessonVerb, st.id, good)
+	fold = curation.Fold(st.ctx.Records)
+	if h, _ := fold.Hypothesis(st.id); h.Stage != curation.StagePromoted || h.Lesson == nil || *h.Lesson != promoted || len(curation.Candidates(fold, st.ctx.Lifecycle, "c-4")) != 1 {
+		t.Fatalf("the admitted promotion binds and is the one candidate: %+v", h)
+	}
+	// Contests the boundary refuses, raw-pushed: by the worker citing
+	// held-out evidence, and by the curator citing the support set.
+	// Neither moves the stage, and the lesson keeps surfacing.
+	heldOut := contestBody(st, hp, cite("c-1", st.deadEnd1b), cite("c-6", st.deadEnd6))
+	var oog *OutOfGrantError
+	if err := Check(st.ctx, draftV(t, st.worker, v, curation.ContestVerb, st.id, heldOut, st.ctx.Tip)); !errors.As(err, &oog) {
+		t.Fatalf("a claim key cannot contest: %v", err)
+	}
+	st.ctx = st.step(st.worker, v, curation.ContestVerb, st.id, heldOut)
+	fromSupport := contestBody(st, hp, cite("c-1", st.deadEnd1))
+	if err := Check(st.ctx, draftV(t, st.curator, v, curation.ContestVerb, st.id, fromSupport, st.ctx.Tip)); err == nil || gate(t, err) != curation.GateContestHeldOut {
+		t.Fatalf("support-set evidence refuses: %v", err)
+	}
+	st.ctx = st.step(st.curator, v, curation.ContestVerb, st.id, fromSupport)
+	fold = curation.Fold(st.ctx.Records)
+	if fold.Contested(st.id) || len(fold.Contests[st.id]) != 0 || fold.Anomalies != 2 || len(curation.Candidates(fold, st.ctx.Lifecycle, "c-4")) != 1 {
+		t.Fatalf("raw-pushed contests are anomalies and the lesson keeps surfacing: contested=%v anomalies=%d", fold.Contested(st.id), fold.Anomalies)
+	}
+	if _, ok := curation.ContestValid(st.ctx.Records, st.ctx.Table, st.ctx.Count-1); ok {
+		t.Fatal("a contest citing the support set is never an admitted contest")
+	}
+	// The legitimate contest admits, moves the stage, and closes the
+	// delivery.
+	if err := Check(st.ctx, draftV(t, st.curator, v, curation.ContestVerb, st.id, heldOut, st.ctx.Tip)); err != nil {
+		t.Fatalf("held-out evidence from curate contests: %v", err)
+	}
+	st.ctx = st.step(st.curator, v, curation.ContestVerb, st.id, heldOut)
+	fold = curation.Fold(st.ctx.Records)
+	if !fold.Contested(st.id) || len(curation.Candidates(fold, st.ctx.Lifecycle, "c-4")) != 0 {
+		t.Fatal("the admitted contest moves the stage and removes the lesson from delivery")
+	}
+	// Admission and the fold agree by construction: every promotion
+	// and contest on the chain is admitted exactly when the fold binds
+	// it.
+	for pos, rec := range st.ctx.Records {
+		switch rec.Event.Verb {
+		case curation.LessonVerb:
+			_, valid := curation.PromotionValid(st.ctx.Records, st.ctx.Table, pos)
+			if valid != (pos == promoted) {
+				t.Fatalf("promotion at %d: valid=%v", pos, valid)
+			}
+		case curation.ContestVerb:
+			_, valid := curation.ContestValid(st.ctx.Records, st.ctx.Table, pos)
+			if valid != (pos == st.ctx.Count-1) {
+				t.Fatalf("contest at %d: valid=%v", pos, valid)
+			}
+		}
+	}
+}
+
+// contestBody is a contest of the stand's hypothesis citing the given
+// evidence.
+func contestBody(st *curationStand, hp int, evidence ...string) string {
+	q := make([]string, len(evidence))
+	for i, e := range evidence {
+		q[i] = fmt.Sprintf("%q", e)
+	}
+	return fmt.Sprintf(`{"hypothesis": "%s", "evidence": [%s], "reason": "the mirror was warm and it still failed"}`, cite(st.id, hp), strings.Join(q, ", "))
+}
+
+// plainPass works an ordinary contract to an authenticated pass: a
+// verdict with no eval marker at all.
+func plainPass(t *testing.T, st *curationStand) int {
+	t.Helper()
+	v := st.v
+	st.ctx = st.step(st.root, v, "intent.filed", "c-plain", trivialFiling)
+	st.ctx = st.step(st.root, v, "contract.specified", "c-plain", specBody)
+	st.ctx = st.step(st.worker2, v, "claim.taken", "c-plain", `{}`)
+	sub := st.ctx.Count
+	st.ctx = st.step(st.worker2, v, "submission.made", "c-plain", `{"fence": "`+activeFence(t, st.ctx, "c-plain")+`", "packet": `+findingPacket+`}`)
+	pos := st.ctx.Count
+	st.ctx = st.step(st.verifier, v, "verdict.rendered", "c-plain", fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, strings.Repeat("0", 64), sub))
+	return pos
 }
 
 // curationEarly is the stand before any contract: the lanes enrolled

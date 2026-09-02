@@ -439,30 +439,50 @@ func TestLintFileIsTheGatesFileHalf(t *testing.T) {
 	if err := Verify(repo, unmergedReal); err == nil || !strings.Contains(err.Error(), "not an ancestor") {
 		t.Fatalf("an anchor on an unmerged branch does not resolve, naming the ancestry: %v", err)
 	}
-	for name, c := range map[string]struct {
+	// The lint judges one revision, the bytes at the promoted anchor:
+	// a working file that differs from them refuses at the digest gate
+	// whatever its frontmatter says, so a valid frontmatter in a later
+	// edit cannot stand in for the promoted one (review finding on the
+	// task PR). Each bent case is therefore promoted as its own anchor.
+	if err := LintFile(repo, []byte(body+"\nedited\n"), fact, h, now); err == nil || gateOf(t, err) != GateLintDigest {
+		t.Fatalf("a working file that differs from the promoted bytes refuses at the digest gate: %v", err)
+	}
+	promote := func(bent string) LessonFact {
+		t.Helper()
+		if bent == body {
+			return fact
+		}
+		if err := os.WriteFile(filepath.Join(repo, path), []byte(bent), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		git("commit", "--quiet", "-am", "bent")
+		return LessonFact{Lesson: path + " @ " + git("rev-parse", "HEAD"), Hypothesis: id + "@4", Carrier: "knowledge", Digest: Digest([]byte(bent))}
+	}
+	for _, c := range []struct {
+		name string
 		body string
-		fact LessonFact
 		hyp  *HypothesisFact
 		now  time.Time
 		gate string
 	}{
-		"frontmatter": {"# no block\n", fact, h, now, GateLintFrontmatter},
-		"hypothesis":  {strings.Replace(body, id+"@4", "h-000000000000@4", 1), fact, h, now, GateLintHypothesis},
-		"applies":     {strings.Replace(body, `{"routing": "core"}`, `{"routing": "other"}`, 1), fact, h, now, GateLintAppliesWhen},
-		"applies-bad": {strings.Replace(body, `{"routing": "core"}`, `flaky`, 1), fact, h, now, GateLintAppliesWhen},
-		"support":     {strings.Replace(body, "c-2@9", "c-2@10", 1), fact, h, now, GateLintSupport},
-		"provenance":  {strings.Replace(body, "plans/x.md @ "+planCommit, "plans/y.md @ "+planCommit, 1), fact, h, now, GateLintProvenance},
-		"stale":       {body, fact, h, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC), GateLintStamps},
-		"expired":     {body, fact, h, time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC), GateLintStamps},
-		"carrier":     {strings.Replace(body, "carrier: knowledge", "carrier: role", 1), fact, h, now, GateLintCarrier},
+		{"frontmatter", "# no block\n", h, now, GateLintFrontmatter},
+		{"hypothesis", strings.Replace(body, id+"@4", "h-000000000000@4", 1), h, now, GateLintHypothesis},
+		{"applies", strings.Replace(body, `{"routing": "core"}`, `{"routing": "other"}`, 1), h, now, GateLintAppliesWhen},
+		{"applies-bad", strings.Replace(body, `{"routing": "core"}`, `flaky`, 1), h, now, GateLintAppliesWhen},
+		{"support", strings.Replace(body, "c-2@9", "c-2@10", 1), h, now, GateLintSupport},
+		{"provenance", strings.Replace(body, "plans/x.md @ "+planCommit, "plans/y.md @ "+planCommit, 1), h, now, GateLintProvenance},
+		{"stale", body, h, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC), GateLintStamps},
+		{"expired", body, h, time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC), GateLintStamps},
+		{"carrier", strings.Replace(body, "carrier: knowledge", "carrier: role", 1), h, now, GateLintCarrier},
 	} {
-		err := LintFile(repo, []byte(c.body), c.fact, c.hyp, c.now)
+		bentFact := promote(c.body)
+		err := LintFile(repo, []byte(c.body), bentFact, c.hyp, c.now)
 		if err == nil {
-			t.Errorf("%s: refuses", name)
+			t.Errorf("%s: refuses", c.name)
 			continue
 		}
 		if got := gateOf(t, err); got != c.gate {
-			t.Errorf("%s: refuses at %s, got %s (%v)", name, c.gate, got, err)
+			t.Errorf("%s: refuses at %s, got %s (%v)", c.name, c.gate, got, err)
 		}
 	}
 }

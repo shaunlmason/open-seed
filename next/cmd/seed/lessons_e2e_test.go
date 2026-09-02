@@ -9,6 +9,7 @@ package main
 // it from the next claim after that.
 
 import (
+	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,6 +21,8 @@ import (
 	"github.com/shaunlmason/open-seed/next/executor"
 	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/eval"
+	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/loop"
 	"github.com/shaunlmason/open-seed/next/internal/version"
@@ -295,18 +298,57 @@ func TestSmallTeamPromotionDeliversLessonsAtClaimTime(t *testing.T) {
 		t.Fatalf("the held-out dead end: %d %+v", code, e.Error)
 	}
 	pC := firstDeadEnd(show(), "c-c")
-	e, code = runEnv(t, append(append([]string{"knowledge", "contest"}, m.posture()...), "--key", m.keys["curator"],
-		"--hypothesis", cited, "--evidence", fmt.Sprintf("c-c@%d", pC), "--reason", "the temperature was recorded and the fetch still failed")...)
-	if code != 0 {
-		t.Fatalf("the curator contests: %d %+v", code, e.Error)
-	}
 	m.contract(t, "c-d", "supervisor")
+	// The contest lands MID-FLIGHT: staged through the boundary, then
+	// rewound so the hook replays it when the claim's first push
+	// arrives. The claim's session opened at a tip where the lesson
+	// surfaced; the retry against the refreshed tip must re-derive
+	// the set, so the claim lands reporting what the landed tip
+	// delivers, never what the session opened at (review finding on
+	// the task PR).
+	before := remoteTip(t, m.remote)
+	contest := fmt.Sprintf(`{"hypothesis": %q, "evidence": [%q], "reason": "the temperature was recorded and the fetch still failed"}`, cited, fmt.Sprintf("c-c@%d", pC))
+	// Landed through the library with its own client state, so the
+	// claim's persisted head never sees the rival before the race.
+	curatorBytes, err := os.ReadFile(m.keys["curator"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	curatorKey, err := event.ParsePrivateKey(curatorBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	curatorFP, err := event.Fingerprint(curatorKey.Public().(ed25519.PublicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rivalClient, err := gitref.NewClient(t.TempDir(), m.remote, remoteRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rivalClient.AppendLoop(gitref.Draft{
+		V: version.Seed3, TS: "2026-09-01T02:00:00Z", Actor: curatorFP,
+		Verb: curation.ContestVerb, Subject: id, Payload: json.RawMessage(contest),
+	}, func(ev event.Event) (*event.Record, error) { return event.Sign(ev, curatorKey) }, m.ringOf(t).Resolver(), nil, 5); err != nil {
+		t.Fatalf("the curator's contest lands through the library: %v", err)
+	}
+	rival := remoteTip(t, m.remote)
+	if out, err := exec.Command("git", "--git-dir", m.remote, "update-ref", remoteRef, before).CombinedOutput(); err != nil {
+		t.Fatalf("rewind: %v %s", err, out)
+	}
+	installRivalHook(t, m.remote, []string{rival})
 	e, code = runEnv(t, append(append([]string{"claim", "take"}, m.posture()...), "--key", m.keys["impl2"], "--subject", "c-d", "--repo", m.src)...)
 	if code != 0 {
 		t.Fatalf("claim take after the contest: %d %+v", code, e.Error)
 	}
+	if attempts, _ := e.Result["attempts"].(float64); attempts < 2 {
+		t.Fatalf("fixture: the rival must have landed mid-flight, or the race never happened: %+v", e.Result)
+	}
 	if lessons, _ := e.Result["lessons"].([]any); len(lessons) != 0 {
-		t.Fatalf("a contested hypothesis's lesson reaches no claim: %+v", lessons)
+		t.Fatalf("a contested hypothesis's lesson reaches no claim, even when the contest lands mid-flight: %+v", lessons)
+	}
+	if remoteTip(t, m.remote) == rival {
+		t.Fatal("fixture: the claim must have landed after the rival")
 	}
 	if stages, _ := show()["stages"].(map[string]any); stages["contested"] != 1.0 || stages["lessons"] != 1.0 {
 		t.Fatalf("the contest keeps the file and the facts: %+v", stages)

@@ -315,4 +315,56 @@ var poisonScripts = map[string]func(t *testing.T) *poisonRun{
 		st.ctx = st.step(st.root, st.v, "intent.filed", "eval-ungated", `{"intent": "eval", "tier": "trivial", "budget": "small", "routing": "core", "eval": `+marker+`}`)
 		return attempt(t, st, st.root, "contract.specified", "eval-ungated", `{"acceptance": {"ref": "next/evals/fix-the-check/fixture/accept.md @ abc1234", "executable": true}}`)
 	},
+	"raw-pushed-promotion": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp := st.admitHypothesis(t)
+		plain := plainPass(t, st)
+		body := strings.Replace(lessonBody(st.id, hp, "fix-the-check", plain), `"knowledge"`, `"role"`, 1)
+		r := attempt(t, st, st.observer, curation.LessonVerb, st.id, body)
+		// Pushed past the boundary anyway: the ends below must still
+		// hold, so the fold re-judges it at its position.
+		st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, body)
+		return r
+	},
+	"raw-pushed-contest": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp, bound, _ := admittedAndBound(t, st)
+		st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, lessonBody(st.id, hp, "fix-the-check", bound))
+		body := contestBody(st, hp, cite("c-1", st.deadEnd1))
+		r := attempt(t, st, st.curator, curation.ContestVerb, st.id, body)
+		st.ctx = st.step(st.curator, st.v, curation.ContestVerb, st.id, body)
+		// The legitimate lesson keeps surfacing: the raw contest moved
+		// nothing, which is the end this poison attacks.
+		if fold := curation.Fold(st.ctx.Records); fold.Contested(st.id) || len(curation.Candidates(fold, st.ctx.Lifecycle, "c-4")) != 1 {
+			t.Fatal("a raw-pushed contest disabled the lesson")
+		}
+		// The poisoned end is the contest's, not the lesson's: report the
+		// promoted lesson's subject as untouched by pointing the ends at
+		// a hypothesis that has none.
+		r.subject = curation.HypothesisID("nothing was promoted for this", nil)
+		return r
+	},
+	"pass-at-another-position": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp, bound, _ := admittedAndBound(t, st)
+		return attempt(t, st, st.observer, curation.LessonVerb, st.id, lessonBody(st.id, hp, "fix-the-check", bound-1))
+	},
+	"contested-surfacing": func(t *testing.T) *poisonRun {
+		st := curationFixture(t)
+		hp, bound, _ := admittedAndBound(t, st)
+		good := lessonBody(st.id, hp, "fix-the-check", bound)
+		st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, good)
+		if len(curation.Candidates(curation.Fold(st.ctx.Records), st.ctx.Lifecycle, "c-4")) != 1 {
+			t.Fatal("the promoted lesson surfaces before the contest")
+		}
+		st.ctx = st.step(st.curator, st.v, curation.ContestVerb, st.id, contestBody(st, hp, cite("c-1", st.deadEnd1b), cite("c-6", st.deadEnd6)))
+		r := attempt(t, st, st.observer, curation.LessonVerb, st.id, good)
+		// The lesson stands in the fold (evidence kept) and surfaces
+		// nowhere: the ends read the candidates, not the promotion.
+		r.subject = curation.HypothesisID("nothing surfaces for this", nil)
+		if len(curation.Candidates(curation.Fold(st.ctx.Records), st.ctx.Lifecycle, "c-4")) != 0 {
+			t.Fatal("a contested hypothesis's lesson surfaces")
+		}
+		return r
+	},
 }

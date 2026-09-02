@@ -124,7 +124,12 @@ average. The boundary requires the cited hypothesis to be an admitted
 proposal on this subject, and each evidence to be an admitted
 observation on a contract the applies-when selects that is NOT in the
 support set: held-out evidence, by construction. The fold moves the
-hypothesis to `contested` from `proposed` or `promoted`; a contested
+hypothesis to `contested` from `proposed` or `promoted` only for a
+contest that passed that same boundary at its own position
+(`curation.ContestValid`: the signer held `curate` there and the
+citations pass `CheckContest` there), so a contest raw-pushed by a key
+holding no `curate`, or citing fabricated or support-set evidence, is
+an anomaly that moves nothing and disables no lesson; a contested
 hypothesis refuses `lesson.promoted`, and a promoted lesson whose
 hypothesis is contested stops surfacing while its file and every fact
 remain, which is "evidence kept". A contested hypothesis is never
@@ -162,8 +167,14 @@ and not contested at the tip; its support still satisfies the arms;
 authenticated pass, replayed at its own position, on a subject whose
 `eval` marker names that eval AND binds it to this hypothesis and to
 this lesson anchor ([`evals.md`](evals.md)), filed after the
-hypothesis's position. Every promoted lesson is behavior-changing,
-because promotion is what puts it in front of a worker at claim time;
+hypothesis's position. One implementation, `curation.CheckPromotion`,
+judges the ledger half at the boundary and in the fold: a promotion
+binds to its hypothesis only when it passed that check at its own
+position with a signer holding a capability the promotion accepts
+(`curation.PromotionValid`), so a promotion raw-pushed past the
+boundary folds `unbound` and surfaces nowhere. Every promoted lesson
+is behavior-changing, because promotion is what puts it in front of a
+worker at claim time;
 a `knowledge` carrier says where the lesson lands, never that it is
 harmless, so no carrier is exempt. The file half, `seed knowledge
 lint <file> --ledger <dir> --repo <dir> [--now <RFC3339>]`: the
@@ -171,8 +182,12 @@ frontmatter names its hypothesis, applies-when, support, provenance,
 `last-validated`, `expires` and `carrier`
 (`next/knowledge/lessons/README.md`) and agrees with the fact and the
 hypothesis; the file's bytes at the anchor hash to the fact's
-`digest` and the anchor commit is an ancestor of the repository's
-head (the promotion PR merged); every provenance anchor resolves in
+`digest`, the working file IS those bytes (the lint reads the anchored
+revision first and judges it alone, so a valid frontmatter in a later
+or uncommitted edit cannot stand in for the promoted one: a later edit
+refuses at `lint.digest` until it is promoted in its turn), and the
+anchor commit is an ancestor of the repository's head (the promotion
+PR merged); every provenance anchor resolves in
 the repository at its commit; `last-validated` is not after the
 declared instant and `expires` is after it. A drill applies the
 presence lint to every file in the store, so `make check` refuses a
@@ -226,9 +241,11 @@ there is a red test rather than a silent gap.
 
 ## Delivery
 
-The surfacing set (`curation.Surfacing`) is every promoted lesson
-whose hypothesis is not contested, whose applies-when selects the
-subject, AND whose fact resolves in the repository the reader holds:
+The surfacing set (`curation.Surfacing`) is every admitted promotion
+(the fold binds only what passed the promotion boundary at its own
+position) whose hypothesis is not contested by an admitted contest,
+whose applies-when selects the subject, AND whose fact resolves in the
+repository the reader holds:
 the anchor commit is an ancestor of the repository's head (the
 promotion PR merged) and the file's bytes at the anchor hash to the
 fact's `digest`. A fact that does not resolve is reported as
@@ -241,7 +258,11 @@ set from that one derivation: the envelope of `claim take --repo
 <dir>` gains `lessons` (present on every claim, empty when nothing
 matches; without `--repo` nothing surfaces and `lessons_unverified`
 counts what a repository would have verified,
-[`loop-verbs.md`](loop-verbs.md)); the provisioned handoff, where
+[`loop-verbs.md`](loop-verbs.md)), derived from the view the claim is
+judged against and re-derived against every refreshed view the
+optimistic loop retries at, so the set reported is the one at the tip
+the claim landed on, never the one the session opened at (a promotion
+or a contest landing mid-flight changes what the claim receives); the provisioned handoff, where
 `Provision` writes the set to `.seed-run/lessons.json` beside
 `packet.json` ([`executors.md`](executors.md)); and the orienting
 read, `seed situation --repo <dir>`, which lists the same rows per

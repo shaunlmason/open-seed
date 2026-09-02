@@ -69,17 +69,27 @@ func TestKnowledgeProjectionPublishesTheStages(t *testing.T) {
 	add(curator, version.Seed1, curation.HypothesisVerb, id, fmt.Sprintf(`{"claim": %q, "applies_when": {"routing": "core"}, "support": ["c-1@12", "c-2@13"], "exceptions": [], "provenance": []}`, claim))
 	add(worker, version.Seed1, curation.HypothesisVerb, "h-000000000000", `{"claim": "x"}`)
 	add(root, version.Seed1, curation.LessonVerb, "h-ffffffffffff", `{"lesson": "next/knowledge/lessons/x.md @ 0123456", "hypothesis": "h-ffffffffffff@3", "pr": "pr/1 @ 0123456", "carrier": "knowledge", "adversarial": {"eval": "e", "verdict": "1"}, "last_validated": "2026-09-01T00:00:00Z", "expires": "2026-12-01T00:00:00Z", "digest": "`+strings.Repeat("a", 64)+`"}`)
+	// c-3 at 17..19 with a dead end at 20: the held-out observation
+	// the contest cites (the fold re-judges the contest, so evidence
+	// from the support set would move nothing).
+	add(root, version.Seed1, "intent.filed", "c-3", `{"intent": "drill", "tier": "trivial", "budget": "small", "routing": "core"}`)
+	add(root, version.Seed1, "contract.specified", "c-3", `{"acceptance": {"ref": "specs/thing.md @ abc1234", "executable": false}}`)
+	add(worker, version.Seed1, "claim.taken", "c-3", `{}`)
+	add(worker, version.Seed1, curation.DeadEndVerb, "c-3", `{"fence": "19", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
 	other := "retry twice"
 	otherID := curation.HypothesisID(other, nil)
 	add(curator, version.Seed1, curation.HypothesisVerb, otherID, fmt.Sprintf(`{"claim": %q, "applies_when": {"routing": "core"}, "support": ["c-1@12", "c-2@13"], "exceptions": [], "provenance": []}`, other))
-	add(curator, version.Seed1, curation.ContestVerb, otherID, fmt.Sprintf(`{"hypothesis": "%s@17", "evidence": ["c-1@12"], "reason": "no"}`, otherID))
+	add(curator, version.Seed1, curation.ContestVerb, otherID, fmt.Sprintf(`{"hypothesis": "%s@21", "evidence": ["c-3@20"], "reason": "no"}`, otherID))
+	// A contest raw-pushed by the worker, citing the support set:
+	// shape-valid, never admitted, an anomaly rather than a stage.
+	add(worker, version.Seed1, curation.ContestVerb, id, fmt.Sprintf(`{"hypothesis": "%s@14", "evidence": ["c-1@12"], "reason": "no"}`, id))
 
 	out2 := lockedTempOut(t, "after")
 	if _, err := project.Rebuild(dir, out2, project.Default(), resolve); err != nil {
 		t.Fatal(err)
 	}
 	view := currentView(t, out2, "knowledge")
-	for _, want := range []string{`"observations": 2`, `"hypotheses": 2`, `"promoted": 0`, `"contested": 1`, `"lessons": 0`, `"unbound": 1`, `"anomalies": 1`, `"id": "` + id + `"`, `"stage": "proposed"`, `"stage": "contested"`, `"single_actor_family": true`} {
+	for _, want := range []string{`"observations": 3`, `"hypotheses": 2`, `"promoted": 0`, `"contested": 1`, `"lessons": 0`, `"unbound": 1`, `"anomalies": 2`, `"id": "` + id + `"`, `"stage": "proposed"`, `"stage": "contested"`, `"single_actor_family": true`} {
 		if !strings.Contains(view, want) {
 			t.Errorf("the knowledge view carries %s: %s", want, view)
 		}
