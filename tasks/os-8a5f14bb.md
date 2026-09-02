@@ -1,12 +1,17 @@
 ---
 id: os-8a5f14bb
 title: 'next: Phase 9 item 3 — the unattended maintenance loop'
-state: review
+state: done
 priority: P1
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-02T03:42:52Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/205
 created_at: "2026-09-01T20:22:10Z"
-updated_at: "2026-09-01T21:22:38Z"
+updated_at: "2026-09-02T03:42:52Z"
 ---
 
 Phase 9 item 3 of docs/next-build-plan.md. Above L1: plan first at
