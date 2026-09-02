@@ -12,6 +12,16 @@
       "consequence": "bounded by the held-out rule: a contest cites admitted observations on contracts the applies-when selects and outside the support set, re-judged from the record, so a persuaded curator can close a hypothesis only with evidence the trajectories already carry, and the road out is a new proposal on its own support (next/spec/curation.md)"
     },
     {
+      "verb": "curation.deadend.retired",
+      "why_admitted": "retiring a dead end on an environment change is the curator's attributable judgment that the environment moved (plans/os-0d537fbd.md D3), the curate row alone",
+      "consequence": "bounded by the citation and the environment: the act cites an admitted dead end on its own contract and names an environment other than the recorded one, re-judged from the record, so a persuaded curator can only flag evidence that stays in the fold, never delete it; the applicability read and the held-out listing skip a retired dead end, and any curate key un-retires it (next/spec/curation.md)"
+    },
+    {
+      "verb": "curation.deadend.unretired",
+      "why_admitted": "un-retiring is the same judgment in the other direction: the environment moved again, so the dead end applies again",
+      "consequence": "bounded by the standing retirement and its environment: admits only over an admitted retirement and in an environment other than the one it named, so a persuaded curator can restore a dead end to the listing and nothing more; the dead end's own evidence never changed (next/spec/curation.md)"
+    },
+    {
       "verb": "escalation.raised",
       "why_admitted": "any lane may raise blocked(needs-you) per the charter; the curator joined the row with its proposal grant",
       "consequence": "freezes a contract until a human answers: denial of progress, never escalation of authority, attributable and reversible (next/spec/escalation.md)"

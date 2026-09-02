@@ -25,8 +25,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -47,6 +49,21 @@ const (
 	ContestVerb    = "curation.hypothesis.contested"
 	LessonVerb     = "curation.lesson.promoted"
 )
+
+// The retirement verbs (plans/os-0d537fbd.md D2, D3): a lesson's
+// retirement is the observer's observation that a conclusion is
+// revoked while its evidence stays; a dead end's retirement and
+// un-retirement are the curator's attributable acts on the
+// environment a dead end applies to.
+const (
+	RetireVerb          = "curation.lesson.retired"
+	DeadEndRetireVerb   = "curation.deadend.retired"
+	DeadEndUnretireVerb = "curation.deadend.unretired"
+)
+
+// RetireReasons are the reasons a lesson retires under; each pairs
+// with exactly one optional field.
+var RetireReasons = []string{"regression", "superseded", "expired"}
 
 // LessonsDir is the validated-lessons store: files merged by PR, one
 // per lesson, whose frontmatter Lint checks (next/knowledge/lessons).
@@ -132,6 +149,17 @@ var (
 	GateLintAncestry        = register("lint.ancestry", "the anchor commit is an ancestor of the repository's head")
 	GateLintStamps          = register("lint.stamps", "last-validated is not after the declared instant, expires is after it, and both equal the fact's")
 	GateLintCarrier         = register("lint.carrier", "the frontmatter's carrier equals the fact's")
+	GateLintDuplicate       = register("lint.duplicate", "one lesson file per hypothesis in the store")
+	GateLintStructure       = register("lint.structure", "the frontmatter carries exactly the known keys and the body the README's sections, in order")
+	GatePromotionOrder      = register("promotion.revalidation", "a re-promotion of a path carries a last_validated after the previous admitted promotion's")
+	GateRetireShape         = register("retirement.shape", "the retirement's payload shape and fields")
+	GateRetirePromotion     = register("retirement.promotion", "the retirement cites the latest admitted promotion of its path")
+	GateRetireReason        = register("retirement.reason", "pr rides regression alone, superseded_by rides superseded alone, expired carries neither")
+	GateRetireSuperseded    = register("retirement.superseded_by", "superseded_by names a later admitted promotion, never the retired one")
+	GateDeadEndRetireShape  = register("deadend_retirement.shape", "the dead-end retirement's payload shape and fields")
+	GateDeadEndRetireCited  = register("deadend_retirement.deadend", "the citation is an admitted dead end on this subject")
+	GateDeadEndRetireEnv    = register("deadend_retirement.environment", "the environment differs from the one the previous act named")
+	GateDeadEndRetireStand  = register("deadend_retirement.standing", "a retirement needs no standing retirement, an un-retirement needs one")
 )
 
 // Gates lists every registered gate, sorted.
@@ -573,6 +601,113 @@ func UnderLessonsDir(anchor string) bool {
 	return strings.HasPrefix(p, LessonsDir+"/")
 }
 
+// Retirement is the strict payload of curation.lesson.retired
+// (plans/os-0d537fbd.md D2): the retired promotion by its lesson anchor
+// and hypothesis citation, the reason, and the one field the reason
+// requires.
+type Retirement struct {
+	Lesson       string `json:"lesson"`
+	Hypothesis   string `json:"hypothesis"`
+	Reason       string `json:"reason"`
+	PR           string `json:"pr,omitempty"`
+	SupersededBy string `json:"superseded_by,omitempty"`
+}
+
+// ParseRetirement decodes and shape-checks a retirement: anchored
+// lesson under the store, a hypothesis citation whose subject is the
+// event's, a known reason, and the reason's one field present and the
+// others absent.
+func ParseRetirement(subject string, raw []byte) (*Retirement, error) {
+	var r Retirement
+	if err := strict(raw, &r); err != nil {
+		return nil, NewGateError(GateRetireShape, RetireVerb, subject, "the payload is the strict object {lesson, hypothesis, reason, pr?, superseded_by?}: "+err.Error())
+	}
+	var missing []string
+	for _, f := range []struct{ name, v string }{{"lesson", r.Lesson}, {"hypothesis", r.Hypothesis}, {"reason", r.Reason}} {
+		if strings.TrimSpace(f.v) == "" {
+			missing = append(missing, f.name)
+		}
+	}
+	if len(missing) > 0 {
+		return nil, &transition.IncompleteError{Verb: RetireVerb, Subject: subject, Missing: missing}
+	}
+	if !anchorRE.MatchString(r.Lesson) || !UnderLessonsDir(r.Lesson) {
+		return nil, NewGateError(GateRetireShape, RetireVerb, subject, fmt.Sprintf("lesson %q is not an anchored path under %s/", r.Lesson, LessonsDir))
+	}
+	c, ok := ParseCitation(r.Hypothesis)
+	if !ok || !IsHypothesisSubject(c.Contract) {
+		return nil, NewGateError(GateRetireShape, RetireVerb, subject, fmt.Sprintf("hypothesis %q is not \"<h-id>@<position>\"", r.Hypothesis))
+	}
+	if c.Contract != subject {
+		return nil, NewGateError(GateRetireShape, RetireVerb, subject, fmt.Sprintf("the cited hypothesis %s is not this subject: a retirement is a fact on the hypothesis whose lesson it retires", c.Contract))
+	}
+	known := false
+	for _, k := range RetireReasons {
+		known = known || k == r.Reason
+	}
+	if !known {
+		return nil, NewGateError(GateRetireReason, RetireVerb, subject, fmt.Sprintf("reason %q is not one of %s", r.Reason, strings.Join(RetireReasons, ", ")))
+	}
+	hasPR, hasBy := strings.TrimSpace(r.PR) != "", strings.TrimSpace(r.SupersededBy) != ""
+	switch r.Reason {
+	case "regression":
+		if !hasPR || hasBy {
+			return nil, NewGateError(GateRetireReason, RetireVerb, subject, "regression requires pr (the revert's merge, the charter's one command observed) and carries no superseded_by")
+		}
+		if !anchorRE.MatchString(r.PR) {
+			return nil, NewGateError(GateRetireShape, RetireVerb, subject, fmt.Sprintf("pr %q is not \"<pr> @ <merged-commit>\"", r.PR))
+		}
+	case "superseded":
+		if !hasBy || hasPR {
+			return nil, NewGateError(GateRetireReason, RetireVerb, subject, "superseded requires superseded_by (the position of the later admitted promotion) and carries no pr")
+		}
+		if _, err := strconv.Atoi(r.SupersededBy); err != nil {
+			return nil, NewGateError(GateRetireShape, RetireVerb, subject, fmt.Sprintf("superseded_by %q is not a position", r.SupersededBy))
+		}
+	case "expired":
+		if hasPR || hasBy {
+			return nil, NewGateError(GateRetireReason, RetireVerb, subject, "expired carries neither pr nor superseded_by: the stamp the fold already holds is the evidence")
+		}
+	}
+	return &r, nil
+}
+
+// DeadEndRetirement is the strict payload of curation.deadend.retired
+// and curation.deadend.unretired (plans/os-0d537fbd.md D3): the dead
+// end by citation, the environment now, and the reason.
+type DeadEndRetirement struct {
+	DeadEnd     string `json:"deadend"`
+	Environment string `json:"environment"`
+	Reason      string `json:"reason"`
+}
+
+// ParseDeadEndRetirement decodes and shape-checks a dead-end
+// retirement or un-retirement: a citation on this subject, a
+// non-empty environment and reason.
+func ParseDeadEndRetirement(verb, subject string, raw []byte) (*DeadEndRetirement, error) {
+	var d DeadEndRetirement
+	if err := strict(raw, &d); err != nil {
+		return nil, NewGateError(GateDeadEndRetireShape, verb, subject, "the payload is the strict object {deadend, environment, reason}: "+err.Error())
+	}
+	var missing []string
+	for _, f := range []struct{ name, v string }{{"deadend", d.DeadEnd}, {"environment", d.Environment}, {"reason", d.Reason}} {
+		if strings.TrimSpace(f.v) == "" {
+			missing = append(missing, f.name)
+		}
+	}
+	if len(missing) > 0 {
+		return nil, &transition.IncompleteError{Verb: verb, Subject: subject, Missing: missing}
+	}
+	c, ok := ParseCitation(d.DeadEnd)
+	if !ok {
+		return nil, NewGateError(GateDeadEndRetireShape, verb, subject, fmt.Sprintf("deadend %q is not \"<contract>@<position>\"", d.DeadEnd))
+	}
+	if c.Contract != subject {
+		return nil, NewGateError(GateDeadEndRetireShape, verb, subject, fmt.Sprintf("the cited dead end is on %s, not this subject: the act is a fact on the contract the dead end was recorded on", c.Contract))
+	}
+	return &d, nil
+}
+
 // StampsOrdered parses the two RFC3339 stamps and requires expires
 // after last_validated.
 func StampsOrdered(lastValidated, expires string) (time.Time, time.Time, error) {
@@ -962,6 +1097,29 @@ func ContestValid(records []*event.Record, table *transition.Table, pos int) (*C
 // position (review finding on the task PR), so a promotion raw-pushed
 // past the boundary binds nothing and surfaces nowhere.
 func CheckPromotion(records []*event.Record, table *transition.Table, fold *transition.Fold, subject string, l *Lesson) error {
+	if err := checkPromotionArms(records, table, fold, subject, l); err != nil {
+		return err
+	}
+	// Revalidation is a re-promotion of the same path with the stamps
+	// moved forward (plans/os-0d537fbd.md D1): a re-promotion whose
+	// last_validated is not after the previous admitted promotion's
+	// refuses naming both, so the latest promotion per path is always
+	// the most recently validated.
+	if prev, ok := LatestPromotionBefore(records, table, l.Lesson, len(records)); ok && !revalidates(l, prev.Lesson) {
+		return NewGateError(GatePromotionOrder, LessonVerb, subject, fmt.Sprintf("last_validated %s is not after the previous promotion's %s at position %d: a revalidation moves the stamps forward, and a re-promotion that does not is the old promotion again", l.LastValidated, prev.Lesson.LastValidated, prev.Pos))
+	}
+	return nil
+}
+
+// checkPromotionArms is every promotion gate but the revalidation
+// order: the hypothesis, the contest, the support and the adversarial
+// pass. The order is judged against the latest admitted promotion of
+// the path, and LatestPromotionBefore finds that promotion by judging
+// each earlier one through these arms and the order against the
+// latest it has admitted so far, one forward pass: a promotion's
+// validity never re-derives the validity of every promotion before it
+// (the refold class item 2's ContestedBefore closed).
+func checkPromotionArms(records []*event.Record, table *transition.Table, fold *transition.Fold, subject string, l *Lesson) error {
 	cit, _ := ParseCitation(l.Hypothesis)
 	h, ok := HypothesisValid(records, table, cit)
 	if !ok {
@@ -974,6 +1132,279 @@ func CheckPromotion(records []*event.Record, table *transition.Table, fold *tran
 		return NewGateError(GatePromotionSupport, LessonVerb, subject, "the hypothesis's support no longer satisfies the arms at the tip: "+err.Error())
 	}
 	return adversarialSurvived(records, table, fold, subject, cit.Position, l)
+}
+
+// revalidates is the one ordering rule a re-promotion of a path must
+// satisfy against the promotion that stands: its last_validated is
+// after the previous one's.
+func revalidates(l, prev *Lesson) bool {
+	return stampAfter(l.LastValidated, prev.LastValidated)
+}
+
+// stampAfter reports whether the RFC3339 instant a is after b; a
+// stamp that does not parse is never after anything.
+func stampAfter(a, b string) bool {
+	ta, err := time.Parse(time.RFC3339, a)
+	if err != nil {
+		return false
+	}
+	tb, err := time.Parse(time.RFC3339, b)
+	if err != nil {
+		return false
+	}
+	return ta.After(tb)
+}
+
+// Promotion is an admitted promotion at a position, with its payload.
+type Promotion struct {
+	Pos    int
+	Actor  string
+	Lesson *Lesson
+}
+
+// LatestPromotionBefore finds the latest admitted promotion of the
+// lesson path (by its "<path> @ <commit>" anchor's path) before the
+// position: the promotion a retirement cites and a revalidation
+// supersedes. One position-accurate scan, never a refold.
+func LatestPromotionBefore(records []*event.Record, table *transition.Table, anchor string, before int) (Promotion, bool) {
+	path, _, _ := AnchorParts(anchor)
+	if before > len(records) {
+		before = len(records)
+	}
+	var out Promotion
+	found := false
+	for pos := 0; pos < before; pos++ {
+		e := &records[pos].Event
+		if e.Verb != LessonVerb {
+			continue
+		}
+		l, ok := promotionArmsValid(records, table, pos)
+		if !ok {
+			continue
+		}
+		if p, _, _ := AnchorParts(l.Lesson); p != path {
+			continue
+		}
+		if found && !revalidates(l, out.Lesson) {
+			continue
+		}
+		out, found = Promotion{Pos: pos, Actor: e.Actor, Lesson: l}, true
+	}
+	return out, found
+}
+
+// Expired reports whether the promotion is expired at the instant: the
+// instant is at or past its expires stamp (plans/os-0d537fbd.md D1).
+// Derived, never a fact; a stamp that does not parse counts as expired,
+// since a lesson whose expiry cannot be read has none a reader can
+// trust.
+func Expired(l LessonFact, at time.Time) bool {
+	ex, err := time.Parse(time.RFC3339, l.Expires)
+	if err != nil {
+		return true
+	}
+	return !at.Before(ex)
+}
+
+// CheckRetirement judges a retirement against the record as the
+// boundary does (plans/os-0d537fbd.md D2): the cited promotion is the
+// latest admitted promotion of its path and cites this hypothesis, and
+// superseded_by, where the reason requires it, names a later admitted
+// promotion that is not the retired one. The fold re-judges every
+// retirement through this same function at its own position.
+func CheckRetirement(records []*event.Record, table *transition.Table, subject string, r *Retirement) (Promotion, error) {
+	prev, ok := LatestPromotionBefore(records, table, r.Lesson, len(records))
+	if !ok || prev.Lesson.Lesson != r.Lesson || prev.Lesson.Hypothesis != r.Hypothesis {
+		return Promotion{}, NewGateError(GateRetirePromotion, RetireVerb, subject, fmt.Sprintf("%s citing %s is not the latest admitted promotion of its path: a retirement revokes the promotion that stands, and a superseded one is already gone", r.Lesson, r.Hypothesis))
+	}
+	if err := supersededBy(records, table, subject, prev, r); err != nil {
+		return Promotion{}, err
+	}
+	if at, standing := RetirementStanding(records, table, prev, len(records)); standing {
+		return Promotion{}, NewGateError(GateRetirePromotion, RetireVerb, subject, fmt.Sprintf("%s already stands retired at position %d: a retirement revokes the promotion that stands, and only a new promotion through the gate brings the path back", r.Lesson, at))
+	}
+	return prev, nil
+}
+
+// supersededBy judges the one citation the superseded reason carries:
+// a later admitted promotion that is not the retired one.
+func supersededBy(records []*event.Record, table *transition.Table, subject string, prev Promotion, r *Retirement) error {
+	if r.Reason != "superseded" {
+		return nil
+	}
+	pos, _ := strconv.Atoi(r.SupersededBy)
+	if pos == prev.Pos {
+		return NewGateError(GateRetireSuperseded, RetireVerb, subject, "superseded_by names the retired promotion itself")
+	}
+	if pos <= prev.Pos {
+		return NewGateError(GateRetireSuperseded, RetireVerb, subject, fmt.Sprintf("superseded_by %d is not later than the retired promotion at %d", pos, prev.Pos))
+	}
+	if _, ok := PromotionValid(records, table, pos); !ok {
+		return NewGateError(GateRetireSuperseded, RetireVerb, subject, fmt.Sprintf("superseded_by %d is not an admitted promotion", pos))
+	}
+	return nil
+}
+
+// RetirementStanding finds the admitted retirement of the promotion
+// standing before the position, if one does: the first retirement
+// after the promotion, on its hypothesis, signed by a key the verb
+// accepts, citing it and satisfying the reason's citation. The first
+// such act is the standing one and every later one refuses on it, so
+// one forward pass decides without re-judging each retirement's own
+// prefix (the refold class again).
+func RetirementStanding(records []*event.Record, table *transition.Table, prev Promotion, before int) (int, bool) {
+	if before > len(records) {
+		before = len(records)
+	}
+	cit, _ := ParseCitation(prev.Lesson.Hypothesis)
+	for pos := prev.Pos + 1; pos < before; pos++ {
+		e := &records[pos].Event
+		if e.Verb != RetireVerb || e.Subject != cit.Contract {
+			continue
+		}
+		r, ok := retirementAccepted(records, table, pos)
+		if !ok || r.Lesson != prev.Lesson.Lesson || r.Hypothesis != prev.Lesson.Hypothesis {
+			continue
+		}
+		if supersededBy(records[:pos], table, e.Subject, prev, r) != nil {
+			continue
+		}
+		return pos, true
+	}
+	return -1, false
+}
+
+// retirementAccepted is the part of a retirement's validity that
+// needs no record: shape, and a signer the verb accepts at the prefix.
+func retirementAccepted(records []*event.Record, table *transition.Table, pos int) (*Retirement, bool) {
+	if table == nil || pos < 0 || pos >= len(records) {
+		return nil, false
+	}
+	e := &records[pos].Event
+	if e.Verb != RetireVerb || !keyring.Applies(e.V) {
+		return nil, false
+	}
+	r, err := ParseRetirement(e.Subject, e.Payload)
+	if err != nil {
+		return nil, false
+	}
+	ring, _, err := keyring.StateAt(records[:pos])
+	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(RetireVerb)) {
+		return nil, false
+	}
+	return r, true
+}
+
+// RetirementValid re-judges the record at the position as an admitted
+// retirement: on its subject, signed by a key holding a capability the
+// retirement accepts at that prefix, passing CheckRetirement there.
+func RetirementValid(records []*event.Record, table *transition.Table, pos int) (*Retirement, bool) {
+	r, ok := retirementAccepted(records, table, pos)
+	if !ok {
+		return nil, false
+	}
+	if _, err := CheckRetirement(records[:pos], table, records[pos].Event.Subject, r); err != nil {
+		return nil, false
+	}
+	return r, true
+}
+
+// DeadEndStanding is what the admitted retirement acts on a dead end
+// say before the position: whether it stands retired, and the
+// environment the standing act named (the dead end's own when no act
+// stands).
+func DeadEndStanding(records []*event.Record, table *transition.Table, c Citation, before int) (retired bool, environment string, at int) {
+	if before > len(records) {
+		before = len(records)
+	}
+	at = -1
+	if c.Position >= 0 && c.Position < len(records) {
+		if d, err := ParseDeadEnd(c.Contract, records[c.Position].Event.Payload); err == nil {
+			environment = d.Environment
+		}
+	}
+	for pos := 0; pos < before; pos++ {
+		e := &records[pos].Event
+		if (e.Verb != DeadEndRetireVerb && e.Verb != DeadEndUnretireVerb) || e.Subject != c.Contract {
+			continue
+		}
+		d, ok := DeadEndRetirementValid(records, table, pos)
+		if !ok || d.DeadEnd != c.String() {
+			continue
+		}
+		retired, environment, at = e.Verb == DeadEndRetireVerb, d.Environment, pos
+	}
+	return retired, environment, at
+}
+
+// CheckDeadEndRetirement judges a dead-end retirement or un-retirement
+// against the record as the boundary does (plans/os-0d537fbd.md D3):
+// the citation is an admitted dead end on this subject; a retirement
+// needs no standing retirement and an environment different from the
+// dead end's recorded one; an un-retirement needs a standing
+// retirement and an environment different from the one it named. The
+// comparison is exact string equality, the comparison applicability
+// uses.
+func CheckDeadEndRetirement(records []*event.Record, table *transition.Table, verb, subject string, d *DeadEndRetirement) error {
+	c, _ := ParseCitation(d.DeadEnd)
+	o, ok := ObservationAt(records, table, c)
+	if !ok || o.Verb != DeadEndVerb {
+		return NewGateError(GateDeadEndRetireCited, verb, subject, fmt.Sprintf("%s is not an admitted dead end on this subject", d.DeadEnd))
+	}
+	retired, environment, _ := DeadEndStanding(records, table, c, len(records))
+	switch verb {
+	case DeadEndRetireVerb:
+		if retired {
+			return NewGateError(GateDeadEndRetireStand, verb, subject, fmt.Sprintf("%s already stands retired: un-retire it first if the environment moved again", d.DeadEnd))
+		}
+		if d.Environment == environment {
+			return NewGateError(GateDeadEndRetireEnv, verb, subject, fmt.Sprintf("environment %q is the one the dead end was recorded in: a dead end retires because the environment moved, and in the environment it names it still applies", d.Environment))
+		}
+	case DeadEndUnretireVerb:
+		if !retired {
+			return NewGateError(GateDeadEndRetireStand, verb, subject, fmt.Sprintf("%s stands unretired: an un-retirement needs a standing retirement", d.DeadEnd))
+		}
+		if d.Environment == environment {
+			return NewGateError(GateDeadEndRetireEnv, verb, subject, fmt.Sprintf("environment %q is the one the standing retirement named: a dead end comes back because the environment moved again", d.Environment))
+		}
+	default:
+		return NewGateError(GateDeadEndRetireShape, verb, subject, "not a dead-end retirement verb")
+	}
+	return nil
+}
+
+// DeadEndRetirementValid re-judges the record at the position as an
+// admitted dead-end retirement or un-retirement: signed by a key
+// holding curate at that prefix and passing CheckDeadEndRetirement
+// there.
+func DeadEndRetirementValid(records []*event.Record, table *transition.Table, pos int) (*DeadEndRetirement, bool) {
+	if table == nil || pos < 0 || pos >= len(records) {
+		return nil, false
+	}
+	e := &records[pos].Event
+	if (e.Verb != DeadEndRetireVerb && e.Verb != DeadEndUnretireVerb) || !keyring.Applies(e.V) {
+		return nil, false
+	}
+	d, err := ParseDeadEndRetirement(e.Verb, e.Subject, e.Payload)
+	if err != nil {
+		return nil, false
+	}
+	prefix := records[:pos]
+	ring, _, err := keyring.StateAt(prefix)
+	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(e.Verb)) {
+		return nil, false
+	}
+	if err := CheckDeadEndRetirement(prefix, table, e.Verb, e.Subject, d); err != nil {
+		return nil, false
+	}
+	return d, true
+}
+
+// Applies reports whether a dead end applies to a run in the
+// environment: recorded in that environment, by exact string equality,
+// and not standing retired.
+func (d DeadEndFact) Applies(environment string) bool {
+	return !d.Retired && d.Environment == environment
 }
 
 // adversarialSurvived is the promotion's adversarial arm: the cited
@@ -1064,6 +1495,21 @@ func AuthenticPass(records []*event.Record, table *transition.Table, subject str
 // the promotion accepts at that prefix and whose citations pass
 // CheckPromotion there.
 func PromotionValid(records []*event.Record, table *transition.Table, pos int) (*Lesson, bool) {
+	l, ok := promotionArmsValid(records, table, pos)
+	if !ok {
+		return nil, false
+	}
+	if prev, ok := LatestPromotionBefore(records, table, l.Lesson, pos); ok && !revalidates(l, prev.Lesson) {
+		return nil, false
+	}
+	return l, true
+}
+
+// promotionArmsValid re-judges the record at the position through
+// everything but the revalidation order: a promotion on the subject
+// whose signer held a capability the promotion accepts at that prefix
+// and whose citations pass the arms there.
+func promotionArmsValid(records []*event.Record, table *transition.Table, pos int) (*Lesson, bool) {
 	if table == nil || pos < 0 || pos >= len(records) {
 		return nil, false
 	}
@@ -1080,7 +1526,7 @@ func PromotionValid(records []*event.Record, table *transition.Table, pos int) (
 	if err != nil || ring == nil || !ring.HasAnyCapability(e.Actor, keyring.AcceptedCapabilities(LessonVerb)) {
 		return nil, false
 	}
-	if err := CheckPromotion(prefix, table, table.FoldRecords(prefix), e.Subject, l); err != nil {
+	if err := checkPromotionArms(prefix, table, table.FoldRecords(prefix), e.Subject, l); err != nil {
 		return nil, false
 	}
 	return l, true
@@ -1096,6 +1542,23 @@ type DeadEndFact struct {
 	Condition   string `json:"condition"`
 	Environment string `json:"environment"`
 	Pointer     string `json:"pointer,omitempty"`
+	// Retired reports a standing admitted retirement, and
+	// RetiredEnvironment the environment the standing act named
+	// (plans/os-0d537fbd.md D3); evidence kept, never deleted.
+	Retired            bool   `json:"retired,omitempty"`
+	RetiredEnvironment string `json:"retired_environment,omitempty"`
+	RetiredAt          *int   `json:"retired_at,omitempty"`
+}
+
+// RetirementFact is a folded, admitted lesson retirement.
+type RetirementFact struct {
+	Pos          int    `json:"position"`
+	Actor        string `json:"actor"`
+	Lesson       string `json:"lesson"`
+	Hypothesis   string `json:"hypothesis"`
+	Reason       string `json:"reason"`
+	PR           string `json:"pr,omitempty"`
+	SupersededBy string `json:"superseded_by,omitempty"`
 }
 
 // HypothesisFact is a folded hypothesis with its stage.
@@ -1156,8 +1619,12 @@ type State struct {
 	DeadEnds   map[string][]DeadEndFact
 	Hypotheses map[string]*HypothesisFact
 	Contests   map[string][]ContestFact
-	Lessons    map[string]LessonFact
-	Unbound    []LessonFact
+	// Lessons holds the LATEST admitted promotion per lesson path
+	// (plans/os-0d537fbd.md D1); Retired the standing retirement per
+	// path, cleared by a later promotion of that path.
+	Lessons map[string]LessonFact
+	Retired map[string]RetirementFact
+	Unbound []LessonFact
 	// Anomalies counts malformed raw facts: counted, never folded.
 	Anomalies int
 	order     []string
@@ -1170,6 +1637,12 @@ func (s *State) HypothesisIDs() []string { return append([]string(nil), s.order.
 func (s *State) Hypothesis(id string) (*HypothesisFact, bool) {
 	h, ok := s.Hypotheses[id]
 	return h, ok
+}
+
+// RetiredPath reports whether a standing retirement holds the path.
+func (s *State) RetiredPath(path string) bool {
+	_, retired := s.Retired[path]
+	return retired
 }
 
 // LessonsOf returns the promotions citing the hypothesis, in position
@@ -1193,7 +1666,7 @@ func (s *State) LessonsOf(id string) []LessonFact {
 // the boundary re-judges citations from the records.
 func Fold(records []*event.Record) *State {
 	s := &State{DeadEnds: map[string][]DeadEndFact{}, Hypotheses: map[string]*HypothesisFact{},
-		Contests: map[string][]ContestFact{}, Lessons: map[string]LessonFact{}}
+		Contests: map[string][]ContestFact{}, Lessons: map[string]LessonFact{}, Retired: map[string]RetirementFact{}}
 	// A proposal folds only when it passed the boundary at its own
 	// position: the fold is what the duplicate rule, the contest and
 	// the promotion's citation read, so a raw-pushed proposal must be
@@ -1266,6 +1739,30 @@ func Fold(records []*event.Record) *State {
 				p := pos
 				h.Contest = &p
 			}
+		case RetireVerb:
+			r, ok := RetirementValid(records, table, pos)
+			if !ok || terr != nil {
+				s.Anomalies++
+				continue
+			}
+			path, _, _ := AnchorParts(r.Lesson)
+			s.Retired[path] = RetirementFact{Pos: pos, Actor: e.Actor, Lesson: r.Lesson, Hypothesis: r.Hypothesis, Reason: r.Reason, PR: r.PR, SupersededBy: r.SupersededBy}
+		case DeadEndRetireVerb, DeadEndUnretireVerb:
+			d, ok := DeadEndRetirementValid(records, table, pos)
+			if !ok || terr != nil {
+				s.Anomalies++
+				continue
+			}
+			c, _ := ParseCitation(d.DeadEnd)
+			for i := range s.DeadEnds[c.Contract] {
+				if s.DeadEnds[c.Contract][i].Pos != c.Position {
+					continue
+				}
+				p := pos
+				s.DeadEnds[c.Contract][i].Retired = e.Verb == DeadEndRetireVerb
+				s.DeadEnds[c.Contract][i].RetiredEnvironment = d.Environment
+				s.DeadEnds[c.Contract][i].RetiredAt = &p
+			}
 		case LessonVerb:
 			l, err := ParseLesson(e.Subject, e.Payload)
 			if err != nil {
@@ -1294,7 +1791,12 @@ func Fold(records []*event.Record) *State {
 				s.Unbound = append(s.Unbound, fact)
 				continue
 			}
-			s.Lessons[l.Lesson] = fact
+			// The latest admitted promotion per PATH stands, keyed by
+			// the path, and a new promotion of a path brings a retired
+			// lesson back (plans/os-0d537fbd.md D1, D2).
+			path, _, _ := AnchorParts(l.Lesson)
+			delete(s.Retired, path)
+			s.Lessons[path] = fact
 			if h.Stage == StageProposed {
 				h.Stage = StagePromoted
 				p := pos
@@ -1348,9 +1850,18 @@ func HeldOut(records []*event.Record, table *transition.Table, fold *transition.
 		if inSupport[cit.String()] {
 			continue
 		}
-		if o, ok := ObservationAt(records, table, cit); ok {
-			out = append(out, *o)
+		o, ok := ObservationAt(records, table, cit)
+		if !ok {
+			continue
 		}
+		// A retired dead end is evidence kept, never counter-evidence
+		// offered (plans/os-0d537fbd.md D3).
+		if o.Verb == DeadEndVerb {
+			if retired, _, _ := DeadEndStanding(records, table, cit, len(records)); retired {
+				continue
+			}
+		}
+		out = append(out, *o)
 	}
 	return out
 }
@@ -1390,7 +1901,28 @@ func Candidates(st *State, fold *transition.Fold, subject string) []LessonFact {
 				continue
 			}
 		}
-		out = append(out, st.LessonsOf(id)...)
+		for _, l := range st.LessonsOf(id) {
+			// A retired lesson never surfaces; its file, hypothesis
+			// and observations remain (plans/os-0d537fbd.md D2).
+			if path, _, _ := AnchorParts(l.Lesson); st.RetiredPath(path) {
+				continue
+			}
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+// CandidatesAt is Candidates at a declared instant: an expired lesson
+// leaves the set (plans/os-0d537fbd.md D1, D6). Reads may consult an
+// instant; admission never does.
+func CandidatesAt(st *State, fold *transition.Fold, subject string, at time.Time) []LessonFact {
+	var out []LessonFact
+	for _, l := range Candidates(st, fold, subject) {
+		if Expired(l, at) {
+			continue
+		}
+		out = append(out, l)
 	}
 	return out
 }
@@ -1420,10 +1952,10 @@ func Verify(repo string, l LessonFact) error {
 // D6): every candidate whose fact resolves in the repository, and the
 // candidates that do not, with the reason. With repo empty nothing
 // surfaces and every candidate is unresolved as unverified.
-func Surfacing(records []*event.Record, fold *transition.Fold, repo, subject string) ([]Surfaced, []Unresolved) {
+func Surfacing(records []*event.Record, fold *transition.Fold, repo, subject string, at time.Time) ([]Surfaced, []Unresolved) {
 	st := Fold(records)
 	surfaced, unresolved := []Surfaced{}, []Unresolved{}
-	for _, l := range Candidates(st, fold, subject) {
+	for _, l := range CandidatesAt(st, fold, subject, at) {
 		if repo == "" {
 			unresolved = append(unresolved, Unresolved{Lesson: l.Lesson, Hypothesis: l.Hypothesis, Reason: "no repository to verify against"})
 			continue
@@ -1572,6 +2104,121 @@ func LintFile(repo string, body []byte, fact LessonFact, h *HypothesisFact, now 
 	}
 	if fm["carrier"] != fact.Carrier {
 		return NewGateError(GateLintCarrier, LessonVerb, subject, fmt.Sprintf("the frontmatter's carrier %q differs from the fact's %q", fm["carrier"], fact.Carrier))
+	}
+	return nil
+}
+
+// BodySections are the sections a lesson file's body carries, in this
+// order, after the frontmatter (next/knowledge/lessons/README.md;
+// plans/os-0d537fbd.md D4): the claim, the evidence it rests on, and
+// when it applies.
+var BodySections = []string{"## Claim", "## Evidence", "## Applies when"}
+
+// LintStructure is the structure lint (plans/os-0d537fbd.md D4): the
+// frontmatter carries exactly the known keys, no unknown one, and the
+// body carries BodySections in order. Refuses at lint.structure
+// naming the part.
+func LintStructure(body []byte) error {
+	fm, err := Frontmatter(body)
+	if err != nil {
+		return NewGateError(GateLintStructure, LessonVerb, "", err.Error())
+	}
+	known := map[string]bool{}
+	for _, k := range FrontmatterKeys {
+		known[k] = true
+	}
+	var unknown []string
+	for k := range fm {
+		if !known[k] {
+			unknown = append(unknown, k)
+		}
+	}
+	sort.Strings(unknown)
+	if len(unknown) > 0 {
+		return NewGateError(GateLintStructure, LessonVerb, "", fmt.Sprintf("the frontmatter carries keys the contract does not name: %s", strings.Join(unknown, ", ")))
+	}
+	text := strings.ReplaceAll(string(body), "\r\n", "\n")
+	rest := text[4:]
+	end := strings.Index(rest, "\n---")
+	after := rest[end+4:]
+	last := -1
+	for _, section := range BodySections {
+		at := strings.Index(after, "\n"+section+"\n")
+		if at < 0 && strings.HasPrefix(after, section+"\n") {
+			at = 0
+		}
+		if at < 0 {
+			return NewGateError(GateLintStructure, LessonVerb, "", fmt.Sprintf("the body carries no %q section: a lesson states its claim, its evidence and when it applies, in that order", section))
+		}
+		if at < last {
+			return NewGateError(GateLintStructure, LessonVerb, "", fmt.Sprintf("the %q section is out of order: the body carries %s in that order", section, strings.Join(BodySections, ", ")))
+		}
+		last = at
+	}
+	return nil
+}
+
+// LintDuplicates is the dedup lint (plans/os-0d537fbd.md D4): the
+// store holds one file per hypothesis, so two files whose frontmatter
+// cites one hypothesis subject refuse at lint.duplicate naming both
+// and saying which is the duplicate: with the fold given, the file
+// the hypothesis's admitted promotion cites is the original and any
+// other is the duplicate; without it, the first by name. A
+// revalidation keeps its path, so it is never a duplicate.
+func LintDuplicates(dir string, st *State) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".md" || e.Name() == "README.md" {
+			continue
+		}
+		names = append(names, e.Name())
+	}
+	sort.Strings(names)
+	byHypothesis := map[string][]string{}
+	var ids []string
+	for _, name := range names {
+		b, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+		fm, err := Frontmatter(b)
+		if err != nil {
+			continue
+		}
+		c, ok := ParseCitation(fm["hypothesis"])
+		if !ok {
+			continue
+		}
+		if _, seen := byHypothesis[c.Contract]; !seen {
+			ids = append(ids, c.Contract)
+		}
+		byHypothesis[c.Contract] = append(byHypothesis[c.Contract], name)
+	}
+	for _, id := range ids {
+		files := byHypothesis[id]
+		if len(files) < 2 {
+			continue
+		}
+		original := files[0]
+		if st != nil {
+			for _, l := range st.LessonsOf(id) {
+				path, _, _ := AnchorParts(l.Lesson)
+				for _, name := range files {
+					if filepath.Base(path) == name {
+						original = name
+					}
+				}
+			}
+		}
+		for _, name := range files {
+			if name != original {
+				return NewGateError(GateLintDuplicate, LessonVerb, id, fmt.Sprintf("%s cites hypothesis %s, which %s already carries: one file per hypothesis, and %s is the duplicate", name, id, original, name))
+			}
+		}
 	}
 	return nil
 }

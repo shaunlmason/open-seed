@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"sort"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/curation"
@@ -150,13 +152,38 @@ func gitAncestor(repo, ancestor, descendant string) bool {
 // (plans/os-96850e5a.md D6): every promoted, uncontested lesson whose
 // fact does not resolve in the repository is lesson_unverified, on the
 // hypothesis subject, with the reason.
-func Lessons(records []*event.Record, fold *transition.Fold, repo string) []Finding {
+func Lessons(records []*event.Record, fold *transition.Fold, repo string, at time.Time) []Finding {
 	var out []Finding
-	_, unresolved := curation.Surfacing(records, fold, repo, "")
+	_, unresolved := curation.Surfacing(records, fold, repo, "", at)
 	for _, u := range unresolved {
 		c, _ := curation.ParseCitation(u.Hypothesis)
 		out = append(out, Finding{Subject: c.Contract, Class: ClassLessonUnverified,
 			Detail: fmt.Sprintf("the promotion of %s does not resolve in the repository: %s — a fact a worker would be handed must verify before it surfaces", u.Lesson, u.Reason)})
+	}
+	return out
+}
+
+// LessonsStale lists the lessons stale at the instant: the latest
+// admitted promotion of each path, unretired, expired for at least
+// staleAfter (plans/os-0d537fbd.md D5). The loop never retires or
+// revalidates; the finding asks for one or the other.
+func LessonsStale(st *curation.State, now time.Time, staleAfter time.Duration) []Finding {
+	var out []Finding
+	paths := make([]string, 0, len(st.Lessons))
+	for path := range st.Lessons {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	for _, path := range paths {
+		l := st.Lessons[path]
+		if st.RetiredPath(path) || !curation.Expired(l, now) {
+			continue
+		}
+		if ex, err := time.Parse(time.RFC3339, l.Expires); err == nil && now.Sub(ex) < staleAfter {
+			continue
+		}
+		out = append(out, Finding{Subject: fmt.Sprintf("%s@%d", path, l.Pos), Class: ClassLessonStale,
+			Detail: fmt.Sprintf("the promotion at position %d of %s expired at %s and nobody revalidated or retired it — a revalidation (the stamps moved forward in a PR, then a new lesson.promoted for the path) or a lesson.retired with reason expired", l.Pos, l.Lesson, l.Expires)})
 	}
 	return out
 }

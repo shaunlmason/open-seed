@@ -246,6 +246,14 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapCurate}
 	case "curation.lesson.promoted":
 		return []string{CapObserver, CapOperator}
+	// Expiry, retirement and rollback (plans/os-0d537fbd.md D2, D3): a
+	// lesson's retirement is the promotion's own row (the observation
+	// of a revoked conclusion), a dead end's retirement and
+	// un-retirement the curator's alone, judging applicability.
+	case "curation.lesson.retired":
+		return []string{CapObserver, CapOperator}
+	case "curation.deadend.retired", "curation.deadend.unretired":
+		return []string{CapCurate}
 	}
 	return nil
 }

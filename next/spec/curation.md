@@ -218,25 +218,36 @@ there is a red test rather than a silent gap.
 | `contest.shape` | the contest's payload shape and fields |
 | `deadend.holder` | the dead end is the window holder's own |
 | `deadend.shape` | the dead end's payload shape and fields |
+| `deadend_retirement.deadend` | the citation is an admitted dead end on this subject |
+| `deadend_retirement.environment` | the environment differs from the one the previous act named |
+| `deadend_retirement.shape` | the dead-end retirement's payload shape and fields |
+| `deadend_retirement.standing` | a retirement needs no standing retirement, an un-retirement needs one |
 | `lint.ancestry` | the anchor commit is an ancestor of the repository's head |
 | `lint.applies_when` | the frontmatter's applies-when parses and equals the hypothesis's |
 | `lint.carrier` | the frontmatter's carrier equals the fact's |
 | `lint.digest` | the file's bytes at the anchor hash to the fact's digest |
+| `lint.duplicate` | one lesson file per hypothesis in the store |
 | `lint.frontmatter` | the lesson file opens with the frontmatter block and its keys |
 | `lint.hypothesis` | the frontmatter cites the fact's hypothesis |
 | `lint.provenance` | every provenance anchor resolves in the repository at its commit |
 | `lint.stamps` | last-validated is not after the declared instant, expires is after it, and both equal the fact's |
+| `lint.structure` | the frontmatter carries exactly the known keys and the body the README's sections, in order |
 | `lint.support` | the frontmatter's support equals the hypothesis's |
 | `promotion.adversarial` | the adversarial evaluation is an authenticated pass bound to this hypothesis and this lesson anchor, filed after the hypothesis |
 | `promotion.carrier` | the carrier is a member |
 | `promotion.contested` | a contested hypothesis is not promotable |
 | `promotion.digest` | the digest is the lesson file's sha256 |
 | `promotion.hypothesis` | the promotion cites an admitted hypothesis on its own subject |
+| `promotion.revalidation` | a re-promotion of a path carries a last_validated after the previous admitted promotion's |
 | `promotion.shape` | the promotion's payload shape and fields |
 | `promotion.stamps` | last_validated and expires are RFC3339 and ordered |
 | `promotion.support` | the hypothesis's support still satisfies the arms at promotion |
 | `proposal.shape` | the proposal's payload shape and fields |
 | `proposal.subject` | the subject is derived from the claim and its exceptions |
+| `retirement.promotion` | the retirement cites the latest admitted promotion of its path |
+| `retirement.reason` | pr rides regression alone, superseded_by rides superseded alone, expired carries neither |
+| `retirement.shape` | the retirement's payload shape and fields |
+| `retirement.superseded_by` | superseded_by names a later admitted promotion, never the retired one |
 | `support.actors` | two distinct holders where the family allows it |
 | `support.duplicate` | one claim is proposed once |
 | `support.failed` | no cited contract stands failed |

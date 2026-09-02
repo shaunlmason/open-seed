@@ -38,6 +38,14 @@ type probeView struct {
 	// support, hypothesis and contest are the curation probes'
 	// citations (curationProbes).
 	support, hypothesis, contest string
+	// retireLesson and retireHypothesis are the standing promotion the
+	// retirement probe cites; deadEnd and retiredDeadEnd the dead-end
+	// citations the retire and un-retire probes make on the queried
+	// subject, each with the environment that act would name
+	// (plans/os-0d537fbd.md D2, D3).
+	retireLesson, retireHypothesis     string
+	deadEnd, deadEndEnvironment        string
+	retiredDeadEnd, retiredEnvironment string
 	// version is the chain's active protocol version: a probe must
 	// synthesize the payload shape THAT version admits, or the
 	// affordance list would say a verb is unavailable because the
@@ -168,7 +176,63 @@ const (
 	probeSupport    = `["probe@0", "probe@0"]`
 	probeHypothesis = "h-000000000000@0"
 	probeContest    = `["probe@0"]`
+	probeLesson     = curation.LessonsDir + "/probe.md @ 0000000000000000000000000000000000000000"
+	probeDeadEnd    = "probe@0"
+	probeEnv        = "probe"
 )
+
+func (v *probeView) retireLessonOr() string {
+	if v.retireLesson == "" {
+		return probeLesson
+	}
+	return v.retireLesson
+}
+
+func (v *probeView) retireHypothesisOr() string {
+	if v.retireHypothesis == "" {
+		return probeHypothesis
+	}
+	return v.retireHypothesis
+}
+
+func (v *probeView) deadEndOr() string {
+	if v.deadEnd == "" {
+		return probeDeadEnd
+	}
+	return v.deadEnd
+}
+
+func (v *probeView) retiredDeadEndOr() string {
+	if v.retiredDeadEnd == "" {
+		return probeDeadEnd
+	}
+	return v.retiredDeadEnd
+}
+
+func (v *probeView) deadEndEnvironmentOr() string {
+	if v.deadEndEnvironment == "" {
+		return probeEnv
+	}
+	return v.deadEndEnvironment
+}
+
+func (v *probeView) retiredEnvironmentOr() string {
+	if v.retiredEnvironment == "" {
+		return probeEnv
+	}
+	return v.retiredEnvironment
+}
+
+// movedFrom names an environment that differs from the one standing:
+// the dead-end probes ask "could this dead end retire (or come back)
+// here", which the rule admits only in an environment other than the
+// one the previous act named.
+func movedFrom(environment string) string {
+	if environment != probeEnv {
+		return probeEnv
+	}
+	return probeEnv + "-moved"
+}
 
 func (v *probeView) contestOr() string {
 	if v.contest == "" {
@@ -193,12 +257,18 @@ func (v *probeView) hypothesisOr() string {
 
 // curationProbes derives the citations the curation probes make: two
 // admitted observations on two distinct non-failed contracts (the
-// support a proposal needs) and the latest admitted hypothesis (the
-// citation a promotion needs). Where the record holds none the probe
-// cites what the rules refuse, so the affordance is invisible exactly
-// when the act is not yet legal.
-func curationProbes(ctx *Context) (support, hypothesis, contest string) {
-	support, hypothesis, contest = probeSupport, probeHypothesis, probeContest
+// support a proposal needs), the latest admitted hypothesis (the
+// citation a promotion needs), the first standing promotion with no
+// standing retirement (the one a retirement revokes), and the queried
+// subject's first unretired and first retired dead ends (the citations
+// the dead-end acts make). Where the record holds none the probe cites
+// what the rules refuse, so the affordance is invisible exactly when
+// the act is not yet legal.
+func curationProbes(ctx *Context, subject string, v *probeView) {
+	v.support, v.hypothesis, v.contest = probeSupport, probeHypothesis, probeContest
+	v.retireLesson, v.retireHypothesis = probeLesson, probeHypothesis
+	v.deadEnd, v.deadEndEnvironment = probeDeadEnd, probeEnv
+	v.retiredDeadEnd, v.retiredEnvironment = probeDeadEnd, probeEnv
 	if ctx == nil || ctx.Table == nil || ctx.Lifecycle == nil {
 		return
 	}
@@ -217,21 +287,51 @@ func curationProbes(ctx *Context) (support, hypothesis, contest string) {
 		cited = append(cited, fmt.Sprintf("%q", byContract[e.Subject]))
 	}
 	if len(cited) >= curation.SupportMinimum {
-		support = "[" + strings.Join(cited, ", ") + "]"
+		v.support = "[" + strings.Join(cited, ", ") + "]"
 	}
 	fold := curation.Fold(ctx.Records)
 	for _, id := range fold.HypothesisIDs() {
 		h, _ := fold.Hypothesis(id)
 		if _, ok := curation.HypothesisValid(ctx.Records, ctx.Table, curation.Citation{Contract: id, Position: h.Pos}); ok {
-			hypothesis = fmt.Sprintf("%s@%d", id, h.Pos)
+			v.hypothesis = fmt.Sprintf("%s@%d", id, h.Pos)
 			// The contest probe cites one held-out observation on a
 			// selected contract, where the record holds one.
 			if held := curation.HeldOut(ctx.Records, ctx.Table, ctx.Lifecycle, h); len(held) > 0 {
-				contest = fmt.Sprintf(`["%s@%d"]`, held[0].Contract, held[0].Position)
+				v.contest = fmt.Sprintf(`["%s@%d"]`, held[0].Contract, held[0].Position)
 			}
 		}
 	}
-	return
+	paths := make([]string, 0, len(fold.Lessons))
+	for path := range fold.Lessons {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	// The queried subject's own standing promotion first, where it
+	// is a hypothesis with one; else the first unretired path.
+	for _, own := range []bool{true, false} {
+		for _, path := range paths {
+			l := fold.Lessons[path]
+			if c, _ := curation.ParseCitation(l.Hypothesis); fold.RetiredPath(path) || (own && c.Contract != subject) {
+				continue
+			}
+			v.retireLesson, v.retireHypothesis = l.Lesson, l.Hypothesis
+			break
+		}
+		if v.retireLesson != probeLesson {
+			break
+		}
+	}
+	unretired, retired := false, false
+	for _, d := range fold.DeadEnds[subject] {
+		switch {
+		case !d.Retired && !unretired:
+			v.deadEnd, v.deadEndEnvironment = fmt.Sprintf("%s@%d", subject, d.Pos), movedFrom(d.Environment)
+			unretired = true
+		case d.Retired && !retired:
+			v.retiredDeadEnd, v.retiredEnvironment = fmt.Sprintf("%s@%d", subject, d.Pos), movedFrom(d.RetiredEnvironment)
+			retired = true
+		}
+	}
 }
 
 // probeEscalation is the minimal shape-valid question: one sentence
@@ -268,6 +368,10 @@ var probeSubjects = map[string]func(v *probeView) string{
 	},
 	"curation.lesson.promoted": func(v *probeView) string {
 		h, _ := curation.ParseCitation(v.hypothesisOr())
+		return h.Contract
+	},
+	"curation.lesson.retired": func(v *probeView) string {
+		h, _ := curation.ParseCitation(v.retireHypothesisOr())
 		return h.Contract
 	},
 }
@@ -363,6 +467,20 @@ var affordanceCatalog = []struct {
 	{"curation.lesson.promoted", func(v *probeView) string {
 		return `{"lesson": "` + curation.LessonsDir + `/probe.md @ 0000000000000000000000000000000000000000", "hypothesis": "` + v.hypothesisOr() + `", "pr": "pr/0 @ 0000000000000000000000000000000000000000", "carrier": "knowledge", "adversarial": {"eval": "probe", "verdict": "0"}, "last_validated": "2026-01-01T00:00:00Z", "expires": "2026-02-01T00:00:00Z", "digest": "` + strings.Repeat("0", 64) + `"}`
 	}},
+	// The retirement probe gives the reason the record alone can
+	// judge: expired carries no field beyond the citation, and the
+	// rule admits it wherever an unretired promotion stands. The
+	// dead-end acts are facts on the queried subject, citing its own
+	// dead ends in an environment other than the standing one.
+	{"curation.lesson.retired", func(v *probeView) string {
+		return `{"lesson": "` + v.retireLessonOr() + `", "hypothesis": "` + v.retireHypothesisOr() + `", "reason": "expired"}`
+	}},
+	{"curation.deadend.retired", func(v *probeView) string {
+		return `{"deadend": "` + v.deadEndOr() + `", "environment": "` + v.deadEndEnvironmentOr() + `", "reason": "probe"}`
+	}},
+	{"curation.deadend.unretired", func(v *probeView) string {
+		return `{"deadend": "` + v.retiredDeadEndOr() + `", "environment": "` + v.retiredEnvironmentOr() + `", "reason": "probe"}`
+	}},
 	{"plan.proposed", func(v *probeView) string {
 		return `{` + v.fenceKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000"}`
 	}},
@@ -451,7 +569,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 	}
 	v.version = ctx.Active
 	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
-	v.support, v.hypothesis, v.contest = curationProbes(ctx)
+	curationProbes(ctx, subject, v)
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			if s.Claim != nil {

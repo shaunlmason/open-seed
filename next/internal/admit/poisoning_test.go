@@ -279,7 +279,7 @@ func TestEveryPoisonFailsAtBothEnds(t *testing.T) {
 					t.Fatalf("%s: a claim on %s would carry the poisoned lesson: %+v", p.Name, run.selected, l)
 				}
 			}
-			if surfaced, _ := curation.Surfacing(ctx.Records, ctx.Lifecycle, "", run.selected); len(surfaced) != 0 {
+			if surfaced, _ := curation.Surfacing(ctx.Records, ctx.Lifecycle, "", run.selected, time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)); len(surfaced) != 0 {
 				t.Fatalf("%s: the surfacing set for %s is not empty: %+v", p.Name, run.selected, surfaced)
 			}
 		})

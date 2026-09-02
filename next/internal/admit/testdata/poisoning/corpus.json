@@ -376,6 +376,94 @@
         "verb": "lint",
         "gate": "lint.stamps"
       }
+    },
+    {"name": "re-promotion-stale-stamps",
+      "gate": "promotion.revalidation",
+      "attack": "a re-promotion of the same path at a new anchor with a fresh adversarial pass and the old last_validated stamp, so the file changes without anyone revalidating it",
+      "expect": {
+        "verb": "curation.lesson.promoted",
+        "gate": "promotion.revalidation"
+      }
+    },
+    {"name": "retirement-smuggled-field",
+      "gate": "retirement.shape",
+      "attack": "a retirement carrying an extra key (a rewritten lesson body), hoping a reader takes the retirement as an edit of the evidence",
+      "expect": {
+        "verb": "curation.lesson.retired",
+        "gate": "retirement.shape"
+      }
+    },
+    {"name": "regression-without-revert",
+      "gate": "retirement.reason",
+      "attack": "a regression retirement without the revert's pr, a pr riding the expired reason, and a reason the contract does not name: each takes the promotion out without the evidence its reason requires",
+      "expect": {
+        "verb": "curation.lesson.retired",
+        "gate": "retirement.reason"
+      }
+    },
+    {"name": "retire-superseded-promotion",
+      "gate": "retirement.promotion",
+      "attack": "a retirement citing the earlier promotion of a path after a revalidation superseded it, so the path reads retired while its latest promotion stands",
+      "expect": {
+        "verb": "curation.lesson.retired",
+        "gate": "retirement.promotion"
+      }
+    },
+    {"name": "superseded-by-itself",
+      "gate": "retirement.superseded_by",
+      "attack": "a superseded retirement whose superseded_by names the retired promotion itself, an earlier position, or a position that is no promotion, so the conclusion is revoked with nothing standing in its place",
+      "expect": {
+        "verb": "curation.lesson.retired",
+        "gate": "retirement.superseded_by"
+      }
+    },
+    {"name": "deadend-retire-cross-contract",
+      "gate": "deadend_retirement.shape",
+      "attack": "a dead-end retirement on one contract citing another contract's dead end, so a curator retires evidence on a trajectory the act is not a fact on",
+      "expect": {
+        "verb": "curation.deadend.retired",
+        "gate": "deadend_retirement.shape"
+      }
+    },
+    {"name": "deadend-retire-phantom",
+      "gate": "deadend_retirement.deadend",
+      "attack": "a dead-end retirement citing a park, not a dead end, so the act flags an observation that was never a dead end",
+      "expect": {
+        "verb": "curation.deadend.retired",
+        "gate": "deadend_retirement.deadend"
+      }
+    },
+    {"name": "deadend-retire-same-environment",
+      "gate": "deadend_retirement.environment",
+      "attack": "a dead-end retirement naming the environment the dead end was recorded in, so the dead end is flagged while it still applies",
+      "expect": {
+        "verb": "curation.deadend.retired",
+        "gate": "deadend_retirement.environment"
+      }
+    },
+    {"name": "unretire-without-retirement",
+      "gate": "deadend_retirement.standing",
+      "attack": "an un-retirement of a dead end nobody retired, planting a standing act that a later retirement would then have to un-do",
+      "expect": {
+        "verb": "curation.deadend.unretired",
+        "gate": "deadend_retirement.standing"
+      }
+    },
+    {"name": "duplicate-lesson",
+      "gate": "lint.duplicate",
+      "attack": "a second lesson file citing the hypothesis a file already carries, so the store holds two conclusions for one claim",
+      "expect": {
+        "verb": "lint",
+        "gate": "lint.duplicate"
+      }
+    },
+    {"name": "frontmatter-smuggled-key",
+      "gate": "lint.structure",
+      "attack": "a frontmatter key the contract does not name (a stage), a body missing its evidence section, and the sections out of order: each reads as a lesson while carrying something the README never asked for",
+      "expect": {
+        "verb": "lint",
+        "gate": "lint.structure"
+      }
     }
   ]
 }
