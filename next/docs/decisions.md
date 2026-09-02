@@ -2110,3 +2110,22 @@ here. Newest last.
 - **Budget classes are named in capacity order** (os-be12ac16). The
   refusal says `small, medium, large`, the order the spec table and
   the criterion use, rather than alphabetical.
+
+- **A non-string tier or budget refuses; a decode failure never skips
+  the check** (os-be12ac16, review finding on #222). The first cut
+  decoded the two fields into a string-valued struct and ran the
+  vocabulary checks only when the decode succeeded, so `"tier": 1`
+  passed presence, failed the decode, and was admitted with no check at
+  all, after which the tolerant fold read an empty tier. Each field is
+  now decoded on its own from the presence map, and a value that is not
+  a JSON string refuses as a vocabulary refusal naming the raw value.
+  Drilled for a numeric tier, an object tier, an array budget and a
+  boolean budget.
+
+- **No protocol bump for the filing check, restated on the task PR**
+  (os-be12ac16, review finding on #222). The same argument as on the
+  plan PR, answered above: verification does not run the completeness
+  or vocabulary checks (the raw-pushed `budget: "s"` fixtures in the
+  project and reconcile drills verify unchanged after this card), so no
+  two validators disagree on chain validity; only the cooperative
+  boundary refuses, which `actors.md` records as bump-free by design.
