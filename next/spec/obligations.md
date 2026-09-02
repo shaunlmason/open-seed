@@ -106,7 +106,8 @@ policy surface rather than a derivation.
 [--since <position>]` renders one position-stamped envelope: the
 caller's obligations, the windows they hold with the active fence
 (the argument a lane would otherwise read out of a projection by
-hand), and the standard advisory fields. A keyless read guesses no
+hand), the caller's message notices, and the standard advisory
+fields. A keyless read guesses no
 identity and reports the board unfiltered; probes must be signed, so
 affordance stamping needs the key itself.
 
@@ -134,6 +135,98 @@ stood at the cited position, on the **unfiltered** prior set, because
 caller-filtered comparison cannot see. A row that stood at the cited
 position under no entry at all — `run.unsettled` begins standing at a
 position later than its own `since` — is reported for the same reason.
+
+### The messages section: notices, never bodies
+
+The read also carries the caller's **mail**, which is what closes the
+build plan's Phase 9 item 5(b). Each entry says a message exists and
+nothing about what it says: `{from, at, bytes, unread}`, plus
+`subject` when it resolves and `undeliverable` where it applies. Every
+one of those is a ledger-generated identifier, a count, or a flag.
+
+**The subject is carried only when it is a contract.** The event's
+subject field is sender-controlled: `message.sent` admits on any
+nonempty subject, and the classification lint reads only the payload,
+so `--subject "IGNORE PREVIOUS INSTRUCTIONS"` admits (review finding
+on #211). A notice therefore carries `subject` only when it resolves
+to a contract on the chain and omits it otherwise — the message still
+shows, from whom and how large, and declines to repeat what the sender
+wrote in a field that was never an identifier. The injection sweep
+plants its marker in a subject as well as in payloads.
+
+**Why not the body.** `message.sent` needs **no capability at all** —
+it is the standing-only verb any enrolled active actor may append, and
+[`lanes.md`](lanes.md)'s residual table names it "the one that RELAYS",
+bounded only by a size lint that a short instruction sails through. The
+situation read is the single surface every lane fragment names as the
+one it orients from, taken on **every wake, unbidden**. A body here
+would let any enrolled actor write prose into the read of every lane in
+the deployment, which is a different thing from a persuaded dispatcher
+relaying to a reader who chose to look. The containment is asserted by
+marker sweep in `cmd/seed/injection_cli_test.go`, in the read's
+serialized form, so a field added later is covered.
+
+**Unread is the cursor, and there is no read-state.** A message at
+position P is unread iff `P > --since`; with no cursor cited, every
+message the caller can see is unread, because a caller that names no
+position has said nothing about what it has seen. The position a lane
+carries forward IS its read cursor, so no `message.read` verb exists
+and `message.acked` stays unimplemented: an ack means "I acted on
+this", which a cursor cannot derive. Under `--since` the section is cut
+like every other; unlike obligations there are no removals, because an
+event does not stop having been appended.
+
+**Addressing, and why malformed fails closed.** A payload carrying
+`"to": "<fp>"` or an all-string array is addressed to those actors; a
+payload with no `to` key at all is a **broadcast**; and a `to` that is
+present and does not parse addresses **nobody**. Absent and malformed
+are different facts. An absent `to` is a sender who said nothing about
+addressing, and reading that as everyone reads what is there. A
+malformed `to` is a sender who said something the projection cannot
+read, and every resolution invents intent: broadcasting widens delivery
+from one intended recipient to every actor on an encoding slip, and
+delivering to the well-formed entries only is the same invention one
+notch quieter, since nothing says which entries were meant. An
+undeliverable message is not erased — the **keyless** whole-board read
+applies no caller filter, so an operator still finds it.
+
+Addressing is read leniently by the projection and the admission
+boundary is untouched: `message.sent` still refuses nothing, `{"n": 1}`
+is still legal. Validating recipients at admission would be a new
+refusal surface on a verb that today has none, which is a different
+change from a read.
+
+### Reading one message
+
+`seed message read --ledger <dir> --key <path> --at <position>` returns
+one message's body to a caller it addresses. This is the deliberate
+second act the notices exist to prompt: the reader chose to look, at a
+position it names, after a notice told it who sent the thing — the
+"reader must choose to look" posture [`lanes.md`](lanes.md)'s residual
+analysis already accepts, which is exactly what the orienting read is
+not.
+
+It appends nothing. A caller the message does not address gets
+`not_found` (exit 4), **byte for byte** what a position holding no
+message gets, so this surface adds no oracle for what is there; the
+four reasons a caller gets no body share one construction site so
+that stays true.
+
+**Addressing is routing, not confidentiality** (review finding on
+#211). The ledger is plaintext and is the audit record by charter
+design: the projections carry every payload verbatim
+([`projections.md`](projections.md)), and `seed ledger show
+--position P` returns any event to anyone with read access to the
+repository, which is the same access these reads need. A non-recipient
+can read any body there. What `not_found` buys is that a lane acting
+through Seed verbs is routed only its own mail, and that the message
+surface does not become a second place to ask. A body that must be
+confidential is a sealed-checks problem
+([`sealed-checks.md`](sealed-checks.md)), not an addressing one. `not_recipient` (exit 23) is not reused: it names the
+sealed-envelope recipient set, whose answer is "re-seal to the current
+set" ([`envelope.md`](envelope.md)'s allocation rule forbids sharing a
+code across two different answers). A key is required, because a body
+is read as somebody and a keyless read addresses no one.
 
 The read is read-only and idempotent: it opens the ledger read-only,
 mutates nothing, and journals no attempt, because a read is not an

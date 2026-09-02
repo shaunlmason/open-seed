@@ -607,13 +607,22 @@ administrative card, not a Phase 8 item).
   as os-9b3f3ef3: derived arguments not re-derived across the
   optimistic retry, a remote refusal stamped from the stale view, and
   a JSON null packet panicking the CLI.
-- **9.5 part (b) is PARTIALLY MET**: the obligations, windows and
-  budget block landed; the unread messages item 5(b) specifies did
-  not, so the read a lane is told to orient from cannot yet tell it
-  that it has mail. The remainder is now named in the build plan's
-  own item 5 text (this card): the situation read carries the
-  caller's messages, with "unread" derived from the cited --since
-  position rather than stored read-state.
+- **9.5 part (b) is MET** (os-8451d939, plan #209): the situation read
+  carries the caller's messages, with "unread" derived from the cited
+  `--since` position rather than stored read-state, so no
+  `message.read` verb exists and `message.acked` stays unimplemented.
+  It carries **notices, not bodies** — sender, contract, position,
+  size — because `message.sent` needs no capability at all and the
+  orienting read is taken on every wake, unbidden; the injection sweep
+  now plants a hostile message addressed to the reading worker, and
+  both the addressed and broadcast paths through the filter. The body
+  is reached by `seed message read --at <position>`, the deliberate
+  second act, which appends nothing and refuses a non-recipient with
+  the same `not_found` a position holding no message gets. A `to` that
+  is present and does not parse addresses NOBODY rather than everybody
+  (review finding on #209): broadcasting a malformed address widens
+  delivery from one intended recipient to every actor on an encoding
+  slip.
 - 9.1 lane role fragments, dispatcher least-capability, injection
   corpus, worker-lane loop with exhaustion parking — its
   role-definition text binds four ergonomic obligations (os-68ea0b2d):
@@ -764,9 +773,19 @@ the escalation it answers. Waiting escalations surface as
 elapsed time and a position difference is event count wearing a clock's
 clothes.
 
-**Next action: the Phase 9 exit record.** Item 4 is this card's task
-PR, and with item 3 (#205) every numbered item in the phase has an
-implementation. Both modes run the full loop to `done` on the remote
+**Next action: the Phase 9 exit record**, now that 5(b) has landed
+(os-8451d939, #209) and the role-grant gap is planned (os-d6a52784,
+#210). A correction worth keeping, because it was made here and then
+unmade: an earlier revision of this line claimed the phase was complete
+once items 3 and 4 merged. It was not. **Item 5(b) had no
+implementation**, which the build plan and this file both said in other
+paragraphs while the frontier line said otherwise — a frontier is only
+useful if it is the same claim as the rest of the document. Assembling
+the exit record is what surfaced it, one item too late.
+
+Item 4 was os-6a08b166's task
+PR, and with item 3 (#205) every numbered item in the phase had an
+implementation except 5(b). Both modes run the full loop to `done` on the remote
 posture, wakeless, with every convergence arm exercised. Three things
 this card settled are worth carrying forward.
 

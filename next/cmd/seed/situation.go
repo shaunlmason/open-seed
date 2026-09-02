@@ -251,6 +251,7 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 		"actor":       fp,
 		"obligations": out,
 		"windows":     windowsHeld(st, fp, *subject),
+		"messages":    messagesFor(st, fp, *subject, sincePos, haveSince),
 	}
 	if haveSince {
 		result["since"] = *since
@@ -262,6 +263,54 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 		env = stampAffordancesFrom(env, admitCtx, signer, *subject)
 	}
 	return render(stampTip(env, st.count), stdout, stderr)
+}
+
+// messagesFor is the read a lane learns it has mail from: NOTICES, not
+// bodies (plans/os-8451d939.md D1). This read is taken on every wake,
+// unbidden, and message.sent is the injection suite's named relaying
+// residual — no capability at all — so a body here would let any
+// enrolled actor write into the surface every lane orients from. The
+// body is fetched deliberately by position instead (seed message read).
+//
+// Unread is the cursor and nothing else (D3): a message at position P
+// is unread iff P > --since, so no read-state is stored and no
+// message.read verb exists. With no cursor cited, everything the
+// caller can see is unread, because a caller that names no position
+// has said nothing about what it has seen.
+func messagesFor(st *verdictState, fp, only string, sincePos int, haveSince bool) []map[string]any {
+	out := []map[string]any{}
+	isContract := func(subject string) bool { _, ok := st.fold.State(subject); return ok }
+	for _, m := range project.DeriveMessages(st.records, isContract) {
+		if only != "" && m.Subject != only {
+			continue
+		}
+		// A keyless read reports the whole board unfiltered, as it
+		// does for obligations — which is also what keeps an
+		// undeliverable message discoverable rather than erased (D2).
+		if fp != "" && !m.Addresses(fp) {
+			continue
+		}
+		if haveSince && m.At <= sincePos {
+			continue
+		}
+		row := map[string]any{
+			"from":   m.From,
+			"at":     fmt.Sprintf("%d", m.At),
+			"bytes":  fmt.Sprintf("%d", m.Bytes),
+			"unread": !haveSince || m.At > sincePos,
+		}
+		// The subject is a contract id or it is absent: an event
+		// subject that resolves to nothing on the chain is prose a
+		// sender chose, and it does not ride this read.
+		if m.Subject != "" {
+			row["subject"] = m.Subject
+		}
+		if m.Undeliverable {
+			row["undeliverable"] = true
+		}
+		out = append(out, row)
+	}
+	return out
 }
 
 // windowsHeld lists the subjects where the caller holds the active
