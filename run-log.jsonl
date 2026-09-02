@@ -1019,3 +1019,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T10:59:03Z"},"task":"os-03e47abb","ts":"2026-09-02T09:59:03Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T12:07:59Z"},"task":"os-03e47abb","ts":"2026-09-02T10:07:59Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T12:22:18Z"},"task":"os-03e47abb","ts":"2026-09-02T10:22:18Z","verb":"lease-renew"}
+{"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:219","to":"ready"},"task":"os-be12ac16","ts":"2026-09-02T10:28:58Z","verb":"plan-unblock"}
