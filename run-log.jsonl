@@ -993,3 +993,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-5e3703b1","kind":"check"},"task":"os-8e53ffd9","ts":"2026-09-02T08:41:46Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-68d3bc2f","kind":"mutation"},"task":"os-8e53ffd9","ts":"2026-09-02T08:41:49Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-fce77b19","kind":"pr"},"task":"os-8e53ffd9","ts":"2026-09-02T08:42:40Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-8e53ffd9","ts":"2026-09-02T08:42:43Z","verb":"transition"}
