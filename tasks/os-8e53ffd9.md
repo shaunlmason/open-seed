@@ -1,13 +1,11 @@
 ---
 id: os-8e53ffd9
 title: 'next: Phase 10 item 1 — runtime tuples in enrollment and grants; adapters report the provisioned tuple; drift is out-of-grant'
-state: blocked
+state: ready
 priority: P1
 squad: core
-blocked_on:
-    - plan:215
 created_at: "2026-09-02T07:29:45Z"
-updated_at: "2026-09-02T07:37:08Z"
+updated_at: "2026-09-02T07:52:53Z"
 ---
 
 Phase 10 (qualification and evaluation) item 1, the frontier named by
