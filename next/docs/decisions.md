@@ -2337,3 +2337,39 @@ against the item 2 fixture (a grantless stranger key raw-pushing a
 claim, a dead end, a proposal and a pass). The contest and the
 promotion gates read the admitted fold, so an unadmitted proposal can
 be neither contested nor promoted.
+
+## Phase 11 item 3 — the poisoning drill (os-e2f1ad23, plan #229)
+
+**The corpus is a JSON declaration and the scripts are Go, joined both
+ways.** The plan's D1 names the shape; the choice worth recording is
+that a poison's expectation is either a registered gate or a reason
+string, never both, and that the reasons are the three refusals the
+boundary raises outside the registry (out of grant, the grant's
+disjointness, the acceptance's gate). A poison expecting a gate is
+judged by `GateError.Gate`; one expecting a reason by the error's text,
+except out of grant, which is judged by type so the message can change.
+
+**The lint poisons have one end.** The file half judges a lesson the
+ledger already promoted; its "achieved" end is the file passing `seed
+knowledge lint` under `make check`, which gates the lesson PR. The
+drill asserts the refusal at the gate and says so, rather than
+pretending a claim-time check the delivery does not make.
+
+**A sixth residual, `raw-pushed-promotion`.** Scripting the promotion
+poisons showed that a promotion pushed past the boundary binds in the
+fold and is a delivery candidate: the fold re-judges proposals at their
+position (item 1's review fixes) but cannot re-judge the adversarial
+arm, whose pass authentication lives in admission. The plan's D5 says a
+poison that gets through is fixed in the gate; this one is not a gate
+admitting it (the boundary refuses it) but the fold binding what the
+boundary refused, and moving the adversarial arm into the fold would
+move `authenticPass` out of admission, out of this card's scope guard.
+It is named and pinned instead: what stands in the way is the boundary
+at append (the pre-receive hook and the client's `AppendLoop` run the
+same rules), and the entry says so. Item 4 or a later hardening card
+may decide the fold should carry admission-accurate promotions.
+
+**The CLI arm reads the hypothesis position from `knowledge show`.**
+The propose envelope stamps the tip, not the fact's position; the
+lessons e2e drill already reads the fold's view, and the arm does the
+same rather than deriving a position from the tip.

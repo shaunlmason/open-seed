@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/eval"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -985,5 +986,149 @@ func TestSmallTeamEvalQualifiesAndDisqualifiesThroughTheProductionMachinery(t *t
 	performed(e, "")
 	if owed, _ := e.Result["owed"].([]any); len(owed) != 0 {
 		t.Fatalf("with the spot-check open and offered nothing is owed: %+v", owed)
+	}
+}
+
+// conformance: plans/os-e2f1ad23.md AC4, the CLI arm of the poisoning
+// drill. Two poisons run through `seed knowledge propose` and `seed
+// knowledge promote` in the small-team fixture, proving the refusal
+// reaches an operator's terminal with the code the boundary gave:
+// `worker-proposes` (a claim key proposing over its own admitted
+// observations) and `smuggled-role-lesson` (a role carrier promoted
+// citing a pass on an ordinary contract that carries no eval marker).
+func TestPoisonsRefuseAtTheTerminal(t *testing.T) {
+	m := buildMode(t, append(append([]identity{}, smallTeam...),
+		identity{lane: "implementer", actor: "impl2", seed: 54},
+		identity{lane: "curator", actor: "curator", seed: 55},
+		identity{lane: "dispatcher", actor: "dispatch", seed: 53}))
+	m.appendRaw(ledger.UpgradeVerb, "system", `{"to": "`+version.Seed2+`"}`)
+	m.appendRaw(ledger.UpgradeVerb, "system", `{"to": "`+version.Seed3+`"}`)
+	gitSrc := func(args ...string) string {
+		t.Helper()
+		full := append([]string{"-C", m.src, "-c", "user.name=t", "-c", "user.email=t@example.invalid"}, args...)
+		out, err := exec.Command("git", full...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	anchor := gitSrc("rev-parse", "HEAD")
+	deadEnd := func(actor, subject string) (ledgerEnv, int) {
+		t.Helper()
+		return runEnv(t, append(append([]string{"knowledge", "deadend"}, m.posture()...), "--key", m.keys[actor], "--subject", subject,
+			"--tried", "retrying the fetch", "--outcome", "the mirror timed out", "--condition", "the mirror was cold", "--environment", "ci-runner/v0")...)
+	}
+	work := func(actor string) string {
+		t.Helper()
+		d, err := loop.New(implementerManifest(t), loopVerbs{}, m.posture(), m.keys[actor],
+			loop.WorkFunc(func(s string, sit loop.Situation) (int, error) {
+				if e, code := deadEnd(actor, s); code != 0 {
+					return 0, fmt.Errorf("the holder's dead end: %d %+v", code, e.Error)
+				}
+				return 2, nil
+			}), loop.WithBase(m.base+".."+m.head))
+		if err != nil {
+			t.Fatal(err)
+		}
+		step, err := d.Step(5)
+		if err != nil || step.Outcome != loop.Submitted {
+			t.Fatalf("the loop claims, works and submits: %+v %v", step, err)
+		}
+		return step.Subject
+	}
+	m.contract(t, "c-a", "supervisor")
+	if got := work("impl"); got != "c-a" {
+		t.Fatalf("impl took c-a: %s", got)
+	}
+	m.contract(t, "c-b", "supervisor")
+	if got := work("impl2"); got != "c-b" {
+		t.Fatalf("impl2 took c-b: %s", got)
+	}
+	// An ordinary pass on c-a: a verdict with no eval marker.
+	if e, code := runEnv(t, append(append([]string{"verdict", "render"}, m.posture()...),
+		"--subject", "c-a", "--repo", m.src, "--key", m.keys["verify"], "--verdict", "pass")...); code != 0 {
+		t.Fatalf("the verifier passes c-a: %d %+v", code, e.Error)
+	}
+	st, failEnv := loadVerdictState(m.materialize(t))
+	if failEnv != nil {
+		t.Fatalf("the remote chain must verify: %+v", failEnv)
+	}
+	plainState, _ := st.fold.State("c-a")
+	if plainState.Verdict == nil {
+		t.Fatal("the plain pass folded")
+	}
+	plainPass := plainState.Verdict.Pos
+	dead := func(contract string) int {
+		t.Helper()
+		e, code := runEnv(t, append([]string{"knowledge", "show"}, m.posture()...)...)
+		if code != 0 {
+			t.Fatalf("knowledge show: %d %+v", code, e)
+		}
+		ends, _ := e.Result["dead_ends"].(map[string]any)
+		list, _ := ends[contract].([]any)
+		if len(list) == 0 {
+			t.Fatalf("no dead end on %s: %+v", contract, e.Result)
+		}
+		pos, _ := list[0].(map[string]any)["position"].(float64)
+		return int(pos)
+	}
+	pA, pB := dead("c-a"), dead("c-b")
+	claim := "record the mirror's temperature before retrying the fetch"
+	propose := func(key string) (ledgerEnv, int) {
+		t.Helper()
+		return runEnv(t, append(append([]string{"knowledge", "propose"}, m.posture()...), "--key", m.keys[key],
+			"--claim", claim, "--applies-when", `{"routing": "core"}`, "--support", fmt.Sprintf("c-a@%d", pA), "--support", fmt.Sprintf("c-b@%d", pB),
+			"--provenance", "plans/os-e2f1ad23.md @ "+anchor)...)
+	}
+	// worker-proposes: the claim key that recorded the observations
+	// cannot propose over them; the terminal reports out_of_grant.
+	if e, code := propose("impl"); code != 14 || e.Error == nil || e.Error.Code != "out_of_grant" {
+		t.Fatalf("worker-proposes refuses out of grant at the terminal: %d %+v", code, e.Error)
+	}
+	e, code := propose("curator")
+	if code != 0 {
+		t.Fatalf("the curator proposes: %d %+v", code, e.Error)
+	}
+	id, _ := e.Result["hypothesis"].(string)
+	e, code = runEnv(t, append([]string{"knowledge", "show"}, m.posture()...)...)
+	if code != 0 {
+		t.Fatalf("knowledge show: %d %+v", code, e)
+	}
+	hyps, _ := e.Result["hypotheses"].([]any)
+	if len(hyps) != 1 {
+		t.Fatalf("one hypothesis stands: %+v", e.Result)
+	}
+	hposF, _ := hyps[0].(map[string]any)["position"].(float64)
+	cited := fmt.Sprintf("%s@%d", id, int(hposF))
+	// The candidate role lesson lands on main: the carrier.
+	body := "---\nhypothesis: " + cited + "\napplies-when: {\"routing\": \"core\"}\nsupport: " + fmt.Sprintf("c-a@%d, c-b@%d", pA, pB) +
+		"\nprovenance: plans/os-e2f1ad23.md @ " + anchor + "\nlast-validated: 2026-09-01T00:00:00Z\nexpires: 2026-12-01T00:00:00Z\ncarrier: role\n---\n\n# Record the mirror's temperature\n"
+	if err := os.MkdirAll(filepath.Join(m.src, curation.LessonsDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(m.src, curation.LessonsDir, "mirror.md"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitSrc("add", ".")
+	gitSrc("commit", "--quiet", "-m", "knowledge: the mirror lesson (#2)")
+	carrierCommit := gitSrc("rev-parse", "HEAD")
+	carrier := curation.LessonsDir + "/mirror.md @ " + carrierCommit
+	// smuggled-role-lesson: the observer promotes the role carrier
+	// citing the plain pass as its adversarial evaluation.
+	e, code = runEnv(t, append(append([]string{"knowledge", "promote"}, m.posture()...), "--key", m.keys["observer"],
+		"--lesson", carrier, "--hypothesis", cited, "--pr", "pr/2 @ "+carrierCommit, "--repo", m.src, "--carrier", "role",
+		"--adversarial", fmt.Sprintf("fix-the-check@%d", plainPass), "--last-validated", "2026-09-01T00:00:00Z", "--expires", "2026-12-01T00:00:00Z")...)
+	if code == 0 || e.Error == nil || !strings.Contains(e.Error.Message, curation.GatePromotionAdversary) {
+		t.Fatalf("smuggled-role-lesson refuses at the terminal naming the gate: %d %+v", code, e.Error)
+	}
+	// Neither end reached: the fold carries no lesson and the next
+	// claim on a matching contract receives none.
+	m.contract(t, "c-c", "supervisor")
+	e, code = runEnv(t, append(append([]string{"claim", "take"}, m.posture()...), "--key", m.keys["impl"], "--subject", "c-c", "--repo", m.src)...)
+	if code != 0 {
+		t.Fatalf("claim take: %d %+v", code, e.Error)
+	}
+	if lessons, _ := e.Result["lessons"].([]any); len(lessons) != 0 {
+		t.Fatalf("the poisoned lesson reached a claim: %+v", lessons)
 	}
 }

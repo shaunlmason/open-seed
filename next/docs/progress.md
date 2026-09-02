@@ -909,7 +909,19 @@ PR (an administrative card, not a Phase 9 item).
   the unverified reported as such; `lesson_unverified` at evidence
   grade; the projection's `contested` stage and per-lesson
   `surfaces`).
-- 11.3 poisoning drill — os-e2f1ad23 — planned (#229 merged)
+- 11.3 poisoning drill — os-e2f1ad23 — **in review** (task PR against
+  plan #229, stacked on item 2's: `internal/admit/testdata/poisoning/`
+  declares forty-two poisons over the thirty-two registered gates and
+  six residuals; `poisoning_test.go` derives coverage from
+  `curation.Gates()` pinned to the spec table both ways, scripts every
+  poison to an attempt to promote and asserts it fails at both ends
+  (the refusal at its gate, no admitted promotion, no lesson on a
+  selected claim), pins every residual by a characterization drill,
+  and refuses an empty corpus, an empty table, a declared poison with
+  no script and a script with no declaration; the CLI arm runs
+  `worker-proposes` and `smuggled-role-lesson` through `seed knowledge`
+  in the small-team fixture; `curation.md` gains "The poisoning
+  drill" and `lanes.md` records III.K row 4 as met)
 - 11.4 expiry, retirement, rollback by revert — os-0d537fbd — planned
   (#230 merged)
 - 11.5 flywheel v0 — os-9075c308 — plan in review (#231)

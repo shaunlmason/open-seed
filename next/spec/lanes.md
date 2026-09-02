@@ -367,6 +367,13 @@ ordered fragment list prevents.
   for the input-handling half, **two-thirds met**: intents and tool
   output are covered and mirrors are not, because `request.*` is
   unlanded. Three residuals are named and pinned rather than closed.
+- III.K row 4 "Trajectories are treated as untrusted inputs; the
+  poisoning drill fails to achieve promotion in CI" — met by the
+  curator poisoning drill ([`curation.md`](curation.md), "The
+  poisoning drill"): this suite's shape turned on the curation gates,
+  a corpus of scripted poisons derived from the gate registry, each
+  asserted to fail at both ends, six residuals named and pinned, and a
+  CLI arm in the modes fixture; `make check` runs it.
 
 ## A gap the mode fixtures surfaced
 
