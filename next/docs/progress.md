@@ -856,7 +856,9 @@ PR (an administrative card, not a Phase 9 item).
   level before drafting and refuses at usage when a required
   declaration is missing; `verdict check` and the contracts view render
   the level; reconcile classifies `independence_unverified` (the record
-  half, and the reproduction for unsealed L3 verdicts); `EvalApplies`
+  half, and the receipt's reproduction, sealed subjects under `--key`,
+  the maintenance loop reporting what its key cannot open); the
+  contracts projection republishes as version 13; `EvalApplies`
   is the named list `{seed/3, seed/4}`; both modes drive a `critical`
   contract to `done`, small-team at L2 with a second model family and
   fleet at L3 on an executable gated spec); its table is built: **the

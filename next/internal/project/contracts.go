@@ -215,11 +215,13 @@ type ContractClaim struct {
 // omitted on budget-inactive subjects; Version "11" the
 // execution-run facts (plans/os-1dad487d.md), omitted on run-free
 // subjects; Version "12" the safe-point interrupts
-// (plans/os-0f718b4e.md), omitted on interrupt-free subjects — each
+// (plans/os-0f718b4e.md), omitted on interrupt-free subjects; Version
+// "13" the verdict's independence level (plans/os-99829835.md), which
+// changes the bytes of every prefix carrying a verdict — each
 // republishing under a new build id via the version-in-identity
 // machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "12", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "13", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance

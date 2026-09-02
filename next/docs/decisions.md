@@ -2235,17 +2235,25 @@ here. Newest last.
 
 ## Phase 10 item 3 — independence levels (os-99829835, plan #223)
 
-- **Reconcile reproduces unsealed L3 verdicts; sealed ones are
-  `verdict check --key`'s** (os-99829835, D5 refined). The evidence-grade
-  half recomputes an L3 verdict's receipt from the verifier's own input
-  seam and classifies `independence_unverified` when the digest differs
-  from the cited one. A sealed subject's receipt includes the sealed
-  transcripts, which recompute only under a recipient key, and reconcile
-  holds no key; so the reproduction runs for unsealed subjects and the
-  record half (the level the records support, the tier the subject
-  requires) still judges every subject. `EvidenceAt` takes the records
-  and the fold beside `Evidence`, whose signature `internal/maintain`
-  keeps.
+- **The L3 reproduction opens sealed subjects under a key, and never
+  skips one silently** (os-99829835, D5 refined; review findings on the
+  task PR). The evidence-grade half recomputes an L3 verdict's receipt
+  from the verifier's own input seam and classifies
+  `independence_unverified` when the digest differs from the cited one.
+  A sealed subject's receipt includes its sealed transcripts, which
+  recompute only under a recipient key, and the first draft skipped
+  sealed subjects on that ground, which excluded every `standard` and
+  `critical` contract from the one evidence-grade check. Now
+  `reconcile.Reproduction` carries the chain, the fold, an `Unseal`
+  hook and a `NotAttempted` report: `seed reconcile --key` opens sealed
+  subjects and, meeting a sealed L3 verdict it cannot open, refuses the
+  run naming the subject (`usage` with no key, the unseal envelope
+  otherwise), the `verdict check` posture of no silent partial
+  verification; the maintenance loop opens them under the maintenance
+  actor's key and reports what that key cannot open as a skip with the
+  reason. The loop passes its records and fold too: the first draft's
+  `Evidence` wrapper handed a nil fold and so disabled the reproduction
+  for every unattended pass.
 
 - **The modes drills stage the seal through the library** (os-99829835,
   D6 refined). `critical` requires sealed checks, `seal create` reads a

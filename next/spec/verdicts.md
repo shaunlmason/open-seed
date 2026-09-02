@@ -125,7 +125,9 @@ consult refuses a folded verdict whose recorded level the record does
 not support or which is short of the subject's tier, so a raw-pushed
 `critical` verdict at `L1` cannot be laundered into `done`;
 [`reconciliation.md`](reconciliation.md)'s `independence_unverified`
-surfaces the same two conditions and the evidence-grade reproduction.
+surfaces the same two conditions and the evidence-grade reproduction,
+a sealed subject's under an identity able to unseal (`seed reconcile
+--key`, the maintenance actor's key), never skipped silently.
 
 Before `seed/4` the level is the literal `L1` and a declaration has
 nowhere to go; a `seed/3` chain keeps `seed/3`'s judgment

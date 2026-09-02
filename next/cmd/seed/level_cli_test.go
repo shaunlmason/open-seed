@@ -121,6 +121,7 @@ func TestVerdictRenderComputesTheLevel(t *testing.T) {
 
 	// The contracts view carries the level beside the verdict.
 	out := t.TempDir() + "/out"
+	unlockForCleanup(t, out)
 	if e, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out); code != 0 {
 		t.Fatalf("project rebuild: %d %+v", code, e)
 	}
@@ -143,7 +144,7 @@ func TestVerdictRenderComputesTheLevel(t *testing.T) {
 // receipt does not reproduce, and never a supported claim that meets
 // the tier.
 func TestReconcileClassifiesUnsupportedLevels(t *testing.T) {
-	ld, src, _, _, _, _, drive := levelLedger(t)
+	ld, src, _, _, _, keys, drive := levelLedger(t)
 	verifier := workerRawKey(24)
 	classes := func(subject string) map[string]float64 {
 		e, code := runEnv(t, "reconcile", "--ledger", ld, "--repo", src, "--subject", subject)
@@ -188,5 +189,78 @@ func TestReconcileClassifiesUnsupportedLevels(t *testing.T) {
 	rawAppendAt(t, ld, verifier, version.Seed4, "verdict.rendered", "c-ok", verdict(sub, "L2", bogus, levelTuple("other/1")))
 	if by := classes("c-ok"); by["independence_unverified"] != 0 {
 		t.Fatalf("a supported claim that meets the tier classifies nothing: %v", by)
+	}
+
+	// A sealed L3 verdict recomputes only under an identity able to
+	// unseal, and there is no silent partial verification: without
+	// --key reconcile refuses naming the subject and the flag, under a
+	// key that is no recipient it refuses not_recipient, and under the
+	// verifier's key the bogus receipt classifies as the unsealed one
+	// did.
+	sub = drive("c-l3s", "standard", true)
+	rawAppendAt(t, ld, verifier, version.Seed4, "verdict.rendered", "c-l3s", verdict(sub, "L3", bogus, ""))
+	e, code := runEnv(t, "reconcile", "--ledger", ld, "--repo", src, "--subject", "c-l3s")
+	if code != 64 || e.Error == nil || !strings.Contains(e.Error.Message, "c-l3s") || !strings.Contains(e.Error.Message, "--key") {
+		t.Fatalf("a sealed L3 verdict with no key refuses at usage naming the subject and --key: %d %+v", code, e.Error)
+	}
+	e, code = runEnv(t, "reconcile", "--ledger", ld, "--repo", src, "--subject", "c-l3s", "--key", keys["workerA"])
+	if code != 23 || e.Error == nil || e.Error.Code != "not_recipient" {
+		t.Fatalf("a key that cannot unseal refuses not_recipient: %d %+v", code, e.Error)
+	}
+	e, code = runEnv(t, "reconcile", "--ledger", ld, "--repo", src, "--subject", "c-l3s", "--key", keys["verifier"])
+	if code != 0 || classesOf(t, e)["independence_unverified"] != 1 {
+		t.Fatalf("under an identity able to unseal, a sealed L3 whose receipt does not reproduce classifies independence_unverified: %d %+v", code, e)
+	}
+
+	// The maintenance loop grades the same evidence: the unsealed L3
+	// classifies, and the sealed one is reported skipped with the
+	// reason under a key that cannot open it, classified under one
+	// that can.
+	maintain := func(key string) ledgerEnv {
+		t.Helper()
+		e, code := runEnv(t, "maintain", "run", "--ledger", ld, "--repo", src, "--key", key, "--obs", t.TempDir())
+		if code != 0 {
+			t.Fatalf("maintain run: %d %+v", code, e)
+		}
+		return e
+	}
+	// subjectsOf maps each row's subject to its text (a finding's
+	// detail, a skip's reason), keeping the rows whose named field
+	// carries the wanted value.
+	subjectsOf := func(rows any, key, want string) map[string]string {
+		out := map[string]string{}
+		list, _ := rows.([]any)
+		for _, r := range list {
+			m, _ := r.(map[string]any)
+			s, _ := m["subject"].(string)
+			if v, _ := m[key].(string); s == "" || (want != "" && v != want) {
+				continue
+			}
+			text, _ := m["detail"].(string)
+			if because, _ := m["because"].(string); because != "" {
+				text = because
+			}
+			out[s] = text
+		}
+		return out
+	}
+	e = maintain(keys["workerA"])
+	found := subjectsOf(e.Result["findings"], "class", "independence_unverified")
+	if _, ok := found["c-l3"]; !ok {
+		t.Fatalf("the maintenance pass reproduces the unsealed L3: %+v", e.Result["findings"])
+	}
+	if _, ok := found["c-l3s"]; ok {
+		t.Fatalf("the sealed L3 the actor's key cannot open is not judged: %+v", e.Result["findings"])
+	}
+	if skipped := subjectsOf(e.Result["skipped"], "", ""); !strings.Contains(skipped["c-l3s"], "not reproduced") {
+		t.Fatalf("the sealed L3 the actor's key cannot open is reported skipped with the reason: %+v", e.Result["skipped"])
+	}
+	e = maintain(keys["verifier"])
+	found = subjectsOf(e.Result["findings"], "class", "independence_unverified")
+	if _, ok := found["c-l3s"]; !ok {
+		t.Fatalf("under an identity able to unseal the maintenance pass reproduces the sealed L3 too: %+v", e.Result["findings"])
+	}
+	if skipped := subjectsOf(e.Result["skipped"], "", ""); skipped["c-l3s"] != "" {
+		t.Fatalf("nothing is skipped once the key opens the seal: %+v", e.Result["skipped"])
 	}
 }
