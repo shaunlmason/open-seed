@@ -1278,6 +1278,34 @@ the assertions read, and there is no copy to go stale.
   the wrong payload two steps later; when a derivation "re-owes"
   something already performed, check which payload was appended
   before suspecting the derivation.
+- A recorded corpus that replays against the boundary is only as
+  deterministic as its inputs: derive every key from a fixed seed, keep
+  every instant out of the recorded frame, and let the scenario fix
+  positions and verbs, or two recordings on two machines differ in a
+  fingerprint and the byte-for-byte drill is unwritable.
+- A class that judges a recorded point against the current
+  configuration must ask whether the point was ever inside it: a
+  refused attempt at an undeclared act is a decision point too, and a
+  class that holds it to the manifest fails the corpus on the day it
+  is recorded. Hold admitted points to the configuration; hold refused
+  ones to their frame.
+- Never run a mutation script that restores with a directory-wide
+  `git checkout -- <dir>` while the tree carries uncommitted edits
+  elsewhere in that directory: the restore reverts them too. Restore
+  the mutated files by name, and commit the docs before the mutations
+  run.
+- When a stacked or parallel card bumps the same projection version,
+  resolve the merge by taking the later number and saying so in the
+  merge commit; two "12"s with different meanings is a silent
+  republish under a wrong id.
+
+- Judge a slice bound on the value the input supplies, never on a sum
+  derived from it: `position+1 > len` overflows at the largest value
+  the parser admits and slips past the guard. Compare the position
+  and add afterwards.
+- A field documented as an anchor is validated as one at the shape
+  rule, not only where a flag's help text says so: the CLI is one
+  path to the boundary, and the raw seam is another.
 - A fold that re-judges a fact "through the same checks" must include
   the grant: re-running the record gates alone binds a well-formed
   fact pushed raw under the wrong key. Read the keyring at the

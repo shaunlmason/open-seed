@@ -135,6 +135,43 @@ type ReportView struct {
 	// filed and done, and merged over recurring, record-derivable from
 	// the fold alone. Null when no work subject exists.
 	Flywheel *flywheel.Metrics `json:"flywheel"`
+	// Lanes is the lane-quality section (plans/os-6bd9ffff.md D6;
+	// charter III.J row 3): the dispatcher's re-triage rate and the
+	// planner's unedited-approval rate, record-derivable from the
+	// fold alone. Null when no work subject exists, the reconciliation
+	// section's posture.
+	Lanes *ReportLanes `json:"lanes"`
+}
+
+// ReportLanes carries the two lane-quality metrics III.J row 3 asks
+// for, each over the fold's own facts.
+type ReportLanes struct {
+	Dispatcher ReportDispatcher `json:"dispatcher"`
+	Planner    ReportPlanner    `json:"planner"`
+}
+
+// ReportDispatcher is the re-triage figure: subjects with one or more
+// applied specifications, those with two or more (a re-specification
+// from ready, the seed/4 row), and their ratio as a three-decimal
+// string, null at a zero denominator.
+type ReportDispatcher struct {
+	Specified    int     `json:"specified"`
+	Respecified  int     `json:"respecified"`
+	RetriageRate *string `json:"retriage_rate"`
+}
+
+// ReportPlanner is the unedited-approval figure: subjects carrying an
+// approval, split into unedited (the approval's digest equals the
+// first proposal's), edited, and unmeasured (an approval or proposal
+// before seed/4 carries no digest: stated, never guessed), with the
+// unedited share of the measured approvals as a three-decimal
+// string, null at a zero denominator.
+type ReportPlanner struct {
+	Approvals    int     `json:"approvals"`
+	Unedited     int     `json:"unedited"`
+	Edited       int     `json:"edited"`
+	Unmeasured   int     `json:"unmeasured"`
+	UneditedRate *string `json:"unedited_rate"`
 }
 
 // ReportReconciliation is the record-derivable half of divergence
@@ -176,14 +213,15 @@ type ReportReconciliation struct {
 // it (review finding on the item 3 PR). Version "12" moves with the
 // section again: the retired and stale counts, the latter judged at
 // the declared instant (plans/os-0d537fbd.md D4). Version "13" adds
-// the flywheel section (plans/os-9075c308.md D5), the same posture:
+// the lanes section (plans/os-6bd9ffff.md D6) and version "14" the
+// flywheel section (plans/os-9075c308.md D5), both the same posture:
 // record-derivable from the fold, so an unchanged tip republishes
-// with it. Inputs marks it as
+// with them. Inputs marks it as
 // an input-consuming projection; the knowledge projection is the
 // other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "13", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "14", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -256,12 +294,57 @@ func reportView(records []*event.Record) (*ReportView, error) {
 		view.Reconciliation = rec
 		metrics := flywheel.Derive(records, fold)
 		view.Flywheel = &metrics
+		view.Lanes = lanesSection(fold)
 	}
 	if curation.Fold(records).Any() {
 		stages := DeriveKnowledge(records).Stages
 		view.Knowledge = &stages
 	}
 	return &view, nil
+}
+
+// lanesSection derives the lane-quality metrics from the fold
+// (plans/os-6bd9ffff.md D6): re-triage over subjects with a
+// specification, unedited approvals over the measured ones.
+func lanesSection(fold *transition.Fold) *ReportLanes {
+	sec := &ReportLanes{}
+	for _, subject := range fold.Subjects() {
+		s, ok := fold.State(subject)
+		if !ok {
+			continue
+		}
+		if s.Specifications >= 1 {
+			sec.Dispatcher.Specified++
+		}
+		if s.Specifications >= 2 {
+			sec.Dispatcher.Respecified++
+		}
+		if _, approved := fold.PlanApproved(subject); approved {
+			sec.Planner.Approvals++
+			unedited, measured := fold.PlanDigests(subject).Unedited()
+			switch {
+			case !measured:
+				sec.Planner.Unmeasured++
+			case unedited:
+				sec.Planner.Unedited++
+			default:
+				sec.Planner.Edited++
+			}
+		}
+	}
+	sec.Dispatcher.RetriageRate = reportRate(sec.Dispatcher.Respecified, sec.Dispatcher.Specified)
+	sec.Planner.UneditedRate = reportRate(sec.Planner.Unedited, sec.Planner.Unedited+sec.Planner.Edited)
+	return sec
+}
+
+// reportRate is a ratio as a fixed three-decimal string, null at a
+// zero denominator: a rate over nothing is not zero.
+func reportRate(num, den int) *string {
+	if den == 0 {
+		return nil
+	}
+	s := fmt.Sprintf("%.3f", float64(num)/float64(den))
+	return &s
 }
 
 func buildReport(records []*event.Record, in Inputs) (map[string][]byte, error) {

@@ -39,6 +39,30 @@ merged-commit>"}`, operator-attested in v0, the `merge.observed`
 posture). Both are **facts, not transitions**: no lifecycle state
 changes, and the 5.1 pinned invariant stands.
 
+**The plan digest** (plans/os-6bd9ffff.md D5; [`trajectories.md`](trajectories.md)).
+From `seed/4` both verbs carry `digest`, the lowercase-hex sha256 of
+the plan bytes at the anchor: `plan.proposed` is `{"plan", "digest"}`
+and `plan.approved` `{"plan", "pr", "digest"}`, the field required
+there (a proposal or approval without one is incomplete naming it)
+and refused before it naming the version (a `seed/3` validator's shape
+has no such field). Anchors alone cannot say whether a plan survived
+review unedited, because the commit halves differ across a squash
+merge even when the content is identical; the digest can. `seed plan
+propose --plan "<path> @ <commit>" --repo <dir>` and `seed plan approve
+--plan … --pr "<pr> @ <merged-commit>" --repo <dir>` append the two
+facts through the boundary, deriving the digest from the repository at
+the anchor rather than asking for it, refusing an anchor the
+repository lacks (`not_found`: an anchor with no bytes has no digest
+to carry), and citing the active fence where a claim window is open.
+The fold keeps, per subject, the **first** admitted proposal's digest
+and the approval's; an approval is **unedited** iff the two are equal,
+the planner's original decomposition having survived review by anyone,
+the planner included, since the charter's figure is "plan-PRs pass
+human review unedited". An approval or proposal before `seed/4`
+carries no digest, so such an approval is **unmeasured**, stated and
+never guessed. The report's `lanes` section derives the rate
+([`projections.md`](projections.md)).
+
 **The gate bites at `submission.made`** — the charter allows claiming
 an unplanned contract, and planning needs the claim's exclusivity, so
 the earliest ledger point where implementation-not-planning manifests

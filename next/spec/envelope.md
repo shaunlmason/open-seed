@@ -113,7 +113,7 @@ meaning.
 
 **Exits are families; the machine code can be finer.** The `exit` answers
 "what kind of thing happened", which is what a caller branches on; the
-`code` string names the specific condition inside that family. Five exits
+`code` string names the specific condition inside that family. Eight exits
 ship with a second code today, and each of them is a NARROWER case of its
 exit rather than a different meaning, so none of them is the sharing the
 rule above forbids:
@@ -129,6 +129,7 @@ rule above forbids:
 | 20 | `human_verdict` | `seed verdict render` over a scorecard item at `high` uncertainty (neither verdict is renderable; `seed verdict defer` routes it to a human), or from a key without operator standing on a human-review tier or after a deferral: the render is a human's (`verdicts.md`) |
 | 20 | `lint_refused` | `seed knowledge lint` on a lesson file that fails the promotion gate's file half at a named gate (curation.md): the file, the fact and the repository disagree, which is a check gone red on content rather than on a command |
 | 19 | `eval_vacuous` | `seed eval check` on a definition whose unsolved fixture already passes every acceptance command: the spec cannot decide, which is the family's answer, and the extra word says which way, since a pass on such an eval would qualify nobody (`evals.md`) |
+| 26 | `trajectory_diverged` | `seed trajectory replay` on a recorded trajectory that no longer replays green: a point whose frame, declaration, grant or admissibility moved, or a manifest or posture digest that differs from the recorded one. The family's answer stands, the checked-in lane configuration no longer supports a claim about it, and the word says the claim was a recorded decision point rather than a table row (`trajectories.md`) |
 | 22 | `seal_unauthorized` | a seal whose signer held no sealer grant at the seal's own position, or which cites a position outside the verified chain: like a broken seal in that it will not be unsealed, unlike one in that the ciphertext is fine and the authoring boundary is what failed (`seed reconcile` surfaces the same condition as `seal_unverified`) |
 | 66 | `posture_unreadable` | the posture declaration exists and cannot be read: the same operational failure as `unreadable`, narrowed to the one input whose absence is separately reportable as `posture_undeclared` |
 

@@ -142,7 +142,17 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   section and its `contested` count, [`curation.md`](curation.md), so
   an unchanged tip republishes with the section; version "12" its
   `retired` and `stale` counts, the latter at the declared instant;
-  version "13" the `flywheel` section, [`flywheel.md`](flywheel.md):
+  version "13" adds `lanes`, [`trajectories.md`](trajectories.md):
+  `dispatcher` `{specified, respecified, retriage_rate}`, subjects
+  with one or more applied specifications, those with two or more,
+  and their ratio, and `planner` `{approvals, unedited, edited,
+  unmeasured, unedited_rate}`, approvals split by whether the
+  approval's digest equals the first proposal's, the rate over the
+  measured ones; rates are three-decimal strings, null at a zero
+  denominator, and the section is null when no work subject exists,
+  the reconciliation section's posture; record-derivable from the
+  fold alone, no new projection registered;
+  version "14" the `flywheel` section, [`flywheel.md`](flywheel.md):
   null on an empty ledger, else the recurring, proposed and merged
   shape counts, the repair contracts filed and done, and the
   conversion rate):

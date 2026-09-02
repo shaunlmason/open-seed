@@ -30,6 +30,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 // probeView is the context snapshot the synthesizers fill templates
@@ -204,6 +205,17 @@ func flywheelProbes(ctx *Context) (shape, occurrences, standing, path, repair st
 		}
 	}
 	return
+}
+
+// planDigestKV is the plan verbs' content digest, a seed/4 field
+// (plans/os-6bd9ffff.md D5): required there and refused before it,
+// so the probe carries it exactly at the versions whose shape rule
+// demands it.
+func (v *probeView) planDigestKV() string {
+	if !version.LevelsApply(v.version) {
+		return ""
+	}
+	return `"digest": "` + strings.Repeat("0", 64) + `", `
 }
 
 // probePacket is the minimal shape-valid four-part packet: non-empty
@@ -574,10 +586,10 @@ var affordanceCatalog = []struct {
 		return `{"deadend": "` + v.retiredDeadEndOr() + `", "environment": "` + v.retiredEnvironmentOr() + `", "reason": "probe"}`
 	}},
 	{"plan.proposed", func(v *probeView) string {
-		return `{` + v.fenceKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000"}`
+		return `{` + v.fenceKV() + v.planDigestKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000"}`
 	}},
 	{"plan.approved", func(v *probeView) string {
-		return `{` + v.fenceKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000", "pr": "probe"}`
+		return `{` + v.fenceKV() + v.planDigestKV() + `"plan": "probe.md @ 0000000000000000000000000000000000000000", "pr": "pr/0 @ 0000000000000000000000000000000000000000"}`
 	}},
 	{"progress.milestone", func(v *probeView) string {
 		return `{` + v.fenceKV() + `"count": 1, "step": "probe"}`

@@ -88,8 +88,12 @@ type modeStand struct {
 	remote, state, ld     string
 	src, base, spec, head string
 	priv                  string
-	keys, fps             map[string]string
-	grants                map[string][]string
+	// active is the protocol version the stand has upgraded to, so the
+	// background facts the fixture stages carry the shape that version
+	// admits (the plan approval's digest from seed/4).
+	active    string
+	keys, fps map[string]string
+	grants    map[string][]string
 	// appendRaw stages BACKGROUND facts on the raw seam. Setup may
 	// use it (D3); nothing a drill asserts may come from it, because
 	// `ledger append` runs no rules and a fact staged there proves

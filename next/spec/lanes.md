@@ -270,6 +270,7 @@ residual and one that cannot see it.
 | act | what a persuaded dispatcher can inflict |
 | --- | --- |
 | `intent.filed` | **narrowed by os-be12ac16** ([`tiers.md`](tiers.md)): the filed `tier` and `budget` are now validated against their tables at admission, so a persuaded dispatcher cannot file a value the system does not know, and the three authority sites read the table rather than the constant. What remains is **mis-tiering**: `"trivial"` is a legitimate filing that exempts the plan gate and the sealed-checks lint, and nothing yet attests who may make it. Owner: tier provenance ([`plans.md`](plans.md)'s "until tier provenance lands"), still pinned by a characterization drill. `routing` names a squad the deployment owns and is not validated here |
+| `contract.specified` from `ready` | **re-specification** (plans/os-6bd9ffff.md D4; [`lifecycle.md`](lifecycle.md)): from `seed/4` a persuaded dispatcher can rewrite an unclaimed contract's draft acceptance. The reach widens, the bound does not: the acceptance gate binds the rewrite exactly as the first draft (executable content needs gate evidence), a claimed, reviewed, blocked or finished contract is out of reach by the table, `tier`, `budget` and `routing` stay the intent's, and the record carries the revision (the fold's `Specifications`, the report's re-triage rate), so a rewrite is visible as one rather than as the first draft. The reachability drill derives the widening from the boundary rather than being told. Owner: tier provenance, for the fields this cannot revise |
 | `claim.reaped` | admitted on a live claim with no liveness evidence consulted at all. Its two preconditions are freshness and attribution, not authorization: the fence citation (readable from any position-stamped read) and a packet. Owner: Phase 9 item 3 |
 | `message.sent` | **no capability at all** — standing-only, so any enrolled active actor appends it. This is the one that RELAYS. Bounded by the classification lint at 512 bytes per string, which is a SIZE bound: the sixty-byte instruction that matters sails through. Since os-8451d939 it reaches one more surface, and deliberately only as far as a NOTICE: `seed situation` reports that mail exists (sender, contract, position, size) and carries no payload text, because the orienting read is taken on every wake unbidden. The body is reached by `seed message read --at <position>`, which is the reader choosing to look ([`obligations.md`](obligations.md)) |
 
@@ -373,6 +374,15 @@ ordered fragment list prevents.
   for the input-handling half, **two-thirds met**: intents and tool
   output are covered and mirrors are not, because `request.*` is
   unlanded. Three residuals are named and pinned rather than closed.
+- III.J row 3 "Dispatcher re-triage rate and planner unedited-approval
+  rate are tracked" — met by [`trajectories.md`](trajectories.md)'s
+  metrics half: the `ready` origin of `contract.specified` at `seed/4`
+  ([`lifecycle.md`](lifecycle.md)), the plan verbs' content digest
+  ([`plans.md`](plans.md)) and the report's `lanes` section
+  ([`projections.md`](projections.md)); the harness half, III.O row 3's
+  recorded decision points replayed against these manifests, is the
+  same spec's, with its residual (no decider re-runs at a point) named
+  in this suite's words.
 - III.K row 4 "Trajectories are treated as untrusted inputs; the
   poisoning drill fails to achieve promotion in CI" — met by the
   curator poisoning drill ([`curation.md`](curation.md), "The

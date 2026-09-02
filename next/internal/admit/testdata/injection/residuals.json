@@ -8,8 +8,8 @@
     },
     {
       "verb": "contract.specified",
-      "why_admitted": "routing a contract with a draft acceptance spec is the dispatcher's job",
-      "consequence": "bounded by the acceptance gate: executable content requires review-gate evidence at every tier, so text cannot become an executed command without a gate between (internal/transition/acceptance.go)"
+      "why_admitted": "routing a contract with a draft acceptance spec is the dispatcher's job; from seed/4, so is revising that draft while the contract is still unclaimed (re-specification, the ready origin; plans/os-6bd9ffff.md D4)",
+      "consequence": "bounded by the acceptance gate: executable content requires review-gate evidence at every tier, so text cannot become an executed command without a gate between (internal/transition/acceptance.go). RE-SPECIFICATION widens the reach, not the bound: a persuaded dispatcher can rewrite an unclaimed contract's draft acceptance at seed/4, and the same gate binds the rewrite; a claimed, reviewed, blocked or finished contract is out of reach by the table, and tier, budget and routing stay the intent's. The record now carries the revision (Specifications on the fold; the report's re-triage rate), so a rewrite is visible as one rather than as the first draft. Owner: tier provenance, for the fields this cannot revise."
     },
     {
       "verb": "contract.blocked",

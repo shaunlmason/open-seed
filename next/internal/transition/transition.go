@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"math"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -82,11 +83,19 @@ type InvalidTransitionError struct {
 	Subject string
 	From    string
 	Verb    string
+	// Reason, when set, names why a row the table carries still
+	// refuses at this position: the re-specification origin before
+	// seed/4 (plans/os-6bd9ffff.md D4), a table row gated by version
+	// rather than by state.
+	Reason string
 }
 
 func (e *InvalidTransitionError) Error() string {
 	if e.From == "" {
 		return fmt.Sprintf("verb %s is illegal for subject %s: the subject does not exist (only the birth verb creates one)", e.Verb, e.Subject)
+	}
+	if e.Reason != "" {
+		return fmt.Sprintf("verb %s is illegal for subject %s in state %s: %s", e.Verb, e.Subject, e.From, e.Reason)
 	}
 	return fmt.Sprintf("verb %s is illegal for subject %s in state %s", e.Verb, e.Subject, e.From)
 }
@@ -431,6 +440,12 @@ type SubjectState struct {
 	// whose acceptance is invalid counts an anomaly and leaves what
 	// is honestly derivable.
 	Acceptance *AcceptanceInfo
+	// Specifications counts the applied contract.specified events on
+	// the subject: the first from backlog, and from seed/4 every
+	// re-specification from ready (plans/os-6bd9ffff.md D4), the
+	// dispatcher revising its own triage. Two or more is the report's
+	// re-triage figure.
+	Specifications int
 	// PriorClaimants is every fingerprint that has ever held a claim
 	// on this subject: the fence rule's who-must-cite input — a
 	// reaped or released worker cannot demote itself to observer
@@ -876,6 +891,15 @@ type Fold struct {
 	// (plans/os-16c1d142.md): they change no lifecycle state and the
 	// submission gate consults them.
 	planned map[string]string
+	// proposed maps subject -> the FIRST proposal's content digest,
+	// and approved maps subject -> the approval's, both read at seed/4
+	// positions only, where the plan verbs carry one
+	// (plans/os-6bd9ffff.md D5). An approval is unedited iff the two
+	// are equal: the planner's original decomposition survived review.
+	// The first proposal, not the last: a planner that revises its own
+	// proposal before review is exactly the edit the figure counts.
+	proposed map[string]string
+	approved map[string]string
 	// milestones maps subject -> its milestone high-water mark
 	// (plans/os-2ff8dbf1.md): progress.milestone is a fact too, and
 	// the summarization boundary consults the mark. Raw-pushed
@@ -890,10 +914,42 @@ func (f *Fold) PlanApproved(subject string) (string, bool) {
 	return ref, ok
 }
 
+// PlanDigests is the fold's plan-content facts for a subject
+// (plans/os-6bd9ffff.md D5): the first proposal's digest and the
+// approval's, each empty where the chain carries none (a proposal or
+// approval before seed/4, or none at all).
+type PlanDigests struct {
+	Proposed string
+	Approved string
+}
+
+// PlanDigests reports the subject's plan digests.
+func (f *Fold) PlanDigests(subject string) PlanDigests {
+	return PlanDigests{Proposed: f.proposed[subject], Approved: f.approved[subject]}
+}
+
+// Unedited reports whether the approval kept the first proposal's
+// content: both digests present and equal. measured is false when
+// either is absent, the report's unmeasured case, never guessed.
+func (d PlanDigests) Unedited() (unedited, measured bool) {
+	if d.Proposed == "" || d.Approved == "" {
+		return false, false
+	}
+	return d.Proposed == d.Approved, true
+}
+
+// RespecificationNeeds is the reason a ready-origin specification
+// refuses at a version before seed/4: the row activates there
+// (plans/os-6bd9ffff.md D4, D7), and a validator of the earlier
+// version judges the record by its own table.
+func RespecificationNeeds(active string) string {
+	return fmt.Sprintf("re-specification activates at %s and the chain is at %s (append system.protocol.upgraded first; next/spec/lifecycle.md)", version.Seed4, active)
+}
+
 // FoldRecords folds every subject's lifecycle events, skipping illegal
 // history without wedging, the halt.StateAt posture.
 func (t *Table) FoldRecords(records []*event.Record) *Fold {
-	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}, milestones: map[string]milestoneFact{}}
+	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}, proposed: map[string]string{}, approved: map[string]string{}, milestones: map[string]milestoneFact{}}
 	for pos, rec := range records {
 		e := &rec.Event
 		if !version.Activated(e.V) {
@@ -910,6 +966,20 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		if e.Verb == PlanApprovedVerb {
 			if ref, _ := planAnchor(e.Payload); ref != "" {
 				f.planned[e.Subject] = ref
+				// The digest is a seed/4 fact: at earlier positions the
+				// field is undefined and a raw copy carrying one is not
+				// a measurement (D5, D7).
+				if d, ok := planDigest(e.Payload); ok && version.LevelsApply(e.V) {
+					f.approved[e.Subject] = d
+				}
+			}
+			continue
+		}
+		if e.Verb == PlanProposedVerb {
+			if d, ok := planDigest(e.Payload); ok && version.LevelsApply(e.V) {
+				if _, seen := f.proposed[e.Subject]; !seen {
+					f.proposed[e.Subject] = d
+				}
 			}
 			continue
 		}
@@ -1264,6 +1334,14 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			current = s.State
 		}
 		to, err := t.Check(e.Subject, current, e.Verb)
+		if err == nil && e.Verb == "contract.specified" && current == "ready" && !version.LevelsApply(e.V) {
+			// The ready origin is a seed/4 row (plans/os-6bd9ffff.md
+			// D4): a re-specification at an earlier position is the
+			// transition the table of that version refused, so the
+			// tolerant fold skips it visibly rather than applying an
+			// acceptance the boundary of the day would not have.
+			err = &InvalidTransitionError{Subject: e.Subject, From: current, Verb: e.Verb, Reason: RespecificationNeeds(e.V)}
+		}
 		if err != nil {
 			if !ok {
 				s = &SubjectState{}
@@ -1330,6 +1408,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 		}
 		if e.Verb == "contract.specified" {
+			s.Specifications++
 			if a, aerr := ParseAcceptance(e.Subject, e.Payload); aerr == nil {
 				s.Acceptance = &AcceptanceInfo{Ref: a.Ref, Executable: a.Executable, Gated: !a.Executable || a.Gate != ""}
 			} else {
@@ -1921,6 +2000,30 @@ func planAnchor(payload []byte) (string, bool) {
 	return m.Plan, m.Plan != ""
 }
 
+// planDigestRE is the digest's shape: the lowercase-hex sha256 of the
+// plan bytes at the anchor, the figure seed plan propose derives from
+// the repository (plans/os-6bd9ffff.md D5).
+var planDigestRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// planDigest extracts a payload's well-formed plan digest.
+func planDigest(payload []byte) (string, bool) {
+	var m struct {
+		Digest string `json:"digest"`
+	}
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return "", false
+	}
+	return m.Digest, planDigestRE.MatchString(m.Digest)
+}
+
+// PlanDigestNeeds is the reason a plan verb carrying a digest refuses
+// at a version before seed/4: the field is defined there
+// (plans/os-6bd9ffff.md D5, D7), and a seed/3 validator would judge
+// the record without it.
+func PlanDigestNeeds(verb, active string) string {
+	return fmt.Sprintf("the %s carries a plan digest and the chain is at %s: plan digests activate at %s (next/spec/plans.md)", verb, active, version.Seed4)
+}
+
 // PlanRequiredError is the plan-gate refusal (exit 16 plan_required):
 // claiming an unplanned contract authorizes planning only, so a
 // submission above the trivial tier needs an approved plan and must
@@ -1961,31 +2064,53 @@ func (f *Fold) CheckPlanGate(subject, tier string, payload []byte) error {
 	return nil
 }
 
-// CheckPlanEventShape enforces payload presence for the plan.* verbs:
-// a proposal names the plan artifact anchor; an approval names the
-// plan anchor and the merged PR (both combined anchors, the
-// external-fact observation posture).
-func CheckPlanEventShape(verb, subject string, payload []byte) error {
-	switch verb {
-	case PlanProposedVerb:
-		if _, ok := planAnchor(payload); !ok {
-			return &IncompleteError{Verb: verb, Subject: subject, Missing: []string{"plan"}}
+// CheckPlanEventShape enforces payload presence for the plan.* verbs
+// at the active version v: a proposal names the plan artifact anchor;
+// an approval names the plan anchor and the merged PR (both combined
+// anchors, the external-fact observation posture); and from seed/4
+// both carry the plan's content digest, the sha256 of the plan bytes
+// at the anchor (plans/os-6bd9ffff.md D5), required there and refused
+// before it, since a seed/3 validator's shape has no such field.
+func CheckPlanEventShape(v, verb, subject string, payload []byte) error {
+	if verb != PlanProposedVerb && verb != PlanApprovedVerb {
+		return nil
+	}
+	var m struct {
+		Plan   string          `json:"plan"`
+		PR     string          `json:"pr"`
+		Digest json.RawMessage `json:"digest"`
+	}
+	_ = json.Unmarshal(payload, &m)
+	var missing []string
+	if m.Plan == "" {
+		missing = append(missing, "plan")
+	}
+	if verb == PlanApprovedVerb && m.PR == "" {
+		missing = append(missing, "pr")
+	}
+	if version.LevelsApply(v) {
+		if _, ok := planDigest(payload); !ok {
+			missing = append(missing, "digest")
 		}
-	case PlanApprovedVerb:
-		var m struct {
-			Plan string `json:"plan"`
-			PR   string `json:"pr"`
-		}
-		if err := json.Unmarshal(payload, &m); err != nil || m.Plan == "" || m.PR == "" {
-			var missing []string
-			if m.Plan == "" {
-				missing = append(missing, "plan")
-			}
-			if m.PR == "" {
-				missing = append(missing, "pr")
-			}
-			return &IncompleteError{Verb: verb, Subject: subject, Missing: missing}
-		}
+	} else if len(m.Digest) > 0 {
+		return &ChainError{Subject: subject, Verb: verb, Reason: PlanDigestNeeds(verb, v)}
+	}
+	if len(missing) > 0 {
+		return &IncompleteError{Verb: verb, Subject: subject, Missing: missing}
+	}
+	// The approval's pr is the merged plan PR AT its merge commit, the
+	// external-fact observation posture: a bare name carries no
+	// revision to hold the approval to (review finding on the
+	// os-6bd9ffff task PR).
+	if verb == PlanApprovedVerb && !isAnchor(m.PR) {
+		return &ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("pr %q is not \"<pr> @ <merged-commit>\": an approval observes the plan PR's merge at a revision", m.PR)}
 	}
 	return nil
+}
+
+// isAnchor reports the combined anchor form "<name> @ <commit>" with
+// both halves present.
+func isAnchor(s string) bool {
+	name, commit, ok := strings.Cut(s, " @ ")
+	return ok && strings.TrimSpace(name) != "" && strings.TrimSpace(commit) != ""
 }
