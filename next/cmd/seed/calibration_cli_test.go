@@ -128,8 +128,8 @@ func TestCalibrationAtTheTerminal(t *testing.T) {
 		return subject
 	}
 	e1 := calibrate(agreeing, "fail")
-	if _, notes := dueActs(t, ld, repo); !strings.Contains(fmt.Sprint(notes), "gold_missing") {
-		t.Fatalf("without --gold the calibration owes nothing and notes gold_missing: %+v", notes)
+	if owed, notes := dueActs(t, ld, repo); len(owed) != 0 || !strings.Contains(fmt.Sprint(notes), "gold_missing") {
+		t.Fatalf("without --gold the calibration owes nothing, its offer included, and notes gold_missing: %+v / %+v", owed, notes)
 	}
 	wrongDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(wrongDir, "calib.json"), []byte(`{"items": [{"id": "tone", "score": "fail"}]}`), 0o644); err != nil {

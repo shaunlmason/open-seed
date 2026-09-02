@@ -65,8 +65,10 @@ type Definition struct {
 	Calibration *Calibration `json:"calibration,omitempty"`
 }
 
-// KindCalibration marks a calibration definition.
-const KindCalibration = "calibration"
+// KindCalibration marks a calibration definition. It is the marker's
+// kind too (transition.EvalKindCalibration): a filing carries it so the
+// boundary can hold a verdict qualification to a calibration.
+const KindCalibration = transition.EvalKindCalibration
 
 // CalibrationFloor is the agreement a verifier must reach against the
 // gold to qualify: policy on the protected spec surface
@@ -358,6 +360,9 @@ func FileBound(def Definition, anchor Anchor, tu *tuple.Tuple, prior int, lesson
 	sum := sha256.Sum256([]byte(key))
 	id := "eval-" + hex.EncodeToString(sum[:6])
 	marker := map[string]any{"name": def.Name}
+	if def.IsCalibration() {
+		marker["kind"] = KindCalibration
+	}
 	if tu != nil {
 		marker["tuple"] = *tu
 	}
@@ -595,6 +600,19 @@ func Due(in Inputs) Report {
 			rep.Notes = append(rep.Notes, *note)
 			continue
 		}
+		// A calibration the derivation cannot score is not offered
+		// (review finding on the task PR): an offer would dispatch
+		// work whose verdict nothing here can compare to the gold, so
+		// the gold is looked for before anything is owed, and its
+		// absence is the one note.
+		def, isCalibration := Find(in.Evals, s.Eval.Name)
+		isCalibration = isCalibration && def.IsCalibration()
+		if isCalibration {
+			if _, note := goldFor(in, def, subject); note != nil {
+				rep.Notes = append(rep.Notes, *note)
+				continue
+			}
+		}
 		// Offers: a waiting eval with no live offer.
 		if s.State == "ready" && len(s.LiveOffers(in.Now)) == 0 {
 			payload, _ := json.Marshal(map[string]any{
@@ -606,7 +624,7 @@ func Due(in Inputs) Report {
 		}
 		// Calibration (plans/os-2e34f66a.md D5): the verifier's
 		// scorecard against the gold, never the pass or fail.
-		if def, ok := Find(in.Evals, s.Eval.Name); ok && def.IsCalibration() {
+		if isCalibration {
 			rep = calibrate(in, def, subject, s, rep)
 			continue
 		}
@@ -748,15 +766,18 @@ func holdsFor(ring *keyring.State, actor, capability string, t tuple.Tuple) bool
 // verifier's declared tuple, below it the tuple-wide disqualification
 // and the dispatcher's defect filing naming the disagreeing items.
 func calibrate(in Inputs, def Definition, subject string, s transition.SubjectState, rep Report) Report {
-	gold, ok := in.Gold[def.Name]
-	if !ok {
-		rep.Notes = append(rep.Notes, Note{Kind: "gold_missing", Subject: subject,
-			Detail: fmt.Sprintf("no gold scorecard was supplied for calibration %s (--gold <dir>/%s.json); nothing is owed on a calibration the derivation cannot score", def.Name, def.Name)})
+	gold, note := goldFor(in, def, subject)
+	if note != nil {
+		rep.Notes = append(rep.Notes, *note)
 		return rep
 	}
-	if "sha256:"+gold.Digest != def.Calibration.Gold {
-		rep.Notes = append(rep.Notes, Note{Kind: "gold_mismatch", Subject: subject,
-			Detail: fmt.Sprintf("the supplied gold's digest sha256:%s is not the definition's commitment %s; nothing is scored against a gold the tree did not commit to", gold.Digest, def.Calibration.Gold)})
+	if s.Eval.Kind != KindCalibration {
+		// The boundary holds a verdict qualification to a filing
+		// marked as a calibration (review finding on the task PR),
+		// so a calibration filed without the mark owes nothing the
+		// boundary would admit: said, rather than owed and refused.
+		rep.Notes = append(rep.Notes, Note{Kind: "kind_unmarked", Subject: subject,
+			Detail: fmt.Sprintf("the filing's eval marker does not say %q, so its verdict qualifies nobody: file the calibration through seed eval file, which marks it", KindCalibration)})
 		return rep
 	}
 	fact := admit.AuthenticVerdict(in.Ctx, subject, s)
@@ -787,9 +808,14 @@ func calibrate(in Inputs, def Definition, subject string, s transition.SubjectSt
 		}
 		return rep
 	}
-	// Drift: tuple-wide, every verifier holding the configuration.
+	// Drift: tuple-wide, every verifier holding the configuration,
+	// and the verifier that rendered even when nothing cites its
+	// tuple yet (review finding on the task PR): a verifier holding
+	// verdict by a bare grant renders under the bridge, and its first
+	// failed calibration is what closes it.
 	for _, actor := range in.Ring.Actors() {
-		if !holdsFor(in.Ring, actor, keyring.CapVerdict, *fact.Tuple) || alreadyCited(in.Ring, actor, subject, fact.Pos, true) {
+		bridging := actor == verifier && in.Ring.HasAnyCapability(actor, []string{keyring.CapVerdict}) && !in.Ring.EverCited(actor, keyring.CapVerdict)
+		if (!holdsFor(in.Ring, actor, keyring.CapVerdict, *fact.Tuple) && !bridging) || alreadyCited(in.Ring, actor, subject, fact.Pos, true) {
 			continue
 		}
 		payload, _ := json.Marshal(map[string]any{
@@ -812,6 +838,23 @@ func calibrate(in Inputs, def Definition, subject string, s transition.SubjectSt
 			Because: fmt.Sprintf("drift on %s files a defect naming the contract and the disagreeing items, once per contract", subject)})
 	}
 	return rep
+}
+
+// goldFor finds the supplied gold a calibration definition commits
+// to, or the note saying why nothing can be scored: no gold supplied
+// (gold_missing), or a gold that is not the commitment
+// (gold_mismatch).
+func goldFor(in Inputs, def Definition, subject string) (Gold, *Note) {
+	gold, ok := in.Gold[def.Name]
+	if !ok {
+		return Gold{}, &Note{Kind: "gold_missing", Subject: subject,
+			Detail: fmt.Sprintf("no gold scorecard was supplied for calibration %s (--gold <dir>/%s.json); nothing is owed on a calibration the derivation cannot score, and it is not offered", def.Name, def.Name)}
+	}
+	if "sha256:"+gold.Digest != def.Calibration.Gold {
+		return Gold{}, &Note{Kind: "gold_mismatch", Subject: subject,
+			Detail: fmt.Sprintf("the supplied gold's digest sha256:%s is not the definition's commitment %s; nothing is scored against a gold the tree did not commit to, and it is not offered", gold.Digest, def.Calibration.Gold)}
+	}
+	return gold, nil
 }
 
 func alreadyCited(ring *keyring.State, actor, contract string, verdictPos int, disqualified bool) bool {

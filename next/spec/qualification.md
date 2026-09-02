@@ -121,7 +121,12 @@ bridge, the verifier renders as before. Non-empty: the declared tuple
 must equal a member, or the render is out of grant. Empty and once
 cited (every configuration disqualified by drift): nothing admits
 until a calibration passes again, the same closed bridge as for
-`claim`. A calibration eval is where a configuration proves itself,
+`claim`. The bridge closes on the first failed calibration too: for
+`verdict` alone, a disqualification of a tuple a bare-grant verifier
+never had cited admits, marking the capability cited with an empty
+set, so a verifier whose first calibration drifts does not keep
+rendering under the configuration that drifted because nothing had
+named it yet (review finding on the task PR). A calibration eval is where a configuration proves itself,
 so the rule never gates a render on an eval subject, exactly as
 `run.started` on one; an undeclared render is the bridge either way.
 

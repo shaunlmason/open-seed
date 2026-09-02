@@ -137,11 +137,31 @@ func TestRubricVerdictsAtTheTerminal(t *testing.T) {
 	if s.Verdict == nil || s.Verdict.Scorecard == nil || s.Verdict.Scorecard.Digest != digest || len(s.Verdict.Scorecard.Items) != 2 || s.Verdict.Scorecard.Items[0].ID != "tone" {
 		t.Fatalf("the fold carries the scorecard's digest and items: %+v", s.Verdict)
 	}
-	if e, code := runEnv(t, "verdict", "check", "--ledger", st.ld, "--subject", "c-r", "--repo", st.src); code != 0 {
-		t.Fatalf("verdict check over a rubric verdict: %d %+v", code, e.Error)
+	if e, code := runEnv(t, "verdict", "check", "--ledger", st.ld, "--subject", "c-r", "--repo", st.src); code != 0 || e.Result["scorecard"] != "verified" {
+		t.Fatalf("verdict check over a rubric verdict verifies the cited scorecard too: %d %+v", code, e)
 	}
 	if e, code := runEnv(t, "reconcile", "--ledger", st.ld, "--repo", st.src); code != 0 || classesOf(t, e)["scorecard_unverified"] != 0 {
 		t.Fatalf("an agreeing stored scorecard classifies nothing: %d %+v", code, e.Result["by_class"])
+	}
+	// The scorecard artifact lost: the check is not green over a store
+	// that lost what the verifier scored (review finding on the task
+	// PR), exactly as reconcile classifies it.
+	scorecardPath := filepath.Join(artifactsDir("", st.src), "sha256", digest)
+	stored, err := os.ReadFile(scorecardPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(scorecardPath); err != nil {
+		t.Fatal(err)
+	}
+	if e, code := runEnv(t, "verdict", "check", "--ledger", st.ld, "--subject", "c-r", "--repo", st.src); code != 21 || e.Error == nil || e.Error.Code != "receipt_mismatch" || !strings.Contains(e.Error.Message, "scorecard") {
+		t.Fatalf("a lost scorecard refuses the check as receipt_mismatch naming it: %d %+v", code, e)
+	}
+	if err := os.WriteFile(scorecardPath, stored, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if e, code := runEnv(t, "verdict", "check", "--ledger", st.ld, "--subject", "c-r", "--repo", st.src); code != 0 {
+		t.Fatalf("restored, the check is green again: %d %+v", code, e.Error)
 	}
 
 	// The derivation's refinements.

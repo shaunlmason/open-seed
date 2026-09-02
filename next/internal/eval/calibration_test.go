@@ -318,3 +318,88 @@ func TestCalibrationOwesMintsDriftAndTheDefect(t *testing.T) {
 		t.Fatalf("an aged verdict qualification owes a spot-check on the calibration: %s", kinds(rep.Acts))
 	}
 }
+
+// conformance: review findings on the task PR — a ready calibration
+// whose gold the derivation cannot see is not offered (the note is
+// what is owed); a calibration filed without the marker's kind owes
+// nothing but the kind_unmarked note; and a bare-grant verifier whose
+// FIRST calibration drifts is disqualified for the configuration it
+// rendered under, closing its bridge, beside the defect.
+func TestCalibrationWithholdsOffersAndClosesTheBridgeOnFirstDrift(t *testing.T) {
+	repo, _ := evalRepo(t)
+	goldDir := plantCalibration(t, repo, "calib", "2")
+	defs, _ := eval.Load(repo)
+	def, _ := eval.Find(defs, "calib")
+	anchor, err := eval.AnchorOf(repo, def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gold, _ := eval.LoadGold(goldDir, defs)
+	s := newCalibrationStand(t)
+	now := time.Date(2026, 9, 2, 0, 0, 0, 0, time.UTC)
+	verifierTuple := `{"principal": "acme", "harness": "local-worktree/v0", "model": "other/1", "tool_policy": "default", "environment": "detached-git-worktree"}`
+
+	// Ready, no gold: no offer, one note.
+	e1 := s.file4(def, anchor, 0)
+	if rep := s.due4(now, 0, defs, repo, nil); len(rep.Acts) != 0 || noteKinds(rep.Notes) != "gold_missing" {
+		t.Fatalf("a ready calibration without its gold is not offered: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
+	}
+	wrong, _ := eval.ParseGold([]byte(`{"items": [{"id": "tone", "score": "fail"}]}`))
+	if rep := s.due4(now, 0, defs, repo, map[string]eval.Gold{"calib": wrong}); len(rep.Acts) != 0 || noteKinds(rep.Notes) != "gold_mismatch" {
+		t.Fatalf("a gold that is not the commitment withholds the offer too: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
+	}
+	if rep := s.due4(now, 0, defs, repo, gold); kinds(rep.Acts) != "offer:"+e1 {
+		t.Fatalf("with the gold the ready calibration is offered: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
+	}
+	// The filing carries the mark.
+	f, err := eval.File(def, anchor, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(f.Intent), `"kind":"calibration"`) && !strings.Contains(string(f.Intent), `"kind": "calibration"`) {
+		t.Fatalf("seed eval file marks a calibration: %s", f.Intent)
+	}
+
+	// The first calibration drifts: the verifier holds verdict by a
+	// bare grant, nothing cites its tuple, and the disqualification is
+	// owed for it all the same, beside the defect.
+	driftPos := s.score(e1, "holderA", verifierTuple, map[string]string{"tone": "pass", "taste": "pass", "clarity": "pass", "brevity": "fail", "care": "pass"})
+	rep := s.due4(now, 0, defs, repo, gold)
+	if got := kinds(rep.Acts); got != "disqualify:"+s.fps["verifier"]+" defect:"+eval.DriftDefectID(e1) {
+		t.Fatalf("the first failed calibration disqualifies the verifier that rendered and files the defect: %s / %s", got, noteKinds(rep.Notes))
+	}
+	var drop map[string]any
+	if err := json.Unmarshal([]byte(rep.Acts[0].Payload), &drop); err != nil {
+		t.Fatal(err)
+	}
+	if drop["verdict"] != fmt.Sprint(driftPos) || drop["tuple"].(map[string]any)["model"] != "other/1" {
+		t.Fatalf("the disqualification cites the drifted verdict and its tuple: %+v", drop)
+	}
+	// The keyring admits it and the bridge closes; the dispatcher files
+	// the defect; nothing more is owed on that verdict.
+	s.add4("supervisor", keyring.VerbDisqualified, s.fps["verifier"], rep.Acts[0].Payload)
+	s.add4("root", "intent.filed", rep.Acts[1].Subject, rep.Acts[1].Payload)
+	ring := s.ctx().Keyring
+	if !ring.EverCited(s.fps["verifier"], keyring.CapVerdict) || len(ring.GrantTuples(s.fps["verifier"], keyring.CapVerdict)) != 0 {
+		t.Fatal("after the first failed calibration the verifier's verdict set is empty and once cited")
+	}
+	if rep := s.due4(now, 0, defs, repo, gold); len(rep.Acts) != 0 {
+		t.Fatalf("one verdict, one consequence: %s", kinds(rep.Acts))
+	}
+
+	// A calibration filed without the mark owes nothing but the note.
+	unmarked, err := eval.File(def, anchor, nil, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intent := regexp.MustCompile(`,?\s*"kind":\s*"calibration",?`).ReplaceAllString(string(unmarked.Intent), "")
+	if strings.Contains(intent, `"kind"`) || !json.Valid([]byte(intent)) {
+		t.Fatalf("the drill could not strip the mark: %s", intent)
+	}
+	s.add4("root", "intent.filed", unmarked.Subject, intent)
+	s.add4("root", "contract.specified", unmarked.Subject, string(unmarked.Spec))
+	s.score(unmarked.Subject, "holderA", verifierTuple, map[string]string{"tone": "pass", "taste": "fail", "clarity": "pass", "brevity": "pass", "care": "pass"})
+	if rep := s.due4(now, 0, defs, repo, gold); len(rep.Acts) != 0 || !strings.Contains(noteKinds(rep.Notes), "kind_unmarked") {
+		t.Fatalf("an unmarked calibration owes nothing the boundary would admit, and says so: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
+	}
+}

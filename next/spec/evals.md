@@ -239,7 +239,22 @@ supplies it to the derivation (`seed eval status|act --gold <dir>`,
 one `<name>.json` per calibration definition). With none supplied the
 contract owes nothing and the derivation notes `gold_missing`; a gold
 whose canonical digest is not the definition's commitment refuses to
-score, `gold_mismatch`, and performs nothing.
+score, `gold_mismatch`, and performs nothing. Neither offers the
+calibration either (review finding on the task PR): a ready
+calibration whose gold the derivation cannot see is not offered, so
+`seed eval act` never dispatches work whose verdict nothing could
+compare, and the note is what is owed.
+
+A calibration's filing marks itself: `seed eval file` writes `"kind":
+"calibration"` into the eval marker (`{name, tuple?, lesson?,
+carrier?, kind?}`, the kind a `seed/4` field, neither absent nor
+`calibration` refusing), the fold carries it, and the boundary holds a
+`verdict` qualification to it: a qualification citing an ordinary
+eval's verdict refuses, because an ordinary eval proves a
+configuration for work and says nothing about the verifier's judgment,
+so citing one would mint verdict authority past the calibration gate
+(review finding on the task PR). A calibration filed without the mark
+owes nothing and the derivation notes `kind_unmarked`.
 
 Filed with `seed eval file` and worked like any eval (the solution
 applied, the submission made), a calibration is judged by the verifier
@@ -257,7 +272,13 @@ spec's floor refuses at `Load`); nothing an invoker of `seed eval
 act` passes can move it. At or above the floor `Due` owes
 `actor.qualified` for capability **`verdict`** on the verifier's
 declared tuple; below it, **drift**: `actor.disqualified` for
-`verdict` on that tuple, tuple-wide (every verifier holding it), and
+`verdict` on that tuple, tuple-wide (every verifier holding it) and
+always the verifier that rendered, even on its first calibration when
+nothing cites its tuple yet: a verifier holding `verdict` by a bare
+grant renders under the bridge, the keyring admits that one
+disqualification as the act that closes it (`EverCited`, an empty
+admissible set), and the verifier renders nothing declared until a
+calibration passes again (review finding on the task PR), and
 a defect contract filed by the dispatcher naming the contract and the
 disagreeing items, `intent.filed` under the stable id
 `d-<sha256(calibration_drift, contract)[:16]>` (the maintenance loop's

@@ -812,7 +812,23 @@ func (s *State) Advance(rec *event.Record) error {
 				kept = append(kept, have)
 			}
 			if !removed {
-				return fmt.Errorf("%s: actor %s holds no admissible %s grant citing that tuple, so there is nothing to disqualify", e.Verb, e.Subject, p.Capability)
+				// A verifier holding verdict by a bare grant renders
+				// under the bridge, every configuration admissible and
+				// none cited; its first failed calibration disqualifies
+				// the configuration it rendered under and closes the
+				// bridge, so a drifted verifier does not keep rendering
+				// because nothing had cited its tuple yet (review
+				// finding on the task PR). The bridge is the never
+				// cited's, so once cited there is nothing left to
+				// disqualify, exactly as before.
+				bridging := p.Capability == CapVerdict && slices.Contains(cur.Grants, CapVerdict) && !cur.everCited[CapVerdict]
+				if !bridging {
+					return fmt.Errorf("%s: actor %s holds no admissible %s grant citing that tuple, so there is nothing to disqualify", e.Verb, e.Subject, p.Capability)
+				}
+				cur.markCited(p.Capability)
+			}
+			if cur.Tuples == nil {
+				cur.Tuples = map[string][]tuple.Tuple{}
 			}
 			cur.Tuples[p.Capability] = kept
 			q.Disqualified = true

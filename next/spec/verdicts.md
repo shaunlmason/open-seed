@@ -387,7 +387,12 @@ defer`, stores it and cites it; the human's `seed verdict render`
 retrieves that receipt intact from the store rather than recomputing,
 validates its own scorecard against the rubric and that receipt, and
 cites the same digest, so `seed verdict check` and reconcile recompute
-it under a capable key as for any verdict. One deferral per window: a
+it under a capable key as for any verdict. `seed verdict check` also
+retrieves the cited scorecard and holds its stored items to the
+payload's, the same check reconcile classifies as
+`scorecard_unverified`, refusing `receipt_mismatch` over a store that
+lost or altered it and reporting `scorecard: verified` otherwise
+(review finding on the task PR). One deferral per window: a
 second refuses, and so does one over a submission already judged; a
 new submission clears it.
 

@@ -1323,7 +1323,7 @@ func Default() []Rule {
 					return &transition.ChainError{Subject: rec.Event.Subject, Verb: verb,
 						Reason: fmt.Sprintf("the filing carries an eval marker and the chain is at %s: eval semantics activate at %s (next/spec/evals.md)", c.Active, version.Seed3)}
 				}
-				return checkEvalMarker(rec.Event.Subject, filed.Eval)
+				return checkEvalMarker(c.Active, rec.Event.Subject, filed.Eval)
 			}
 			if verb != keyring.VerbQualified && verb != keyring.VerbDisqualified {
 				return nil
@@ -1371,7 +1371,15 @@ func Default() []Rule {
 				// A calibration qualifies or disqualifies on agreement
 				// with the gold, whichever way the verdict went
 				// (plans/os-2e34f66a.md D5): the cited verdict is the
-				// eval's authenticated one, pass or fail.
+				// eval's authenticated one, pass or fail. The cited
+				// contract must be a calibration (review finding on
+				// the task PR): an ordinary eval's verdict proves a
+				// configuration for work and says nothing about the
+				// verifier's judgment, so citing one would mint verdict
+				// authority past the calibration gate.
+				if s.Eval.Kind != transition.EvalKindCalibration {
+					return refuse(fmt.Sprintf("the cited contract is not a calibration: a %s qualification cites a calibration eval's verdict, the one compared to a committed gold, and %q is filed as an ordinary eval", keyring.CapVerdict, s.Eval.Name))
+				}
 				if fact = AuthenticVerdict(c, p.Contract, s); fact == nil || fact.Pos != pos {
 					return refuse(fmt.Sprintf("position %d is not the calibration's authenticated verdict: a verdict qualification cites the verdict whose scorecard was compared to the gold, rendered by a verdict-granted key disjoint from the implementer", pos))
 				}
@@ -2657,16 +2665,30 @@ func strictJSON(raw []byte, into any) error {
 // carrier an anchored path. A bound marker names the hypothesis and
 // the exact candidate revision the eval is for, on the record at
 // filing.
-func checkEvalMarker(subject string, raw json.RawMessage) error {
+func checkEvalMarker(active, subject string, raw json.RawMessage) error {
 	var m struct {
 		Name    string          `json:"name"`
 		Tuple   json.RawMessage `json:"tuple"`
 		Lesson  string          `json:"lesson"`
 		Carrier string          `json:"carrier"`
+		Kind    string          `json:"kind"`
 	}
 	if err := strictJSON(raw, &m); err != nil {
 		return &transition.ChainError{Subject: subject, Verb: "intent.filed",
-			Reason: fmt.Sprintf("the eval marker is the strict object {name, tuple?, lesson?, carrier?}: %v", err)}
+			Reason: fmt.Sprintf("the eval marker is the strict object {name, tuple?, lesson?, carrier?, kind?}: %v", err)}
+	}
+	// The kind is a seed/4 field (plans/os-2e34f66a.md D5, D6): it
+	// marks a calibration, the one kind whose verdict qualifies a
+	// verifier, and a seed/3 validator's marker has no such field.
+	if m.Kind != "" {
+		if !version.LevelsApply(active) {
+			return &transition.ChainError{Subject: subject, Verb: "intent.filed",
+				Reason: fmt.Sprintf("the eval marker names a kind and the chain is at %s: calibration activates at %s (next/spec/evals.md)", active, version.Seed4)}
+		}
+		if m.Kind != transition.EvalKindCalibration {
+			return &transition.ChainError{Subject: subject, Verb: "intent.filed",
+				Reason: fmt.Sprintf("the eval marker's kind %q is neither absent nor %q", m.Kind, transition.EvalKindCalibration)}
+		}
 	}
 	if (m.Lesson == "") != (m.Carrier == "") {
 		return &transition.ChainError{Subject: subject, Verb: "intent.filed",

@@ -370,7 +370,18 @@ type EvalInfo struct {
 	// eval.
 	Lesson  string
 	Carrier string
+	// Kind is the marker's kind: empty for an ordinary eval, or
+	// EvalKindCalibration for a calibration (plans/os-2e34f66a.md D5;
+	// review finding on the task PR: a verdict qualification cites a
+	// calibration and nothing else, so the record says which evals
+	// are calibrations rather than leaving the boundary to guess).
+	Kind string
 }
+
+// EvalKindCalibration is the eval marker's kind for a calibration
+// definition: the one kind whose verdict qualifies a verifier. The
+// eval package mirrors it as its definition kind.
+const EvalKindCalibration = "calibration"
 
 // Claim is the active claim on an in_progress subject: the fence is
 // the chain position of the admitted claim.taken record — derived,
@@ -1288,6 +1299,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 					Tuple   json.RawMessage `json:"tuple"`
 					Lesson  string          `json:"lesson"`
 					Carrier string          `json:"carrier"`
+					Kind    string          `json:"kind"`
 				} `json:"eval"`
 			}
 			if json.Unmarshal(e.Payload, &filed) == nil {
@@ -1299,7 +1311,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 				// not parse is dropped and counted, never folded as
 				// a partial configuration.
 				if filed.Eval != nil && filed.Eval.Name != "" && version.EvalApplies(e.V) {
-					info := &EvalInfo{Name: filed.Eval.Name, Lesson: filed.Eval.Lesson, Carrier: filed.Eval.Carrier}
+					info := &EvalInfo{Name: filed.Eval.Name, Lesson: filed.Eval.Lesson, Carrier: filed.Eval.Carrier, Kind: filed.Eval.Kind}
 					if len(filed.Eval.Tuple) > 0 {
 						if tu, terr := tuple.Parse(filed.Eval.Tuple); terr == nil {
 							info.Tuple = &tu

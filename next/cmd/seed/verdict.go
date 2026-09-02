@@ -33,6 +33,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/plan"
+	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -766,17 +767,20 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 	}
 	// The latest rendered verdict on the subject is the one checked.
 	var cited struct {
-		Verdict      string `json:"verdict"`
-		Receipt      string `json:"receipt"`
-		Submission   string `json:"submission"`
-		Independence string `json:"independence"`
+		Verdict      string                   `json:"verdict"`
+		Receipt      string                   `json:"receipt"`
+		Submission   string                   `json:"submission"`
+		Independence string                   `json:"independence"`
+		Scorecard    *transition.ScorecardRef `json:"scorecard"`
 	}
 	found := false
+	citedPos := -1
 	for i := len(st.records) - 1; i >= 0; i-- {
 		e := &st.records[i].Event
 		if e.Verb == transition.VerdictRenderedVerb && e.Subject == *subject {
 			if err := json.Unmarshal(e.Payload, &cited); err == nil {
 				found = true
+				citedPos = i
 			}
 			break
 		}
@@ -792,6 +796,17 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 	if _, err := artifact.Open(artifactsDir(*artifacts, *repo)).Get(strings.TrimSpace(cited.Receipt)); err != nil {
 		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
 			fmt.Sprintf("the cited receipt %s is not retrievable intact from the artifact store: %v — the evidence a verdict points at must survive verbatim (6.2 reconciliation input)", cited.Receipt, err)), st.count), stdout, stderr)
+	}
+	// A rubric verdict's other artifact (plans/os-2e34f66a.md D3;
+	// review finding on the task PR): the cited scorecard retrieves
+	// intact and its items are the payload's, the same check
+	// reconcile classifies as scorecard_unverified, so a check is not
+	// green over a store that lost or altered what the verifier
+	// scored.
+	if cited.Scorecard != nil {
+		if f := reconcile.ScorecardAt(*subject, &transition.VerdictFact{Pos: citedPos, Scorecard: cited.Scorecard}, artifact.Open(artifactsDir(*artifacts, *repo))); f != nil {
+			return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch", f.Detail), st.count), stdout, stderr)
+		}
 	}
 	in, s, failEnv := st.verdictInput(*subject, *repo, *timeout, false)
 	if failEnv != nil {
@@ -834,14 +849,18 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
 			fmt.Sprintf("recomputation from the submission head yields %s, the rendered verdict cites %s — the receipt, the range, or the repository's content has diverged from what was attested (6.2 reconciliation input)", digest, cited.Receipt)), st.count), stdout, stderr)
 	}
-	return render(stampTip(envelope.OK(map[string]any{
+	result := map[string]any{
 		"subject":      *subject,
 		"receipt":      digest,
 		"verdict":      cited.Verdict,
 		"submission":   cited.Submission,
 		"independence": cited.Independence,
 		"artifact":     "verified",
-	}), st.count), stdout, stderr)
+	}
+	if cited.Scorecard != nil {
+		result["scorecard"] = "verified"
+	}
+	return render(stampTip(envelope.OK(result), st.count), stdout, stderr)
 }
 
 // renderLocked finds the authenticated fail that locks pass out of the

@@ -275,7 +275,7 @@ func TestCalibrationQualifiesTheVerifierAndBindsItsRenders(t *testing.T) {
 	base := tupleJSON(t, nil)
 	verifierTuple := tupleJSON(t, map[string]string{"model": "other/1"})
 	drifted := tupleJSON(t, map[string]string{"model": "other/2"})
-	subE := st.drive("e-1", evalFiled, evalSpec, base)
+	subE := st.drive("e-1", calibFiled, evalSpecFor("calib"), base)
 	verdictPos := st.ctx.Count
 	// An executable gated spec supports L3 whatever the declaration.
 	st.step(k.verifier, version.Seed4, transition.VerdictRenderedVerb, "e-1", scoredBody("pass", subE, "L3", verifierTuple, scored(item("tone", "pass", "low"))))
@@ -289,7 +289,7 @@ func TestCalibrationQualifiesTheVerifierAndBindsItsRenders(t *testing.T) {
 	chainRefusal(t, "another actor", qualify(fpOf(t, k.holder), keyring.CapVerdict, verifierTuple, verdictPos), "verdict's signer")
 	chainRefusal(t, "another tuple", qualify(fpOf(t, k.verifier), keyring.CapVerdict, drifted, verdictPos), "configuration the verifier declared")
 	// A verdict declaring no tuple qualifies nobody for verdict.
-	subF := st.drive("e-2", evalFiled, evalSpecFor("fix-the-check"), base)
+	subF := st.drive("e-2", calibFiled, evalSpecFor("calib"), base)
 	bare := st.ctx.Count
 	st.step(k.verifier, version.Seed4, transition.VerdictRenderedVerb, "e-2", levelBody("pass", subF, "L3", ""))
 	if err := Check(st.ctx, draftV(t, k.supervisor, version.Seed4, keyring.VerbQualified, fpOf(t, k.verifier), fmt.Sprintf(`{"capability": %q, "tuple": %s, "contract": "e-2", "verdict": "%d"}`, keyring.CapVerdict, verifierTuple, bare), st.ctx.Tip)); err == nil || !strings.Contains(err.Error(), "declares no tuple") {
@@ -308,7 +308,7 @@ func TestCalibrationQualifiesTheVerifierAndBindsItsRenders(t *testing.T) {
 	if err := st.render(t, "c-1", levelBody("pass", sub, "L1", "")); err != nil {
 		t.Fatalf("an undeclared render is the bridge: %v", err)
 	}
-	subE3 := st.drive("e-3", evalFiled, evalSpec, base)
+	subE3 := st.drive("e-3", calibFiled, evalSpecFor("calib"), base)
 	if err := st.render(t, "e-3", levelBody("pass", subE3, "L3", drifted)); err != nil {
 		t.Fatalf("on an eval any declared tuple renders, the drifted one included: %v", err)
 	}
@@ -324,5 +324,84 @@ func TestCalibrationQualifiesTheVerifierAndBindsItsRenders(t *testing.T) {
 	old := levelFixture(t, version.Seed3)
 	if err := Check(old.ctx, draftV(t, old.keys.supervisor, version.Seed3, keyring.VerbQualified, fpOf(t, old.keys.verifier), fmt.Sprintf(`{"capability": %q, "tuple": %s, "contract": "e-1", "verdict": "3"}`, keyring.CapVerdict, verifierTuple), old.ctx.Tip)); err == nil || !strings.Contains(err.Error(), version.Seed4) {
 		t.Fatalf("a verdict qualification at seed/3 refuses naming seed/4: %v", err)
+	}
+}
+
+// calibFiled is a filing marked as a calibration (review finding on
+// the task PR): the one kind whose verdict qualifies a verifier.
+const calibFiled = `{"intent": "eval calib: the scorecard against the gold", "tier": "trivial", "budget": "small", "routing": "core", "eval": {"name": "calib", "kind": "calibration"}}`
+
+// conformance: review finding on the task PR — a verdict qualification
+// cites a calibration and nothing else: an ordinary eval's verdict,
+// however authenticated and declared, mints no verdict authority; the
+// marker's kind is a seed/4 field, refused before it and refused when
+// it is neither absent nor calibration.
+func TestVerdictQualificationCitesACalibrationOnly(t *testing.T) {
+	st := levelFixture(t, version.Seed4)
+	k := st.keys
+	base := tupleJSON(t, nil)
+	verifierTuple := tupleJSON(t, map[string]string{"model": "other/1"})
+	subE := st.drive("e-1", evalFiled, evalSpec, base)
+	pos := st.ctx.Count
+	st.step(k.verifier, version.Seed4, transition.VerdictRenderedVerb, "e-1", scoredBody("pass", subE, "L3", verifierTuple, scored(item("tone", "pass", "low"))))
+	body := fmt.Sprintf(`{"capability": %q, "tuple": %s, "contract": "e-1", "verdict": "%d"}`, keyring.CapVerdict, verifierTuple, pos)
+	err := Check(st.ctx, draftV(t, k.supervisor, version.Seed4, keyring.VerbQualified, fpOf(t, k.verifier), body, st.ctx.Tip))
+	chainRefusal(t, "an ordinary eval", err, "not a calibration")
+	// The same verdict on a calibration-marked filing qualifies.
+	subC := st.drive("e-2", calibFiled, evalSpecFor("calib"), base)
+	posC := st.ctx.Count
+	st.step(k.verifier, version.Seed4, transition.VerdictRenderedVerb, "e-2", scoredBody("pass", subC, "L3", verifierTuple, scored(item("tone", "pass", "low"))))
+	bodyC := fmt.Sprintf(`{"capability": %q, "tuple": %s, "contract": "e-2", "verdict": "%d"}`, keyring.CapVerdict, verifierTuple, posC)
+	if err := Check(st.ctx, draftV(t, k.supervisor, version.Seed4, keyring.VerbQualified, fpOf(t, k.verifier), bodyC, st.ctx.Tip)); err != nil {
+		t.Fatalf("a calibration's verdict qualifies the verifier: %v", err)
+	}
+	if s, _ := st.ctx.Lifecycle.State("e-2"); s.Eval == nil || s.Eval.Kind != transition.EvalKindCalibration {
+		t.Fatalf("the fold carries the marker's kind: %+v", s.Eval)
+	}
+	// The marker's kind: neither absent nor calibration refuses; at
+	// seed/3 the field refuses by version.
+	odd := strings.Replace(calibFiled, `"kind": "calibration"`, `"kind": "audit"`, 1)
+	if err := Check(st.ctx, draftV(t, k.signer, version.Seed4, "intent.filed", "e-3", odd, st.ctx.Tip)); err == nil || !strings.Contains(err.Error(), "neither absent nor") {
+		t.Fatalf("an unknown kind refuses by name: %v", err)
+	}
+	old := levelFixture(t, version.Seed3)
+	if err := Check(old.ctx, draftV(t, old.keys.signer, version.Seed3, "intent.filed", "e-1", calibFiled, old.ctx.Tip)); err == nil || !strings.Contains(err.Error(), version.Seed4) {
+		t.Fatalf("the kind is a seed/4 field, refused before it naming the version: %v", err)
+	}
+}
+
+// conformance: review finding on the task PR — a verifier holding
+// verdict by a bare grant renders under the bridge; its first failed
+// calibration's disqualification admits and closes it, so renders
+// under the drifted configuration, and under any other, refuse out of
+// grant until a calibration passes again; the calibration subject
+// itself still admits any declared tuple.
+func TestFirstFailedCalibrationClosesTheBridgeAtRender(t *testing.T) {
+	st := levelFixture(t, version.Seed4)
+	k := st.keys
+	base := tupleJSON(t, nil)
+	drifted := tupleJSON(t, map[string]string{"model": "other/2"})
+	other := tupleJSON(t, map[string]string{"model": "other/3"})
+	sub := st.drive("c-1", filedTier("standard"), specBody, base)
+	if err := st.render(t, "c-1", levelBody("pass", sub, "L2", drifted)); err != nil {
+		t.Fatalf("under the bridge a bare-grant verifier renders any declared configuration: %v", err)
+	}
+	subE := st.drive("e-1", calibFiled, evalSpecFor("calib"), base)
+	failPos := st.ctx.Count
+	st.step(k.verifier, version.Seed4, transition.VerdictRenderedVerb, "e-1", scoredBody("fail", subE, "L3", drifted, scored(item("tone", "fail", "low"))))
+	drop := fmt.Sprintf(`{"capability": %q, "tuple": %s, "contract": "e-1", "verdict": "%d", "reason": "drift"}`, keyring.CapVerdict, drifted, failPos)
+	if err := Check(st.ctx, draftV(t, k.supervisor, version.Seed4, keyring.VerbDisqualified, fpOf(t, k.verifier), drop, st.ctx.Tip)); err != nil {
+		t.Fatalf("the first failed calibration disqualifies the configuration nothing had cited: %v", err)
+	}
+	st.step(k.supervisor, version.Seed4, keyring.VerbDisqualified, fpOf(t, k.verifier), drop)
+	var oog *OutOfGrantError
+	for name, tup := range map[string]string{"the drifted configuration": drifted, "any other": other} {
+		if err := st.render(t, "c-1", levelBody("pass", sub, "L2", tup)); !errors.As(err, &oog) || oog.Drift == nil {
+			t.Fatalf("%s: after the first failed calibration the bridge is closed: %v", name, err)
+		}
+	}
+	subE2 := st.drive("e-2", calibFiled, evalSpecFor("calib"), base)
+	if err := st.render(t, "e-2", levelBody("pass", subE2, "L3", drifted)); err != nil {
+		t.Fatalf("a calibration subject still admits any declared tuple, where the configuration re-proves itself: %v", err)
 	}
 }

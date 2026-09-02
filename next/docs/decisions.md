@@ -2612,3 +2612,43 @@ in `calibration_cli_test.go` through the same verbs the modes drive
 drill carries the rubric and deferred contracts to done. The modes
 fixture would need a second full eval work cycle per calibration to
 say nothing the terminal drill does not.
+
+### Review findings on the task PR (os-2e34f66a)
+
+**A verdict qualification cites a calibration and nothing else.** The
+boundary held the qualification to a bound eval with an authenticated
+tuple-declaring verdict, and an ordinary eval satisfies both; a
+supervisor could mint verdict authority from a green ordinary eval
+with no gold and no agreement anywhere. `EvalInfo` had no kind, and
+the boundary cannot read the definition. The filing now says: `seed
+eval file` writes `kind: calibration` into the marker (a `seed/4`
+field, neither absent nor `calibration` refusing), the fold carries
+it, and the qualification rule for `verdict` requires it. The
+derivation notes `kind_unmarked` on a calibration filed without it
+rather than owing a mint the boundary refuses.
+
+**The first failed calibration closes the bridge.** Drift was
+tuple-wide over the actors whose `verdict` grants cited the tuple, and
+a verifier holding `verdict` by a bare grant (every shipped verifier
+does) cited none: its first failed calibration disqualified nobody,
+and the empty-set bridge kept admitting the configuration that had
+just drifted. The keyring admits, for `verdict` alone, a
+disqualification of a tuple a bare-grant verifier never had cited, as
+the act that closes the bridge (cited, empty set), and the derivation
+owes it for the verifier that rendered. `claim` keeps the refusal:
+item 2's bridge is the never-qualified worker's, and an eval's fail
+was never meant to close it.
+
+**`verdict check` reads both artifacts.** It retrieved the receipt and
+recomputed it, and never read the scorecard the same verdict cites, so
+a deleted or altered scorecard checked green until someone ran
+reconcile. It now runs the same check reconcile classifies as
+`scorecard_unverified` and refuses `receipt_mismatch` naming the
+scorecard.
+
+**A calibration the derivation cannot score is not offered.** The
+offer act preceded the gold lookup, so `eval act` without `--gold`
+offered a ready calibration whose verdict nothing could compare. The
+gold is looked for first; without it the note is the whole of what is
+owed.
+
