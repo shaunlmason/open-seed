@@ -20,7 +20,9 @@ import (
 	"os/exec"
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/verdict"
 )
 
 // Evidence runs the checks a projection build cannot: the cited
@@ -28,12 +30,36 @@ import (
 // to the attested head by clean ancestry, and the merged commit must
 // still sit under the target tip.
 func Evidence(id string, s transition.SubjectState, store *artifact.Store, repo string) []Finding {
+	return EvidenceAt(id, s, store, repo, nil, nil)
+}
+
+// EvidenceAt is Evidence with the chain and its fold in hand, which the
+// L3 reproduction needs (plans/os-99829835.md D5): `seed reconcile`
+// passes them; a caller without them grades everything but that.
+func EvidenceAt(id string, s transition.SubjectState, store *artifact.Store, repo string, records []*event.Record, fold *transition.Fold) []Finding {
+	var out []Finding
+	// The L3 reproduction (plans/os-99829835.md D1, D5): a verdict that
+	// recorded deterministic-first verification cites a receipt that
+	// recomputes from the verifier's own checkout to the cited digest;
+	// one that does not is an L3 the evidence does not support. Sealed
+	// subjects need the sealer's key to recompute and are `verdict
+	// check --key`'s; the record half above still judges them.
+	if s.Verdict != nil && s.Verdict.Levels && s.Verdict.Independence == string(transition.L3) && s.Sealed == nil && fold != nil {
+		digest, err := reproduce(records, fold, s, id, repo)
+		if err != nil || digest != s.Verdict.Receipt {
+			why := "the recomputed receipt digest differs from the cited " + s.Verdict.Receipt
+			if err != nil {
+				why = err.Error()
+			}
+			out = append(out, Finding{Subject: id, Class: ClassIndependenceUnverified,
+				Detail: fmt.Sprintf("the verdict at position %d records L3 and its receipt does not reproduce from the verifier's own checkout: %s — deterministic-first verification is what the reproduction proves", s.Verdict.Pos, why)})
+		}
+	}
 	if s.Merged == nil || s.Merged.SHA == "" || s.Verdict == nil {
 		// Record-derivable classes already cover chains this
 		// incomplete; there is no evidence to grade.
-		return nil
+		return out
 	}
-	var out []Finding
 	merged := s.Merged.SHA
 	// The attested comparison needs the receipt; the target check
 	// below does not, so lost evidence never hides a rewritten target
@@ -78,4 +104,19 @@ func gitResolves(repo, rev string) bool {
 
 func gitAncestor(repo, ancestor, descendant string) bool {
 	return exec.Command("git", "-C", repo, "merge-base", "--is-ancestor", ancestor, descendant).Run() == nil
+}
+
+// reproduce recomputes the receipt for the subject's bound submission
+// exactly as `seed verdict check` does, through the verifier's own
+// input seam, and returns its digest.
+func reproduce(records []*event.Record, fold *transition.Fold, s transition.SubjectState, subject, repo string) (string, error) {
+	in, err := verdict.InputFor(records, fold, s, subject, repo, 0)
+	if err != nil {
+		return "", err
+	}
+	r, err := verdict.Compute(in)
+	if err != nil {
+		return "", err
+	}
+	return r.Digest()
 }

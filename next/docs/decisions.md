@@ -2232,3 +2232,57 @@ here. Newest last.
   bound by construction, since `File` writes the anchor. `EvalRoot`
   moved to `internal/transition` so the boundary and the eval package
   read one layout.
+
+## Phase 10 item 3 — independence levels (os-99829835, plan #223)
+
+- **Reconcile reproduces unsealed L3 verdicts; sealed ones are
+  `verdict check --key`'s** (os-99829835, D5 refined). The evidence-grade
+  half recomputes an L3 verdict's receipt from the verifier's own input
+  seam and classifies `independence_unverified` when the digest differs
+  from the cited one. A sealed subject's receipt includes the sealed
+  transcripts, which recompute only under a recipient key, and reconcile
+  holds no key; so the reproduction runs for unsealed subjects and the
+  record half (the level the records support, the tier the subject
+  requires) still judges every subject. `EvidenceAt` takes the records
+  and the fold beside `Evidence`, whose signature `internal/maintain`
+  keeps.
+
+- **The modes drills stage the seal through the library** (os-99829835,
+  D6 refined). `critical` requires sealed checks, `seal create` reads a
+  ledger directory, and both modes run on the remote posture (the loop's
+  first act is online-only). The seal is BACKGROUND under the fixture's
+  own rule: the envelope is built and encrypted to the eligible
+  recipients through `internal/seal`, the ciphertext lands in the
+  repository's artifact store, and the commitment is appended on the
+  raw seam signed by the sealer-capable verifier, so `sealAuthorized`
+  still passes it; nothing the drills assert comes from it. The plan
+  approval is staged the same way, and it anchors `accept.md` at the
+  spec commit with the submissions ranging from there, because the
+  receipt binds the approved plan's bytes at the merge-base and the
+  fixture repository holds no `plans/` tree. That `seal create` has no
+  remote posture is an existing residual, noted here rather than
+  widened in this PR.
+
+- **The declaration is all three flags or none, and `level_short`
+  precedes the lockout and the sealed gate.** `seed verdict render`
+  refuses a partial declaration at usage; `harness` and `environment`
+  come from the local adapter's constants, the `run start` posture. The
+  level is computed as soon as the subject and the declaration are
+  known, before the red-verdict lockout and the `unsealed` refusal, so
+  a verifier learns what its tier requires of it before anything
+  about the subject's checks. A declaration on a pre-`seed/4` chain
+  refuses at usage naming the version.
+
+- **L2 reads the window's ADMITTED start.** `submissionDeclaration`
+  finds the bound submission's window and re-judges its `run.started`
+  through `RunStartValid`: fold presence is not admission, so a
+  raw-pushed start carrying a tuple the holder's grants do not cite is
+  no declaration, and L2 cannot be manufactured by pushing a start. The
+  fold records a malformed verdict `tuple` as an anomaly and no fact.
+
+- **`LevelsApply` is `seed/4` exactly; `EvalApplies` became the list.**
+  The plan's D4: the newest gate is an equality until the next version
+  lands, at which point it becomes a named list, which is the lesson
+  `EvalApplies` teaches in this PR. The next register entry owes
+  `LevelsApply` the same edit.
+

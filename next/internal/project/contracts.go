@@ -143,6 +143,10 @@ type ContractVerdict struct {
 	Position string `json:"position"`
 	Verdict  string `json:"verdict"`
 	Receipt  string `json:"receipt"`
+	// Independence is the level the verdict recorded
+	// (plans/os-99829835.md D5), verbatim from the payload; empty on
+	// a fact that carried none.
+	Independence string `json:"independence,omitempty"`
 }
 
 // ContractMerge is the admitted merge.observed: its chain position
@@ -290,7 +294,8 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 				e.Acceptance = &ContractAcceptance{Ref: s.Acceptance.Ref, Executable: s.Acceptance.Executable, Gated: s.Acceptance.Gated}
 			}
 			if s.Verdict != nil {
-				e.Verdict = &ContractVerdict{Position: fmt.Sprintf("%d", s.Verdict.Pos), Verdict: s.Verdict.Verdict, Receipt: s.Verdict.Receipt}
+				e.Verdict = &ContractVerdict{Position: fmt.Sprintf("%d", s.Verdict.Pos), Verdict: s.Verdict.Verdict, Receipt: s.Verdict.Receipt,
+					Independence: s.Verdict.Independence}
 			}
 			if s.Requested != nil {
 				pos := fmt.Sprintf("%d", s.Requested.Pos)

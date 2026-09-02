@@ -20,11 +20,11 @@ answers at each gate, declared once.
 
 ## The table
 
-| tier | plan required | sealed checks required | human review |
-|---|---|---|---|
-| `trivial` | `no` | `no` | `no` |
-| `standard` | `yes` | `yes` | `no` |
-| `critical` | `yes` | `yes` | `yes` |
+| tier | plan required | sealed checks required | human review | independence |
+|---|---|---|---|---|
+| `trivial` | `no` | `no` | `no` | `L1` |
+| `standard` | `yes` | `yes` | `no` | `L1` |
+| `critical` | `yes` | `yes` | `yes` | `L2` |
 
 Mirrored in `internal/transition` as the tier table with
 `Tier(name) (TierRow, bool)`, and pinned by a test that parses the rows
@@ -36,15 +36,19 @@ contract, the one every gate applies to; `critical` is the charter's
 "high-consequence" tier, the one humans review.
 
 The `human review` column is **declared here and consumed by nobody
-yet**: it is the row the verdict pipeline's human-verdict routing and
-Phase 10 item 3's independence levels read, and declaring it now is
-what makes "per tier" a table rather than three scattered string
-comparisons. `critical` behaves as `standard` at every site this spec
-governs until that reader exists.
+yet**: it is the row the verdict pipeline's human-verdict routing
+reads, and declaring it now is what makes "per tier" a table rather
+than three scattered string comparisons. `critical` behaves as
+`standard` at that site until that reader exists. The `independence`
+column is consumed: it is the minimum level a verdict on the tier must
+achieve ([`verdicts.md`](verdicts.md), "Independence levels"), read by
+the verdict rule, the merge chain's reapplication, `seed verdict
+render` and reconcile through `TierGates`, and satisfied by any
+achieved level at or above it (`L1` < `L2` < `L3`).
 
 **The strictest-row rule.** An unknown tier has no row, and every
 reader of a missing row takes the strictest column: plan required,
-sealed checks required, human review. This is the budget class posture
+sealed checks required, human review, independence `L3`. This is the budget class posture
 (an unknown class has no capacity) applied to authority: absent
 knowledge is never fudged into a relaxation. It is also why a
 raw-pushed record carrying an unknown tier changes nothing: it folds
@@ -111,9 +115,9 @@ attests who is entitled to make it. That residual is
 by a characterization drill in the injection suite, and its owner is
 tier provenance, not this table.
 
-Phase 10 item 3 adds the `independence` column (`L1`/`L2`/`L3` per
-tier) and widens [`verdicts.md`](verdicts.md)'s level vocabulary; this
-spec adds no level and changes no verdict rule.
+Phase 10 item 3 added the `independence` column (`L1`/`L2`/`L3` per
+tier) and widened [`verdicts.md`](verdicts.md)'s level vocabulary: this
+spec declares the requirement, and the verdict rule enforces it.
 [`acceptance.md`](acceptance.md)'s provenance-gated relaxation for
 trusted trivial-tier specs waits on origin provenance, which is not a
 tier question.

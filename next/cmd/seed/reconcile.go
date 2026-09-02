@@ -62,7 +62,7 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 		checked++
 		findings = append(findings, reconcile.Subject(id, s)...)
 		findings = append(findings, verdictFindings[id]...)
-		findings = append(findings, reconcile.Evidence(id, s, store, *repo)...)
+		findings = append(findings, reconcile.EvidenceAt(id, s, store, *repo, st.records, st.fold)...)
 	}
 	if findings == nil {
 		findings = []reconcile.Finding{}

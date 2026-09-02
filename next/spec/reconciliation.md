@@ -107,6 +107,7 @@ never the artifact store or the repository):
 | `chain_skipped` | an observed merge with no admitted `merge.requested` citing the verdict |
 | `unreconciled` | a pass verdict with no observed merge yet; not classified for an eval subject, whose verdict is its terminal fact ([`evals.md`](evals.md)) |
 | `verdict_unverified` | a folded verdict whose signer, replayed to the verdict's own position, held no verdict grant or was an implementing key — a raw-pushed verdict that never passed the verifier boundary |
+| `independence_unverified` | a folded verdict (from `seed/4`) whose recorded level the records do not support (L2 with no declaration or a same-provider, same-family, same-harness one; L3 on a prose-only or ungated spec), or which is short of its subject's tier; at evidence grade (`seed reconcile`, which holds the repository and the store), an L3 whose receipt does not reproduce from the verifier's own checkout ([`verdicts.md`](verdicts.md), "Independence levels") |
 | `overridden` | the merge chain ran through an operator override — the sanctioned alternative, surfaced neutrally and by name, never as a divergence |
 | `override_unverified` | a folded override whose signer, replayed to its own position, held no operator standing — a raw-pushed override that substitutes for nothing |
 
