@@ -159,7 +159,9 @@ by name, drilled on planted tables.
 The charter's birth rule — a contract becomes claimable only when it
 carries intent prose, an acceptance spec, and tier/budget/routing —
 is enforced at the shape level: `intent.filed` must carry non-empty
-`intent`, `tier`, `budget`, and `routing`; `contract.specified` must
+`intent`, `tier`, `budget`, and `routing`, with `tier` a member of the
+tier table and `budget` a member of the class table, byte for byte
+([`tiers.md`](tiers.md), [`budgets.md`](budgets.md)); `contract.specified` must
 carry the **structured acceptance field** — commit-anchored `ref`,
 the `executable` flag, and gate evidence bound to the ref's revision
 for ALL executable content ([`acceptance.md`](acceptance.md)). The

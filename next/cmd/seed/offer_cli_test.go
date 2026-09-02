@@ -287,11 +287,11 @@ func TestOfferRaceExpiryAndFilters(t *testing.T) {
 		t.Fatalf("the root's implicit operator sees every scope: %+v", offers)
 	}
 	if e, code := runEnv(t, "offer", "publish", "--ledger", ld, "--subject", "c-2",
-		"--key", keys["supervisor"], "--expires", "2027-01-01T00:00:00Z", "--tier", "weighty"); code != 0 {
+		"--key", keys["supervisor"], "--expires", "2027-01-01T00:00:00Z", "--tier", "standard"); code != 0 {
 		t.Fatalf("tier-scoped publish: %d %+v", code, e)
 	}
 	if offers := listOffers(t, ld, fps["workerB"], ""); len(offers) != 0 {
-		t.Fatalf("a trivial contract never matches a weighty-scoped offer: %+v", offers)
+		t.Fatalf("a trivial contract never matches a standard-scoped offer: %+v", offers)
 	}
 	if offers := listOffers(t, ld, "deadbeef", ""); len(offers) != 0 {
 		t.Fatalf("an unknown actor sees an empty list: %+v", offers)

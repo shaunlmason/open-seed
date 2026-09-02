@@ -26,7 +26,8 @@ arrives only through `merge.observed`, behind the full chain rule
 
 Unknown keys refuse; `verdict` admits only the two literals;
 `independence` admits only `"L1"` in v0 — the level vocabulary widens
-when Phase 10 declares levels per tier, and the verdict records the
+when Phase 10 item 3 declares levels per tier, a column on the tier
+table [`tiers.md`](tiers.md) now declares, and the verdict records the
 level actually achieved. `submission` is the chain position of the
 `submission.made` that put the subject in its current `review` state
 (the fold records it): a verdict is bound to the submission it judges,
