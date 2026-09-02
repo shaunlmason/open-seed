@@ -19,12 +19,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/flywheel"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
@@ -35,6 +37,10 @@ import (
 // refuse, so illegality is judged by the rule set, never by the
 // synthesizer.
 type probeView struct {
+	// The flywheel probes' citations (plans/os-9075c308.md): the
+	// first recurring shape without a standing proposal and its
+	// occurrences, and the first standing proposal's shape and path.
+	flywheelShape, flywheelOccurrences, flywheelStanding, flywheelPath, flywheelRepair string
 	// support, hypothesis and contest are the curation probes'
 	// citations (curationProbes).
 	support, hypothesis, contest string
@@ -162,6 +168,44 @@ func (v *probeView) fenceKV() string {
 	return `"fence": "` + v.fence + `", `
 }
 
+// flywheelProbes derive what the flywheel verbs' probes cite
+// (plans/os-9075c308.md): the first recurring shape with no standing
+// proposal and its first RecurringAfter occurrences, for the
+// proposal; the first shape with a standing proposal and the proposed
+// path, for the merge observation. Absent facts leave the probe's own
+// placeholders, which the rule refuses.
+func flywheelProbes(ctx *Context) (shape, occurrences, standing, path, repair string) {
+	shape, occurrences, standing, path = "s-probe", "[]", "s-probe", flywheel.RegistryDir+"/probe.yaml"
+	if ctx == nil || ctx.Lifecycle == nil {
+		return
+	}
+	st := flywheel.Fold(ctx.Records)
+	for _, s := range flywheel.Shapes(ctx.Records, ctx.Lifecycle) {
+		if !s.Recurring() {
+			continue
+		}
+		if fact, ok := st.Standing(s.ID); ok {
+			if standing == "s-probe" {
+				standing, path = s.ID, fact.Path()
+			}
+			continue
+		}
+		if shape == "s-probe" {
+			var cites []string
+			for _, occ := range s.Occurrences[:flywheel.RecurringAfter] {
+				cites = append(cites, strconv.Quote(occ.Cite()))
+			}
+			shape, occurrences = s.ID, "["+strings.Join(cites, ", ")+"]"
+			// A passed repair is cited, as the proposal must; an open
+			// one leaves the probe refused, as the proposal is.
+			if _, passed := flywheel.Repairs(ctx.Lifecycle, s.ID); len(passed) > 0 {
+				repair = passed[0].Cite()
+			}
+		}
+	}
+	return
+}
+
 // probePacket is the minimal shape-valid four-part packet: non-empty
 // acceptance, marked decisions (none), the zero-length base range,
 // and honestly empty refs and findings (next/spec/packets.md).
@@ -253,6 +297,46 @@ func (v *probeView) hypothesisOr() string {
 		return probeHypothesis
 	}
 	return v.hypothesis
+}
+
+// The flywheel probes' fallbacks: a view built without a context (the
+// catalog completeness drill renders every probe on an empty view)
+// still yields a shape-valid, refused probe.
+func (v *probeView) flywheelShapeOr() string {
+	if v.flywheelShape == "" {
+		return "s-probe"
+	}
+	return v.flywheelShape
+}
+
+func (v *probeView) flywheelOccurrencesOr() string {
+	if v.flywheelOccurrences == "" {
+		return "[]"
+	}
+	return v.flywheelOccurrences
+}
+
+func (v *probeView) flywheelStandingOr() string {
+	if v.flywheelStanding == "" {
+		return "s-probe"
+	}
+	return v.flywheelStanding
+}
+
+func (v *probeView) flywheelPathOr() string {
+	if v.flywheelPath == "" {
+		return flywheel.RegistryDir + "/probe.yaml"
+	}
+	return v.flywheelPath
+}
+
+// flywheelRepairKV is the proposal probe's repair citation, present
+// exactly when a passed repair stands for the probed shape.
+func (v *probeView) flywheelRepairKV() string {
+	if v.flywheelRepair == "" {
+		return ""
+	}
+	return `, "repair": ` + strconv.Quote(v.flywheelRepair)
 }
 
 // curationProbes derives the citations the curation probes make: two
@@ -361,6 +445,8 @@ const probeTuple = `{"principal": "probe", "harness": "probe/0", "model": "probe
 // curation facts (a hypothesis on the id its claim derives, a
 // promotion on the hypothesis it cites) are legal on no contract.
 var probeSubjects = map[string]func(v *probeView) string{
+	flywheel.ProposedVerb:          func(v *probeView) string { return v.flywheelShapeOr() },
+	flywheel.MergedVerb:            func(v *probeView) string { return v.flywheelStandingOr() },
 	"curation.hypothesis.proposed": func(v *probeView) string { return curation.HypothesisID(probeClaim, nil) },
 	"curation.hypothesis.contested": func(v *probeView) string {
 		h, _ := curation.ParseCitation(v.hypothesisOr())
@@ -457,6 +543,12 @@ var affordanceCatalog = []struct {
 	}},
 	{"curation.deadend.recorded", func(v *probeView) string {
 		return `{"fence": "` + v.fence + `", "tried": "probe", "outcome": "probe", "condition": "probe", "environment": "probe"}`
+	}},
+	{flywheel.ProposedVerb, func(v *probeView) string {
+		return `{"shape": "` + v.flywheelShapeOr() + `", "workflow": "` + flywheel.RegistryDir + `/probe.yaml @ 0000000000000000000000000000000000000000", "occurrences": ` + v.flywheelOccurrencesOr() + `, "validated": {"run": "wf-probe"}` + v.flywheelRepairKV() + `}`
+	}},
+	{flywheel.MergedVerb, func(v *probeView) string {
+		return `{"workflow": "` + v.flywheelPathOr() + ` @ 0000000000000000000000000000000000000000", "shape": "` + v.flywheelStandingOr() + `", "pr": "pr/0 @ 0000000000000000000000000000000000000000"}`
 	}},
 	{"curation.hypothesis.proposed", func(v *probeView) string {
 		return `{"claim": "` + probeClaim + `", "applies_when": {"routing": "probe"}, "support": ` + v.supportOr() + `, "exceptions": [], "provenance": []}`
@@ -570,6 +662,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 	v.version = ctx.Active
 	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
 	curationProbes(ctx, subject, v)
+	v.flywheelShape, v.flywheelOccurrences, v.flywheelStanding, v.flywheelPath, v.flywheelRepair = flywheelProbes(ctx)
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			if s.Claim != nil {

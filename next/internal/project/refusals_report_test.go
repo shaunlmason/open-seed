@@ -125,7 +125,7 @@ func TestReportRefusalsSection(t *testing.T) {
 	}
 	// The refusals section arrived at version 10; the knowledge section
 	// moved the report to 11 and republishes every prefix in its turn.
-	if v := project.Report().Version; v != "12" {
+	if v := project.Report().Version; v != "13" {
 		t.Fatalf("the report's version is 11 (10 added the refusals section, 11 the knowledge section), got %s", v)
 	}
 }

@@ -216,6 +216,13 @@ admission).
   judgment that a dead end's environment moved, on the contract), all
   seven from [`curation.md`](curation.md) as additive catalog growth,
   active from `seed/1`.
+- `workflow.*` — `workflow.proposed` (the curator's proposal of a
+  drafted, mock-validated workflow for a recurring shape, on the shape
+  id its occurrences derive, citing the file, the occurrences and the
+  validating run) and `workflow.merged` (the observation that the
+  proposal's PR landed the file in the registry, on the shape, citing
+  the file and the PR), both from [`flywheel.md`](flywheel.md) as
+  additive catalog growth, active from `seed/1`.
 
 ## Data classification (summary)
 

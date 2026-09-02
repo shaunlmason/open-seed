@@ -318,7 +318,11 @@ edge closed with Phase 11 items 1 and 2: the four implemented verbs
 are in the catalog and the table, and the curator's own reachable set
 (the proposal, the contest, the raise, the standing-only relay) is
 derived from the boundary and pinned against its residual table
-exactly as the dispatcher's is ([`curation.md`](curation.md)).
+exactly as the dispatcher's is ([`curation.md`](curation.md)). The
+`workflow.*` edge closed with Phase 11 item 5: both verbs are in the
+catalog and the table, the proposal reachable by the curator alone and
+the merge by the observer, and the curator's residual table names the
+proposal ([`flywheel.md`](flywheel.md)).
 
 ## The loop-verb registry
 

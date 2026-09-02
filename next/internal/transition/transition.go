@@ -353,6 +353,12 @@ type AcceptanceInfo struct {
 // the reviewed anchor.
 const EvalRoot = "next/evals"
 
+// FlywheelRoot is where a flywheel repair contract's acceptance lives,
+// relative to the repository: next/flywheel/<shape>/accept.md
+// (plans/os-9075c308.md D7), the EvalRoot precedent. The path binds
+// the subject to its shape from the record alone.
+const FlywheelRoot = "next/flywheel"
+
 // EvalFixturePrefix is the repository-relative prefix every acceptance
 // ref of the named eval must carry.
 func EvalFixturePrefix(name string) string { return EvalRoot + "/" + name + "/fixture/" }

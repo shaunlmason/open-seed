@@ -43,6 +43,7 @@ var specCatalogVerbs = []string{
 	"message.sent",
 	"curation.deadend.recorded", "curation.hypothesis.proposed", "curation.hypothesis.contested", "curation.lesson.promoted",
 	"curation.lesson.retired", "curation.deadend.retired", "curation.deadend.unretired",
+	"workflow.proposed", "workflow.merged",
 }
 
 func TestAffordanceCatalogCompleteness(t *testing.T) {
