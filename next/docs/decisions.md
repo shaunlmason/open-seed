@@ -1509,3 +1509,47 @@ here. Newest last.
   the reason restated honestly: serialized runs are what the measured
   behavior was established against, not evidence for the mechanism the
   old comment claimed.
+- **The key-file TOCTOU closes at the SIGNING SITE, not by making two
+  reads atomic** (os-9a89245c). `internal/loop` fingerprints the key
+  before every act; the act then crosses the CLI seam as `--key
+  <path>`, and `loopSigner` reopens that path independently, so an
+  atomic replacement between the two reads is observed by only one of
+  them. `--as <fingerprint>` moves the comparison onto the read the
+  signature uses, which is the actual defect — nothing needs to be
+  atomic across the seam once there is no second opinion to disagree
+  with.
+
+  Both shapes the review thread proposed were rejected and are recorded
+  so they are not revisited: widening the verbs to carry key MATERIAL
+  changes a protocol surface seven verbs share and makes a
+  material-bearing seam out of a path-bearing one; copying the key to a
+  Driver-private path puts private material in a second place on disk.
+  Both buy a property a fingerprint comparison buys for one optional
+  flag, and a fingerprint is public — it is the `actor` field of every
+  record in the chain.
+- **The last-ditch exit declares no identity, and that is the same
+  exemption rather than a caveat on it.** `strand` calls
+  `parkGated(…, lastDitch: true)` so the exit bypasses the loop's
+  identity gate and reaches the **admission boundary**, where the fence
+  rule gives the authoritative refusal. Appending `--as <cached actor>`
+  there would reinstate that gate one layer lower, inside `loopSigner`:
+  under a rotated key the exit would stop with `usage` at the seam
+  instead of refusing `fenced_out` at the boundary, re-creating in a
+  new place the blockage the strand path exists to remove. So
+  `lastDitch` now means one thing in two layers.
+
+  Rejected: passing the *currently observed* fingerprint on that act so
+  the seam check "passes". It keeps a check nominally alive while
+  changing its meaning from *the identity the loop declared* to
+  *whatever is on disk right now* — the property the flag exists to
+  deny, dressed as compliance.
+- **A drill against a double cannot see a seam it never crosses.** The
+  plan's first draft cited `internal/loop`'s existing rotation drills
+  as the protection for the last-ditch exemption. They cannot provide
+  it: those drills run against the `recorder` double, so `--as` never
+  reaches `loopSigner` and they pass with the regression present. Both
+  guard drills therefore live in `cmd/seed`, driving the real CLI, and
+  the interleaving one rotates the key from inside a `loop.Verbs`
+  wrapper — after the loop's check, before the CLI's read — so it sits
+  in the window by construction rather than by timing. A race
+  reproduced by sleeping passes green on a slower runner.
