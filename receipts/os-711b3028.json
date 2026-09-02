@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "task": "os-711b3028",
+  "merge_base": "d2f9064a43fec5545d59ec9b72c485e55767e8f7",
+  "head": "ec5a3c315f03f7a7180c21d137981d2b93972324",
+  "plan_path": "plans/os-711b3028.md",
+  "plan_sha256": "109eb7448accdbd06a1231bd4910a01aa90ff77b93743ff96fc1fc866fb53e2d",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/gitref/gitref.go",
+    "next/internal/gitref/gitref_test.go",
+    "next/internal/verdict/verdict_test.go",
+    "next/internal/verdict/workspace.go",
+    "next/spec/protocol.md",
+    "next/spec/verdicts.md"
+  ],
+  "diff_sha256": "3e8f07a9219c68542c050a0090f9aa81817bf947690e89464f4c8e8bcee1f363",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/gitref/ ./internal/verdict/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
