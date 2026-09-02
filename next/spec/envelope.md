@@ -111,6 +111,27 @@ charter names (halt, out-of-grant, classification refusal, …) get their own
 codes when the refusing rule lands; nothing shares a code with a different
 meaning.
 
+**Exits are families; the machine code can be finer.** The `exit` answers
+"what kind of thing happened", which is what a caller branches on; the
+`code` string names the specific condition inside that family. Four exits
+ship with a second code today, and each of them is a NARROWER case of its
+exit rather than a different meaning, so none of them is the sharing the
+rule above forbids:
+
+| exit | refining code | the narrower condition |
+|---|---|---|
+| 3 | `ledger_not_empty` | `seed init` against a ledger that already has a genesis: an illegal transition whose one useful detail is *which* illegal one, since the caller's next move is to point at a different directory rather than to re-read the tables |
+| 4 | `posture_undeclared` | the posture declaration the invocation needs does not exist: a `not_found` whose subject is a config file rather than a ledger subject, and the only `not_found` a caller answers by writing a file |
+| 22 | `seal_unauthorized` | a seal whose signer held no sealer grant at the seal's own position, or which cites a position outside the verified chain: like a broken seal in that it will not be unsealed, unlike one in that the ciphertext is fine and the authoring boundary is what failed (`seed reconcile` surfaces the same condition as `seal_unverified`) |
+| 66 | `posture_unreadable` | the posture declaration exists and cannot be read: the same operational failure as `unreadable`, narrowed to the one input whose absence is separately reportable as `posture_undeclared` |
+
+A refinement is not a way around the allocation rule. A condition a caller
+must act on **differently** takes its own exit, which is precisely why
+budget exhaustion did not stay a refinement of `chain_invalid`
+(`budgets.md`): the answer to it is to reserve less, and the answer to a
+malformed payload is not. A refinement is for when the family's answer is
+already right and the extra word only says which case it was.
+
 ## Deferred: structured error data
 
 Error stays exactly `{code, message}` in `seed-envelope/0`. Rich failure

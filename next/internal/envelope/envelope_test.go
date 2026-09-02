@@ -2,6 +2,8 @@ package envelope
 
 import (
 	"bytes"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -96,7 +98,15 @@ func specTable() (map[string]int, error) {
 	}
 	row := regexp.MustCompile("^\\|\\s*(\\d+)\\s*\\|\\s*`([a-z_]+)`\\s*\\|")
 	out := map[string]int{}
-	for _, line := range strings.Split(string(b), "\n") {
+	// Bounded to the ALLOCATION table. The refinements table below the
+	// allocation rule has the same row shape and names codes that are
+	// deliberately not constants, so an unbounded parse would read them
+	// as rows with no constant and fail the parity it exists to prove.
+	body := string(b)
+	if i := strings.Index(body, "**Allocation rule for new codes**"); i >= 0 {
+		body = body[:i]
+	}
+	for _, line := range strings.Split(body, "\n") {
 		m := row.FindStringSubmatch(line)
 		if m == nil {
 			continue
@@ -178,4 +188,136 @@ func TestRenderErrorPath(t *testing.T) {
 	if err := e.Render(&bytes.Buffer{}); err == nil {
 		t.Fatal("expected a marshal error for an unserializable result")
 	}
+}
+
+// conformance: the OTHER half of the parity, and the one the first
+// version could not see. TestExitCodesMatchSpecTable derives a wire
+// name by transforming a CONSTANT IDENTIFIER, so it proves nothing
+// whatever about the string a caller actually receives — a call site
+// passing any code at all with a documented exit was invisible to it
+// (review finding on #208). This drill reads the emitted pairs out of
+// the tree and requires every one of them to be in the spec: either as
+// its exit's own row, or as a listed refinement of it.
+//
+// So the spec is now authoritative over the two things that were
+// separately drifting: which numbers exist, and which strings ship on
+// them.
+func TestEmittedCodesAppearInTheTable(t *testing.T) {
+	primary, err := specTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	byExit := map[int]string{}
+	for name, code := range primary {
+		byExit[code] = name
+	}
+	refinements, err := refinementTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	constants, err := constantTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	emitted, err := emittedPairs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(emitted) == 0 {
+		t.Fatal("no emissions found: the scan is broken, and a scan that finds nothing agrees with everything")
+	}
+	for pair := range emitted {
+		// constants is keyed by WIRE NAME, so the identifier is mapped
+		// through the same transform the parity drill uses.
+		exit, ok := constants[wireName(strings.TrimPrefix(pair.constant, "Exit"))]
+		if !ok {
+			t.Errorf("%s is emitted with code %q and is not a constant in this package",
+				pair.constant, pair.code)
+			continue
+		}
+		if byExit[exit] == pair.code {
+			continue
+		}
+		if refinements[pair.code] == exit {
+			continue
+		}
+		if n, listed := refinements[pair.code]; listed {
+			t.Errorf("code %q is documented as a refinement of exit %d and is emitted on exit %d (%s)",
+				pair.code, n, exit, pair.constant)
+			continue
+		}
+		t.Errorf("exit %d ships code %q, and next/spec/envelope.md says exit %d is %q: a second code on "+
+			"an exit is a REFINEMENT and belongs in the refinements table, or it is a different meaning "+
+			"and takes its own exit — either way the table decides, not the call site",
+			exit, pair.code, exit, byExit[exit])
+	}
+}
+
+type emission struct{ constant, code string }
+
+// emittedPairs scans the tree for envelope.Fail(envelope.ExitX, "code")
+// and returns the distinct pairs. Test files are excluded: a drill
+// constructing an envelope is not the CLI shipping one, and including
+// them would let a test's fixture code silently satisfy the spec.
+func emittedPairs() (map[emission]bool, error) {
+	call := regexp.MustCompile(`envelope\.Fail\(\s*envelope\.(Exit[A-Za-z]+)\s*,\s*"([a-z_]+)"`)
+	// Inside this package the calls are unqualified.
+	local := regexp.MustCompile(`\bFail\(\s*(Exit[A-Za-z]+)\s*,\s*"([a-z_]+)"`)
+	out := map[emission]bool{}
+	root := filepath.Join("..", "..")
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == "testdata" || d.Name() == ".git" {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, re := range []*regexp.Regexp{call, local} {
+			for _, m := range re.FindAllStringSubmatch(string(b), -1) {
+				out[emission{m[1], m[2]}] = true
+			}
+		}
+		return nil
+	})
+	return out, err
+}
+
+// refinementTable parses the refinements listed below the allocation
+// rule: "| <exit> | `<code>` | …". It is deliberately a SEPARATE table
+// from the allocation one — a refinement has no constant of its own,
+// which is exactly what distinguishes it from an allocation.
+func refinementTable() (map[string]int, error) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "spec", "envelope.md"))
+	if err != nil {
+		return nil, err
+	}
+	body := string(b)
+	i := strings.Index(body, "**Allocation rule for new codes**")
+	if i < 0 {
+		return nil, errors.New("next/spec/envelope.md no longer states the allocation rule")
+	}
+	row := regexp.MustCompile("^\\|\\s*(\\d+)\\s*\\|\\s*`([a-z_]+)`\\s*\\|")
+	out := map[string]int{}
+	for _, line := range strings.Split(body[i:], "\n") {
+		m := row.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			return nil, err
+		}
+		out[m[2]] = n
+	}
+	return out, nil
 }
