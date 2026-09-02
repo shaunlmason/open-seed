@@ -2233,6 +2233,46 @@ here. Newest last.
   moved to `internal/transition` so the boundary and the eval package
   read one layout.
 
+## The client's private git dir arms auto-gc in production (os-711b3028, plan #224)
+
+- **Every construction, not only init (D1).** `NewClient` writes the
+  three keys after the init-or-stat on every open. Refused: writing
+  only when absent, because a stat-and-branch can drift from what the
+  drill asserts and three idempotent config writes cost less than the
+  branch. Refused: a `GIT_CONFIG_GLOBAL` in production, because the
+  invoking process's global config is the operator's and the engine
+  writes nothing there. A write that fails is `NewClient`'s error,
+  named by key: a git that cannot configure its own repository cannot
+  be trusted to fetch from it either.
+- **Two sites, not one (D2).** The card named the client; the tree has
+  the verifier's per-run clone too, whose `Cleanup` runs right after
+  the checkout that arms the collector. The keys are written between
+  the clone and the checkout, repository-locally, so no config outside
+  the workspace is consulted or written.
+- **The drills read `--local` (D3).** `TestClientGitDirHasNoAutoGC`
+  passed before this card for the wrong reason: the process-wide
+  global `TestMain` installs satisfied `git config --get`. It now reads
+  the repository's own scope; an older-build drill stages a bare dir
+  with the keys unset, asserts the hardening on the no-init path, and
+  asserts a second construction leaves the config bytes unchanged; a
+  workspace drill reads the clone's own scope. The test-side hardening
+  and the fixture guard of os-c4e8b57a stay as they were.
+- **No production failure was observed**, only the test-side one; the
+  two spec sentences say what the engine promises (nothing it made
+  mutates after it exits), not that a failure happened.
+- **`GIT_CONFIG` is scrubbed and the target is named (review finding
+  on #232).** The variable selects the file `git config` reads and
+  writes: an unqualified write under it lands in the operator's
+  selected file, and `--local` under it refuses with "only one config
+  file at a time" rather than overriding it (probed, not assumed). Both
+  sites therefore write with `--local` AND run without the variable,
+  and a drill at each plants `GIT_CONFIG`, asserts the repository's own
+  config carries the keys, and asserts the selected file was never
+  written. The scrub is the load-bearing half: dropping it makes
+  `NewClient` and `NewWorkspace` fail under the variable; `--local` is
+  the explicit target whose removal the drill cannot see once the
+  environment is clean, kept because a write that names its file reads
+  as what it is.
 ## Phase 11 item 1 — the staged curation stores (os-f30ee0d3, plan #226)
 
 - **The curator's reachable set is three verbs, not two** (os-f30ee0d3,
