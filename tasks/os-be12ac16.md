@@ -1,12 +1,17 @@
 ---
 id: os-be12ac16
 title: 'next: validate the filed tier against a vocabulary (Phase 10 tier system)'
-state: review
+state: done
 priority: P2
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: seed-maintenance
+    reviewed_at: "2026-09-02T12:39:42Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/222
 created_at: "2026-09-01T14:55:14Z"
-updated_at: "2026-09-02T11:19:43Z"
+updated_at: "2026-09-02T12:39:42Z"
 ---
 
 Found while building the injection conformance suite (os-b779b4c7),
