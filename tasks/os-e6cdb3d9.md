@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-02T07:23:24Z"
     lease_expires: "2026-09-02T08:23:24Z"
 created_at: "2026-09-02T06:53:07Z"
-updated_at: "2026-09-02T07:23:24Z"
+updated_at: "2026-09-02T07:29:34Z"
 ---
 
 Phase 9 (lanes, escalation, maintenance) is complete once #212 merges,
@@ -53,3 +53,7 @@ What the exit record must do, and not do:
 Plan-first: docs-only, but the exit record is the document the next
 phase orients from, and the last frontier claim was wrong. Block on
 #212 until it merges.
+
+## Evidence ev-d71da447 (pr, seed-next-implementer, 2026-09-02T07:29:34Z)
+
+https://github.com/shaunlmason/open-seed/pull/214
