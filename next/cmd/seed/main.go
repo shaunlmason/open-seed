@@ -89,6 +89,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runEval(args[1:], stdout, stderr)
 	case "knowledge":
 		return runKnowledge(args[1:], stdout, stderr)
+	case "trajectory":
+		return runTrajectory(args[1:], stdout, stderr)
 	default:
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown verb %q — try 'seed version'", args[0])), stdout, stderr)
 	}

@@ -30,7 +30,7 @@ later phase's machinery):
   ],
   "transitions": [
     {"verb": "intent.filed", "from": null, "to": "backlog"},
-    {"verb": "contract.specified", "from": ["backlog"], "to": "ready"},
+    {"verb": "contract.specified", "from": ["backlog", "ready"], "to": "ready"},
     {"verb": "claim.taken", "from": ["ready"], "to": "in_progress", "exclusive": true},
     {"verb": "submission.made", "from": ["in_progress"], "to": "review"},
     {"verb": "claim.released", "from": ["in_progress"], "to": "ready"},

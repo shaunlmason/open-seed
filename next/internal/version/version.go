@@ -82,4 +82,8 @@ func EvalApplies(v string) bool { return v == Seed3 || v == Seed4 }
 // exactly (plans/os-99829835.md D4), the item 2 posture for a field a
 // seed/3 validator's strict verdict decode would refuse. A later
 // version joins this list when it is registered, never by ordering.
+// The same gate carries what seed/4 added beside the levels: the
+// contract.specified ready origin (re-specification) and the plan
+// verbs' content digest (plans/os-6bd9ffff.md D4, D5, D7), each a
+// row or field a seed/3 validator judges differently.
 func LevelsApply(v string) bool { return v == Seed4 }
