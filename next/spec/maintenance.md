@@ -133,6 +133,18 @@ reached a terminal state. A closed-without-settle predicate written
 fresh looks obviously right and files a spurious finding against every
 park and reap in flight.
 
+Phase 11 item 4 adds one more, `lesson_stale`
+([`curation.md`](curation.md), "Bloat"): the latest admitted promotion
+of a lesson path, unretired, expired at the pass's declared instant
+for at least `--stale-after` (zero by default: on expiry itself). The
+finding's subject is `<lesson path>@<promotion position>`, so the
+defect's identity follows the promotion: one stale cycle files once
+and the boundary refuses the duplicate on the next pass, a retired or
+re-promoted lesson files nothing, and a re-promotion that expires in
+its turn files new work under its own position. The loop never
+retires or revalidates: it asks. The instant is the pass's `--as-of`,
+the one clock a pass has.
+
 Closed means a new lint lands by adding a class **with the spec that
 pairs it to its fact**, the `factDischargers` precedent in
 [`obligations.md`](obligations.md). An open-ended lint list would make

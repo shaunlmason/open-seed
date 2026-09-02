@@ -97,7 +97,7 @@ func TestKnowledgeProjectionPublishesTheStages(t *testing.T) {
 	// The report's derivation version moved with the section, so an
 	// already-published prefix republishes with it rather than keeping
 	// a same-id tree without it (review finding on the item 3 PR).
-	if project.Report().Version != "11" {
+	if project.Report().Version != "12" {
 		t.Fatalf("the report's version names the knowledge section: %s", project.Report().Version)
 	}
 	report := currentView(t, out2, "report")

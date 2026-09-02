@@ -599,11 +599,20 @@ func TestCuratorRaisesAndItsReachableSetIsNamed(t *testing.T) {
 		named[r.Verb] = true
 	}
 	seen := map[string]bool{}
-	for _, subject := range []string{"c-1", "c-2", "c-3", "c-4"} {
-		for _, verb := range Affordances(ctx, st.curator, subject) {
-			seen[verb] = true
+	sweep := func() {
+		for _, subject := range []string{"c-1", "c-2", "c-3", "c-4"} {
+			for _, verb := range Affordances(st.ctx, st.curator, subject) {
+				seen[verb] = true
+			}
 		}
 	}
+	sweep()
+	// The un-retirement is reachable only over a standing retirement
+	// (plans/os-0d537fbd.md D3): retire one dead end and sweep again,
+	// so the table names both directions of the curator's act.
+	st.ctx = st.step(st.curator, v, curation.DeadEndRetireVerb, "c-1",
+		`{"deadend": "`+cite("c-1", st.deadEnd1)+`", "environment": "moved", "reason": "the environment moved"}`)
+	sweep()
 	for verb := range seen {
 		if !named[verb] {
 			t.Errorf("the curator can reach %s and the residual table does not name it", verb)

@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/curation"
@@ -114,9 +115,9 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	if *subject == "" {
-		findings = append(findings, reconcile.Lessons(st.records, st.fold, *repo)...)
+		findings = append(findings, reconcile.Lessons(st.records, st.fold, *repo, time.Now().UTC())...)
 	} else if curation.IsHypothesisSubject(*subject) {
-		for _, f := range reconcile.Lessons(st.records, st.fold, *repo) {
+		for _, f := range reconcile.Lessons(st.records, st.fold, *repo, time.Now().UTC()) {
 			if f.Subject == *subject {
 				findings = append(findings, f)
 			}

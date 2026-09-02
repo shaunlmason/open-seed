@@ -49,7 +49,7 @@ func lessonRepo(t *testing.T, id string, hpos int, support []string) (repo, plan
 	git("add", ".")
 	git("commit", "--quiet", "-m", "plan")
 	planCommit = git("rev-parse", "HEAD")
-	body = "---\nhypothesis: " + id + "@" + fmt.Sprint(hpos) + "\napplies-when: {\"routing\": \"core\"}\nsupport: " + strings.Join(support, ", ") + "\nprovenance: plans/x.md @ " + planCommit + "\nlast-validated: 2026-09-01T00:00:00Z\nexpires: 2026-12-01T00:00:00Z\ncarrier: knowledge\n---\n\n# Retry when cold\n"
+	body = "---\nhypothesis: " + id + "@" + fmt.Sprint(hpos) + "\napplies-when: {\"routing\": \"core\"}\nsupport: " + strings.Join(support, ", ") + "\nprovenance: plans/x.md @ " + planCommit + "\nlast-validated: 2026-09-01T00:00:00Z\nexpires: 2026-12-01T00:00:00Z\ncarrier: knowledge\n---\n\n# Retry when cold\n\n## Claim\n\nRetry the fetch once when the mirror is cold.\n\n## Evidence\n\nThe support set.\n\n## Applies when\n\nRouting core.\n"
 	if err := os.WriteFile(filepath.Join(repo, curation.LessonsDir, "retry-when-cold.md"), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}

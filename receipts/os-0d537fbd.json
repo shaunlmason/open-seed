@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "task": "os-0d537fbd",
+  "merge_base": "e6d13927386b4756c2d8d26d46d09e77d33a0d3d",
+  "head": "f944923e5f2b78721b898378f010211765e8cce5",
+  "plan_path": "plans/os-0d537fbd.md",
+  "plan_sha256": "819d1d5f9b7bbc0837ed1371a214799ac550fd78a3832d5dec7fc1980ff825b5",
+  "diff_files": [
+    "docs/next-build-plan.md",
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/knowledge.go",
+    "next/cmd/seed/knowledge_cli_test.go",
+    "next/cmd/seed/loop.go",
+    "next/cmd/seed/maintain.go",
+    "next/cmd/seed/reconcile.go",
+    "next/cmd/seed/retirement_cli_test.go",
+    "next/cmd/seed/retirement_e2e_test.go",
+    "next/cmd/seed/situation.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/affordances_test.go",
+    "next/internal/admit/curation_test.go",
+    "next/internal/admit/poisoning_scripts_test.go",
+    "next/internal/admit/poisoning_test.go",
+    "next/internal/admit/retirement_test.go",
+    "next/internal/admit/testdata/injection/curator-residuals.json",
+    "next/internal/admit/testdata/poisoning/corpus.json",
+    "next/internal/curation/curation.go",
+    "next/internal/curation/curation_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/maintain/maintain.go",
+    "next/internal/project/knowledge.go",
+    "next/internal/project/knowledge_internal_test.go",
+    "next/internal/project/knowledge_test.go",
+    "next/internal/project/refusals_report_test.go",
+    "next/internal/project/report.go",
+    "next/internal/reconcile/evidence.go",
+    "next/internal/reconcile/reconcile.go",
+    "next/internal/reconcile/stale_test.go",
+    "next/knowledge/lessons/README.md",
+    "next/spec/actors.md",
+    "next/spec/curation.md",
+    "next/spec/lanes.md",
+    "next/spec/loop-verbs.md",
+    "next/spec/maintenance.md",
+    "next/spec/projections.md",
+    "next/spec/protocol.md",
+    "next/spec/reconciliation.md"
+  ],
+  "diff_sha256": "467d82d146e1669c827e253f84f9514bb579d7eaa8ab795e24cbe97528b9335d",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/curation/ ./internal/keyring/ ./internal/admit/ ./internal/project/ ./internal/maintain/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

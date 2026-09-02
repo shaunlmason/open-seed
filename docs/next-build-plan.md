@@ -333,7 +333,9 @@ row 3.
    envelope at claim time (the charter III.I row the Phase 8 exit routes here —
    knowledge nobody is shown at the right moment is knowledge that does not exist).
 3. Poisoning drill: constructed trajectories fail to achieve promotion.
-4. Expiry, retirement (evidence kept), rollback-by-revert.
+4. Expiry, retirement (evidence kept), rollback-by-revert. III.K row 9 (knowledge
+   bloat managed: dedup with provenance, staleness flags, structure lint) lands here
+   too, staleness being expiry's other face (plans/os-0d537fbd.md).
 5. Flywheel v0: recurring-shape detection from the ledger → drafted workflow → mock
    validation → proposal PR.
 

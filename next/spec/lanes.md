@@ -376,6 +376,12 @@ ordered fragment list prevents.
   a corpus of scripted poisons derived from the gate registry, each
   asserted to fail at both ends, five residuals named and pinned, and a
   CLI arm in the modes fixture; `make check` runs it.
+- III.K rows 6, 7 and 9 (the stamps and expiry-for-revalidation,
+  retirement keeping evidence, rollback by revert; dead ends
+  un-retired on environment change and dead-end applicability;
+  knowledge bloat managed) — met by Phase 11 item 4
+  ([`curation.md`](curation.md), "Expiry, retirement and
+  applicability" and "Bloat"), the mapping there naming each drill.
 
 ## A gap the mode fixtures surfaced
 
