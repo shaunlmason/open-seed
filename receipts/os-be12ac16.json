@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "task": "os-be12ac16",
+  "merge_base": "3ae56a3f20f4b6578242b58fc339833d69398617",
+  "head": "6980bf6262715c990d16832b33e62b1271f04f95",
+  "plan_path": "plans/os-be12ac16.md",
+  "plan_sha256": "810a11773fe810dd69dacac6219db228fec33a9e41588485810c8e19a32c6dc9",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed-admit/main_test.go",
+    "next/cmd/seed/offer_cli_test.go",
+    "next/cmd/seed/remote_test.go",
+    "next/cmd/seed/seal_cli_test.go",
+    "next/cmd/seed/verdict.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/injection_test.go",
+    "next/internal/gitref/gitref_test.go",
+    "next/internal/reconcile/reconcile.go",
+    "next/internal/reconcile/reconcile_test.go",
+    "next/internal/transition/tier_test.go",
+    "next/internal/transition/transition.go",
+    "next/spec/acceptance.md",
+    "next/spec/budgets.md",
+    "next/spec/lanes.md",
+    "next/spec/lifecycle.md",
+    "next/spec/tiers.md",
+    "next/spec/verdicts.md"
+  ],
+  "diff_sha256": "b12542e0e1b322b3e685f368edcaba65368a7236006b5ad712e53e438d703a55",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/transition/ ./internal/reconcile/ ./internal/admit/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
