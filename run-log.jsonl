@@ -1060,3 +1060,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-0d537fbd","ts":"2026-09-02T12:21:30Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T14:21:34Z"},"task":"os-0d537fbd","ts":"2026-09-02T12:21:34Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-0d537fbd","ts":"2026-09-02T12:25:15Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"next: Phase 11 item 5 — flywheel v0: recurring-shape detection from the ledger, drafted workflow, mock validation, proposal PR; conversion rate tracked"},"task":"os-9075c308","ts":"2026-09-02T12:35:39Z","verb":"create"}
