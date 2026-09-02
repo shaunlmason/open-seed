@@ -1135,3 +1135,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-5300e5e7","kind":"receipt"},"task":"os-6bd9ffff","ts":"2026-09-02T22:23:30Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-b62c632a","kind":"pr"},"task":"os-9075c308","ts":"2026-09-02T22:30:57Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-79b3bfae","kind":"receipt"},"task":"os-9075c308","ts":"2026-09-02T22:31:00Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-9075c308","ts":"2026-09-02T22:31:04Z","verb":"transition"}
