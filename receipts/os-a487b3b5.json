@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "task": "os-a487b3b5",
+  "merge_base": "45031fed4c49f9105dc1b2b177cee5caadf729ba",
+  "head": "5a0be23b6646558d5afa1d0888e0a6085a52bd21",
+  "plan_path": "plans/os-a487b3b5.md",
+  "plan_sha256": "a34cdfc83208db6b3fad7ab9bb4a2624074af7b846a67c5a8ec858a766aab5b8",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/.gitignore",
+    "next/docs/decisions.md",
+    "next/seed"
+  ],
+  "diff_sha256": "1d09875e68bf627d02b15060070c61a1782d6510b752a5188f5fc62a51807bd7",
+  "validation": [
+    {
+      "cmd": "git ls-files next/seed",
+      "exit": 0
+    },
+    {
+      "cmd": "git check-ignore -v next/seed",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go build ./cmd/seed \u0026\u0026 git status --porcelain",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
