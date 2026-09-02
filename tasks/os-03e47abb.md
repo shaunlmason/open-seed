@@ -1,12 +1,17 @@
 ---
 id: os-03e47abb
 title: 'next: Phase 10 item 2 — eval contracts through the production machinery; grants cite passing tuples; scheduled spot-checks; suspension on failure'
-state: review
+state: done
 priority: P1
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-02T13:04:10Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/221
 created_at: "2026-09-02T08:46:00Z"
-updated_at: "2026-09-02T10:50:00Z"
+updated_at: "2026-09-02T13:04:10Z"
 ---
 
 Phase 10 (qualification and evaluation) item 2, the frontier after item 1
