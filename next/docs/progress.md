@@ -723,6 +723,71 @@ administrative card, not a Phase 8 item).
   prefixes the fix is for; the shared walk now ends by suspending and
   revoking the lane holding an open reservation)
 
+**Phase 9 exit (charter III.J as docs/next-build-plan.md's exit line
+scopes it): met.** Met means the three criteria the plan's own exit
+line names, the scoped-exit posture of the Phase 2 through 8 records,
+each backed by a drill on `main` that a reader can find by name.
+*Both modes run the full loop in CI*: `TestSmallTeamModeReachesDone`
+and `TestFleetModeConvergesAndReachesDone`
+(`cmd/seed/modes_e2e_test.go`), remote posture, no wake channel, every
+refusal converging within one retry, with `TestBlindRetryDetector`
+pinning the forbidden fourth outcome, and since #212 both modes
+provisioned from the shipped role set alone rather than from
+identities the fixture invented. *Injection corpus green*: the eight
+corpus files under `internal/admit/testdata/injection/` with
+`TestNoHostileTextWidensTheDispatcherSet`, plus the containment sweep
+`TestIntentProseReachesNoDownstreamReadAutomatically`, which since
+#211 plants its marker in a message payload and a message subject as
+well as in an intent. *Maintenance runs unattended in the fixture*:
+`TestMaintainHoldsNoPrivatePowers`,
+`TestMaintainFilesDefectsAndRaisesNoEscalation` and
+`TestMaintainCheckpointIsStartableByAFreshReader`
+(`cmd/seed/maintain_cli_test.go`), one pass, no scheduler, no wake,
+audited as an ordinary actor. Every numbered item has a merged PR:
+1 across #188, #191 and #192 (review fixes os-378e44f3); 2 in #200;
+3 in #205; 4 in #207; 5(a) in #171, 5(c) in #173 (post-merge defects
+os-9b3f3ef3), 5(b) in #211; and the role-grant gap item 4 found, in
+#212. Charter III.J as a whole is walked rather than the three the
+exit line scopes, and two of its six rows are recorded UNMET rather
+than glossed. Row 1 (role definitions for all six lanes as grants +
+conventions, ordered fragments, validated): met by #188, with #212
+making "six" enforced by name rather than counted. Row 2 (dispatcher
+least standing capability; injection suite over intents, mirrors and
+tool output): **UNMET, not claimed** — the row is conjunctive and the
+mirror arm cannot be met, because `request.*`, the family mirror edits
+and dashboard actions enter by, has zero transition rows and the build
+plan named neither the family nor the word "mirror" anywhere; intents
+and tool output are covered by #192 and least standing capability by
+#188's allowlist. Row 3 (dispatcher re-triage rate and planner
+unedited-approval rate tracked; planner receives the strongest tuples
+by policy): **UNMET, not claimed** — nothing in the tree computes
+either rate, and "strongest tuples" presupposes Phase 10's tuple
+system. Row 4 (maintenance unattended, audited as an ordinary actor):
+met by #205, with `TestMaintainHoldsNoPrivatePowers` as the
+audit-posture pin. Row 5 (escalations carry packet + question +
+minimal decision; waiting ones surface with age; resolution latency
+tracked): met by #200 — `escalation.pending` carries the raising
+`ts`, and `seed decision record` reports `resolved_after_seconds`,
+derived from the chain and stored nowhere. Row 6 (small-team and fleet
+modes run the full loop in CI): met by #207 with #212. Both unmet rows
+are routed in the build plan's own text by this record, the move the
+Phase 8 record made for III.I: row 3 to Phase 10 items 1 and 5 and
+Phase 10's exit line, and row 2's mirror arm to Phase 13 item 4 and
+Phase 13's exit line beside III.I. Full charter III.J conformance is
+therefore claimable only once Phase 10 and Phase 13 both close. Two
+things this phase learned are worth one sentence each. Its frontier
+line was wrong once, claiming the phase complete while item 5(b) had
+no implementation and two other paragraphs of this file said so; the
+exit record re-derives the item list from the build plan rather than
+reading the summary, which is how the gap was found. And three cards
+in a row found hand-listed counts wrong — the exit-code table and the
+refusal-site matrix (os-d03bde01), the capability-coverage gap
+(os-d6a52784, where the derived drill found six ungranted verbs
+against a card that named two capabilities) — so when a criterion says
+"all N", N is a claim a drill derives, never a number it is told
+(`memory/LEARNINGS.md`). This exit record is card os-e6cdb3d9's task
+PR (an administrative card, not a Phase 9 item).
+
 ## Frontier
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
@@ -741,7 +806,13 @@ every card closed. Phase 8 is done and closed: every plan (#158,
 #162, #164), every implementation (8.1 #160, 8.2 #163, 8.3 #165),
 the out-of-item ledger writeHead race fix (#161 against plan #159),
 and the exit record above (card os-ef715d17's task PR) are merged
-with every card closed.
+with every card closed. Phase 9 is done and closed: every plan (#170,
+#172, #187, #189, #190, #197, #203, #204, #206, #209, #210), every
+implementation (5(a) #171, 5(c) #173, 1a #188, 1c #191, 1b #192, 2
+#200, 3 #205, 4 #207, 5(b) #211, the role-grant gap #212), the
+out-of-item fixes (#175's task PR, os-9b3f3ef3, os-378e44f3, budget
+exhaustion's exit code #208), and the exit record above (card
+os-e6cdb3d9's task PR) are merged with every card closed.
 Phase 9 is under way: item 5's derivation and read merged (#171) and
 its loop verbs merged (#173), so the lane-facing surface is whole in
 shape — `seed situation` says what is true and what is owed, and the
@@ -773,10 +844,14 @@ the escalation it answers. Waiting escalations surface as
 elapsed time and a position difference is event count wearing a clock's
 clothes.
 
-**Next action: the Phase 9 exit record**, now that 5(b) has landed
-(os-8451d939, #209) and the role-grant gap is planned (os-d6a52784,
-#210). A correction worth keeping, because it was made here and then
-unmade: an earlier revision of this line claimed the phase was complete
+**Next action: Phase 10 item 1** — runtime tuples in enrollment and
+grants, adapters reporting the provisioned tuple, drift as
+out-of-grant. The derivation, stated rather than read off a summary:
+Phase 9's items 1, 2, 3, 4, 5(a), 5(b), 5(c) and the role-grant gap
+each have a merged PR (#188/#191/#192, #200, #205, #207, #171, #211,
+#173, #212), the exit record above walks III.J and routes its two
+unmet rows, so nothing in Phase 9 remains to claim. A correction
+worth keeping, because it was made here and then unmade: an earlier revision of this line claimed the phase was complete
 once items 3 and 4 merged. It was not. **Item 5(b) had no
 implementation**, which the build plan and this file both said in other
 paragraphs while the frontier line said otherwise — a frontier is only
