@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-d6a52784",
-  "merge_base": "91e593cd1b4fefc73b2768d554c70c6879642b3c",
-  "head": "2b02d9bc42d50b6b8a0e6f6c489d5bee966a7d58",
+  "merge_base": "46ad48db25f7aee1e83b3bd150fa41b17398e2fd",
+  "head": "b6e22da021e19219e86b0ccb6e41a9922c4d4236",
   "plan_path": "plans/os-d6a52784.md",
   "plan_sha256": "cc9c5edf3059a21ec8dc85d13dd9b2935eceb1f751a11e168c06be02e9a2a7b3",
   "diff_files": [
@@ -26,7 +26,7 @@
     "next/lanes/verifier.json",
     "next/spec/lanes.md"
   ],
-  "diff_sha256": "bf54c336b59ae86ab8a820d4fc3fb4916691f55018348b033a720cec2c46968c",
+  "diff_sha256": "25e59de988f5e6618bbb2c1f8419213539920c4e6c4a22e891756b5c78c668c6",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
