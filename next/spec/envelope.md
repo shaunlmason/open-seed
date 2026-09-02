@@ -94,6 +94,12 @@ for tooling continuity. Inherited allocations:
 | 19 | `spec_unrunnable` | declared-executable acceptance content yields no parseable commands: the declaration promised runnable content and the body carries none, an inconsistency only run time can see — silence must never decide, so the run refuses rather than passing vacuously (`verdicts.md`) |
 | 20 | `checks_red` | rendering `pass` refused: the verifier derives the permissible verdict from the transcripts it just executed, and at least one visible check exited nonzero — `fail` stays renderable, and the message names the failing command (`verdicts.md`) |
 | 21 | `receipt_mismatch` | recomputation from the submission head does not reproduce a cited receipt digest: the stored receipt, the range, or the repository's content has diverged from what the verdict attested — the recompute-and-mismatch refusal, and 6.2 reconciliation input; the message names both digests (`verdicts.md`) |
+| 22 | `seal_broken` | a sealed-checks envelope does not open: missing ciphertext, a commitment that does not match the body, or an envelope carrying no checks. The commitment is the contract, so a body that fails it is not a weaker seal but a different document (`sealed-checks.md`) |
+| 23 | `not_recipient` | the identity opening a sealed envelope is outside its recipient set, which rotation lag produces routinely: the sealer encrypted to a key set this actor is no longer (or not yet) in, and re-sealing to the current set is the fix, never a bypass (`sealed-checks.md`) |
+| 24 | `unsealed` | an above-trivial contract reaches the verifier with no sealed-checks commitment: contracts above the trivial tier carry sealed checks, sealed before the first claim, and render refuses rather than judging against criteria the implementer could read (`sealed-checks.md`) |
+| 25 | `red_locked` | rendering `pass` over a submission an authenticated `fail` already judged: a red verdict locks pass out until a NEW submission (`contract.returned`, re-claim, resubmit). Fail restatements stay admissible, and only boundary-validated fails lock (`verdicts.md`) |
+| 26 | `lane_invalid` | a checked-in lane manifest makes a claim the tables refuse: a grant outside the vocabulary, an act whose accepted capabilities the lane does not hold, a liveness source that is not a work step, a missing fragment. Distinct from `posture_invalid`, which judges a deployment's posture declaration rather than a role definition (`lanes.md`) |
+| 27 | `budget_exhausted` | a reservation asks for more than the class has left: capacity is checked and decremented at admission, so exhaustion is a first-class, EXPECTED, recoverable condition rather than chain trouble, and the worker loop's exhaustion park carries this code into its packet for the next worker to read. Narrow by design: the budget rule's other refusals (malformed payload, wrong signer, unknown class, double close, laundering) stay `chain_invalid`, because a caller that answers this code by asking for less must not also be answering a bug (`budgets.md`) |
 | 64 | `usage` | CLI usage error (EX_USAGE); never a verb result |
 | 66 | `unreadable` | an input the invocation names exists but cannot be opened or read (EX_NOINPUT: a directory, denied permissions, an I/O failure): an operational failure in the usage class, distinct from a judgment on the content (`posture_invalid`) and from a missing declaration (`not_found`) |
 
@@ -104,6 +110,27 @@ above stay reserved for CLI-usage-class errors. Distinct refusals the
 charter names (halt, out-of-grant, classification refusal, …) get their own
 codes when the refusing rule lands; nothing shares a code with a different
 meaning.
+
+**Exits are families; the machine code can be finer.** The `exit` answers
+"what kind of thing happened", which is what a caller branches on; the
+`code` string names the specific condition inside that family. Four exits
+ship with a second code today, and each of them is a NARROWER case of its
+exit rather than a different meaning, so none of them is the sharing the
+rule above forbids:
+
+| exit | refining code | the narrower condition |
+|---|---|---|
+| 3 | `ledger_not_empty` | `seed init` against a ledger that already has a genesis: an illegal transition whose one useful detail is *which* illegal one, since the caller's next move is to point at a different directory rather than to re-read the tables |
+| 4 | `posture_undeclared` | the posture declaration the invocation needs does not exist: a `not_found` whose subject is a config file rather than a ledger subject, and the only `not_found` a caller answers by writing a file |
+| 22 | `seal_unauthorized` | a seal whose signer held no sealer grant at the seal's own position, or which cites a position outside the verified chain: like a broken seal in that it will not be unsealed, unlike one in that the ciphertext is fine and the authoring boundary is what failed (`seed reconcile` surfaces the same condition as `seal_unverified`) |
+| 66 | `posture_unreadable` | the posture declaration exists and cannot be read: the same operational failure as `unreadable`, narrowed to the one input whose absence is separately reportable as `posture_undeclared` |
+
+A refinement is not a way around the allocation rule. A condition a caller
+must act on **differently** takes its own exit, which is precisely why
+budget exhaustion did not stay a refinement of `chain_invalid`
+(`budgets.md`): the answer to it is to reserve less, and the answer to a
+malformed payload is not. A refinement is for when the family's answer is
+already right and the extra word only says which case it was.
 
 ## Deferred: structured error data
 

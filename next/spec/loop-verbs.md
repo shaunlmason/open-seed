@@ -250,14 +250,25 @@ is the contract's own anchor as the orienting read reports it: what a
 successor is judged against is the contract's, never the lane's
 paraphrase.
 
-**A residual, recorded.** Budget exhaustion refuses under the generic
-`chain_invalid` (exit 8), the same code as a malformed payload or a
-broken chain, because [`envelope.md`](envelope.md) allocates no budget
-code. The message carries the whole account; the code misleads, since a
-successor reading `chain_invalid` would conclude the ledger is broken
-rather than the budget spent. The current behavior is pinned by a
-characterization assertion in `cmd/seed/loop_e2e_test.go`, so closing it
-fails that drill and forces this passage to be updated with it.
+**The code the packet carries is the budget's, not the chain's.**
+Exhaustion refuses under `budget_exhausted` (exit 27,
+[`envelope.md`](envelope.md)), so the finding a successor reads names
+the condition it can act on: the class is spent, and a caller that
+asks for less can proceed. It used to refuse under the generic
+`chain_invalid` (exit 8), which told a successor the ledger was broken
+when only the budget was; the message carried the whole account, but
+nothing above the message could tell exhaustion from a malformed
+payload.
+
+The code is deliberately narrower than the rule that emits it. The
+budget rule has fourteen refusal sites and exactly one of them is
+exhaustion; the other thirteen — a malformed payload, a non-positive
+amount, a wrong signer, a class the table does not know, a citation
+that resolves to no reservation, a double close, a release carrying
+actuals — keep `chain_invalid`, because each is a bug in the caller
+and none of them is answered by asking for less. A code that covered
+the whole rule would read as "retry smaller" to a lane that had
+signed with the wrong key.
 
 ### The lane's identity is its key's
 

@@ -17,9 +17,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/lane"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/loop"
+	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -202,20 +204,42 @@ func TestWorkerLoopParksOnRealBudgetExhaustion(t *testing.T) {
 		t.Fatalf("the refusal must be the capacity one (%q says otherwise): run.started is the executor's "+
 			"spending gate and no key this loop signs with can trip it", step.Cause.Message)
 	}
-	// RECORDED RESIDUAL, pinned here so closing it cannot go unnoticed.
-	// Budget exhaustion is a first-class, expected, recoverable
-	// condition in the reservation model, and it comes back under the
-	// generic chain_invalid — the same code as a malformed payload or a
-	// broken chain. next/spec/envelope.md allocates no budget code, so
-	// the MESSAGE carries the whole account and the code actively
-	// misleads: a successor reading "chain_invalid" would think the
-	// ledger was broken rather than the budget spent. Carded rather
-	// than fixed here, because an exit code is protocol surface and
-	// this card's scope guard forbids widening it.
-	if step.Cause.Code != "chain_invalid" {
-		t.Errorf("budget exhaustion is reported as %q now — if that is the new budget code, "+
-			"next/spec/envelope.md and next/spec/loop-verbs.md must say so and this pin must go",
-			step.Cause.Code)
+	// The residual this drill used to pin is closed (os-d03bde01):
+	// exhaustion carries its own code, so a successor branches on
+	// "budget_exhausted" instead of reading chain_invalid and
+	// concluding the ledger is broken.
+	if step.Cause.Code != "budget_exhausted" {
+		t.Errorf("capacity exhaustion is the one budget refusal a caller answers by asking "+
+			"for less, and it reports as %q: next/spec/envelope.md allocates exit %d for it",
+			step.Cause.Code, envelope.ExitBudgetExhausted)
+	}
+
+	// What the DRIVER saw is not what the successor reads. The packet
+	// on the chain is, so the code is asserted where a next worker
+	// actually meets it: folded out of the admitted claim.parked,
+	// verbatim, with the prefix the packet writer puts on it.
+	var parked *packet.Packet
+	for _, rec := range remoteState(t, remote).records {
+		if rec.Event.Verb == "claim.parked" && rec.Event.Subject == subject {
+			p, err := packet.FromPayload(subject, rec.Event.Payload)
+			if err != nil {
+				t.Fatalf("the park's packet must parse: %v", err)
+			}
+			parked = p
+		}
+	}
+	if parked == nil {
+		t.Fatal("the park the driver reports must stand on the chain as an admitted claim.parked")
+	}
+	if len(parked.Findings) != 1 {
+		t.Fatalf("the park records the one thing it tried: %+v", parked.Findings)
+	}
+	if got := parked.Findings[0].Outcome; !strings.HasPrefix(got, "budget_exhausted: ") {
+		t.Errorf("the finding carries the refusal's code VERBATIM, so a successor branches on it "+
+			"without parsing prose: %q", got)
+	}
+	if !strings.Contains(parked.Findings[0].Outcome, "exceeds remaining") {
+		t.Errorf("the code replaces nothing: the account travels with it: %q", parked.Findings[0].Outcome)
 	}
 
 	e, code := runEnv(t, "situation", "--remote", remote, "--state", state,
