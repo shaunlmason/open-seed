@@ -1056,3 +1056,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-e2f1ad23","ts":"2026-09-02T12:15:24Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T14:15:28Z"},"task":"os-e2f1ad23","ts":"2026-09-02T12:15:28Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-e2f1ad23","ts":"2026-09-02T12:19:04Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"next: Phase 11 item 4 — expiry for revalidation, retirement (evidence kept), rollback-by-revert; dead ends un-retired on environment change; staleness flags"},"task":"os-0d537fbd","ts":"2026-09-02T12:21:27Z","verb":"create"}
