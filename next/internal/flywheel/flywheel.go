@@ -393,18 +393,28 @@ func contains(list []string, s string) bool {
 // shim's cache holds the pinned release for this platform. When it
 // cannot, reason says why, for a drill that skips by name (D3).
 func EngineAvailable(repo string) (reason string, ok bool) {
+	_, reason, ok = EnginePath(repo)
+	return reason, ok
+}
+
+// EnginePath resolves the engine binary the shim would exec from the
+// repository, the way the shim resolves it: SEED_ENGINE first, then
+// the bootstrap cache under XDG_CACHE_HOME or the home directory at
+// the lock's pinned version. A fixture that must run the engine under
+// a scrubbed environment vendors this path into its own lock.
+func EnginePath(repo string) (path, reason string, ok bool) {
 	if p := os.Getenv("SEED_ENGINE"); p != "" {
 		if info, err := os.Stat(p); err == nil && info.Mode()&0o111 != 0 {
-			return "", true
+			return p, "", true
 		}
-		return "SEED_ENGINE=" + p + " is not executable", false
+		return "", "SEED_ENGINE=" + p + " is not executable", false
 	}
 	if _, err := os.Stat(filepath.Join(repo, "scripts", "seed")); err != nil {
-		return "the repository has no scripts/seed shim", false
+		return "", "the repository has no scripts/seed shim", false
 	}
 	lock, err := os.ReadFile(filepath.Join(repo, ".seed", "engine.lock"))
 	if err != nil {
-		return "no .seed/engine.lock in the repository", false
+		return "", "no .seed/engine.lock in the repository", false
 	}
 	version := ""
 	for _, line := range strings.Split(string(lock), "\n") {
@@ -413,21 +423,21 @@ func EngineAvailable(repo string) (reason string, ok bool) {
 		}
 	}
 	if version == "" {
-		return "engine.lock names no version", false
+		return "", "engine.lock names no version", false
 	}
 	cache := os.Getenv("XDG_CACHE_HOME")
 	if cache == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "no home directory for the engine cache", false
+			return "", "no home directory for the engine cache", false
 		}
 		cache = filepath.Join(home, ".cache")
 	}
 	bin := filepath.Join(cache, "open-seed", "engine", version, runtime.GOOS+"_"+runtime.GOARCH, "seed")
 	if info, err := os.Stat(bin); err != nil || info.Mode()&0o111 == 0 {
-		return "the pinned engine " + version + " is not in the bootstrap cache (" + bin + ") and SEED_ENGINE is unset", false
+		return "", "the pinned engine " + version + " is not in the bootstrap cache (" + bin + ") and SEED_ENGINE is unset", false
 	}
-	return "", true
+	return bin, "", true
 }
 
 // Validation is what the engine answered: the mock run's id and the
@@ -671,11 +681,16 @@ func RepairAcceptancePath(shapeID string) string {
 }
 
 // RepairCommands are the acceptance's validation commands: the engine's
-// two verbs on the workflow as it stands.
-func RepairCommands(name string) []string {
+// two verbs on the workflow as it stands, the mock run binding each
+// declared input to a placeholder exactly as the validation does.
+func RepairCommands(name string, inputs []string) []string {
+	run := "scripts/seed workflow run " + name + " --mock"
+	for _, in := range inputs {
+		run += " --input " + in + "=placeholder"
+	}
 	return []string{
 		"scripts/seed workflow validate " + RegistryDir + "/" + name + ".yaml",
-		"scripts/seed workflow run " + name + " --mock",
+		run,
 	}
 }
 
@@ -692,7 +707,7 @@ func RepairAcceptance(d *Draft, e *EngineError) []byte {
 	fmt.Fprintf(&b, "- Failing step: `%s`\n- Finding: %s\n\n", step, e.Finding)
 	b.WriteString("Fix the workflow on this branch so both commands below pass. Do not widen it: the run steps are the acceptance spec's own commands and stay so.\n\n")
 	b.WriteString("## Validation Commands\n\n")
-	for _, c := range RepairCommands(d.Name) {
+	for _, c := range RepairCommands(d.Name, d.Inputs) {
 		fmt.Fprintf(&b, "- `%s`\n", c)
 	}
 	return []byte(b.String())

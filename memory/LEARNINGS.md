@@ -1268,3 +1268,26 @@ the assertions read, and there is no copy to go stale.
 - Two parallel shell calls share one working directory: a `cd` in one
   moves the other. Use absolute paths in every call that runs beside
   another, or a merge intended for one worktree lands in another.
+- A fold that re-judges a fact "through the same checks" must include
+  the grant: re-running the record gates alone binds a well-formed
+  fact pushed raw under the wrong key. Read the keyring at the
+  position, as the curation fold does, and let a raw-push drill under
+  a claim key say so.
+- An affordance probe must carry every citation the rule demands at
+  that position; a probe that omits one the record has just made
+  mandatory (a passed repair) hides the verb at the moment it is owed.
+  Derive the probe's citations from the same helper the rule reads.
+- Invoking the v1 engine from a fixture needs the whole instantiation
+  surface it reads (`.seed/`, `scripts/seed`, `scripts/seed-harness`,
+  `scripts/harness/`), and a scrubbed runner needs the engine vendored
+  into the fixture's own lock, because the shim's cache lookup goes
+  through HOME.
+- `workflow run --mock` refuses when a declared required input is not
+  supplied; bind placeholders per declared input wherever the mock is
+  the check.
+- Check the boundary before a side effect the boundary might refuse:
+  a branch written ahead of an out-of-grant append is a branch left
+  behind a refusal.
+- `loop.go`'s `gitOut` treats empty output as an error; git verbs that
+  succeed silently (`add`, `commit --quiet`, `worktree remove`) need a
+  runner that reads the exit status alone.

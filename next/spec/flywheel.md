@@ -202,6 +202,9 @@ byte; the report version moves.
   the branch write and the fact; the subject is the shape id, derived.
 - `seed flywheel repair … --key <path> --shape <id> --repo <dir>` —
   the repair contract, under the dispatcher's key.
+- `seed flywheel observe … --key <path> --shape <id> --merged <commit>
+  --pr <pr>` — the merge observation, under the observer's key, citing
+  the standing proposal's file at the merged commit.
 - `seed flywheel status …` — the report's rows.
 
 ## Conformance mapping

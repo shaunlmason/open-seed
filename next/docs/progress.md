@@ -1004,7 +1004,43 @@ PR (an administrative card, not a Phase 9 item).
   `actors.md`, `projections.md`, `maintenance.md`,
   `reconciliation.md` and `loop-verbs.md` follow, and the build plan
   names row 9 at Phase 11 item 4)
-- 11.5 flywheel v0 — os-9075c308 — plan in review (#231)
+- 11.5 flywheel v0 — os-9075c308 — **in review** (task PR against plan
+  #231: `internal/flywheel` derives every done subject's shape from the
+  record (the JCS form of routing, acceptance path, tier and verb
+  sequence, `s-<12 hex>`), counts recurrence at `RecurringAfter` (2,
+  pinned to the spec's sentence), drafts one deterministic v1 workflow
+  per shape from the gated acceptance's own validation commands (one
+  run step per command in order, the role steps for the sequence's
+  judgment points, inputs exactly the varying fields, prompts over
+  inputs and artifacts only; `ungated` and `divergent` refused; golden
+  bytes committed), validates a draft through the v1 engine's
+  `workflow validate` and `workflow run --mock` from a detached staging
+  worktree that leaves nothing behind (the engine's refusal naming
+  stage, step and finding; `name_taken` before staging; the drill
+  skipping by name without the engine), folds `workflow.proposed`
+  (`curate` alone, on the shape id, citing at least two distinct
+  admitted done occurrences of the shape, a path directly under
+  `.seed/workflows/`, no standing proposal, a passed repair cited and an
+  open one refusing `repair_open`) and `workflow.merged` (`observer` or
+  `operator`, citing the standing proposal's file) re-judged at their
+  positions with the grant, and derives the report's `flywheel` section
+  (version "13": recurring, proposed, merged, repairs filed and done,
+  the rate over recurring); the repair contract (D7) filed under the
+  dispatcher's key at `trivial` and `small` on the shape's routing with
+  its acceptance under `next/flywheel/<shape>/` at the branch commit
+  quoting the finding and carrying the engine's two commands, the
+  proposal after its verdict validating the branch's file as it stands;
+  `seed flywheel shapes | draft [--validate] | propose | repair |
+  observe | status`, the proposal on `seed/flywheel-<shape>` and never
+  on main; drilled in the package, at the boundary (every gate, the raw
+  push, the curator's reach joined into the residual drill), in the
+  keyring, the projection, the terminal, and end to end in the
+  small-team fixture (the chore worked three times converts; the
+  planted harness break is repaired on the branch, the verifier's
+  render runs the two commands green, the proposal cites the contract
+  and one merge closes both); `next/spec/flywheel.md` new, with
+  `protocol.md`, `projections.md`, `lanes.md`, `curation.md`,
+  `actors.md` and `envelope.md` following)
 
 ## Frontier
 
@@ -1053,8 +1089,10 @@ contested state and delivery at claim time) is implemented against
 plan #228 and merged (#235); item 3 (os-e2f1ad23, the poisoning
 drill) is implemented against plan #229 and in review (#236); item 4
 (os-0d537fbd, expiry, retirement, dead-end applicability and bloat)
-is implemented against plan #230 on top of item 3 and in review; item
-5 (os-9075c308, the flywheel) is planned (#231) and next.
+is implemented against plan #230 on top of item 3 and merged (#237);
+item 5 (os-9075c308, the flywheel) is implemented against plan #231
+and in review. With item 5 merged, Phase 11's exit criteria are all
+met by their items, and the phase exit record is the next card.
 Phase 9 was under way: item 5's derivation and read merged (#171) and
 its loop verbs merged (#173), so the lane-facing surface is whole in
 shape — `seed situation` says what is true and what is owed, and the

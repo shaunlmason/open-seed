@@ -22,6 +22,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/flywheel"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
@@ -285,6 +286,12 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	}
 	var vin *admit.VerbInactiveError
 	if errors.As(err, &vin) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
+	}
+	// A flywheel gate (next/spec/flywheel.md) is an illegal step at
+	// this position, and the message names the gate.
+	var fwe *flywheel.Error
+	if errors.As(err, &fwe) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
 	}
 	var itr *transition.InvalidTransitionError

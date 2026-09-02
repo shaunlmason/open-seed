@@ -907,8 +907,12 @@ func TestRepairIsABoundedContractTheProposalCites(t *testing.T) {
 			t.Fatalf("the acceptance quotes the failing step and the finding and names the commands: lacks %q\n%s", want, text)
 		}
 	}
-	if cmds := plan.Commands(acceptance); strings.Join(cmds, "|") != strings.Join(RepairCommands(d.Name), "|") {
+	if cmds := plan.Commands(acceptance); strings.Join(cmds, "|") != strings.Join(RepairCommands(d.Name, nil), "|") || len(cmds) != 2 {
 		t.Fatalf("the acceptance's commands are the engine's two verbs: %v", cmds)
+	}
+	withInputs := RepairCommands(d.Name, []string{"goal", "anchor"})
+	if len(withInputs) != 2 || !strings.HasSuffix(withInputs[1], "--mock --input goal=placeholder --input anchor=placeholder") {
+		t.Fatalf("the mock run binds the declared inputs as the validation does: %v", withInputs)
 	}
 	if !strings.Contains(string(RepairAcceptance(d, &EngineError{Stage: "validate"})), "(no step named)") {
 		t.Fatal("a refusal naming no step says so")

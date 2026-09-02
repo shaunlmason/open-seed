@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
@@ -30,7 +32,7 @@ import (
 
 func runFlywheel(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "flywheel requires a subverb: shapes, draft, propose, repair, or status"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "flywheel requires a subverb: shapes, draft, propose, repair, observe, or status"), stdout, stderr)
 	}
 	switch args[0] {
 	case "shapes":
@@ -41,11 +43,48 @@ func runFlywheel(args []string, stdout, stderr io.Writer) int {
 		return runFlywheelPropose(args[1:], stdout, stderr)
 	case "repair":
 		return runFlywheelRepair(args[1:], stdout, stderr)
+	case "observe":
+		return runFlywheelObserve(args[1:], stdout, stderr)
 	case "status":
 		return runFlywheelStatus(args[1:], stdout, stderr)
 	}
 	return render(envelope.Fail(envelope.ExitUsage, "usage",
-		fmt.Sprintf("unknown flywheel subverb %q — shapes, draft, propose, repair, or status", args[0])), stdout, stderr)
+		fmt.Sprintf("unknown flywheel subverb %q — shapes, draft, propose, repair, observe, or status", args[0])), stdout, stderr)
+}
+
+// runFlywheelObserve appends workflow.merged from the observer's key:
+// the forge fact that the proposal's PR landed the file in the
+// registry, citing the standing proposal's path at the merged commit.
+func runFlywheelObserve(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("flywheel observe", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	f := bindLoopFlags(fs)
+	shapeID := fs.String("shape", "", "the shape whose proposal merged")
+	merged := fs.String("merged", "", "the merged commit")
+	pr := fs.String("pr", "", "the pull request that merged")
+	parseErr := fs.Parse(args)
+	if parseErr != nil || (*f.dir == "") == (*f.remote == "") || *f.keyPath == "" || fs.NArg() != 0 || *shapeID == "" || *merged == "" || *pr == "" {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "flywheel observe requires --ledger or --remote (not both), --key <path>, --shape <id>, --merged <commit> and --pr <pr>"), stdout, stderr)
+	}
+	signer, env := loopSigner(*f.keyPath, *f.as)
+	if env != nil {
+		return render(env, stdout, stderr)
+	}
+	ls, env := openLoopSession(f)
+	if env != nil {
+		return render(env, stdout, stderr)
+	}
+	defer ls.done()
+	*f.subject = *shapeID
+	standing, ok := flywheel.Fold(ls.ctx.Records).Standing(*shapeID)
+	if !ok {
+		return render(stampTip(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no unmerged proposal stands for shape %s: the observation cites an admitted proposal", *shapeID)), ls.ctx.Count), stdout, stderr)
+	}
+	m := flywheel.Merge{Workflow: standing.Path() + " @ " + *merged, Shape: *shapeID, PR: *pr + " @ " + *merged}
+	payload := mustJSON(m)
+	return ls.commit(f, loopAct{verb: flywheel.MergedVerb, payload: payload, resultAt: func(int) map[string]any {
+		return map[string]any{"shape": *shapeID, "workflow": m.Workflow, "pr": m.PR, "proposal": standing.Pos}
+	}}, signer, stdout, stderr)
 }
 
 // shapeRows renders shapes for an envelope.
@@ -121,14 +160,16 @@ func draftEnvelope(err error) *envelope.Envelope {
 }
 
 // engineEnvelope maps the engine's answer: a taken name is an illegal
-// step (3), the engine's refusal a check gone red on the draft (20),
-// naming the stage, the step, the finding and the owed act.
+// step (3, refined name_taken: the registry already holds the name,
+// so nothing is staged), the engine's refusal a check gone red on the
+// draft (20), naming the stage, the step, the finding and the owed
+// act.
 func engineEnvelope(shape string, err error) *envelope.Envelope {
 	var taken *flywheel.NameTakenError
 	var refused *flywheel.EngineError
 	switch {
 	case errors.As(err, &taken):
-		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
+		return envelope.Fail(envelope.ExitInvalidTransition, "name_taken", err.Error())
 	case errors.As(err, &refused):
 		return envelope.Fail(envelope.ExitChecksRed, "checks_red",
 			fmt.Sprintf("%s — nothing appended; the owed act is the repair contract, filed under the dispatcher's key: seed flywheel repair --shape %s (next/spec/flywheel.md)", err.Error(), shape))
@@ -157,15 +198,15 @@ func writeOnBranch(repo, branch string, files map[string][]byte, message string)
 		return "", err
 	}
 	defer func() {
-		_, _ = gitOut(repo, "worktree", "remove", "--force", dir)
-		_, _ = gitOut(repo, "worktree", "prune")
+		_ = gitRun(repo, "worktree", "remove", "--force", dir)
+		_ = gitRun(repo, "worktree", "prune")
 		_ = os.RemoveAll(dir)
 	}()
 	if _, err := gitOut(repo, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch); err == nil {
-		if _, err := gitOut(repo, "worktree", "add", dir, branch); err != nil {
+		if err := gitRun(repo, "worktree", "add", dir, branch); err != nil {
 			return "", err
 		}
-	} else if _, err := gitOut(repo, "worktree", "add", "-b", branch, dir, base); err != nil {
+	} else if err := gitRun(repo, "worktree", "add", "-b", branch, dir, base); err != nil {
 		return "", err
 	}
 	for path, body := range files {
@@ -176,14 +217,24 @@ func writeOnBranch(repo, branch string, files map[string][]byte, message string)
 		if err := os.WriteFile(full, body, 0o644); err != nil {
 			return "", err
 		}
-		if _, err := gitOut(dir, "add", "--", path); err != nil {
+		if err := gitRun(dir, "add", "--", path); err != nil {
 			return "", err
 		}
 	}
-	if _, err := gitOut(dir, "-c", "user.name=seed", "-c", "user.email=seed@flywheel.invalid", "commit", "--quiet", "--allow-empty", "-m", message); err != nil {
+	if err := gitRun(dir, "-c", "user.name=seed", "-c", "user.email=seed@flywheel.invalid", "commit", "--quiet", "--allow-empty", "-m", message); err != nil {
 		return "", err
 	}
 	return gitOut(dir, "rev-parse", "HEAD")
+}
+
+// gitRun runs a git command whose success is silent, and returns its
+// combined output in the error when it fails.
+func gitRun(repo string, args ...string) error {
+	out, err := exec.Command("git", append([]string{"-C", repo}, args...)...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
 func runFlywheelDraft(args []string, stdout, stderr io.Writer) int {
@@ -244,6 +295,35 @@ func flywheelUsage(name string, f *loopFlags, parseErr error, narg int, shape, r
 	return envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("%s requires --ledger or --remote (not both), --key <path>, --shape <id> and --repo <dir>", name))
 }
 
+// flywheelPrecheck drafts the proposal as it would stand at the base
+// and runs the boundary over it, so a refusal names its gate before
+// anything is validated or written.
+func flywheelPrecheck(ls *loopSession, signer ed25519.PrivateKey, shape flywheel.Shape, d *flywheel.Draft, base string) *envelope.Envelope {
+	fp, err := event.Fingerprint(signer.Public().(ed25519.PublicKey))
+	if err != nil {
+		return envelope.Fail(envelope.ExitUsage, "usage", err.Error())
+	}
+	p := flywheel.Proposal{Shape: shape.ID, Workflow: d.Path() + " @ " + base}
+	for _, occ := range shape.Occurrences {
+		p.Occurrences = append(p.Occurrences, occ.Cite())
+	}
+	p.Validated.Run = "wf-precheck"
+	if _, passed := flywheel.Repairs(ls.ctx.Lifecycle, shape.ID); len(passed) > 0 {
+		p.Repair = passed[0].Cite()
+	}
+	rec, err := event.Sign(event.Event{
+		V: ls.ctx.Active, TS: time.Now().UTC().Format(time.RFC3339), Actor: fp,
+		Verb: flywheel.ProposedVerb, Subject: shape.ID, Payload: mustJSON(p), Prev: ls.ctx.Tip,
+	}, signer)
+	if err != nil {
+		return envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot sign the act: %v", err))
+	}
+	if err := admit.Check(ls.ctx, rec); err != nil {
+		return stampTip(remoteFailureEnvelope(err), ls.ctx.Count)
+	}
+	return nil
+}
+
 // repairFor finds the shape's repair contract in the fold: the one
 // filed, whether short of or past its verdict.
 func repairFor(ctx *admit.Context, shape string) (subject string, passedAt int, found, passed bool) {
@@ -289,6 +369,13 @@ func runFlywheelPropose(args []string, stdout, stderr io.Writer) int {
 	d, err := flywheel.DraftWorkflow(shape, *repo)
 	if err != nil {
 		return render(stampTip(draftEnvelope(err), ls.ctx.Count), stdout, stderr)
+	}
+	// The boundary first, on a provisional fact: a proposal the record
+	// refuses (the grant, a standing proposal, an open repair) stages
+	// nothing and writes no branch. The admitted fact is re-judged at
+	// the append, where the tip may have moved.
+	if env := flywheelPrecheck(ls, signer, shape, d, base); env != nil {
+		return render(env, stdout, stderr)
 	}
 	// A repair contract for the shape decides which file is proposed:
 	// short of a passed verdict, the boundary refuses (repair_open),
@@ -337,7 +424,7 @@ func runFlywheelPropose(args []string, stdout, stderr io.Writer) int {
 	payload := mustJSON(p)
 	return ls.commit(f, loopAct{verb: flywheel.ProposedVerb, payload: payload, resultAt: func(int) map[string]any {
 		return map[string]any{
-			"shape": shape.ID, "workflow": p.Workflow, "branch": branch, "commit": commit, "repair": repairCite,
+			"shape": shape.ID, "workflow": p.Workflow, "branch": branch, "branch_head": commit, "repair": repairCite,
 			"pr": map[string]any{"head": branch, "base": "main", "title": fmt.Sprintf("flywheel: %s, the workflow for shape %s", d.Name, shape.ID)},
 		}
 	}}, signer, stdout, stderr)
@@ -411,13 +498,13 @@ func runFlywheelRepair(args []string, stdout, stderr io.Writer) int {
 	for _, step := range []struct{ verb, payload string }{{"intent.filed", string(intent)}, {"contract.specified", string(spec)}} {
 		pos, failEnv := evalAppend(f, signer, step.verb, subject, step.payload)
 		if failEnv != nil {
-			failEnv.Result = map[string]any{"subject": subject, "appended": positions, "refused": step.verb, "branch": branch, "commit": commit}
+			failEnv.Result = map[string]any{"subject": subject, "appended": positions, "refused": step.verb, "branch": branch, "branch_head": commit}
 			return render(failEnv, stdout, stderr)
 		}
 		positions = append(positions, pos)
 	}
 	return render(envelope.OK(map[string]any{
-		"subject": subject, "shape": shape.ID, "branch": branch, "commit": commit, "appended": positions,
+		"subject": subject, "shape": shape.ID, "branch": branch, "branch_head": commit, "appended": positions,
 		"acceptance": flywheel.RepairAcceptancePath(shape.ID) + " @ " + commit,
 		"finding":    map[string]any{"stage": refused.Stage, "step": refused.Step, "finding": refused.Finding},
 	}), stdout, stderr)
