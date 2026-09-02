@@ -1934,6 +1934,17 @@ here. Newest last.
   are provisioned from their manifests now, and the fleet is drilled to
   be exactly six.
 
+- **Completeness lives in the PRODUCTION path, not in a test** (review
+  finding on #212). The first draft kept "all six present" in the
+  shipped-set unit test so that single-manifest fixtures stayed green,
+  and so `seed lane validate --lanes <dir missing planner.json>`
+  certified the set with `lanes: 5`. That protected the tests and not
+  the directory an operator supplies. `Validate`, which the CLI calls,
+  now checks that each charter lane is present exactly once;
+  `ValidateEach` carries the per-manifest rules for the fixtures. The
+  split is the reviewer's own suggestion, and the reviewer's exact
+  case is a CLI drill.
+
 - **The coverage drill reads the capability table's source, and
   `operator` does not count.** A hand-listed drill cannot notice a verb
   it was never told about, which is how the gap survived a phase; the

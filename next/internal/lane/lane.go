@@ -219,29 +219,59 @@ func Resolve(dir string, m Manifest) (string, error) {
 	return b.String(), nil
 }
 
-// Validate runs every check over the loaded set and returns the
-// findings, in a stable order. An empty result is the assertion that
-// each lane's declarations are answerable by the tables the system
-// already enforces.
+// Validate is the PRODUCTION validation of a role set: every
+// per-manifest check (ValidateEach), plus the property only the whole
+// set can answer, that the charter's six lanes are all present, each
+// exactly once. This is what `seed lane validate` runs, and it is the
+// path a deployment's --lanes directory goes through, so a directory
+// that omits planner.json is refused here rather than certified with
+// "lanes: 5" (review finding on #212: the first draft kept completeness
+// in the shipped-set unit test, which protected the test and not the
+// directory an operator actually supplies).
 func Validate(dir string, ms []Manifest) []Finding {
+	out := ValidateEach(dir, ms)
+	seen := map[string]int{}
+	for _, m := range ms {
+		if m.Kind == KindLane {
+			seen[m.Lane]++
+		}
+	}
+	for _, name := range CharterLanes() {
+		switch seen[name] {
+		case 0:
+			out = append(out, Finding{Lane: name, Field: "kind", Message: fmt.Sprintf(
+				"one of the charter's six lanes has no manifest of kind lane (SEED-NEXT.md §II.11: %s)",
+				strings.Join(CharterLanes(), ", "))})
+		case 1:
+		default:
+			out = append(out, Finding{Lane: name, Field: "kind", Message: fmt.Sprintf(
+				"%d manifests claim to be this lane; the charter's six are one manifest each", seen[name])})
+		}
+	}
+	sortFindings(out)
+	return out
+}
+
+// ValidateEach runs every PER-MANIFEST check over the set and returns
+// the findings, in a stable order. It is the half a drill can exercise
+// against a single fixture manifest: a fixture validating one manifest
+// in isolation is not a deployment missing five lanes, and the
+// completeness rule that would say so lives in Validate.
+func ValidateEach(dir string, ms []Manifest) []Finding {
 	var out []Finding
 	add := func(lane, field, msg string) {
 		out = append(out, Finding{Lane: lane, Field: field, Message: msg})
 	}
 	used := map[string]bool{}
 
-	// The enumeration, as a property of the SET (plans/os-d6a52784.md
-	// D3): exactly the charter's six may be lanes, by name. A role is
-	// unconstrained in name, because §II.9 and §8 enumerate nothing.
+	// The enumeration's CLOSED half, as a property of each manifest
+	// (plans/os-d6a52784.md D3): no name outside the charter's six may
+	// be a lane. A role is unconstrained in name, because §II.9 and §8
+	// enumerate nothing. The COMPLETE half is Validate's.
 	charter := map[string]bool{}
 	for _, name := range CharterLanes() {
 		charter[name] = true
 	}
-	// Only the CLOSED half lives here: no name outside the six may be
-	// a lane. The other half, that all six are present, is a property
-	// of the shipped set and is asserted by cmd/seed's shipped-set
-	// drill; a fixture validating one manifest in isolation is not a
-	// deployment missing five lanes.
 	for _, m := range ms {
 		switch m.Kind {
 		case KindLane:
@@ -362,6 +392,11 @@ func Validate(dir string, ms []Manifest) []Finding {
 	}
 
 	out = append(out, orphanFindings(dir, used)...)
+	sortFindings(out)
+	return out
+}
+
+func sortFindings(out []Finding) {
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Lane != out[j].Lane {
 			return out[i].Lane < out[j].Lane
@@ -371,7 +406,6 @@ func Validate(dir string, ms []Manifest) []Finding {
 		}
 		return out[i].Message < out[j].Message
 	})
-	return out
 }
 
 func checkOrientsFrom(m Manifest, add func(lane, field, msg string)) {

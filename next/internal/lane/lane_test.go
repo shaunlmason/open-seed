@@ -155,7 +155,7 @@ func TestEachCheckHasItsOwnFinding(t *testing.T) {
 		m := good()
 		tc.mutate(&m)
 		dir := fixture(t, m, map[string]string{"a.md": "prose\n"})
-		got := Validate(dir, []Manifest{m})
+		got := ValidateEach(dir, []Manifest{m})
 		found := false
 		for _, f := range got {
 			if f.Field == tc.field && strings.Contains(f.Message, tc.says) {
@@ -185,7 +185,7 @@ func TestDispatcherPostureIsAnAllowlist(t *testing.T) {
 	}
 	clean := base()
 	dir := fixture(t, clean, map[string]string{"a.md": "prose\n"})
-	if got := Validate(dir, []Manifest{clean}); len(got) != 0 {
+	if got := ValidateEach(dir, []Manifest{clean}); len(got) != 0 {
 		t.Fatalf("the allowlisted dispatcher validates clean: %v", got)
 	}
 
@@ -194,7 +194,7 @@ func TestDispatcherPostureIsAnAllowlist(t *testing.T) {
 		m.Grants = append(m.Grants, extra)
 		dir := fixture(t, m, map[string]string{"a.md": "prose\n"})
 		found := false
-		for _, f := range Validate(dir, []Manifest{m}) {
+		for _, f := range ValidateEach(dir, []Manifest{m}) {
 			if f.Field == "grants" && strings.Contains(f.Message, extra) && strings.Contains(f.Message, "allowlist") {
 				found = true
 			}
@@ -209,7 +209,7 @@ func TestDispatcherPostureIsAnAllowlist(t *testing.T) {
 	m.Grants = nil
 	dir = fixture(t, m, map[string]string{"a.md": "prose\n"})
 	found := false
-	for _, f := range Validate(dir, []Manifest{m}) {
+	for _, f := range ValidateEach(dir, []Manifest{m}) {
 		if f.Field == "grants" && strings.Contains(f.Message, "does not grant") {
 			found = true
 		}
@@ -238,7 +238,7 @@ func TestAcceptedCapabilitiesAreAlternatives(t *testing.T) {
 		m.ActsThrough = []string{"budget settle"}
 		m.LivenessFrom = []string{"budget settle"}
 		dir := fixture(t, m, map[string]string{"a.md": "prose\n"})
-		for _, f := range Validate(dir, []Manifest{m}) {
+		for _, f := range ValidateEach(dir, []Manifest{m}) {
 			if f.Field == "acts_through" {
 				t.Errorf("holding %q alone must satisfy %s, which accepts %v: %s", one, act.Verb, accepted, f.Message)
 			}
@@ -275,7 +275,7 @@ func TestOrphanFragmentIsAFinding(t *testing.T) {
 	m := good()
 	dir := fixture(t, m, map[string]string{"a.md": "prose\n", "stray.md": "unreferenced\n"})
 	found := false
-	for _, f := range Validate(dir, []Manifest{m}) {
+	for _, f := range ValidateEach(dir, []Manifest{m}) {
 		if f.Field == "fragments" && strings.Contains(f.Message, "stray.md") {
 			found = true
 		}
@@ -292,7 +292,7 @@ func TestFragmentInstructingABareHeartbeatIsAFinding(t *testing.T) {
 	m := good()
 	dir := fixture(t, m, map[string]string{"a.md": "Every 30 seconds run `seed obs emit --count 1`.\n"})
 	found := false
-	for _, f := range Validate(dir, []Manifest{m}) {
+	for _, f := range ValidateEach(dir, []Manifest{m}) {
 		if f.Field == "fragments" && strings.Contains(f.Message, "bare liveness emit") {
 			found = true
 		}
@@ -342,7 +342,7 @@ func TestKindIsRequired(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fs := Validate(dir, ms); len(fs) != 1 || fs[0].Field != "kind" {
+	if fs := ValidateEach(dir, ms); len(fs) != 1 || fs[0].Field != "kind" {
 		t.Fatalf("an unknown kind is a finding on the kind field: %v", fs)
 	}
 }
@@ -358,7 +358,7 @@ func TestTheCharterSixAreClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fs := Validate(dir, ms)
+	fs := ValidateEach(dir, ms)
 	if len(fs) != 1 || fs[0].Field != "kind" || !strings.Contains(fs[0].Message, "II.11") {
 		t.Fatalf("a seventh lane is refused by name, citing the charter: %v", fs)
 	}
@@ -372,7 +372,7 @@ func TestTheCharterSixAreClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fs := Validate(dir, ms); len(fs) != 0 {
+	if fs := ValidateEach(dir, ms); len(fs) != 0 {
 		t.Fatalf("a role may take any name: %v", fs)
 	}
 	// And every charter name IS accepted as a lane, so the list is
@@ -389,7 +389,7 @@ func TestTheCharterSixAreClosed(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, f := range Validate(dir, ms) {
+		for _, f := range ValidateEach(dir, ms) {
 			if f.Field == "kind" {
 				t.Errorf("%s is one of the charter's six and must be accepted as a lane: %v", name, f)
 			}
@@ -408,14 +408,14 @@ func TestActsThroughTurnsOnClaimNotKind(t *testing.T) {
 	role.ActsThrough, role.LivenessFrom = nil, nil
 	dir := fixture(t, role, map[string]string{"a.md": "role text"})
 	ms, _ := Load(dir)
-	if fs := Validate(dir, ms); len(fs) != 0 {
+	if fs := ValidateEach(dir, ms); len(fs) != 0 {
 		t.Fatalf("a role holding no claim owes no acts: %v", fs)
 	}
 	role.Grants = []string{keyring.CapClaim}
 	dir = fixture(t, role, map[string]string{"a.md": "role text"})
 	ms, _ = Load(dir)
 	found := false
-	for _, f := range Validate(dir, ms) {
+	for _, f := range ValidateEach(dir, ms) {
 		if f.Field == "acts_through" && strings.Contains(f.Message, "grants claim but declares no acts") {
 			found = true
 		}
@@ -518,4 +518,75 @@ func capabilityTableVerbs(t *testing.T) []string {
 			"nothing agrees with everything", len(out))
 	}
 	return out
+}
+
+// conformance: plans/os-d6a52784.md D3, the COMPLETE half — the
+// production path refuses a set missing a charter lane, so a --lanes
+// directory that omits planner.json is refused rather than certified
+// with five (review finding on #212). ValidateEach is what the fixture
+// drills above use precisely because they are not deployments.
+func TestValidateRefusesAnIncompleteSet(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, FragmentDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, FragmentDir, "a.md"), []byte("role text"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name string) {
+		m := good()
+		m.Lane = name
+		if name == "dispatcher" {
+			m.Grants = []string{keyring.CapDispatch}
+		}
+		if name != "implementer" && name != "planner" {
+			m.Grants = []string{}
+			if name == "dispatcher" {
+				m.Grants = []string{keyring.CapDispatch}
+			}
+			m.ActsThrough, m.LivenessFrom = nil, nil
+		}
+		b, err := json.MarshalIndent(m, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name+".json"), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, name := range CharterLanes() {
+		if name != "planner" {
+			write(name)
+		}
+	}
+	ms, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var missing []Finding
+	for _, f := range Validate(dir, ms) {
+		if f.Lane == "planner" && f.Field == "kind" {
+			missing = append(missing, f)
+		}
+	}
+	if len(missing) != 1 || !strings.Contains(missing[0].Message, "II.11") {
+		t.Fatalf("five of six must be refused, naming the absent lane and the charter: %v", Validate(dir, ms))
+	}
+	// And the same set through ValidateEach is silent about it, which
+	// is the split: per-manifest rules there, the set property here.
+	for _, f := range ValidateEach(dir, ms) {
+		if f.Lane == "planner" {
+			t.Errorf("ValidateEach must not judge completeness: %v", f)
+		}
+	}
+	write("planner")
+	ms, err = Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range Validate(dir, ms) {
+		if f.Field == "kind" {
+			t.Errorf("all six present: no completeness finding: %v", f)
+		}
+	}
 }

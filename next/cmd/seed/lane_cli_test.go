@@ -346,3 +346,37 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// conformance: the reviewer's exact case (review finding on #212) —
+// `seed lane validate` on a copy of the shipped set with planner.json
+// removed refuses with lane_invalid and names the absent lane, rather
+// than certifying "lanes: 5". This runs through the CLI so it is the
+// path an operator's --lanes directory actually takes.
+func TestLaneValidateRefusesASetMissingACharterLane(t *testing.T) {
+	src := shippedLanes(t)
+	dir := t.TempDir()
+	if err := os.CopyFS(dir, os.DirFS(src)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(dir, "planner.json")); err != nil {
+		t.Fatal(err)
+	}
+	e, code := runEnv(t, "lane", "validate", "--lanes", dir)
+	if code != 26 || e.Error == nil || e.Error.Code != "lane_invalid" {
+		t.Fatalf("a set missing a charter lane exits 26 lane_invalid, got %d %+v", code, e)
+	}
+	rows, _ := e.Result["findings"].([]any)
+	named := false
+	for _, r := range rows {
+		f, _ := r.(map[string]any)
+		if f["lane"] == "planner" && f["field"] == "kind" {
+			named = true
+		}
+	}
+	if !named {
+		t.Fatalf("the finding names the absent lane: %+v", rows)
+	}
+	if e.Result["lanes"] != "5" {
+		t.Errorf("the count is honest about what was found: %+v", e.Result)
+	}
+}
