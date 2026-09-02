@@ -1,16 +1,12 @@
 ---
 id: os-03e47abb
 title: 'next: Phase 10 item 2 — eval contracts through the production machinery; grants cite passing tuples; scheduled spot-checks; suspension on failure'
-state: in_progress
+state: review
 priority: P1
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-d6f465c6a5c42c61
-    claimed_at: "2026-09-02T09:31:42Z"
-    lease_expires: "2026-09-02T12:32:57Z"
+author: seed-next-implementer
 created_at: "2026-09-02T08:46:00Z"
-updated_at: "2026-09-02T10:49:57Z"
+updated_at: "2026-09-02T10:50:00Z"
 ---
 
 Phase 10 (qualification and evaluation) item 2, the frontier after item 1

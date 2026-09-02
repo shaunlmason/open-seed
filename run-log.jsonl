@@ -1025,3 +1025,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T12:36:51Z"},"task":"os-be12ac16","ts":"2026-09-02T10:36:51Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-932767ec","kind":"pr"},"task":"os-03e47abb","ts":"2026-09-02T10:49:53Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-357a0f8f","kind":"receipt"},"task":"os-03e47abb","ts":"2026-09-02T10:49:57Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-03e47abb","ts":"2026-09-02T10:50:00Z","verb":"transition"}
