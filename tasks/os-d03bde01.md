@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-02T03:50:36Z"
     lease_expires: "2026-09-02T04:50:36Z"
 created_at: "2026-09-01T14:19:51Z"
-updated_at: "2026-09-02T04:25:57Z"
+updated_at: "2026-09-02T04:25:59Z"
 ---
 
 Found while implementing the worker loop (os-abb206c8): budget
@@ -58,3 +58,7 @@ https://github.com/shaunlmason/open-seed/pull/208
 ## Evidence ev-6e1f2426 (receipt, seed-next-implementer, 2026-09-02T04:25:57Z)
 
 receipts/os-d03bde01.json (head e86b01c; four validation exits all 0)
+
+## Evidence ev-76d38074 (check, seed-next-implementer, 2026-09-02T04:25:59Z)
+
+make check green, coverage 91.4% (gate 90%) on three cold readings; full suite unprivileged under setpriv --reuid=65534: 32 packages ok, 0 fail

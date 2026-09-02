@@ -941,3 +941,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-0b5f182f","kind":""},"task":"os-d03bde01","ts":"2026-09-02T04:25:17Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-467c22ef","kind":"pr"},"task":"os-d03bde01","ts":"2026-09-02T04:25:54Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-6e1f2426","kind":"receipt"},"task":"os-d03bde01","ts":"2026-09-02T04:25:57Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-76d38074","kind":"check"},"task":"os-d03bde01","ts":"2026-09-02T04:25:59Z","verb":"attach-evidence"}
