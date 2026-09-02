@@ -2073,8 +2073,10 @@ here. Newest last.
   stay** (os-be12ac16, Codex on #219). The plan's file scope named
   only tiers outside the vocabulary; D3 validates budgets at the same
   site, so every fixture that files `budget: "s"` THROUGH admission
-  (`remote_test`, `seal_cli_test`, the `seed-admit` hook drills) moves
-  to `small`, while the ones that append on the library seam keep
+  (`remote_test`, `seal_cli_test`, the `seed-admit` hook drills, and
+  the gitref race storm, whose clients re-validate every draft against
+  the refreshed tip) moves to `small`, while the ones that append on
+  the library seam keep
   their unknown values, which is the tolerant-fold coverage the raw
   seam exists to give. `ten`, the budget drills' injected class, is a
   table member for the test's duration and files unchanged.
