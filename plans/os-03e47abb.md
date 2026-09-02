@@ -423,6 +423,8 @@ maintenance pass gains nothing, D5), NOT `next/executor/**`.
 
 ## Acceptance Criteria
 
+**Boundary set (new, shown working):**
+
 1. `seed eval check` on a definition whose last commit is a squash
    merge reports the unsolved fixture RED and the solution GREEN through
    the verifier's own runner and leaves no worktree behind; a definition
@@ -511,11 +513,42 @@ maintenance pass gains nothing, D5), NOT `next/executor/**`.
     readings above the gate, and the suites pass **unprivileged** under
     `setpriv --reuid=65534`.
 
+**Retention set (existing, shown unharmed):**
+
+- Item 1's rule stands on non-eval subjects: the five per-field drift
+  rows, the bridge for a never-cited holder, the signer-versus-holder
+  rows, `Provision`'s resolved-versus-admitted check and the offer
+  `tuples` scope all keep their drills green unchanged.
+- Every pre-existing fixture chain verifies byte for byte, and a
+  `seed/1` or `seed/2` chain that never upgraded keeps its judgment on
+  every verb (AC9).
+- `seed maintain run` is unchanged in what it reaps, lints, files,
+  rebuilds and checkpoints, and appends none of the new verbs (AC7);
+  its no-private-powers drill stays green.
+- `acceptance.md`'s gate-equality rule, the verdict pipeline's exits
+  (18–25), `verdict check`'s recomputation and the red-verdict lockout
+  are untouched; no transition row moves and no exit is allocated.
+- The loop verbs, the lane validator and the shipped manifests keep
+  their drills; `seed situation` and the projections carry no new
+  obligation on non-eval subjects.
+
 ## Validation Commands
 
-```sh
-cd next && gofmt -l . && go vet ./... && go build ./...
-cd next && go test ./internal/version/ ./internal/tuple/ ./internal/eval/ ./internal/keyring/ ./internal/transition/ ./internal/admit/ ./internal/verdict/ ./internal/obligation/ ./internal/reconcile/ ./cmd/seed/ -count=1
-cd next && go test ./... -count=1
-make check
-```
+- Boundary: `cd next && go test ./internal/version/ ./internal/tuple/ ./internal/eval/ ./internal/keyring/ ./internal/transition/ ./internal/admit/ ./internal/verdict/ ./internal/obligation/ ./internal/reconcile/ ./cmd/seed/ -count=1`
+- Retention: `cd next && gofmt -l . && go vet ./... && go build ./... && go test ./... -count=1` and `make check`
+  (exit checked separately from any pipe; three cold readings).
+
+## Expected diff shape
+
+One new package (`internal/eval`) and one new CLI verb group
+(`seed eval`); two new actor verbs in the keyring and the capability
+table, with `authenticPass` and two admission rules beside the run
+rule's one-line exemption and one-line disqualified-empty refusal; one
+optional field on `intent.filed` and its fold; the exported
+recomputation seam in `internal/verdict`; the eval terminal in
+`obligation` and `reconcile`; `Seed3` and the two `Applies` lists; one
+shipped eval under `next/evals/`; two lane summaries. Specs: one new
+file and edits to eight existing ones; one refinement row in
+`envelope.md`. No change to `seed maintain run`, `internal/maintain`,
+the executor, `transitions.json` or the envelope package; no
+deletions of existing tests; no `plans/**` in the task PR.
