@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-02T07:23:24Z"
     lease_expires: "2026-09-02T08:23:24Z"
 created_at: "2026-09-02T06:53:07Z"
-updated_at: "2026-09-02T07:29:34Z"
+updated_at: "2026-09-02T07:29:37Z"
 ---
 
 Phase 9 (lanes, escalation, maintenance) is complete once #212 merges,
@@ -57,3 +57,7 @@ phase orients from, and the last frontier claim was wrong. Block on
 ## Evidence ev-d71da447 (pr, seed-next-implementer, 2026-09-02T07:29:34Z)
 
 https://github.com/shaunlmason/open-seed/pull/214
+
+## Evidence ev-a0035808 (receipt, seed-next-implementer, 2026-09-02T07:29:37Z)
+
+receipts/os-e6cdb3d9.json (three validation exits all 0: make check, validate, scope check)
