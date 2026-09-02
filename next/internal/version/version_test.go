@@ -19,3 +19,31 @@ func TestIdentity(t *testing.T) {
 		t.Fatalf("Protocol = %q, want seed/<n> per next/spec/protocol.md", Protocol)
 	}
 }
+
+// conformance: plans/os-99829835.md AC2, D4 — seed/4 is registered and
+// every gate is a named list: eval semantics hold at seed/3 and seed/4
+// alike, the levels at seed/4 exactly, and an unregistered version
+// activates nothing however it would sort.
+func TestSeed4GatesAreNamedLists(t *testing.T) {
+	supported := map[string]bool{}
+	for _, v := range Supported() {
+		supported[v] = true
+	}
+	if !supported[Seed3] || !supported[Seed4] {
+		t.Fatalf("Supported must carry seed/3 and seed/4: %v", Supported())
+	}
+	for _, v := range []string{Seed1, Seed2, Seed3, Seed4} {
+		if !Activated(v) {
+			t.Fatalf("Activated(%s) must hold", v)
+		}
+	}
+	if Activated(Protocol) || Activated("seed/9") {
+		t.Fatal("Activated is a named list: the genesis default and an unregistered version activate nothing")
+	}
+	if EvalApplies(Seed2) || !EvalApplies(Seed3) || !EvalApplies(Seed4) || EvalApplies("seed/9") {
+		t.Fatal("EvalApplies is the named list {seed/3, seed/4}: the equality that was right while seed/3 was newest closes on seed/4")
+	}
+	if LevelsApply(Seed3) || !LevelsApply(Seed4) || LevelsApply("seed/9") {
+		t.Fatal("LevelsApply is seed/4 exactly, a named list of one")
+	}
+}

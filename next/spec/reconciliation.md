@@ -107,6 +107,7 @@ never the artifact store or the repository):
 | `chain_skipped` | an observed merge with no admitted `merge.requested` citing the verdict |
 | `unreconciled` | a pass verdict with no observed merge yet; not classified for an eval subject, whose verdict is its terminal fact ([`evals.md`](evals.md)) |
 | `verdict_unverified` | a folded verdict whose signer, replayed to the verdict's own position, held no verdict grant or was an implementing key — a raw-pushed verdict that never passed the verifier boundary |
+| `independence_unverified` | a folded verdict (from `seed/4`) whose recorded level the records do not support (L2 with no declaration or a same-provider, same-family, same-harness one; L3 on a prose-only or ungated spec), or which is short of its subject's tier; at evidence grade (`seed reconcile` and the maintenance loop, which hold the repository and the store), an L3 whose receipt does not reproduce from the verifier's own checkout, a sealed subject's under an identity able to unseal ([`verdicts.md`](verdicts.md), "Independence levels") |
 | `overridden` | the merge chain ran through an operator override — the sanctioned alternative, surfaced neutrally and by name, never as a divergence |
 | `override_unverified` | a folded override whose signer, replayed to its own position, held no operator standing — a raw-pushed override that substitutes for nothing |
 
@@ -114,8 +115,20 @@ never the artifact store or the repository):
 build carries a wall clock, so "failed" versus "pending" is an age
 judgment that belongs to Phase 9's maintenance thresholds.
 
-**Evidence-grade checks** — `seed reconcile` only, which may read the
-artifact store and the repository:
+**Evidence-grade checks** — `seed reconcile` and the maintenance loop
+only, which may read the artifact store and the repository:
+
+- **The L3 reproduction.** A verdict recording `L3` cites a receipt
+  that must recompute from the verifier's own input seam to the cited
+  digest; one that does not is `independence_unverified`. A sealed
+  subject's receipt carries its sealed transcripts and recomputes only
+  under an identity able to unseal, and there is no silent partial
+  verification (`verdict check`'s posture): `seed reconcile` opens it
+  under `--key` and, meeting a sealed L3 verdict with no key or a key
+  that is no recipient, refuses the run naming the subject and what it
+  needs (`usage`, `not_recipient`); the maintenance loop opens it under
+  the maintenance actor's key and reports a subject that key cannot
+  open as skipped with the reason, never as clean.
 
 - **Attested-head reconciliation.** The cited receipt is loaded from
   the artifact store exactly as `verdict check` loads it
@@ -137,10 +150,11 @@ artifact store and the repository:
   sha no longer resolves or is no longer an ancestor of that tip.
 
 `seed reconcile --ledger <dir> --repo <dir> [--subject <id>]
-[--artifacts <dir>]` walks one subject or every folded subject, merges
-both kinds, and returns the divergence set as envelope data at exit 0:
-detection is a report, not a refusal — refusals stay operational
-(usage, unreadable store, chain trouble). Phase 9's loop consumes the
+[--artifacts <dir>] [--key <path>]` walks one subject or every folded
+subject, merges both kinds, and returns the divergence set as envelope
+data at exit 0: detection is a report, not a refusal — refusals stay
+operational (usage, unreadable store, chain trouble, a sealed L3
+verdict `--key` was not given for). Phase 9's loop consumes the
 same output.
 
 ## Visibility

@@ -10,13 +10,19 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/verdict"
 )
 
 func runReconcile(args []string, stdout, stderr io.Writer) int {
@@ -26,8 +32,19 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 	repo := fs.String("repo", "", "repository the merges landed in")
 	subject := fs.String("subject", "", "one contract (default: every folded subject)")
 	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
+	keyPath := fs.String("key", "", "OpenSSH ed25519 private key of an identity able to unseal, for sealed L3 verdicts")
 	if err := fs.Parse(args); err != nil || *dir == "" || *repo == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "reconcile requires --ledger <dir> --repo <dir> [--subject <id>] [--artifacts <dir>]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "reconcile requires --ledger <dir> --repo <dir> [--subject <id>] [--artifacts <dir>] [--key <path>]"), stdout, stderr)
+	}
+	var identity ed25519.PrivateKey
+	if *keyPath != "" {
+		keyBytes, err := os.ReadFile(*keyPath)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --key: %v", err)), stdout, stderr)
+		}
+		if identity, err = event.ParsePrivateKey(keyBytes); err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--key: %v", err)), stdout, stderr)
+		}
 	}
 	st, failEnv := loadVerdictState(*dir)
 	if failEnv != nil {
@@ -52,6 +69,30 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 	for _, f := range reconcile.VerifyOverrides(st.records, st.fold) {
 		verdictFindings[f.Subject] = append(verdictFindings[f.Subject], f)
 	}
+	// The L3 reproduction opens a sealed subject only under --key, and
+	// there is no silent partial verification (the `verdict check`
+	// posture): a sealed L3 verdict this run cannot open refuses the
+	// run, naming the subject and what it needs.
+	var refusal *envelope.Envelope
+	rep := reconcile.Reproduction{Records: st.records, Fold: st.fold,
+		NotAttempted: func(subject, why string) {
+			if refusal == nil {
+				refusal = envelope.Fail(envelope.ExitUsage, "usage",
+					fmt.Sprintf("contract %s carries sealed checks and an L3 verdict — evidence-grade reconcile needs --key with an identity able to unseal, or the receipt cannot be recomputed (%s)", subject, why))
+			}
+		}}
+	if identity != nil {
+		rep.Unseal = func(s transition.SubjectState) (*verdict.SealedInput, error) {
+			in, fail := unsealChecks(st.records, s, identity, store)
+			if fail != nil {
+				if refusal == nil {
+					refusal = fail
+				}
+				return nil, errors.New(fail.Error.Message)
+			}
+			return in, nil
+		}
+	}
 	var findings []reconcile.Finding
 	checked := 0
 	for _, id := range subjects {
@@ -62,7 +103,10 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 		checked++
 		findings = append(findings, reconcile.Subject(id, s)...)
 		findings = append(findings, verdictFindings[id]...)
-		findings = append(findings, reconcile.Evidence(id, s, store, *repo)...)
+		findings = append(findings, reconcile.EvidenceAt(id, s, store, *repo, rep)...)
+		if refusal != nil {
+			return render(stampTip(refusal, st.count), stdout, stderr)
+		}
 	}
 	if findings == nil {
 		findings = []reconcile.Finding{}
