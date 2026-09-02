@@ -991,3 +991,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T09:28:56Z"},"task":"os-8e53ffd9","ts":"2026-09-02T08:28:56Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-b018acaf","kind":"receipt"},"task":"os-8e53ffd9","ts":"2026-09-02T08:41:43Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-5e3703b1","kind":"check"},"task":"os-8e53ffd9","ts":"2026-09-02T08:41:46Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-68d3bc2f","kind":"mutation"},"task":"os-8e53ffd9","ts":"2026-09-02T08:41:49Z","verb":"attach-evidence"}
