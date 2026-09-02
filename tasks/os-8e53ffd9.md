@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-02T07:52:56Z"
     lease_expires: "2026-09-02T09:28:56Z"
 created_at: "2026-09-02T07:29:45Z"
-updated_at: "2026-09-02T08:41:49Z"
+updated_at: "2026-09-02T08:42:40Z"
 ---
 
 Phase 10 (qualification and evaluation) item 1, the frontier named by
@@ -46,3 +46,7 @@ make-check:3-cold-readings-91.7%-gate-90%;unprivileged-suite-uid-65534-ok
 ## Evidence ev-68d3bc2f (mutation, seed-next-implementer, 2026-09-02T08:41:49Z)
 
 10-mutations-each-red:signer-not-holder,diff-skips-field,set-rule-first-grant,tuple-optional-seed2,adapter-invents-model(static+resolve),provision-skips-check,grants-view-drops-qualified,offer-filter-disabled,drift-as-run_error,tuple-gate-at-seed1
+
+## Evidence ev-fce77b19 (pr, seed-next-implementer, 2026-09-02T08:42:40Z)
+
+https://github.com/shaunlmason/open-seed/pull/216
