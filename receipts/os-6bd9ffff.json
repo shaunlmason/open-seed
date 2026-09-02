@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-6bd9ffff",
-  "merge_base": "584648f695ea2fc61b0005a1ab9d0ea5c5d28f0a",
-  "head": "104e3b6e33ba8e5f7479b40e41008b1b20387de9",
+  "merge_base": "c4b720c994447059ba0eab2d9f74290fdc68e52d",
+  "head": "9d4103bb2b434dd917d4924ba8ec73c803ee1d11",
   "plan_path": "plans/os-6bd9ffff.md",
   "plan_sha256": "b60f56068b0128a740d8de5f8a3bd3ab0e801a9caccbcbfc75e3441bf757edf8",
   "diff_files": [
@@ -48,7 +48,7 @@
     "next/trajectories/lanes/supervisor.json",
     "next/trajectories/lanes/verifier.json"
   ],
-  "diff_sha256": "02dedd3f12f49cbbccff2adcaf8ccf5226b0d95ccb440cd50f46401ad601a613",
+  "diff_sha256": "838f9c35116472eaca4099943c84ef044852750e928723e76d466d9eebe0da55",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/trajectory/ ./internal/transition/ ./internal/admit/ ./internal/project/ ./internal/envelope/ ./cmd/seed/ -count=1",
