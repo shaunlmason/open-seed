@@ -994,3 +994,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-68d3bc2f","kind":"mutation"},"task":"os-8e53ffd9","ts":"2026-09-02T08:41:49Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-fce77b19","kind":"pr"},"task":"os-8e53ffd9","ts":"2026-09-02T08:42:40Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-8e53ffd9","ts":"2026-09-02T08:42:43Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"next: Phase 10 item 2 — eval contracts through the production machinery; grants cite passing tuples; scheduled spot-checks; suspension on failure"},"task":"os-03e47abb","ts":"2026-09-02T08:46:01Z","verb":"create"}
