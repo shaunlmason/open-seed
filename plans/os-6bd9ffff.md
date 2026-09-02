@@ -346,7 +346,7 @@ Nothing outside `next/**` except the work-product files above. NOT
    the report version not bumped; the residual entry removed.
 8. `make check` green with coverage measured **cold**, at least three
    readings above the gate, and the suites pass **unprivileged** under
-   `setpriv --reuid=65534`.
+   `setpriv --reuid=65534 --regid=65534 --clear-groups`.
 
 **Retention set (existing, shown unharmed):**
 
