@@ -31,6 +31,11 @@ Measured, not assumed:
   refused attempt is a position-stamped line in the attempts journal
   (`internal/refusals`: instant, position, actor, verb, subject,
   outcome, code), written beside the ledger by every boundary verb.
+  The stamp is a tip ordinal, and it means two different things by
+  outcome: an admitted record is stamped at its own position, while a
+  refusal is stamped at the last record of the view the boundary
+  judged it against (`stampTip(view.Count)`), so the chain the lane
+  saw is `records[:p]` for the one and `records[:p+1]` for the other.
   The worker loop (`internal/loop.Step`) is a fixed sequence of named
   decisions (poll, orient, claim take, reserve, work, settle, submit;
   park on any refusal), so each act is a decision point with a step
@@ -81,11 +86,15 @@ Measured, not assumed:
   bytes and `posture` the sha256 of the resolved fragments.
   `Record(records, journal, key, lanesDir, lane)` takes the actor's
   admitted records in position order and its refused journal entries
-  at their stamped positions, derives each frame from
-  `ContextAt(records[:pos])`, and skips, counting, a journal line at a
-  position that is no prefix of the chain or from another actor. The
-  frame carries no instant, so two recordings of one chain are
-  byte-identical.
+  at their stamped positions, and derives each frame from the prefix
+  the lane actually saw: `ContextAt(records[:p])` for an admitted
+  record at `p` (it was judged against everything before it), and
+  `ContextAt(records[:p+1])` for a refusal stamped `p` (the stamp is
+  the last record of the view it was judged against, so a refusal
+  stamped at the chain's last record sees the whole chain). A journal
+  line at a position beyond the tip, or from another actor, is skipped
+  and counted. The frame carries no instant, so two recordings of one
+  chain are byte-identical.
 
   Refused: recording from the observation stream (unsigned, lossy,
   liveness only). Refused: a recorder hook inside `internal/loop`: the
@@ -99,18 +108,24 @@ Measured, not assumed:
   the lane); `act_undeclared` (the manifest's `acts_through` no longer
   names the point's act); `act_ungranted` (the manifest's grants no
   longer intersect the verb's accepted capabilities); `act_inadmissible`
-  (an admitted point's verb is absent from the recomputed affordances);
-  `posture_changed` (the resolved fragments' digest differs). `seed
-  trajectory replay <file> --ledger <dir> --key <key> --lanes <dir>`
-  exits 0 iff every point is `same` and otherwise exit 26
+  (an admitted point's verb is absent from the recomputed affordances).
+  Beside the points it classifies the configuration once per
+  trajectory: **`manifest_changed`** (the manifest bytes' digest
+  differs from the recorded one, which catches `orients_from`,
+  `liveness_from`, `inbox`, `summary` and the fragment list, the
+  fields no point-level class reads) and **`posture_changed`** (the
+  resolved fragments' digest differs). `seed trajectory replay <file>
+  --ledger <dir> --key <key> --lanes <dir>` exits 0 iff every point is
+  `same` and both configuration digests match, and otherwise exit 26
   `lane_invalid` refining **`trajectory_diverged`**, naming each
-  divergent point and its class. A lane replays its own trajectory
+  divergent point and class and each changed digest. A lane replays its own trajectory
   with its own key, because a fingerprint alone cannot probe the
   boundary (`admit.Affordances`).
 
-  `posture_changed` is a divergence, deliberately: a fragment edit
-  that touches N recorded decision points fails the drill until the
-  corpus is re-recorded on purpose, which is what "catch behavioral
+  `manifest_changed` and `posture_changed` are divergences,
+  deliberately: a manifest or fragment edit that touches a lane with N
+  recorded decision points fails the drill until the corpus is
+  re-recorded on purpose, which is what "catch behavioral
   regressions in role or prompt changes" can mean in a tree with no
   model. The residual is stated in `trajectories.md` in the injection
   suite's words: no decider re-runs at a point, so replay proves that
@@ -118,15 +133,29 @@ Measured, not assumed:
   the same act, not that a model would choose it; Phase 13's
   simulation mode is the seam where a decider plugs in.
 
-- **D3 — the corpus is recorded from the small-team fixture and
-  committed.** `next/trajectories/small-team/<lane>.json` for every
-  lane whose key signs a record or journals an attempt in
-  `TestSmallTeamModeReachesDone`'s scenario. A recorder drill rebuilds
-  the scenario, records, and compares byte for byte to the committed
-  corpus (`-update` re-records); a replay drill replays the corpus
+- **D3 — the corpus covers every shipped manifest, recorded from a
+  scenario that drives each one.** `next/trajectories/lanes/<lane>.json`,
+  one file per manifest in `next/lanes/*.json`, the set derived from
+  the directory and never from a hand list. The small-team fixture
+  provisions only the implementer and the verifier, so a dedicated
+  recorder scenario in `cmd/seed` drives every lane and role through
+  its own acts: the dispatcher's filings and one re-specification
+  (D4), the planner's claim, proposal and release, the implementer's
+  loop through a submission and a park, the verifier's pass and fail,
+  the supervisor's offer and run start, the observer's merge
+  observation, the maintenance actor's reap and filing, each with at
+  least one refused attempt so the journal arm is exercised. A lane
+  with no act in the tree (the curator until its proposal grant lands)
+  records an empty trajectory whose manifest and posture digests are
+  still recorded, so a change to its configuration still diverges
+  (configuration-only coverage, named as such in the drill's output
+  rather than silently accepted). The recorder drill rebuilds the
+  scenario, records, and compares byte for byte to the committed
+  corpus (`-update` re-records); the replay drill replays every file
   against `next/lanes` over the rebuilt chain and requires every point
-  `same`; planted rows prove the classes (a manifest without
-  `submission make`, a manifest without `claim`, a fragment with one
+  `same` and every digest equal; planted rows prove the classes (a
+  manifest without `submission make`, a manifest without `claim`, a
+  manifest whose `orients_from` alone changed, a fragment with one
   added line, a chain with one extra record before a point, a boundary
   that no longer affords a recorded act). Determinism rests on the
   frame carrying no instant and the scenario fixing positions and
@@ -209,18 +238,20 @@ Measured, not assumed:
 5. `next/internal/envelope/` — `trajectory_diverged` under 26.
 6. `next/cmd/seed/trajectory.go` (new) — `record`, `replay`;
    `next/cmd/seed/plan.go` — `propose`, `approve`; `main.go`.
-7. `next/trajectories/small-team/*.json` (new) — the corpus, from the
-   recorder drill.
+7. `next/cmd/seed/trajectory_e2e_test.go` (new) — the recorder
+   scenario driving every manifest; `next/trajectories/lanes/*.json`
+   (new) — the corpus, one file per shipped manifest.
 8. Drills: transition (the row both ways, the fold at and before
    `seed/4`, the digests), admit (re-specification at and before
    `seed/4`, on every non-ready state, from a `claim` key; digests
    refused before and required at `seed/4`; the reachability drill
    green with the new residual), trajectory (a scenario with admitted
    and refused points, every class, two recordings byte-identical,
-   the skipped-and-counted lines), project (the section, the rates,
-   null, the version), `cmd/seed` (record and replay envelopes, the
-   exit 26 refinement, `plan propose|approve`, the corpus drills and
-   the planted rows).
+   the two prefix rules, the skipped-and-counted lines), project (the
+   section, the rates, null, the version), `cmd/seed` (record and
+   replay envelopes, the exit 26 refinement, `plan propose|approve`,
+   the corpus completeness against the lanes directory, the corpus
+   drills and the planted rows).
 9. Specs: new `next/spec/trajectories.md`; `lifecycle.md` (the row and
    its gate), `transitions.json`, `plans.md` (the digest, unedited),
    `projections.md` (the section), `lanes.md` (III.J row 3 in the
@@ -237,8 +268,8 @@ Measured, not assumed:
   `next/internal/project/**`, `next/internal/envelope/**`,
   `next/cmd/seed/trajectory.go` (new), `next/cmd/seed/plan.go`,
   `next/cmd/seed/main.go` and their drills,
-  `next/cmd/seed/modes_e2e_test.go` (the recorder and replay drills),
-  `next/trajectories/**` (new)
+  `next/cmd/seed/trajectory_e2e_test.go` (new: the recorder scenario
+  and the corpus drills), `next/trajectories/**` (new)
 - `next/spec/trajectories.md` (new), `next/spec/lifecycle.md`,
   `next/spec/transitions.json`, `next/spec/plans.md`,
   `next/spec/projections.md`, `next/spec/lanes.md`,
@@ -259,22 +290,32 @@ Nothing outside `next/**` except the work-product files above. NOT
    journals M refusals, the trajectory has N+M points in position
    order; each frame equals the boundary's own derivation at the
    prefix (affordances equal `admit.Affordances` there, state the
-   fold's, owed the situation's rows); a journal line at a position
-   that is no prefix, or from another actor, is skipped and counted;
-   the manifest and posture digests equal those of the shipped files;
-   two recordings are byte-identical.
+   fold's, owed the situation's rows); an admitted record's frame is
+   derived at `records[:p]` and a refusal's at `records[:p+1]`, so a
+   refusal stamped at the chain's last record sees the whole chain and
+   the first record's frame is the empty chain; a journal line beyond
+   the tip, or from another actor, is skipped and counted; the
+   manifest and posture digests equal those of the shipped files; two
+   recordings are byte-identical.
 2. **Replay.** Unchanged configuration and chain: every point `same`,
    exit 0. A manifest whose `acts_through` drops the recorded act:
    `act_undeclared`; grants dropped: `act_ungranted`; a record inserted
    before a point: `frame_changed`; a fragment edited: `posture_changed`;
-   an admitted point whose verb the recomputed affordances lack:
-   `act_inadmissible`. Any divergence exits 26 with refining code
-   `trajectory_diverged` naming each divergent point and class.
-3. **Corpus.** The recorder drill rebuilds the small-team scenario and
-   reproduces `next/trajectories/small-team/*.json` byte for byte;
-   the replay drill replays it against `next/lanes` with every point
-   `same`; the planted-manifest and planted-fragment rows fail it with
-   the named classes.
+   a manifest whose `orients_from` alone changed: `manifest_changed`
+   with every point still `same`; an admitted point whose verb the
+   recomputed affordances lack: `act_inadmissible`. Any divergence
+   exits 26 with refining code `trajectory_diverged` naming each
+   divergent point and class and each changed digest.
+3. **Corpus.** `next/trajectories/lanes/` holds exactly one file per
+   manifest in `next/lanes/*.json`, the set derived from the
+   directory; every lane and role with an act in the tree has at
+   least one admitted and one refused point, and a lane with none is
+   reported as configuration-only; the recorder drill rebuilds the
+   scenario and reproduces every file byte for byte; the replay drill
+   replays every file against `next/lanes` with every point `same` and
+   both digests equal; the planted-manifest, planted-`orients_from`
+   and planted-fragment rows fail it with the named classes, for a
+   configuration-only lane included.
 4. **Re-specification.** At `seed/4` a `dispatch` key re-specifies a
    `ready` contract: the new acceptance folds, `Specifications` reads
    2; before `seed/4` it refuses naming the version; on `in_progress`,
@@ -292,9 +333,12 @@ Nothing outside `next/**` except the work-product files above. NOT
    `unedited_rate` "0.500", `unmeasured` 1; null at no work subject;
    version "11" republishes existing prefixes.
 7. **Mutation evidence.** Each must fail a drill: the recorder skipping
-   refused attempts; the frame omitting the affordances; the frame
-   carrying an instant; replay ignoring the posture digest; replay
-   ignoring `acts_through`; replay ignoring the grants; the `ready`
+   refused attempts; a refusal's prefix sliced like an admitted
+   record's; the frame omitting the affordances; the frame carrying an
+   instant; replay ignoring the posture digest; replay ignoring the
+   manifest digest; replay ignoring `acts_through`; replay ignoring
+   the grants; the corpus completeness read from a hand list of
+   lanes; the `ready`
    origin admitted before `seed/4`; the fold applying a
    re-specification before `seed/4`; `Specifications` counting the
    first specification only; the digest accepted before `seed/4`; the
@@ -325,10 +369,12 @@ Nothing outside `next/**` except the work-product files above. NOT
 
 ## Expected diff shape
 
-One new package with three types, a recorder, a replayer and six
+One new package with three types, a recorder with its two prefix
+rules, a replayer with five point classes and two configuration
 classes; one table row with its version gate and fold; one counter and
 two digests on the fold; one report section and a version bump; one
 refinement code; two CLI verbs and two plan subverbs; one committed
-corpus with its recorder and replay drills; one residual entry. Specs:
+corpus of one file per shipped manifest with its recorder scenario
+and replay drills; one residual entry. Specs:
 one new file and eight edits. No new exit, projection or manifest
 change; no `plans/**` in the task PR.
