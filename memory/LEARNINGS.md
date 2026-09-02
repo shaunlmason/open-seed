@@ -1243,3 +1243,14 @@ the assertions read, and there is no copy to go stale.
   loop retries against a refreshed one; carry the derivation in the
   act so every attempt recomputes it, even when the payload itself
   holds nothing derived.
+- A coverage claim is only as good as its derivation: enumerate the
+  registry the rules construct refusals from (`curation.Gates()`) and
+  fail on any gate no drill attacks, rather than hand-listing the gates
+  a drill covers. The registry and the spec table pinned both ways
+  keep the three from drifting apart.
+- When a script fixes positions ahead of time (an eval marker citing
+  where the hypothesis WILL land), compute the cited position from the
+  count before the records land and assert equality with where the
+  fact actually landed, rather than subtracting a constant from the
+  last record's position: the constant drifts the first time the
+  fixture adds a record.

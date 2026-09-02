@@ -11,7 +11,7 @@
 > runs an adversarial evaluation for behavior-changing lessons;
 > conflicting evidence is a first-class contested state, never
 > averaged, and contested lessons do not surface) and conformance
-> III.K rows 1, 2, 3 and 5 and III.I row 5. Build plan Phase 11 items
+> III.K rows 1, 2, 3, 4 and 5 and III.I row 5. Build plan Phase 11 items
 > 1 and 2; plans `plans/os-f30ee0d3.md` and `plans/os-96850e5a.md`.
 > Implemented by `internal/curation` (the shapes, the id derivation,
 > the predicate, the gate registry, the fold, the surfacing set, the
@@ -366,6 +366,111 @@ byte. No protocol bump.
   `knowledge` section counting the stages when the chain holds any
   curation fact.
 
+## The poisoning drill
+
+III.K row 4 asks that "trajectories are treated as untrusted inputs;
+the poisoning drill fails to achieve promotion in CI". Phase 11 item 3
+(`plans/os-e2f1ad23.md`) answers it in the injection suite's shape
+([`lanes.md`](lanes.md)), and the first thing to say is what it does
+**not** do.
+
+**It does not test that a curator disbelieves hostile text.** There is
+no model under `next/`, and a `curate` key persuaded by what it reads
+proposes a false claim over genuine support that every gate admits: the
+boundary judges the support, never the claim's truth. That is a named
+residual below, not a poison the boundary can refuse. What the drill
+tests is that CONSTRUCTING the support, the contest, the promotion or
+the file cannot get a false lesson in front of a worker.
+
+### Every poison fails at both ends
+
+`internal/admit/testdata/poisoning/corpus.json` declares each poison:
+`{"name", "gate", "attack", "expect": {"verb", "gate" | "reason"}}`, and
+`internal/admit/poisoning_test.go` carries one script per name, a chain
+built the fixture's way (workers' dead ends and packet findings, a
+grantless stranger's raw pushes, curators' proposals and contests,
+observers' promotions, verifiers' eval passes) that ends in an attempt
+to promote. For every poison the drill asserts three things: the named
+verb refuses at the named gate (or names the reason, for the refusals
+the boundary raises outside the registry: out of grant, the grant's
+disjointness, the acceptance's gate); no `lesson.promoted` for the
+poisoned hypothesis stands admitted by the chain's end; and a claim on
+a contract the poison's applies-when selects carries no lesson for it
+(`Candidates` and `Surfacing` both empty for the subject). The last two
+are the charter's sentence made a test: a gate rewritten so that the
+refusal moves keeps the drill red until the lesson is still kept from
+the worker. The lint poisons (`lint.*`) bend the file half in one place
+each and assert the refusal at its gate; their other end is the store's
+lint under `make check`, which is what gates the lesson PR.
+
+### Coverage is derived, never authored
+
+Every refusal of the proposal, contest and promotion rules and of the
+lint's file half is a `curation.GateError` naming a gate registered in
+`curation.Gates()` at init, and the constructor refuses an unregistered
+name, so a refusal without a gate does not exist. The drill enumerates
+that registry, pins it to the gate table above in both directions, and
+fails on a registered gate no poison names, on a poison naming no
+registered gate, on a declared poison with no script, on a script with
+no declaration, on an empty corpus and on an empty residual table. A
+gate added to the rules without a corpus entry is therefore a red test,
+which is what makes "full coverage" a claim the drill derives rather
+than one it is told. At landing the corpus holds forty-seven poisons over
+the thirty-two gates: among them `single-success`, `self-replay`,
+`forged-support`, `grantless-window`, `failed-support`,
+`worker-proposes`, `worker-granted-curate`, `root-proposes`,
+`predicate-everything`, `predicate-unknown-field`,
+`unchanged-reproposal`, `held-out-forgery`, `contested-promotion`,
+`promotion-traversal`, `promotion-of-raw-proposal`,
+`smuggled-role-lesson`, `raw-pass`, `borrowed-pass`, `stale-pass`,
+`pass-at-another-position`, `fail-as-survival`, `support-failed-later`,
+`contested-surfacing`, `raw-pushed-promotion`, `raw-pushed-contest`,
+`ungated-eval`, `fabricated-provenance`, `frontmatter-drift`,
+`unmerged-anchor`, `stamps-unreviewed`. The two raw-pushed poisons push the refused fact
+past the boundary anyway and assert the fold re-judged it: the
+promotion binds nothing and the contest moves nothing, because the
+fold runs `PromotionValid` and `ContestValid` at each fact's own
+position.
+
+### The residuals, named
+
+`residuals.json` in the same directory names each poison the boundary
+ADMITS, with why, what an attacker can inflict and what stands in the
+way, each pinned by a characterization drill asserting the poison is
+admitted, so closing one fails the suite and forces the table to say
+what replaced it.
+
+| residual | what stands in the way |
+| --- | --- |
+| `single-holder-family` | a family the applies-when selects with one holder cannot supply two, so support from that holder admits (the charter's "where the family allows") and the fold records `single_actor_family`; the adversarial evaluation for every carrier and the lesson PR's reviewer stand behind it |
+| `colluding-keys` | disjointness is per key: two workers and a curator on distinct keys satisfy every arm whoever operates them; enrollment is the operator's act and `kind` an assertion the operator makes |
+| `persuaded-curator` | a `curate` key proposing a false claim over genuine observations satisfies every gate; the contest from another `curate` key, the adversarial evaluation and the reviewer stand behind it, and there is no model to test the persuasion itself |
+| `reviewed-vacuous-eval` | `seed eval check` refuses a vacuous definition, but a reviewer can merge one, and the anchor rule then binds a pass on it to the gated revision; the review gates the definition |
+| `cosmetic-reproposal` | a reworded claim is a new subject judged on its own support; the contest follows the observations, which are the same ones |
+
+### The CLI arm
+
+`worker-proposes` and `smuggled-role-lesson` also run through `seed
+knowledge propose` and `seed knowledge promote` in the small-team
+fixture (`cmd/seed/modes_e2e_test.go`), proving the refusal reaches an
+operator's terminal with the code the boundary gave (`out_of_grant`;
+the gate's name in the refusal), and that the next claim on a matching
+contract carries no lesson. The lint poisons promote each bent file as
+its own anchor, since the file half judges the promoted bytes.
+
+### A poison that gets through is a defect in the gate
+
+If constructing a poison finds a gate that admits it, the fix lands in
+the gate's own package with the poison as its regression drill, and
+`next/docs/decisions.md` records the row it changed; the corpus never
+accommodates the gate. Item 1's review found four such gaps before
+this drill landed (a raw window, a raw pass, a raw proposal reserving
+its subject, a traversal path), and item 2's review found two more
+while this drill was being written (a raw-pushed promotion bound in
+the fold and surfaced; a raw-pushed contest disabled a lesson); each
+is a poison here, and the second pair began as a residual of this
+drill before the fold learned to re-judge both facts.
+
 ## Conformance mapping
 
 - III.K row 1 (online lanes append evidence only; conclusion-writing is
@@ -384,6 +489,11 @@ byte. No protocol bump.
   evaluation against constructed counter-trajectories): the predicate,
   the actor arm, the promotion gate's two halves and the bound eval,
   drilled per refusal at the boundary and through `seed knowledge`.
+- III.K row 4 (trajectories are treated as untrusted inputs; the
+  poisoning drill fails to achieve promotion in CI): the poisoning
+  drill above, its corpus derived from the gate registry, every poison
+  asserted to fail at both ends, the residuals named and pinned, and
+  the CLI arm in the modes fixture; `make check` runs it.
 - III.K row 5 (conflicting evidence is a first-class contested state,
   never silently averaged; contested lessons do not surface): the
   contest, the fold's stage and the surfacing set's exclusion,
