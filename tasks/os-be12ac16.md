@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-02T10:36:51Z"
     lease_expires: "2026-09-02T12:57:03Z"
 created_at: "2026-09-01T14:55:14Z"
-updated_at: "2026-09-02T11:00:23Z"
+updated_at: "2026-09-02T11:19:40Z"
 ---
 
 Found while building the injection conformance suite (os-b779b4c7),
@@ -54,3 +54,7 @@ internal/admit/injection_test.go.
 ## Evidence ev-75cd19c2 (pr, seed-next-implementer, 2026-09-02T11:00:23Z)
 
 https://github.com/shaunlmason/open-seed/pull/222
+
+## Evidence ev-3e8d3dfe (receipt, seed-next-implementer, 2026-09-02T11:19:40Z)
+
+receipts/os-be12ac16.json
