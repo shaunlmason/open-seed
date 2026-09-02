@@ -1,10 +1,11 @@
 ---
 id: os-e6cdb3d9
 title: 'next: Phase 9 exit record'
-state: backlog
+state: ready
 priority: P1
 squad: core
 created_at: "2026-09-02T06:53:07Z"
+updated_at: "2026-09-02T06:53:30Z"
 ---
 
 Phase 9 (lanes, escalation, maintenance) is complete once #212 merges,

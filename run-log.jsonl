@@ -970,3 +970,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-f28d79cd","kind":"review"},"task":"os-8451d939","ts":"2026-09-02T06:46:04Z","verb":"attach-evidence"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-8451d939","ts":"2026-09-02T06:47:25Z","verb":"close"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 9 exit record"},"task":"os-e6cdb3d9","ts":"2026-09-02T06:53:09Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-e6cdb3d9","ts":"2026-09-02T06:53:30Z","verb":"promote"}
