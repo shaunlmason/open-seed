@@ -73,6 +73,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runSubmission(args[1:], stdout, stderr)
 	case "reconcile":
 		return runReconcile(args[1:], stdout, stderr)
+	case "maintain":
+		return runMaintain(args[1:], stdout, stderr)
 	case "lane":
 		return runLane(args[1:], stdout, stderr)
 	case "doctor":

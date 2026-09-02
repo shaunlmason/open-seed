@@ -1,6 +1,6 @@
 {
   "lane": "maintenance",
-  "summary": "Runs unattended: reaps, reconciles, rebuilds, lints and checkpoints, audited as an ordinary actor with no private powers.",
+  "summary": "Runs one unattended pass (reap, lint, file, rebuild, checkpoint) with no scheduler and no wake channel: reaps only an unanswered request rather than a timeout, files defect contracts rather than escalations, and crosses the same admission boundary as any other actor, holding no private powers.",
   "grants": [
     "maintenance",
     "operator"

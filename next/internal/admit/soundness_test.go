@@ -42,6 +42,7 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 		submission:  "0",
 		verdict:     "0",
 		packet:      probePacket,
+		position:    fmt.Sprintf("%d", ctx.Count),
 	}
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {

@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "task": "os-8a5f14bb",
+  "merge_base": "f2c9cd8f2603f3049b133651492856e33c3ee05f",
+  "head": "8fdfff72d8f7db990c7821ead00275498a1d12c1",
+  "plan_path": "plans/os-8a5f14bb.md",
+  "plan_sha256": "2221f5facb7fe130a6ccc5611e33fe8b1f47924a5bdebd2f31c906d1b32628bd",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed-admit/actors_test.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/maintain.go",
+    "next/cmd/seed/maintain_cli_test.go",
+    "next/cmd/seed/reconcile.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/grant_test.go",
+    "next/internal/admit/soundness_test.go",
+    "next/internal/checkpoint/checkpoint.go",
+    "next/internal/checkpoint/checkpoint_test.go",
+    "next/internal/maintain/maintain.go",
+    "next/internal/maintain/maintain_test.go",
+    "next/internal/packet/packet.go",
+    "next/internal/reconcile/evidence.go",
+    "next/internal/reconcile/reconcile.go",
+    "next/lanes/maintenance.json",
+    "next/spec/executors.md",
+    "next/spec/loop-verbs.md",
+    "next/spec/maintenance.md",
+    "next/spec/observations.md"
+  ],
+  "diff_sha256": "57bea685d772a5fc48597906bd4e4d56a3b6d72297a42ee91fcdfc7835217111",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/maintain/ ./internal/reconcile/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

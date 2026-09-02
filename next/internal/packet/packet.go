@@ -191,3 +191,38 @@ func Parse(subject string, raw []byte) (*Packet, error) {
 	}
 	return &p, nil
 }
+
+// ZeroRange is the resume coordinate for a packet written when NO
+// pushed work is known: the zero-length range at git's null commit.
+// A forced reap composes its packet "from what is known"
+// (next/spec/executors.md), and what is known about a killed worker's
+// branch is nothing — so the honest coordinate says nothing rather
+// than guessing at a head.
+const ZeroRange = "0000000000000000000000000000000000000000..0000000000000000000000000000000000000000"
+
+// Render marshals a packet and re-parses it, so a caller cannot emit a
+// packet the boundary would refuse. The round trip is the point: it is
+// the same Parse admission runs, so "it built" and "it would be
+// admitted" cannot come apart.
+func Render(p Packet) ([]byte, error) {
+	if p.Acceptance == nil {
+		p.Acceptance = []string{}
+	}
+	if p.Decisions == nil {
+		p.Decisions = []Decision{}
+	}
+	if p.Refs == nil {
+		p.Refs = []string{}
+	}
+	if p.Findings == nil {
+		p.Findings = []Finding{}
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := Parse("", b); err != nil {
+		return nil, err
+	}
+	return b, nil
+}

@@ -18,8 +18,10 @@ import (
 	"crypto/ed25519"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 )
 
@@ -45,6 +47,10 @@ type probeView struct {
 	// judged by the same rule admission enforces, which refuses a
 	// choice outside the set (review finding on #200).
 	choice string
+	// position is this view's own count, so a checkpoint probe cites
+	// the position it would actually materialize rather than a
+	// constant the rule would have to be loosened to accept.
+	position string
 }
 
 // fenceKV is the optional fence citation: on a held subject the
@@ -87,7 +93,18 @@ var affordanceCatalog = []struct {
 	{"system.halt.declared", func(v *probeView) string { return `{"reason": "probe"}` }},
 	{"system.halt.lifted", func(v *probeView) string { return `{}` }},
 	{"system.protocol.upgraded", func(v *probeView) string { return `{"to": "seed/1"}` }},
-	{"system.checkpoint", func(v *probeView) string { return `{"n": 1}` }},
+	{"system.checkpoint", func(v *probeView) string {
+		// A shape-valid snapshot citation (next/spec/maintenance.md):
+		// the versioned format, a well-formed digest, a fetchable
+		// location, and this view's own position. The old `{"n": 1}`
+		// stopped being admissible when the checkpoint rule landed,
+		// and a synthesizer that no longer matches the rule makes a
+		// LEGAL act invisible in the orientation read — the #200
+		// failure, which is why the catalog is swept by test.
+		return `{"format": "` + checkpoint.Format + `", "snapshot": "` +
+			strings.Repeat("0", 64) + `", "location": "` + checkpoint.Location +
+			`", "position": "` + v.position + `"}`
+	}},
 	{"actor.enrolled", func(v *probeView) string {
 		pub, _, err := ed25519.GenerateKey(nil)
 		if err != nil {
@@ -217,6 +234,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		verdict:     "0",
 		packet:      probePacket,
 		escalation:  "0",
+		position:    fmt.Sprintf("%d", ctx.Count),
 	}
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {

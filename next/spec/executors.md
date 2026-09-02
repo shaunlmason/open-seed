@@ -112,4 +112,8 @@ to ready, immediately re-claimable, and the contract completes
 elsewhere from the surviving ledger alone; `run.settled` records
 the dead run's actuals afterward (a run settles after its window
 closes). B-style automatic timeout reaping is the Phase 9
-maintenance loop's job; it presupposes exactly these semantics.
+maintenance loop's job; it presupposes exactly these semantics, and
+[`maintenance.md`](maintenance.md) is where they landed: an automatic
+reap requires an admitted `run.interrupted` on the active fence (or a
+`wedge.declared`) BESIDE the expiry classification, because the
+observation channel is lossy and silence alone can never reap.
