@@ -239,7 +239,7 @@ build-plan sentence. NOT `next/spec/transitions.json`, NOT
    instant; the maintenance filing not idempotent.
 8. `make check` green with coverage measured **cold**, at least three
    readings above the gate, and the suites pass **unprivileged** under
-   `setpriv --reuid=65534`.
+   `setpriv --reuid=65534 --regid=65534 --clear-groups`.
 
 **Retention set (existing, shown unharmed):**
 
