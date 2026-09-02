@@ -1165,3 +1165,18 @@ closures, because the test's copy is whatever the fixture returned
 last, and the failure ("the cited contract is not in the fold") names
 the symptom two subjects late. Return a struct the closures write and
 the assertions read, and there is no copy to go stale.
+
+- A test fixture's resolver must know every key that will sign in the
+  drill: the store's resolver answers genesis keys only, and a lane key
+  enrolled on the chain still fails "actor fingerprint not in the
+  keyring" at append. Build the loose resolver over the drill's own
+  key list rather than reusing a fixture that closes over another
+  drill's.
+- When a probe must be signed on a subject the caller did not name (a
+  fact on a derived subject), map the override by verb beside the
+  catalog rather than adding a field to the catalog's anonymous
+  struct: every positional literal in the table breaks otherwise.
+- Adding a registered projection moves every count pin of the registry
+  (`len(results)`, `len(list)`); grep for the old number across the
+  packages before running the suite.
+

@@ -211,8 +211,8 @@ func TestModeGrantsComeFromTheShippedManifests(t *testing.T) {
 			t.Errorf("lane %s: provisioned %v, manifest says %v", id.lane, got, want)
 		}
 	}
-	if len(m.grants["curator"]) != 0 {
-		t.Errorf("the curator holds no write grant at all, and the fixture carries that: %v", m.grants["curator"])
+	if len(m.grants["curator"]) != 1 || m.grants["curator"][0] != keyring.CapCurate {
+		t.Errorf("the curator holds the proposal grant and nothing else, and the fixture carries that: %v", m.grants["curator"])
 	}
 	// The roles came from MANIFESTS, not from this file (D7): their
 	// grants equal what next/lanes/ ships, and they are not in the

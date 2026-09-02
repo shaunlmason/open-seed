@@ -49,6 +49,12 @@ fields, which Phase 6 hardens):
 4. **`findings`** — the negative knowledge a successor must not
    rediscover: `{tried, outcome, pointer?}`. May be empty (a trivial
    park has nothing to record and says so honestly); never absent.
+   Findings are the curation pipeline's stage one, observations
+   ([`curation.md`](curation.md)): a deliberate exit carrying at least
+   one is an observation a hypothesis may cite, and
+   `curation.deadend.recorded` is the same shape with the charter's
+   failure condition and environment, recorded standalone inside the
+   holder's window.
 
 Unknown keys refuse, at the top level and inside entries (the
 wire-parsing precedent). `packet_ref` is RESERVED: the

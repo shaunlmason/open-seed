@@ -23,6 +23,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/classify"
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
@@ -1426,7 +1427,78 @@ func Default() []Rule {
 			_, err := c.Table.Check(rec.Event.Subject, current, verb)
 			return err
 		}},
+		{Name: "curation", Check: func(c *Context, rec *event.Record) error {
+			// The staged curation stores (plans/os-f30ee0d3.md;
+			// next/spec/curation.md): a dead end is the window holder's
+			// candidate, citing the active fence; a hypothesis lives on
+			// the subject its claim derives, cites at least two
+			// admitted observations on two distinct non-failed
+			// contracts, and refuses as a duplicate once proposed; a
+			// promotion cites an admitted hypothesis on its own subject.
+			// Capability rides the grant rule (the proposal's curate
+			// alone); no stage skips, by citation.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil || c.Table == nil {
+				return nil
+			}
+			return checkCuration(c, rec)
+		}},
 	}
+}
+
+// CurationError is a curation fact's refusal at the boundary: the
+// window, the support, the duplicate, or the citation.
+type CurationError struct {
+	Verb, Subject, Reason string
+}
+
+func (e *CurationError) Error() string {
+	return fmt.Sprintf("%s on %s: %s", e.Verb, e.Subject, e.Reason)
+}
+
+func checkCuration(c *Context, rec *event.Record) error {
+	subject := rec.Event.Subject
+	switch rec.Event.Verb {
+	case curation.DeadEndVerb:
+		d, err := curation.ParseDeadEnd(subject, rec.Event.Payload)
+		if err != nil {
+			return err
+		}
+		// The window and the fence are the fence rule's: a dead end
+		// always cites a fence, so outside a window it has already
+		// refused there ("no claim is active"), and a stale citation
+		// too. What the fence rule lets through is a claim key that
+		// is not the holder citing the right fence, and that is this
+		// rule's refusal: a candidate observation is the holder's own.
+		s, ok := c.Lifecycle.State(subject)
+		if !ok || s.Claim == nil {
+			return &FenceError{Subject: subject, Cited: d.Fence, Active: -1}
+		}
+		if rec.Event.Actor != s.Claim.Holder {
+			return &CurationError{rec.Event.Verb, subject, fmt.Sprintf("signer %s is not the window's holder %s: a candidate observation is the holder's own", rec.Event.Actor, s.Claim.Holder)}
+		}
+		return nil
+	case curation.HypothesisVerb:
+		h, err := curation.ParseHypothesis(subject, rec.Event.Payload)
+		if err != nil {
+			return err
+		}
+		if prior, dup := curation.Fold(c.Records).Hypothesis(subject); dup {
+			return &CurationError{rec.Event.Verb, subject, fmt.Sprintf("the claim was proposed at position %d: one claim derives one subject, and a re-proposal changes nothing", prior.Pos)}
+		}
+		_, err = curation.CheckSupport(c.Records, c.Table, c.Lifecycle, subject, h)
+		return err
+	case curation.LessonVerb:
+		l, err := curation.ParseLesson(subject, rec.Event.Payload)
+		if err != nil {
+			return err
+		}
+		cit, _ := curation.ParseCitation(l.Hypothesis)
+		if _, ok := curation.HypothesisValid(c.Records, c.Table, cit); !ok {
+			return &CurationError{rec.Event.Verb, subject, fmt.Sprintf("%s is not an admitted hypothesis: a lesson promotes a proposal that passed the boundary, and no stage skips", l.Hypothesis)}
+		}
+		return nil
+	}
+	return nil
 }
 
 // Run applies the rules in order; the first refusing rule wraps its
