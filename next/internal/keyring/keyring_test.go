@@ -291,9 +291,11 @@ func TestUnseededKeyringRefusesActorEvents(t *testing.T) {
 	}
 }
 
-func TestAppliesOnlyAtSeed1(t *testing.T) {
-	if keyring.Applies(version.Protocol) || !keyring.Applies(version.Seed1) || keyring.Applies("seed/9") {
-		t.Fatal("keyring semantics activate exactly at seed/1")
+func TestAppliesAtSeed1AndLater(t *testing.T) {
+	// A named list, never an ordering: a version this build has not
+	// registered applies nothing, however it sorts (plans/os-8e53ffd9.md D8).
+	if keyring.Applies(version.Protocol) || !keyring.Applies(version.Seed1) || !keyring.Applies(version.Seed2) || keyring.Applies("seed/9") {
+		t.Fatal("keyring semantics activate at seed/1 and stay on at seed/2")
 	}
 	if !keyring.IsActorVerb("actor.enrolled") || keyring.IsActorVerb("message.sent") {
 		t.Fatal("actor verb detection is namespace-based")
@@ -424,5 +426,101 @@ func TestHasAnyCapability(t *testing.T) {
 	must(s.Advance(rec(t, root, "actor.suspended", fp(t, worker), `{"reason": "x"}`)))
 	if s.HasAnyCapability(fp(t, worker), []string{keyring.CapMaintenance}) {
 		t.Fatal("a suspended actor holds nothing")
+	}
+}
+
+// recAt is rec at a named protocol version.
+func recAt(t testing.TB, priv ed25519.PrivateKey, v, verb, subject, payload string) *event.Record {
+	t.Helper()
+	r, err := event.Sign(event.Event{
+		V: v, TS: "2026-09-01T00:00:00Z", Actor: fp(t, priv),
+		Verb: verb, Subject: subject, Payload: json.RawMessage(payload), Prev: event.EmptyHash,
+	}, priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
+const qualifiedTuple = `{"principal": "acme", "harness": "local-worktree/v0", "model": "fable/5.1", "tool_policy": "default", "environment": "detached-git-worktree"}`
+
+// conformance: plans/os-8e53ffd9.md D2, D8 and AC4 — actor.granted
+// accepts an optional tuple at seed/2 positions only. At a seed/1
+// position the field is unknown and refused with its position, the
+// chain-validity posture actors.md gives payload shapes; at seed/2 it
+// is accepted, the set holds it, and the string view of grants still
+// carries the capability. Malformed tuples refuse by shape.
+func TestGrantTupleActivatesAtSeed2(t *testing.T) {
+	root, worker := key(t, 1), key(t, 2)
+	g, err := genesis.Build(root, nil, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wfp := fp(t, worker)
+	up1 := recAt(t, root, version.Protocol, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`)
+	enroll := rec(t, root, "actor.enrolled", wfp, enrollPayload(t, worker, "agent", "worker"))
+	up2 := rec(t, root, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed2+`"}`)
+	grant := func(v, body string) *event.Record { return recAt(t, root, v, "actor.granted", wfp, body) }
+	qualified := `{"capability": "claim", "tuple": ` + qualifiedTuple + `}`
+
+	if _, _, err := keyring.StateAt([]*event.Record{g, up1, enroll, grant(version.Seed1, qualified)}); err == nil || !strings.Contains(err.Error(), "position 3") {
+		t.Fatalf("a grant carrying tuple at a seed/1 position fails at its position under this build too: %v", err)
+	}
+
+	s, active, err := keyring.StateAt([]*event.Record{g, up1, enroll, up2, grant(version.Seed2, qualified)})
+	if err != nil || active != version.Seed2 {
+		t.Fatalf("at a seed/2 position the field is accepted: %v (%s)", err, active)
+	}
+	cited := s.GrantTuples(wfp, keyring.CapClaim)
+	if len(cited) != 1 || cited[0].Model != "fable/5.1" || cited[0].Harness != "local-worktree/v0" {
+		t.Fatalf("the set holds the cited tuple: %+v", cited)
+	}
+	// The string view never loses a qualified grant: this is the
+	// worker's ONLY claim grant, and every existing caller reads
+	// capabilities through it.
+	if !s.HasAnyCapability(wfp, []string{keyring.CapClaim}) {
+		t.Fatal("a qualified grant still grants the capability in the string view")
+	}
+	if e, ok := s.Get(wfp); !ok || len(e.Grants) != 1 || e.Grants[0] != keyring.CapClaim {
+		t.Fatalf("Grants keeps the string view: %+v", e.Grants)
+	}
+	if s.GrantTuples(wfp, keyring.CapVerdict) != nil || s.GrantTuples("deadbeef", keyring.CapClaim) != nil {
+		t.Fatal("a set is per capability and per actor; unknown ones are empty")
+	}
+	// The accessor returns a copy, and a clone carries the set.
+	cited[0].Model = "mutated"
+	if s.GrantTuples(wfp, keyring.CapClaim)[0].Model != "fable/5.1" {
+		t.Fatal("GrantTuples returns a copy the caller cannot write through")
+	}
+	if c := s.Clone().GrantTuples(wfp, keyring.CapClaim); len(c) != 1 || c[0].Model != "fable/5.1" {
+		t.Fatalf("Clone carries the tuple set: %+v", c)
+	}
+
+	// A grant with no tuple at seed/2 folds as before, and adds nothing
+	// to the set; a second qualified grant accumulates.
+	s, _, err = keyring.StateAt([]*event.Record{g, up1, enroll, up2, grant(version.Seed2, `{"capability": "claim"}`)})
+	if err != nil || len(s.GrantTuples(wfp, keyring.CapClaim)) != 0 || !s.HasAnyCapability(wfp, []string{keyring.CapClaim}) {
+		t.Fatalf("a tuple-less grant at seed/2 folds as today: %v %+v", err, s.GrantTuples(wfp, keyring.CapClaim))
+	}
+	s, _, err = keyring.StateAt([]*event.Record{g, up1, enroll, up2, grant(version.Seed2, qualified),
+		grant(version.Seed2, strings.Replace(qualified, "fable/5.1", "fable/5.2", 1))})
+	if err != nil || len(s.GrantTuples(wfp, keyring.CapClaim)) != 2 {
+		t.Fatalf("grants accumulate into the set: %v %+v", err, s.GrantTuples(wfp, keyring.CapClaim))
+	}
+
+	// Malformed tuples (AC4): each fails at its position as an actor
+	// event, never folds as a grant without a tuple.
+	for name, bad := range map[string]string{
+		"missing field": `{"capability": "claim", "tuple": {"principal": "acme", "harness": "h/1", "model": "m/1", "tool_policy": "p"}}`,
+		"empty string":  `{"capability": "claim", "tuple": {"principal": "", "harness": "h/1", "model": "m/1", "tool_policy": "p", "environment": "e"}}`,
+		"unknown field": `{"capability": "claim", "tuple": {"principal": "acme", "harness": "h/1", "model": "m/1", "tool_policy": "p", "environment": "e", "extra": 1}}`,
+		"non-string":    `{"capability": "claim", "tuple": {"principal": 7, "harness": "h/1", "model": "m/1", "tool_policy": "p", "environment": "e"}}`,
+		"not an object": `{"capability": "claim", "tuple": "acme"}`,
+		"null":          `{"capability": "claim", "tuple": null}`,
+	} {
+		_, _, err := keyring.StateAt([]*event.Record{g, up1, enroll, up2, grant(version.Seed2, bad)})
+		if err == nil || !strings.Contains(err.Error(), "position 4") {
+			t.Errorf("%s: a malformed tuple fails verification at its position: %v", name, err)
+		}
 	}
 }

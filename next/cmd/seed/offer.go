@@ -22,6 +22,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 )
 
 func runOffer(args []string, stdout, stderr io.Writer) int {
@@ -38,11 +39,15 @@ func runOffer(args []string, stdout, stderr io.Writer) int {
 }
 
 // offerEligibility is the published eligibility scope: empty arrays
-// mean unscoped (any active worker, any tier), and omitempty keeps the
-// canonical payload minimal.
+// mean unscoped (any active worker, any tier, any configuration), and
+// omitempty keeps the canonical payload minimal. Tuples is the
+// scheduling input III.J row 3 lands as (plans/os-8e53ffd9.md D6): the
+// supervisor writes the configurations it wants into the offer, and a
+// qualified worker sees it only if one of its cited tuples is named.
 type offerEligibility struct {
-	Capabilities []string `json:"capabilities,omitempty"`
-	Tiers        []string `json:"tiers,omitempty"`
+	Capabilities []string      `json:"capabilities,omitempty"`
+	Tiers        []string      `json:"tiers,omitempty"`
+	Tuples       []tuple.Tuple `json:"tuples,omitempty"`
 }
 
 func runOfferPublish(args []string, stdout, stderr io.Writer) int {
@@ -52,11 +57,23 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	subject := fs.String("subject", "", "contract in ready to invite claims on")
 	keyPath := fs.String("key", "", "OpenSSH ed25519 private key of the supervisor")
 	expires := fs.String("expires", "", "RFC3339 expiry, strictly after now")
-	var capabilities, tiers repeatedFlag
+	var capabilities, tiers, tuples repeatedFlag
 	fs.Var(&capabilities, "capability", "capability the taking worker must hold (repeatable; none = any active worker)")
 	fs.Var(&tiers, "tier", "contract tier the offer covers (repeatable; none = any tier)")
+	fs.Var(&tuples, "tuple", "runtime tuple a qualified taker's claim grant must cite, as the strict JSON object (repeatable; none = any configuration)")
 	if err := fs.Parse(args); err != nil || *dir == "" || *subject == "" || *keyPath == "" || *expires == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer publish requires --ledger <dir> --subject <id> --key <path> --expires <RFC3339> [--capability c]... [--tier t]..."), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer publish requires --ledger <dir> --subject <id> --key <path> --expires <RFC3339> [--capability c]... [--tier t]... [--tuple <json>]..."), stdout, stderr)
+	}
+	// Each --tuple is parsed at the door with the same strict parser
+	// admission applies, so a malformed one refuses as usage here and
+	// never becomes a signed record the boundary refuses later.
+	var scoped []tuple.Tuple
+	for _, raw := range tuples {
+		t, err := tuple.Parse([]byte(raw))
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--tuple %s: %v", raw, err)), stdout, stderr)
+		}
+		scoped = append(scoped, t)
 	}
 	keyBytes, err := os.ReadFile(*keyPath)
 	if err != nil {
@@ -77,7 +94,7 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	payload, err := json.Marshal(struct {
 		Eligibility offerEligibility `json:"eligibility"`
 		Expires     string           `json:"expires"`
-	}{offerEligibility{Capabilities: capabilities, Tiers: tiers}, *expires})
+	}{offerEligibility{Capabilities: capabilities, Tiers: tiers, Tuples: scoped}, *expires})
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
@@ -127,12 +144,13 @@ func offerAuthorized(records []*event.Record, o transition.OfferFact) bool {
 
 // offerRow is one live, eligible offer in the list envelope.
 type offerRow struct {
-	Subject      string   `json:"subject"`
-	Position     string   `json:"position"`
-	Tier         string   `json:"tier,omitempty"`
-	Capabilities []string `json:"capabilities,omitempty"`
-	Tiers        []string `json:"tiers,omitempty"`
-	Expires      string   `json:"expires"`
+	Subject      string        `json:"subject"`
+	Position     string        `json:"position"`
+	Tier         string        `json:"tier,omitempty"`
+	Capabilities []string      `json:"capabilities,omitempty"`
+	Tiers        []string      `json:"tiers,omitempty"`
+	Tuples       []tuple.Tuple `json:"tuples,omitempty"`
+	Expires      string        `json:"expires"`
 }
 
 func runOfferList(args []string, stdout, stderr io.Writer) int {
@@ -179,6 +197,7 @@ func runOfferList(args []string, stdout, stderr io.Writer) int {
 						Tier:         s.Tier,
 						Capabilities: o.Capabilities,
 						Tiers:        o.Tiers,
+						Tuples:       o.Tuples,
 						Expires:      o.Expires,
 					})
 				}
@@ -198,8 +217,12 @@ func runOfferList(args []string, stdout, stderr io.Writer) int {
 // the taking lane, and admission already lets the operator act
 // everywhere in it, so hiding offers from operators would let them
 // claim work they cannot discover. The subject's filed tier must be
-// in the scoped tier set. Empty scopes match any active worker, any
-// tier.
+// in the scoped tier set. A scoped tuple set is met by a worker whose
+// claim grants cite one of its members, per field
+// (plans/os-8e53ffd9.md D6): the supervisor named the configurations
+// it wants, and a worker with none on record, or with only others, is
+// not among them. Empty scopes match any active worker, any tier, any
+// configuration.
 func eligibleFor(ring *keyring.State, fp, tier string, o transition.OfferFact) bool {
 	for _, c := range o.Capabilities {
 		if !ring.HasAnyCapability(fp, []string{c, keyring.CapOperator}) {
@@ -211,6 +234,23 @@ func eligibleFor(ring *keyring.State, fp, tier string, o transition.OfferFact) b
 		for _, t := range o.Tiers {
 			if t == tier {
 				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	if len(o.Tuples) > 0 && !ring.HasAnyCapability(fp, []string{keyring.CapOperator}) {
+		found := false
+		for _, cited := range ring.GrantTuples(fp, keyring.CapClaim) {
+			for _, want := range o.Tuples {
+				if cited.Equal(want) {
+					found = true
+					break
+				}
+			}
+			if found {
 				break
 			}
 		}

@@ -20,6 +20,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,13 +34,22 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
-// Tuple is the runtime tuple the adapter actually provisioned
-// (qualification depends on it, charter §II.5). The v0 value is an
-// honest stub: Phase 10 gives tuples meaning, and nothing here
-// pretends qualification exists yet.
-type Tuple struct {
-	Runtime string `json:"runtime"`
-}
+// Tuple is the runtime tuple (charter §II.5; internal/tuple), the
+// configuration a qualification binds to. An adapter reports it twice
+// (plans/os-8e53ffd9.md D3): Adapter.Tuple() is the STATIC, partial
+// report before any provision, the fields the adapter controls; and
+// Run.Tuple() is what it RESOLVED, checked inside Provision against
+// the configuration the admitted run.started declared, before any
+// execution is released.
+type Tuple = tuple.Tuple
+
+// ErrTupleMismatch refuses a provision whose resolved configuration
+// differs from the one the admitted start declared: the ledger admitted
+// a configuration and the adapter built another, and execution under a
+// configuration the ledger did not admit is the thing III.E row 6
+// forbids. Nothing is left behind: the check runs with the rollback
+// armed.
+var ErrTupleMismatch = errors.New("the provisioned runtime tuple differs from the one the admitted run.started declared — execution is released only under the configuration the ledger admitted (next/spec/qualification.md)")
 
 // ProvisionSpec names everything a provision needs: the ledger the
 // admitted run.started lives in, the repository and base revision
@@ -62,6 +72,9 @@ type ProvisionSpec struct {
 type Run interface {
 	// Workspace is the provisioned working directory.
 	Workspace() string
+	// Tuple is the runtime tuple the adapter RESOLVED for this run:
+	// what was actually provisioned, never what was declared.
+	Tuple() Tuple
 	// Meter appends one metered observation line to the run's
 	// stream: usage rides the ephemeral channel and settles to the
 	// ledger at run end via run.settled.
@@ -89,10 +102,41 @@ var ErrNoAdmittedStart = errors.New("no admitted run.started for this fence — 
 // LocalWorktree is the local worktree adapter: a detached git
 // worktree as the workspace, the packet at .seed-run/packet.json,
 // and metering onto the per-fence observation stream.
-type LocalWorktree struct{}
+type LocalWorktree struct {
+	// Resolve is the post-provision resolution seam: given the
+	// configuration the admitted start declared and the workspace
+	// just built, it returns what was ACTUALLY provisioned. Nil means
+	// the local adapter's own resolution, which is honest about its
+	// limit: a worktree cannot see which model a lane process will
+	// call, so it resolves harness and environment from what it built
+	// and takes principal, model and tool policy from the declaration.
+	// Drills set it to an adapter that resolves something else and
+	// must be refused.
+	Resolve func(declared Tuple, workspace string) Tuple
+}
 
-// Tuple reports the v0 stub.
-func (LocalWorktree) Tuple() Tuple { return Tuple{Runtime: "local-worktree/v0"} }
+// LocalHarness and LocalEnvironment are the two fields the local
+// worktree adapter can resolve for itself.
+const (
+	LocalHarness     = "local-worktree/v0"
+	LocalEnvironment = "detached-git-worktree"
+)
+
+// Tuple reports the static, partial configuration: the two fields this
+// adapter controls, the other three left for the declaring caller.
+func (LocalWorktree) Tuple() Tuple {
+	return Tuple{Harness: LocalHarness, Environment: LocalEnvironment}
+}
+
+func (lw LocalWorktree) resolve(declared Tuple, workspace string) Tuple {
+	if lw.Resolve != nil {
+		return lw.Resolve(declared, workspace)
+	}
+	out := declared
+	out.Harness = LocalHarness
+	out.Environment = LocalEnvironment
+	return out
+}
 
 // Wake is the documented no-op: the advisory channel that does
 // nothing is the honest v0, and polling loses only latency.
@@ -102,8 +146,9 @@ func (LocalWorktree) Wake(string) error { return nil }
 // worktree, writes the packet, and ensures the observation stream
 // directory. Git runs with fixed argument vectors; nothing is
 // interpolated into a shell.
-func (LocalWorktree) Provision(spec ProvisionSpec) (Run, error) {
-	if err := verifyStarted(spec); err != nil {
+func (lw LocalWorktree) Provision(spec ProvisionSpec) (Run, error) {
+	started, err := verifyStarted(spec)
+	if err != nil {
 		return nil, err
 	}
 	dir, err := os.MkdirTemp("", "seed-run-")
@@ -136,35 +181,51 @@ func (LocalWorktree) Provision(spec ProvisionSpec) (Run, error) {
 		rollback()
 		return nil, err
 	}
-	return &localRun{spec: spec, workspace: workspace}, nil
+	// The resolved-against-admitted check (plans/os-8e53ffd9.md D3),
+	// with the rollback armed: a start that declared a configuration
+	// releases execution only under that configuration. A start with
+	// no declaration (a seed/1 chain) has nothing to check against and
+	// the resolved value is still reported.
+	var resolved Tuple
+	if started.Tuple != nil {
+		resolved = lw.resolve(*started.Tuple, workspace)
+		if field, have, want, differs := resolved.Diff(*started.Tuple); differs {
+			rollback()
+			return nil, fmt.Errorf("%w: %s resolved to %q, the admitted start declared %q", ErrTupleMismatch, field, have, want)
+		}
+	} else {
+		resolved = lw.resolve(Tuple{}, workspace)
+	}
+	return &localRun{spec: spec, workspace: workspace, tuple: resolved}, nil
 }
 
 // verifyStarted replays the ledger and requires the admitted
 // run.started the spec cites, at its position, for this fence.
-func verifyStarted(spec ProvisionSpec) error {
+func verifyStarted(spec ProvisionSpec) (*transition.RunStartFact, error) {
 	store, err := ledger.Open(spec.Ledger)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	resolve, _, err := genesis.Bootstrap(store)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var records []*event.Record
 	if _, err := store.VerifyFromGenesis(resolve, ledger.WithObserver(func(pos int, r *event.Record) {
 		records = append(records, r)
 	})); err != nil {
-		return err
+		return nil, err
 	}
 	table, err := transition.Default()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	s, ok := table.FoldRecords(records).State(spec.Subject)
 	if !ok {
-		return ErrNoAdmittedStart
+		return nil, ErrNoAdmittedStart
 	}
-	for _, st := range s.RunStarts {
+	for i := range s.RunStarts {
+		st := s.RunStarts[i]
 		if st.Pos == spec.Started && st.Fence == spec.Fence &&
 			admit.RunStartValid(records, table, spec.Subject, st) {
 			// Fold presence is never proof of admission (review
@@ -172,18 +233,22 @@ func verifyStarted(spec ProvisionSpec) error {
 			// position-accurate boundary the run rule enforces, or a
 			// raw-pushed start would provision an unbudgeted
 			// workspace.
-			return nil
+			return &st, nil
 		}
 	}
-	return ErrNoAdmittedStart
+	return nil, ErrNoAdmittedStart
 }
 
 type localRun struct {
 	spec      ProvisionSpec
 	workspace string
+	tuple     Tuple
 }
 
 func (r *localRun) Workspace() string { return r.workspace }
+
+// Tuple is what this run resolved to, never what its start declared.
+func (r *localRun) Tuple() Tuple { return r.tuple }
 
 func (r *localRun) Meter(units int, step string) error {
 	return obs.Append(r.spec.ObsDir, r.spec.Actor, obs.FormatFence(r.spec.Fence), obs.Line{

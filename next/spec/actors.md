@@ -20,6 +20,13 @@ verified before `seed/1` existed still verifies (the bump discipline in
 `seed/0` tip refuse as a verb illegal in this state (exit 3) until the
 deployment upgrades.
 
+The same posture gives `seed/2` its boundary
+([`qualification.md`](qualification.md)): because these payload shapes
+are chain validity, a field added to one is a rule a `seed/1` validator
+judges differently, so `actor.granted`'s optional `tuple` activates at
+`seed/2` positions only and stays unknown-and-refused at `seed/1`
+positions under every conformant validator.
+
 ## The keyring
 
 The keyring is a **projection**: seeded from the genesis payload's
@@ -41,12 +48,24 @@ attributed to it.
   cryptographic fact** (SEED-NEXT.md Part II), and nothing
   security-relevant may assume otherwise.
 - **`actor.granted`** — subject: an enrolled fingerprint. Payload
-  `{"capability": "<non-empty>"}`. Grants accumulate as capability data;
-  admission checks them per verb from Phase 3.2.
+  `{"capability": "<non-empty>"}`, and from `seed/2` optionally
+  `{"capability": "<non-empty>", "tuple": {…}}` where `tuple` is the
+  strict five-field runtime tuple of
+  [`qualification.md`](qualification.md): a malformed one (a missing
+  field, an empty string, an unknown field, a non-string, `null`) fails
+  verification at its position as `bad_actor_event`, and a grant with
+  no tuple folds exactly as before. Grants accumulate as capability
+  data; admission checks them per verb from Phase 3.2. The tuples a
+  holder's `claim` grants cite form the SET the qualification rule
+  reads at `run.started`; an actor with none is unqualified (the
+  bridge) and admits any run.
 - **`actor.suspended`** / **`actor.revoked`** — subject: an enrolled
   fingerprint. Payload `{"reason": "<non-empty>"}`.
-- **`actor.qualified`** — cataloged, undefined until qualification lands
-  (build plan Phase 10); a `seed/1` chain refuses it.
+- **`actor.qualified`** — cataloged, undefined until eval contracts land
+  (build plan Phase 10 item 2: it cites eval results, and there are
+  none to cite before them); every chain refuses it by name, at
+  `seed/2` as at `seed/1`. Item 1 gave grants the tuple field instead
+  ([`qualification.md`](qualification.md)).
 
 ## Standing transitions
 

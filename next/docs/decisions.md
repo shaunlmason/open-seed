@@ -1956,3 +1956,84 @@ here. Newest last.
   goes red, and with the drill also counting `operator` it wrongly goes
   green; with `sealer` removed it goes red, and with the drill reading a
   hand list it wrongly goes green.
+
+- **The fold and the keyring gate on a named list, `version.Activated`,
+  not on `== seed/1`** (os-8e53ffd9). The lifecycle fold skipped every
+  record whose version was not exactly `seed/1`, so at `seed/2` no
+  claim, reservation or offer folded at all and the first qualification
+  drill refused "no open valid reservation" before it reached the run
+  rule. The gate the plan named for the keyring ("true for `seed/1` and
+  later") is the same gate the fold needs, so it lives once in
+  `internal/version`: `Activated(v)` is `seed/1` or `seed/2`, a list
+  rather than an ordering, so a version this build has not registered
+  activates nothing however it would sort (the `Applies("seed/9")` pin
+  stays false). `tuple.Applies` is the narrower gate for what `seed/2`
+  added on top.
+
+- **Tuples live beside the string view of grants, not in place of
+  it** (os-8e53ffd9, D2 refined). The plan retyped `Entry.Grants` as
+  `[]Grant{Capability, Tuple}` with `Grants()` keeping the string view.
+  Ten non-test readers use `Grants` as `[]string`, and every one of
+  them cares only about capabilities; the tuple set is read at exactly
+  one site (the run rule) and one surface (`offer list`). So `Grants`
+  stays `[]string`, and the set is a sibling `Tuples map[capability]
+  []Tuple` with `GrantTuples(actor, capability)` as the one accessor,
+  returning a copy. The drill that a qualified grant never drops out
+  of the string view is the same drill either shape needs.
+
+- **A seed/1-only validator refuses an upgraded chain at the first
+  seed/2 record, not at the upgrade record** (os-8e53ffd9, AC2c
+  refined). The plan said "at the upgrade record with
+  `version_mismatch`". The verifier's standing mechanism is that the
+  upgrade event is the last event of the old version and is itself
+  valid; the NEXT record is the first judged under the new version, and
+  that is where a build not supporting it refuses, as
+  `version_unsupported` in the `version_mismatch` exit family. Moving
+  the refusal onto the upgrade record would change `internal/ledger`,
+  which the plan's scope guard keeps out of this card, and would buy
+  nothing: either way the refusal names the version and never the
+  grant, which is the property the criterion exists for. The drill pins
+  the position and the reason as they are.
+
+- **`seed run start` is a CLI verb over `run.started`, not a registered
+  loop act** (os-8e53ffd9, D9 applied). The loop-verb registry is the
+  worker lane's vocabulary: what a `claim` lane declares in
+  `acts_through` and what the loop driver's act gate admits.
+  `run.started` is the supervisor's, and `loop-verbs.md`'s own table
+  says a `claim` lane cannot reach it. Registering it would have let a
+  worker manifest declare it and the driver perform it, and would have
+  touched `internal/loopverb` and the lane manifests, which the plan's
+  file scope does not name. It reuses the loop verbs' transport, signer,
+  session and derivations (`activeFence`, `soleOpenReservation`, which
+  now names the citing act in its refusal) and refuses an unknown
+  subverb the way `maintain` and `merge` do.
+
+- **A raw-pushed start's declaration is re-judged where its fence and
+  reservation are** (review finding on #216). `RunStartValid` decoded
+  the tuple as optional and checked only signer, fence and reservation,
+  so a raw `seed/2` start with no tuple, a malformed one, or a drifting
+  one counted as admitted: `Provision` would have skipped the
+  resolved-tuple comparison on a nil declaration, and the
+  one-run-per-window check would have let it block the legitimate
+  start. The decode (`declaredTuple`) and the set rule (`tupleDrift`)
+  are now one function each, called by the run rule at the tip and by
+  `RunStartValid` at the record's own prefix under the record's own
+  version. Same shape as the earlier "fold presence is never proof of
+  admission" finding, one field later.
+
+- **A version gate on a field reads presence, not value** (review
+  finding on #216). The offer rule refused `tuples` before `seed/2` only
+  when the decoded slice was non-empty, so `"tuples": []` passed on a
+  `seed/1` chain while a `seed/1` validator, which strictly decodes
+  eligibility as `{capabilities, tiers}`, refuses it: two admission
+  points disagreeing on a record still labeled `seed/1`, which is
+  exactly what the bump exists to prevent. The field is decoded raw and
+  its presence is the gate; its value is parsed after.
+
+- **A malformed scope folds to nothing, never to a wider one** (review
+  finding on #216). The offer fold dropped unparseable tuple members
+  and kept the offer, so an all-malformed scope became an UNSCOPED
+  offer every eligible worker saw. Both the offer fold and the
+  run-start fold now treat a malformed tuple as a malformed payload:
+  no fact, one anomaly, the `run.settled` posture the tree already
+  had.

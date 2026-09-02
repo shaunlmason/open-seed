@@ -656,3 +656,71 @@ func TestBlindRetryDetector(t *testing.T) {
 		})
 	}
 }
+
+// conformance: plans/os-8e53ffd9.md step 8 — in small-team mode the
+// implementing actor can be QUALIFIED: its claim grant cites the
+// configuration an eval will one day have passed, the supervisor's
+// offers name the configurations they want, and the run the supervisor
+// starts inside the worker's window is held to the holder's grant. A
+// contract offered under a configuration the worker does not hold is
+// unseen, so the loop idles; one offered under its own configuration is
+// claimed, and inside that window a start declaring a different model
+// is out of grant while the cited one admits.
+func TestSmallTeamQualifiedWorkerIsOfferedAndHeldToItsConfiguration(t *testing.T) {
+	m := buildMode(t, smallTeam)
+	m.appendRaw(ledger.UpgradeVerb, "system", `{"to": "`+version.Seed2+`"}`)
+	m.appendRaw("actor.granted", m.fps["impl"], `{"capability": "claim", "tuple": `+drillTuple(nil)+`}`)
+	offerUnder := func(subject, tup string) {
+		t.Helper()
+		m.appendRaw("intent.filed", subject, `{"intent": "drill", "tier": "trivial", "budget": "small", "routing": "core"}`)
+		m.appendRaw("contract.specified", subject,
+			fmt.Sprintf(`{"acceptance": {"ref": "accept.md @ %s", "executable": false}}`, m.spec))
+		offer := fmt.Sprintf(`{"eligibility": {"capabilities": ["claim"], "tuples": [%s]}, "expires": %q}`,
+			tup, time.Now().UTC().Add(time.Hour).Format(time.RFC3339))
+		if e, code := runEnv(t, "ledger", "append", "--remote", m.remote, "--state", m.state,
+			"--key", m.keys["supervisor"], "--verb", "offer.published", "--subject", subject,
+			"--payload", offer); code != 0 {
+			t.Fatalf("offer: %d %+v", code, e)
+		}
+	}
+
+	refused, admitted := 0, 0
+	d, err := loop.New(implementerManifest(t), loopVerbs{}, m.posture(), m.keys["impl"],
+		loop.WorkFunc(func(s string, sit loop.Situation) (int, error) {
+			start := func(model string) (ledgerEnv, int) {
+				return runEnv(t, append(append([]string{"run", "start"}, m.posture()...),
+					"--key", m.keys["supervisor"], "--subject", s,
+					"--principal", "acme", "--model", model, "--tool-policy", "default")...)
+			}
+			if e, code := start("fable/9.9"); code != 14 || e.Error == nil || e.Error.Code != "out_of_grant" {
+				return 0, fmt.Errorf("a start under a configuration the holder's grant does not cite is out of grant inside the window: %d %+v", code, e.Error)
+			}
+			refused++
+			if e, code := start("fable/5.1"); code != 0 {
+				return 0, fmt.Errorf("the cited configuration admits: %d %+v", code, e.Error)
+			}
+			admitted++
+			return 2, nil
+		}), loop.WithBase(m.base+".."+m.head))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	offerUnder("c-1", drillTuple(map[string]string{"model": "fable/9.9"}))
+	step, err := d.Step(5)
+	if err != nil || step.Outcome != loop.Idle {
+		t.Fatalf("an offer naming a configuration the worker does not hold is unseen, so the loop idles: %+v %v", step, err)
+	}
+
+	offerUnder("c-2", drillTuple(nil))
+	step, err = d.Step(5)
+	if err != nil {
+		t.Fatalf("the loop must reach a deliberate exit: %v", err)
+	}
+	if step.Outcome != loop.Submitted || step.Subject != "c-2" {
+		t.Fatalf("the offer naming the worker's own configuration is claimed and submitted: %s %s (%+v)", step.Outcome, step.Subject, step.Cause)
+	}
+	if refused != 1 || admitted != 1 {
+		t.Fatalf("inside the window the drifted start refused once and the cited one admitted once: %d %d", refused, admitted)
+	}
+}

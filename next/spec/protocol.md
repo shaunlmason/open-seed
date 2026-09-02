@@ -44,6 +44,17 @@
     at `seed/0` positions stay inert and grandfathered, and a new
     `actor.*` proposal at a `seed/0` tip refuses until the deployment
     upgrades.
+  - `seed/2` — activates the runtime-tuple semantics
+    ([`qualification.md`](qualification.md)): `actor.granted` may cite
+    a `tuple`, `run.started` must declare one, an offer may scope by
+    `tuples`, and drift refuses as `out_of_grant`. A `seed/1` validator
+    strictly decodes `actor.granted` as `{capability}` and so fails a
+    tuple-bearing grant at its position, which is exactly a validation
+    rule the two would judge differently — hence the bump. At `seed/1`
+    positions the field stays unknown-and-refused under a `seed/2`
+    validator too, so every existing chain verifies byte for byte; a
+    `seed/1`-only validator refuses an upgraded chain at the first
+    `seed/2` record by version, never by misjudging the grant.
 
 ## Canonical event form
 
@@ -150,7 +161,9 @@ admission).
   is additive: older validators refuse the unknown verb safely, so
   the protocol version does not bump).
 - `budget.*` — `reserve`, `settle`, `release`.
-- `run.*` — `settled` (aggregate metering).
+- `run.*` — `started` (the spending gate; declares the runtime tuple
+  from `seed/2`, [`qualification.md`](qualification.md)), `settled`
+  (aggregate metering), `interrupted`.
 - `message.*` — `sent`, `acked`.
 - `request.*` — inbound proposals from projection surfaces (mirror edits,
   dashboard actions).

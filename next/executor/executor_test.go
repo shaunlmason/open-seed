@@ -11,8 +11,13 @@ import (
 
 func TestLocalWorktreeSurface(t *testing.T) {
 	var lw LocalWorktree
-	if got := lw.Tuple(); got.Runtime != "local-worktree/v0" {
-		t.Fatalf("the v0 tuple stub: %+v", got)
+	// The static report is the two fields this adapter controls and
+	// nothing else: principal, model and tool policy are the caller's
+	// judgment, and an adapter that invented one would declare a
+	// configuration nobody chose (plans/os-8e53ffd9.md D1).
+	if got := lw.Tuple(); got.Harness != LocalHarness || got.Environment != LocalEnvironment ||
+		got.Principal != "" || got.Model != "" || got.ToolPolicy != "" || got.Complete() {
+		t.Fatalf("the local adapter's static report: %+v", got)
 	}
 	if err := lw.Wake("anyone"); err != nil {
 		t.Fatalf("wake is the advisory no-op — its total failure costs latency, and the honest v0 does nothing: %v", err)
