@@ -1053,3 +1053,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T14:10:31Z"},"task":"os-96850e5a","ts":"2026-09-02T12:10:31Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-96850e5a","ts":"2026-09-02T12:15:14Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 11 item 3 — poisoning drill: constructed trajectories fail to achieve promotion"},"task":"os-e2f1ad23","ts":"2026-09-02T12:15:20Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-e2f1ad23","ts":"2026-09-02T12:15:24Z","verb":"promote"}
