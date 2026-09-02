@@ -71,6 +71,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runDecision(args[1:], stdout, stderr)
 	case "submission":
 		return runSubmission(args[1:], stdout, stderr)
+	case "merge":
+		return runMerge(args[1:], stdout, stderr)
 	case "reconcile":
 		return runReconcile(args[1:], stdout, stderr)
 	case "lane":
