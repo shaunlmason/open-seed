@@ -68,6 +68,20 @@
     `seed/3` validator too, and the marker is neither read by the fold
     nor admitted at the boundary, so every existing chain verifies byte
     for byte.
+  - `seed/4` — activates the independence levels
+    ([`verdicts.md`](verdicts.md), "Independence levels"):
+    `verdict.rendered`'s `independence` widens from the literal `L1`
+    to the ordered vocabulary `L1`, `L2`, `L3`, the verdict may declare
+    the verifier's `tuple`, and the tier table's `independence` column
+    is enforced at the verdict boundary and reapplied along the merge
+    chain. A `seed/3` validator's strict verdict decode refuses the
+    `tuple` field and any literal but `L1`, so the two judge a `seed/4`
+    verdict differently, hence the bump, which makes a `seed/3`-only
+    validator refuse an upgraded chain at the first `seed/4` record by
+    version rather than by misjudging a level. At `seed/3` positions
+    the literal `L1` alone admits under a `seed/4` validator too, and
+    the eval semantics of `seed/3` hold at `seed/4` alike (the gate is
+    a named list), so every existing chain verifies byte for byte.
 
 ## Canonical event form
 
@@ -173,7 +187,9 @@ admission).
 - `plan.*` — `proposed`, `approved` (observation of the plan PR merge).
 - `progress.*` — `milestone` (coarse; bounded frequency).
 - `submission.*` — `made` (branch, evidence refs).
-- `verdict.*` — `rendered` (pass/fail, receipt, independence level achieved).
+- `verdict.*` — `rendered` (pass/fail, receipt, independence level
+  achieved: `L1` alone before `seed/4`, `L1`/`L2`/`L3` with the
+  verifier's declared tuple from it, [`verdicts.md`](verdicts.md)).
 - `merge.*` / `check.*` — `requested`, `observed` (external-fact
   observations).
 - `offer.*` — `published` (the supervisor's eligibility-scoped,

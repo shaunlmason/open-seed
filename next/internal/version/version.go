@@ -40,12 +40,22 @@ const Seed2 = "seed/2"
 // positions keep their earlier judgment.
 const Seed3 = "seed/3"
 
+// Seed4 is the protocol version that activates the independence levels
+// (next/spec/verdicts.md; plans/os-99829835.md): verdict.rendered's
+// independence widens from the literal L1 to the ordered vocabulary
+// {L1, L2, L3}, the verdict may declare the verifier's runtime tuple,
+// and the tier table's independence column is enforced at the verdict
+// boundary. A seed/3 validator's strict verdict decode refuses the
+// tuple field and the wider vocabulary, which is the bump trigger;
+// records at earlier positions keep their earlier judgment.
+const Seed4 = "seed/4"
+
 // Supported lists the protocol versions this build verifies and appends:
 // the genesis default plus every later version it implements. Verifiers
 // and admission points seed their default supported sets from it, so a
 // chain that upgrades to a version this build implements keeps verifying
 // without per-caller configuration.
-func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3} }
+func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3, Seed4} }
 
 // Activated reports whether the semantics seed/1 introduced (the actor
 // keyring, the lifecycle fold, budgets, offers) are active at a record
@@ -54,11 +64,22 @@ func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3} }
 // has not registered activates nothing however it would sort
 // (plans/os-8e53ffd9.md D8). tuple.Applies is the narrower gate for
 // what seed/2 added on top.
-func Activated(v string) bool { return v == Seed1 || v == Seed2 || v == Seed3 }
+func Activated(v string) bool { return v == Seed1 || v == Seed2 || v == Seed3 || v == Seed4 }
 
 // EvalApplies reports whether the qualification verbs and the eval
 // marker on intent.filed are defined at a record carrying version v:
-// seed/3 exactly (plans/os-03e47abb.md D8). It lives here rather than
-// beside the eval package because the keyring and the fold gate on it
-// and the eval derivation reads both.
-func EvalApplies(v string) bool { return v == Seed3 }
+// seed/3 and every later version this build registers, as a named
+// list (plans/os-03e47abb.md D8; plans/os-99829835.md D4). It was an
+// equality while seed/3 was the newest version, which memory/LEARNINGS.md
+// predicted would close on seed/4; a version this build has not
+// registered activates nothing however it would sort. It lives here
+// rather than beside the eval package because the keyring and the fold
+// gate on it and the eval derivation reads both.
+func EvalApplies(v string) bool { return v == Seed3 || v == Seed4 }
+
+// LevelsApply reports whether the independence levels and the verdict's
+// declared tuple are defined at a record carrying version v: seed/4
+// exactly (plans/os-99829835.md D4), the item 2 posture for a field a
+// seed/3 validator's strict verdict decode would refuse. A later
+// version joins this list when it is registered, never by ordering.
+func LevelsApply(v string) bool { return v == Seed4 }

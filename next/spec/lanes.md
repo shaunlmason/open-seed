@@ -146,7 +146,9 @@ and the capability check then asks it for the grant.
 
 The obligation is **conditional on running a loop, and not dodgeable by
 declining to**. Four of the six lanes perform no loop act — a verifier
-acts through `verdict.rendered`, a dispatcher through `intent.filed`,
+acts through `verdict.rendered` (from `seed/4` declaring its own
+runtime tuple beside the level it achieved,
+[`verdicts.md`](verdicts.md)), a dispatcher through `intent.filed`,
 neither of which is a loop act — so requiring loop acts of all six
 would force four manifests to claim work they never do. Instead: a lane
 that declares acts must declare where its liveness comes from, and a

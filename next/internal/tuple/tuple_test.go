@@ -73,11 +73,58 @@ func TestDiffNamesTheFieldPerField(t *testing.T) {
 }
 
 func TestAppliesAtSeed2AndLater(t *testing.T) {
-	if Applies(version.Protocol) || Applies(version.Seed1) || !Applies(version.Seed2) || !Applies(version.Seed3) || Applies("seed/9") {
+	if Applies(version.Protocol) || Applies(version.Seed1) || !Applies(version.Seed2) || !Applies(version.Seed3) || !Applies(version.Seed4) || Applies("seed/9") {
 		t.Fatal("tuple semantics activate at seed/2 and stay on at every later registered version, never by ordering")
 	}
 	partial := Tuple{Harness: "h/1", Environment: "env"}
 	if partial.Complete() || !full().Complete() {
 		t.Fatal("Complete reports whether every field is set")
+	}
+}
+
+// conformance: plans/os-99829835.md AC3, D1 — the level's model and
+// harness comparisons: family or provider separates, versions never
+// do, and a provider named on one side only is not a difference the
+// record can prove.
+func TestModelAndHarnessSeparation(t *testing.T) {
+	rows := []struct {
+		a, b      string
+		separates bool
+		why       string
+	}{
+		{"fable/7.7", "fable/7.8", false, "a newer build of one family is one failure domain"},
+		{"fable/7.7", "other/1", true, "a different family separates"},
+		{"acme/fable/7.7", "acme/fable/8.0", false, "same provider and family, versions ignored"},
+		{"acme/fable/7.7", "zed/fable/7.7", true, "two providers serving one family separate"},
+		{"acme/fable/7.7", "fable/7.7", false, "a provider named on one side only proves nothing"},
+		{"acme/fable/7.7", "acme/other/1", true, "the family differs under one provider"},
+		{"fable", "fable", false, "a bare string is its own family"},
+		{"fable", "other", true, "bare families differ"},
+	}
+	for _, r := range rows {
+		if got := SeparatesModel(r.a, r.b); got != r.separates {
+			t.Errorf("SeparatesModel(%q, %q) = %v: %s", r.a, r.b, got, r.why)
+		}
+		if got := SeparatesModel(r.b, r.a); got != r.separates {
+			t.Errorf("SeparatesModel is symmetric: (%q, %q)", r.b, r.a)
+		}
+	}
+	if p, f := ModelLineage("acme/fable/7.7"); p != "acme" || f != "fable" {
+		t.Fatalf("a three-part model names provider and family: %q %q", p, f)
+	}
+	if p, f := ModelLineage("fable/7.7"); p != "" || f != "fable" {
+		t.Fatalf("a two-part model names the family alone: %q %q", p, f)
+	}
+	for _, r := range []struct {
+		a, b      string
+		separates bool
+	}{
+		{"local-worktree/v0", "local-worktree/v1", false},
+		{"local-worktree/v0", "container/v0", true},
+		{"h", "h", false},
+	} {
+		if got := SeparatesHarness(r.a, r.b); got != r.separates {
+			t.Errorf("SeparatesHarness(%q, %q) = %v", r.a, r.b, got)
+		}
 	}
 }

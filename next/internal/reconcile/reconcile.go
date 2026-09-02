@@ -12,6 +12,7 @@ package reconcile
 import (
 	"fmt"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/obligation"
@@ -67,6 +68,14 @@ const ClassVerdictUnverified = "verdict_unverified"
 // fact's digest. Evidence grade: it needs the repository. Such a fact
 // never surfaces to a worker; this class is where it is reported.
 const ClassLessonUnverified = "lesson_unverified"
+
+// ClassIndependenceUnverified is a folded verdict whose recorded
+// independence level the records do not support, or which is short of
+// its subject's tier (plans/os-99829835.md D5): verdict_unverified's
+// posture one field over. The record half judges the level from the
+// fold and the window's declaration; the evidence-grade half in
+// Evidence adds an L3 whose receipt does not reproduce.
+const ClassIndependenceUnverified = "independence_unverified"
 
 // ClassUnsealed is an above-trivial subject at or past in_progress
 // with no sealed-checks commitment (plans/os-3128535a.md): reported
@@ -166,6 +175,25 @@ func VerifyVerdicts(records []*event.Record, f *transition.Fold) []Finding {
 		if s.PriorClaimants[signer] || (s.Submission != nil && signer == s.Submission.Signer) {
 			out = append(out, Finding{Subject: id, Class: ClassVerdictUnverified,
 				Detail: fmt.Sprintf("the verdict at position %d was signed by implementing key %s — L1 independence never held", pos, signer)})
+			continue
+		}
+		// The level half (plans/os-99829835.md D5): the recorded level
+		// must be the one the records support, and must meet the tier.
+		if s.Verdict.Levels {
+			table, err := transition.Default()
+			if err != nil {
+				continue
+			}
+			achieved := admit.LevelAchieved(records, table, id, s, s.Verdict.Tuple)
+			if s.Verdict.Independence != string(achieved) {
+				out = append(out, Finding{Subject: id, Class: ClassIndependenceUnverified,
+					Detail: fmt.Sprintf("the verdict at position %d records independence %q and the records support %s — a level the record does not support never passed the verifier boundary", pos, s.Verdict.Independence, achieved)})
+				continue
+			}
+			if required := transition.TierGates(s.Tier).Independence; !achieved.Satisfies(required) {
+				out = append(out, Finding{Subject: id, Class: ClassIndependenceUnverified,
+					Detail: fmt.Sprintf("the verdict at position %d achieved %s and tier %q requires %s — a verdict short of its tier never passed the verifier boundary", pos, achieved, s.Tier, required)})
+			}
 		}
 	}
 	return out

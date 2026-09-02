@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/executor"
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/curation"
@@ -31,7 +32,9 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 func runVerdict(args []string, stdout, stderr io.Writer) int {
@@ -259,13 +262,29 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	verdictFlag := fs.String("verdict", "", "pass or fail")
 	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
 	timeout := fs.Duration("timeout", 0, "per-command wall-clock bound (default 10m)")
+	// The verifier's declared tuple (plans/os-99829835.md D2): the
+	// three fields the workspace cannot know, the run start posture;
+	// harness and environment come from the adapter the verifier
+	// works in.
+	principal := fs.String("principal", "", "the principal the verifier ran as: a judgment the workspace cannot make")
+	model := fs.String("model", "", "the verifier's model as <family>/<version> or <provider>/<family>/<version>")
+	toolPolicy := fs.String("tool-policy", "", "the verifier's tool policy profile")
 	parseErr := fs.Parse(args)
 	missing := ""
 	if *repo == "" || (*verdictFlag != "pass" && *verdictFlag != "fail") {
-		missing = "and --repo <dir> --verdict pass|fail [--artifacts <dir>] [--timeout <dur>]"
+		missing = "and --repo <dir> --verdict pass|fail [--artifacts <dir>] [--timeout <dur>] [--principal <p> --model <m> --tool-policy <t>]"
+	}
+	declaring := *principal != "" || *model != "" || *toolPolicy != ""
+	if declaring && (*principal == "" || *model == "" || *toolPolicy == "") {
+		missing = "and --principal --model --tool-policy together: the verifier's declaration is the whole tuple or none"
 	}
 	if env := f.usage("verdict render", parseErr, fs.NArg(), missing); env != nil {
 		return render(env, stdout, stderr)
+	}
+	var declared *tuple.Tuple
+	if declaring {
+		declared = &tuple.Tuple{Principal: *principal, Harness: executor.LocalHarness, Model: *model,
+			ToolPolicy: *toolPolicy, Environment: executor.LocalEnvironment}
 	}
 	subject := f.subject
 	signer, env := loopSigner(*f.keyPath, *f.as)
@@ -284,6 +303,28 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	in, s, failEnv := st.verdictInput(*subject, *repo, *timeout, true)
 	if failEnv != nil {
 		return render(stampTip(failEnv, st.count), stdout, stderr)
+	}
+	// The achieved level, computed from the same facts the boundary
+	// reads before anything is drafted (plans/os-99829835.md D3): a
+	// tier the record cannot satisfy refuses here, naming the flags
+	// when no declaration was made, and the client never drafts a
+	// doomed verdict. Before seed/4 the level is the literal L1 and a
+	// declaration has nowhere to go.
+	if declared != nil && !version.LevelsApply(ls.ctx.Active) {
+		return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("the chain is at %s: the verifier's declaration (--principal --model --tool-policy) activates at %s (next/spec/protocol.md)", ls.ctx.Active, version.Seed4)), st.count), stdout, stderr)
+	}
+	if version.LevelsApply(ls.ctx.Active) {
+		required := transition.TierGates(s.Tier).Independence
+		achieved := admit.LevelAchieved(ls.ctx.Records, ls.ctx.Table, *subject, s, declared)
+		if !achieved.Satisfies(required) {
+			if declared == nil {
+				return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage",
+					fmt.Sprintf("contract %s (tier %q) requires independence %s and the record supports %s with no declaration: declare the verifier's tuple with --principal --model --tool-policy, a different model family, provider or harness from the window's (next/spec/verdicts.md)", *subject, s.Tier, required, achieved)), st.count), stdout, stderr)
+			}
+			return render(stampTip(envelope.Fail(envelope.ExitNotIndependent, "level_short",
+				(&admit.LevelShortError{Subject: *subject, Tier: s.Tier, Required: required, Achieved: achieved}).Error()), st.count), stdout, stderr)
+		}
 	}
 	// The red-verdict lockout at the render surface
 	// (plans/os-d2497eb7.md): pass over a submission an authenticated
@@ -351,13 +392,14 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	// change it and re-running acceptance per attempt would buy
 	// nothing.
 	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
-		return verdictPayload(ctx, *subject, *verdictFlag, digest)
+		return verdictPayload(ctx, *subject, *verdictFlag, digest, declared)
 	}
 	payload, env := derive(ls.ctx)
 	if env != nil {
 		return render(stampTip(env, st.count), stdout, stderr)
 	}
 	summary := receiptSummary(*subject, r, digest)
+	level := verdictLevel(ls.ctx, *subject, declared)
 	return ls.commit(f, loopAct{verb: transition.VerdictRenderedVerb, payload: payload, derive: derive,
 		resultAt: func(int) map[string]any {
 			out := map[string]any{}
@@ -366,13 +408,29 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 			}
 			out["verdict"] = *verdictFlag
 			out["submission"] = strconv.Itoa(s.Submission.Pos)
+			out["independence"] = level
 			return out
 		}}, signer, stdout, stderr)
 }
 
+// verdictLevel is the level a render writes at a view: the literal L1
+// before seed/4, the achieved level (plans/os-99829835.md D1) from it.
+func verdictLevel(ctx *admit.Context, subject string, declared *tuple.Tuple) string {
+	if ctx == nil || ctx.Lifecycle == nil || !version.LevelsApply(ctx.Active) {
+		return string(transition.L1)
+	}
+	s, ok := ctx.Lifecycle.State(subject)
+	if !ok {
+		return string(transition.L1)
+	}
+	return string(admit.LevelAchieved(ctx.Records, ctx.Table, subject, s, declared))
+}
+
 // verdictPayload binds a rendered verdict to the submission that
-// produced the review state, read from the view being judged against.
-func verdictPayload(ctx *admit.Context, subject, v, receipt string) ([]byte, *envelope.Envelope) {
+// produced the review state, read from the view being judged against,
+// and records the level that view supports with the declaration it was
+// computed from (plans/os-99829835.md D2, D3).
+func verdictPayload(ctx *admit.Context, subject, v, receipt string, declared *tuple.Tuple) ([]byte, *envelope.Envelope) {
 	if ctx == nil || ctx.Lifecycle == nil {
 		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", "no lifecycle view to bind the verdict to")
 	}
@@ -381,12 +439,16 @@ func verdictPayload(ctx *admit.Context, subject, v, receipt string) ([]byte, *en
 		return nil, envelope.Fail(envelope.ExitNotFound, "not_found",
 			fmt.Sprintf("no submission stands on %s — a verdict judges exactly the submission that produced the review state", subject))
 	}
-	b, err := json.Marshal(map[string]string{
+	fields := map[string]any{
 		"verdict":      v,
 		"receipt":      receipt,
 		"submission":   strconv.Itoa(s.Submission.Pos),
-		"independence": "L1",
-	})
+		"independence": verdictLevel(ctx, subject, declared),
+	}
+	if declared != nil && version.LevelsApply(ctx.Active) {
+		fields["tuple"] = declared
+	}
+	b, err := json.Marshal(fields)
 	if err != nil {
 		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
 	}
@@ -425,9 +487,10 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 	}
 	// The latest rendered verdict on the subject is the one checked.
 	var cited struct {
-		Verdict    string `json:"verdict"`
-		Receipt    string `json:"receipt"`
-		Submission string `json:"submission"`
+		Verdict      string `json:"verdict"`
+		Receipt      string `json:"receipt"`
+		Submission   string `json:"submission"`
+		Independence string `json:"independence"`
 	}
 	found := false
 	for i := len(st.records) - 1; i >= 0; i-- {
@@ -493,11 +556,12 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 			fmt.Sprintf("recomputation from the submission head yields %s, the rendered verdict cites %s — the receipt, the range, or the repository's content has diverged from what was attested (6.2 reconciliation input)", digest, cited.Receipt)), st.count), stdout, stderr)
 	}
 	return render(stampTip(envelope.OK(map[string]any{
-		"subject":    *subject,
-		"receipt":    digest,
-		"verdict":    cited.Verdict,
-		"submission": cited.Submission,
-		"artifact":   "verified",
+		"subject":      *subject,
+		"receipt":      digest,
+		"verdict":      cited.Verdict,
+		"submission":   cited.Submission,
+		"independence": cited.Independence,
+		"artifact":     "verified",
 	}), st.count), stdout, stderr)
 }
 

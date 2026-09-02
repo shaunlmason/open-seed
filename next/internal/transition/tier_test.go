@@ -19,10 +19,11 @@ import (
 
 // tierRows parses the spec's table: | `tier` | `yes|no` | `yes|no` | `yes|no` |.
 func tierRows(spec []byte) map[string]transition.TierRow {
-	row := regexp.MustCompile("(?m)^\\| `([a-z]+)` \\| `(yes|no)` \\| `(yes|no)` \\| `(yes|no)` \\|$")
+	row := regexp.MustCompile("(?m)^\\| `([a-z]+)` \\| `(yes|no)` \\| `(yes|no)` \\| `(yes|no)` \\| `(L[123])` \\|$")
 	out := map[string]transition.TierRow{}
 	for _, m := range row.FindAllStringSubmatch(string(spec), -1) {
-		out[m[1]] = transition.TierRow{PlanRequired: m[2] == "yes", SealedChecksRequired: m[3] == "yes", HumanReview: m[4] == "yes"}
+		out[m[1]] = transition.TierRow{PlanRequired: m[2] == "yes", SealedChecksRequired: m[3] == "yes", HumanReview: m[4] == "yes",
+			Independence: transition.Level(m[5])}
 	}
 	return out
 }
@@ -80,11 +81,11 @@ func TestTierPinFailsInEitherDirection(t *testing.T) {
 		t.Fatal(err)
 	}
 	planted := append([]byte{}, b...)
-	planted = append(planted, []byte("\n| `wizard` | `no` | `no` | `no` |\n")...)
+	planted = append(planted, []byte("\n| `wizard` | `no` | `no` | `no` | `L1` |\n")...)
 	if ms := tierMismatches(planted); len(ms) != 1 || !strings.Contains(ms[0], `"wizard" is in the spec table but not the code table`) {
 		t.Fatalf("a spec row the code lacks fails the pin: %v", ms)
 	}
-	disagreeing := []byte(strings.Replace(string(b), "| `trivial` | `no` | `no` | `no` |", "| `trivial` | `yes` | `no` | `no` |", 1))
+	disagreeing := []byte(strings.Replace(string(b), "| `trivial` | `no` | `no` | `no` | `L1` |", "| `trivial` | `yes` | `no` | `no` | `L1` |", 1))
 	if ms := tierMismatches(disagreeing); len(ms) != 1 || !strings.Contains(ms[0], `tier "trivial": code says`) {
 		t.Fatalf("a spec row the code disagrees with fails the pin: %v", ms)
 	}
