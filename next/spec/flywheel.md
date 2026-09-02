@@ -209,8 +209,11 @@ byte; the report version moves.
 
 ## Conformance mapping
 
-- III.K's flywheel row and the Phase 11 exit line ("a real recurring
-  chore in the fixture converts to a workflow through the gates"):
+- III.K row 8 ("the flywheel closes through gates: recurring shapes →
+  drafted workflows → mock validation → PR; repair roles propose
+  patches as PRs; conversion rate is tracked") and the Phase 11 exit
+  line ("a real recurring chore in the fixture converts to a workflow
+  through the gates"):
   the modes fixture's chore worked three times, its shape recurring at
   the second and the third adding an occurrence, the draft validated
   by the engine, proposed on its branch, observed merged, `1.000` in

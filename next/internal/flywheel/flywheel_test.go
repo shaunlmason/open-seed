@@ -222,10 +222,11 @@ func TestShapesAreRecordDerivableAndRecurrenceIsCounted(t *testing.T) {
 	d2 := c.done("c-2", "fix the check again", "core", "trivial", "accept.md", "bbbb222", true, false)
 	c.done("c-4", "planned", "core", "trivial", "accept.md", "aaaa111", true, true)
 	c.done("c-5", "elsewhere", "docs", "trivial", "accept.md", "aaaa111", false, false)
+	c.done("c-6", "bigger", "core", "standard", "accept.md", "aaaa111", true, false)
 	c.add("root", "system.checkpoint", "system", `{}`)
 	shapes := Shapes(c.records, foldOf(t, c))
-	if len(shapes) != 4 {
-		t.Fatalf("four shapes: %d %+v", len(shapes), shapes)
+	if len(shapes) != 5 {
+		t.Fatalf("five shapes: %d %+v", len(shapes), shapes)
 	}
 	chore := shapes[0]
 	if chore.ID != pinnedShape || chore.Routing != "core" || chore.AcceptancePath != "accept.md" || chore.Tier != "trivial" || strings.Join(chore.Sequence, ",") != strings.Join(choreSequence, ",") {
@@ -255,6 +256,9 @@ func TestShapesAreRecordDerivableAndRecurrenceIsCounted(t *testing.T) {
 	docs := shapes[3]
 	if docs.Routing != "docs" || docs.Occurrences[0].Gated {
 		t.Fatalf("routing distinguishes, and an ungated acceptance is recorded ungated: %+v", docs)
+	}
+	if bigger := shapes[4]; bigger.Tier != "standard" || bigger.ID == chore.ID || bigger.Recurring() {
+		t.Fatalf("tier distinguishes: %+v", bigger)
 	}
 	for _, s := range shapes {
 		if s.ID != shapeID(s.Routing, s.AcceptancePath, s.Tier, s.Sequence) {

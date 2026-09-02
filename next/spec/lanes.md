@@ -386,6 +386,15 @@ ordered fragment list prevents.
   knowledge bloat managed) — met by Phase 11 item 4
   ([`curation.md`](curation.md), "Expiry, retirement and
   applicability" and "Bloat"), the mapping there naming each drill.
+- III.K row 8 (the flywheel closes through gates: recurring shapes,
+  drafted workflows, mock validation, PR; repair roles propose patches
+  as PRs; conversion rate tracked) — met by Phase 11 item 5
+  ([`flywheel.md`](flywheel.md), "Conformance mapping"): the shape
+  from the record, the draft from gated acceptance commands, the v1
+  engine's validate and mock run from a staging worktree, the proposal
+  on its branch and never main, the repair contract under the
+  dispatcher's key with its patch on the same branch, and the report's
+  `flywheel` section.
 
 ## A gap the mode fixtures surfaced
 
