@@ -301,8 +301,8 @@ func TestFlywheelProposalIsTheCuratorsOverARecurringShapeAndTheMergeTheObservers
 	if !listsVerb(st.ctx, st.curator, shape.ID, flywheel.ProposedVerb) {
 		t.Fatal("after the merge the shape can be proposed again")
 	}
-	if err := st.refuse(t, st.observer, flywheel.MergedVerb, shape.ID, st.merge(shape, standing.Path())); flywheelGate(err) != flywheel.GateMerge {
-		t.Fatalf("nothing stands to merge: %v", err)
+	if err := st.refuse(t, st.observer, flywheel.MergedVerb, shape.ID, st.merge(shape, standing.Path())); flywheelGate(err) != flywheel.GateMerge || !strings.Contains(err.Error(), "no unmerged proposal stands") {
+		t.Fatalf("nothing stands to merge, and the refusal says so: %v", err)
 	}
 	m := flywheel.Derive(st.ctx.Records, st.ctx.Lifecycle)
 	if m.Recurring != 1 || m.Proposed != 1 || m.Merged != 1 || m.ConversionRate == nil || *m.ConversionRate != "1.000" {
@@ -375,8 +375,8 @@ func TestFlywheelProposalGatesRefuseAtTheBoundary(t *testing.T) {
 		t.Fatalf("a shape done once is no chore: %v", err)
 	}
 	// The merge on the other shape, with nothing standing: refused.
-	if err := st.refuse(t, st.observer, flywheel.MergedVerb, other.ID, st.merge(other, flywheel.RegistryDir+"/x.yaml")); flywheelGate(err) != flywheel.GateMerge {
-		t.Fatalf("a merge cites a standing proposal: %v", err)
+	if err := st.refuse(t, st.observer, flywheel.MergedVerb, other.ID, st.merge(other, flywheel.RegistryDir+"/x.yaml")); flywheelGate(err) != flywheel.GateMerge || !strings.Contains(err.Error(), "no unmerged proposal stands") {
+		t.Fatalf("a merge cites a standing proposal, and the refusal says so: %v", err)
 	}
 	if err := st.refuse(t, st.observer, flywheel.MergedVerb, "c-1", st.merge(shape, flywheel.RegistryDir+"/x.yaml")); flywheelGate(err) != flywheel.GateMerge {
 		t.Fatalf("a merge is appended on its shape: %v", err)

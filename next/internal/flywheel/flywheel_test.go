@@ -809,8 +809,8 @@ func TestProposalAndMergeAreHeldToTheRecord(t *testing.T) {
 	}
 	// A merge observation before any proposal has nothing to cite.
 	m := &Merge{Workflow: RegistryDir + "/" + chore.Name() + ".yaml @ " + zeros40, Shape: chore.ID, PR: "pr/7 @ " + zeros40}
-	if err := CheckMerge(c.records, fold, chore.ID, m); gateOf(t, err) != GateMerge {
-		t.Fatalf("no standing proposal, no merge: %v", err)
+	if err := CheckMerge(c.records, fold, chore.ID, m); gateOf(t, err) != GateMerge || !strings.Contains(err.Error(), "no unmerged proposal stands") {
+		t.Fatalf("no standing proposal, no merge, and the refusal says so: %v", err)
 	}
 	// The proposal appended: a second refuses as a duplicate, the
 	// merge admits on the proposed file only, and after the merge a
@@ -833,8 +833,8 @@ func TestProposalAndMergeAreHeldToTheRecord(t *testing.T) {
 	if err := check(proposal(chore, "wf-2", "")); err != nil {
 		t.Fatalf("after the merge a new proposal admits: %v", err)
 	}
-	if err := CheckMerge(c.records, fold, chore.ID, m); gateOf(t, err) != GateMerge {
-		t.Fatalf("a merged proposal is not standing: %v", err)
+	if err := CheckMerge(c.records, fold, chore.ID, m); gateOf(t, err) != GateMerge || !strings.Contains(err.Error(), "no unmerged proposal stands") {
+		t.Fatalf("a merged proposal is not standing, and the refusal says so: %v", err)
 	}
 }
 
