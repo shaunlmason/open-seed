@@ -21,6 +21,7 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -358,50 +359,79 @@ func TestNoHostileTextWidensTheDispatcherSet(t *testing.T) {
 	}
 }
 
-// conformance: D3 residual 1 — the filed tier is presence-only data
-// whose single value "trivial" exempts the plan gate. This is a
-// CHARACTERIZATION test: it asserts the behavior that exists, in the
-// residual's own words, so that closing the hole fails here and forces
-// the spec to be updated with it. A residual recorded only in prose
-// rots; one pinned by a test cannot.
-//
-// The persuasion is the point. Nothing about the tier is validated
-// against a vocabulary, so a dispatcher talked into "this is routine,
-// file it as trivial" files a contract that submits with no plan.
-func TestTierIsPresenceOnlyDataAndTrivialExemptsThePlanGate(t *testing.T) {
+// conformance: D3 residual 1, NARROWED by os-be12ac16 (next/spec/tiers.md).
+// The filed tier was presence-only data whose single value "trivial"
+// exempted the plan gate; a persuaded dispatcher could file any string.
+// Now the filing validates tier and budget against their tables, and
+// the exemption reads the table. What this drill still CHARACTERIZES,
+// in the residual's own words, is what the vocabulary does not close:
+// "trivial" is a legitimate filing that exempts the gate, and nothing
+// yet attests who may make it. That is tier provenance's, and pinning
+// it here keeps it from rotting into prose.
+func TestTierIsValidatedAgainstTheVocabulary(t *testing.T) {
 	table, err := transition.Default()
 	if err != nil {
 		t.Fatal(err)
 	}
 	fold := table.FoldRecords(nil)
 
-	// The exemption, exactly one string wide.
-	if err := fold.CheckPlanGate("c-1", transition.TrivialTier, []byte(`{}`)); err != nil {
-		t.Fatalf("the trivial tier exempts the plan gate — if that changed, this residual is closed "+
-			"and next/spec/lanes.md must say so: %v", err)
+	// The filing surface: a value outside the vocabulary refuses at
+	// filing, naming the field, the value and the members, byte for
+	// byte; the empty string still refuses as incomplete; each member
+	// files.
+	filed := func(tier, budget string) error {
+		return transition.CheckCompleteness("intent.filed", "c-1",
+			[]byte(fmt.Sprintf(`{"intent": "x", "tier": %q, "budget": %q, "routing": "core"}`, tier, budget)))
 	}
-
-	// Every other value fails safe, INCLUDING values a persuaded lane
-	// might invent, because the site tests against the constant rather
-	// than against a vocabulary. That is what keeps the residual one
-	// string wide instead of open-ended.
-	for _, tier := range []string{"", "standard", "trivial ", "TRIVIAL", "Trivial", "trivial-ish", "wizard"} {
-		if err := fold.CheckPlanGate("c-1", tier, []byte(`{}`)); err == nil {
-			t.Errorf("tier %q must NOT exempt the plan gate: the exemption is the exact string %q",
-				tier, transition.TrivialTier)
+	for _, tier := range []string{"wizard", "Trivial", "trivial ", "TRIVIAL", "standard-ish"} {
+		var ve *transition.VocabularyError
+		err := filed(tier, "small")
+		if !errors.As(err, &ve) || ve.Field != "tier" || ve.Value != tier {
+			t.Fatalf("tier %q: a persuaded dispatcher's invented tier refuses at filing as a vocabulary refusal: %v", tier, err)
+		}
+		for _, member := range []string{"trivial", "standard", "critical"} {
+			if !strings.Contains(err.Error(), member) {
+				t.Fatalf("tier %q: the refusal names the member %q: %v", tier, member, err)
+			}
+		}
+	}
+	var inc *transition.IncompleteError
+	if err := filed("", "small"); !errors.As(err, &inc) {
+		t.Fatalf("an empty tier still refuses as incomplete: %v", err)
+	}
+	for _, tier := range transition.Tiers() {
+		if err := filed(tier, "small"); err != nil {
+			t.Fatalf("member %q files: %v", tier, err)
+		}
+	}
+	// One field over is the same hole: the budget class.
+	var ve *transition.VocabularyError
+	if err := filed("trivial", "bespoke"); !errors.As(err, &ve) || ve.Field != "budget" || !strings.Contains(err.Error(), "small, medium, large") {
+		t.Fatalf("a class outside the table refuses at filing naming the classes: %v", err)
+	}
+	for _, class := range transition.BudgetClasses() {
+		if err := filed("trivial", class); err != nil {
+			t.Fatalf("class %q files: %v", class, err)
 		}
 	}
 
-	// And the filing surface validates the value no further than
-	// presence, which is the other half of why the residual exists.
-	if err := transition.CheckCompleteness("intent.filed", "c-1",
-		[]byte(`{"intent": "x", "tier": "wizard", "budget": "small", "routing": "core"}`)); err != nil {
-		t.Errorf("intent.filed checks tier for PRESENCE only — a vocabulary here is Phase 10's tier "+
-			"system, and if one landed this residual is closed: %v", err)
+	// The exemption reads the table: trivial exempts; standard,
+	// critical and any string the table does not know require a plan.
+	if err := fold.CheckPlanGate("c-1", transition.TrivialTier, []byte(`{}`)); err != nil {
+		t.Fatalf("the trivial tier exempts the plan gate: %v", err)
 	}
-	if err := transition.CheckCompleteness("intent.filed", "c-1",
-		[]byte(`{"intent": "x", "tier": "", "budget": "small", "routing": "core"}`)); err == nil {
-		t.Error("an empty tier must still refuse: presence is checked even though value is not")
+	for _, tier := range []string{"standard", "critical", "", "trivial ", "TRIVIAL", "Trivial", "trivial-ish", "wizard"} {
+		if err := fold.CheckPlanGate("c-1", tier, []byte(`{}`)); err == nil {
+			t.Errorf("tier %q must NOT exempt the plan gate: the table requires a plan, and an unknown tier takes the strictest row", tier)
+		}
+	}
+
+	// The residual that remains, characterized: the persuasion "this
+	// is routine, file it as trivial" files a VALID value the gate
+	// exempts. Closing it is provenance's; if this admits nothing one
+	// day, next/spec/lanes.md's residual row must say what closed it.
+	if err := filed("trivial", "small"); err != nil {
+		t.Fatalf("a persuaded dispatcher filing the valid value trivial still files (mis-tiering is tier provenance's residual): %v", err)
 	}
 }
 

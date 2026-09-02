@@ -483,7 +483,7 @@ func TestRemoteAppendLifecycle(t *testing.T) {
 	steps := []struct{ key, verb, subject, payload string }{
 		{priv, "actor.enrolled", vfp, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "verifier"}`, vpub)},
 		{priv, "actor.granted", vfp, `{"capability": "verdict"}`},
-		{priv, "intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "s", "routing": "core"}`},
+		{priv, "intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "small", "routing": "core"}`},
 		{priv, "contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`},
 		{priv, "claim.taken", "c-1", `{}`},
 		{priv, "submission.made", "c-1", `{"branch": "seed/c-1", "fence": "6", "packet": {"acceptance": ["c-1 resumes"], "decisions": [], "base": "1234567..1234567", "refs": [], "findings": []}}`},
@@ -537,7 +537,7 @@ func TestRemoteClaimFencingCLI(t *testing.T) {
 		return runEnv(t, "ledger", "append", "--remote", remote, "--state", state,
 			"--key", priv, "--verb", verb, "--subject", subject, "--payload", payload)
 	}
-	if _, code := appendCLI("intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "s", "routing": "core"}`); code != 0 {
+	if _, code := appendCLI("intent.filed", "c-1", `{"intent": "fix", "tier": "trivial", "budget": "small", "routing": "core"}`); code != 0 {
 		t.Fatal("filing failed")
 	}
 	if _, code := appendCLI("contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`); code != 0 {

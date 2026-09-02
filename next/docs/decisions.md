@@ -2047,3 +2047,64 @@ here. Newest last.
   output path to point it at; the fix is the index removal and one
   ignore rule beside `bin/`, and the file stays on disk in existing
   checkouts as an ignored one.
+
+## The tier vocabulary (os-be12ac16, plan #219)
+
+- **The plan's review threads bind the task even though the plan
+  merged over them** (os-be12ac16). #219 merged with three bot findings
+  unresolved. Each is answered here rather than left to rot: they were
+  findings about the design this PR implements.
+
+- **No protocol bump: the filing check is admission policy, and
+  admission is not chain validity** (os-be12ac16, Codex on #219). The
+  finding argued that refusing `tier: "wizard"` at admission while an
+  older validator accepts the record is a validation disagreement that
+  `protocol.md` says bumps the version. It conflates the two seams the
+  tree keeps apart: verification tolerates an unknown tier in history
+  in every build, old and new (the fold keeps the value as filed, and
+  every reader takes the strictest row), so no two validators disagree
+  on whether a chain is VALID; they disagree only on what the
+  cooperative boundary will PROPOSE, which is the halt, classification
+  and capability precedent `actors.md` records as bump-free. A bump
+  would have claimed that a `seed/3` chain carrying a raw-pushed
+  `wizard` is corrupt, which it is not.
+
+- **Admission-path budget fixtures move to a member; raw-pushed ones
+  stay** (os-be12ac16, Codex on #219). The plan's file scope named
+  only tiers outside the vocabulary; D3 validates budgets at the same
+  site, so every fixture that files `budget: "s"` THROUGH admission
+  (`remote_test`, `seal_cli_test`, the `seed-admit` hook drills) moves
+  to `small`, while the ones that append on the library seam keep
+  their unknown values, which is the tolerant-fold coverage the raw
+  seam exists to give. `ten`, the budget drills' injected class, is a
+  table member for the test's duration and files unchanged.
+
+- **The mis-tiering residual stays pinned; the vocabulary narrows it,
+  it does not close it** (os-be12ac16, Codex on #219, D5 refined).
+  The plan said the residual is closed and the pin replaced. What the
+  vocabulary closes is the unknown-value hole; a dispatcher persuaded
+  to file the VALID value `trivial` still files a contract the plan
+  gate and the sealed-checks lint exempt, because nothing yet attests
+  who may make that filing. `plans.md` already names that as "until
+  tier provenance lands". So the replaced drill asserts both halves:
+  `wizard` refuses naming the three tiers, and `trivial` from the
+  persuaded dispatcher still files. `lanes.md`'s residual row says
+  what narrowed it and who owns the rest.
+
+- **`Tier(name) (TierRow, bool)` is the accessor; `TierGates(name)` is
+  what the sites read** (os-be12ac16, Copilot on #219). The plan's
+  mutation list named `Tier()` returning the trivial row for an unknown
+  name; the accessor is `Tier(name)`, and the sites read through
+  `TierGates`, which applies the strictest-row rule once so no site
+  re-derives it. The mutation that matters is the one named: `Tier`
+  handing an unknown name the trivial row, which `TierGates` then
+  relays, and the plan-gate and unsealed drills catch.
+
+- **Three authority sites, derived from the tree** (os-be12ac16). The
+  card said two; `cmd/seed/verdict.go`'s `unsealed` refusal is the
+  third, and it now reads the table like the other two, with drills
+  for `critical` and a raw-pushed unknown tier at each.
+
+- **Budget classes are named in capacity order** (os-be12ac16). The
+  refusal says `small, medium, large`, the order the spec table and
+  the criterion use, rather than alphabetical.

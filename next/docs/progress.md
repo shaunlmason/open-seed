@@ -817,8 +817,21 @@ PR (an administrative card, not a Phase 9 item).
 - 10.2 eval contracts through the production machinery; grants cite
   passing tuples; spot-checks; suspension on failure — **next**
 - 10.3 independence levels L2/L3 declared per tier and recorded in
-  verdicts — os-711b3028 / os-be12ac16 (the tier vocabulary at
-  `intent.filed`) — not started
+  verdicts — not started; its table is built: **the tier vocabulary**
+  (os-be12ac16, task PR against plan #219) is **in review** —
+  `next/spec/tiers.md` declares `trivial`, `standard` and `critical`
+  with a plan-required, sealed-checks-required and human-review column
+  each, mirrored by `transition.Tier(name)` and pinned against the spec
+  in both directions; `intent.filed` validates `tier` and `budget`
+  against their tables at admission byte for byte
+  (`VocabularyError`, the completeness family, naming the members); the
+  three authority sites (the plan gate, the reconcile `unsealed` lint,
+  `verdict render`'s `unsealed` refusal; the card said two, the tree
+  had three) read the table through `TierGates`, an unknown tier taking
+  the strictest row; the injection suite's characterization pin is
+  replaced by the vocabulary drill, with mis-tiering (filing the valid
+  `trivial`) kept pinned as tier provenance's residual. Item 3 adds the
+  `independence` column.
 - 10.4 rubric verdicts; calibration harness with authority suspension
   on drift — not started
 - 10.5 trajectory-prefix regression harness; dispatcher re-triage rate

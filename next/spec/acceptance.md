@@ -37,8 +37,8 @@ without origin provenance, a trivial contract spawned from a
 referenced artifact and armed gateless. Requiring the gate
 universally is stricter than the charter and therefore safe; the
 relaxation for trusted-authored trivial-tier specs requires real
-origin provenance and lands with the tier system (Phase 9/10), never
-before. `executable: false` (prose-only criteria) carries no gate —
+origin provenance, which the tier vocabulary ([`tiers.md`](tiers.md))
+does not supply, and lands with that provenance, never before. `executable: false` (prose-only criteria) carries no gate —
 present **iff** required.
 
 **Gate evidence binds to the acceptance revision**: the merged commit

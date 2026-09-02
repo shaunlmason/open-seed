@@ -1128,3 +1128,16 @@ to be reverted by hand before every commit. The repository-level fix is
 one ignore rule (os-a487b3b5); the habit is to build into `next/bin/`
 (`go build -o bin/seed ./cmd/seed`), the path the build plan already
 names, or to use `go run ./cmd/seed`.
+
+## A plan merged over open review threads still owes them an answer
+
+Plan #219 merged with three reviewer findings unresolved (a protocol
+bump argument, a fixture-scope gap, a residual the plan claimed closed
+that it only narrowed). A merged plan is the authority for its task,
+but merging did not make the findings wrong: one of them (the residual)
+changed what the replaced drill had to assert, and one (the fixtures)
+would have turned the suite red on the first run. Read the plan PR's
+threads before implementing, answer each in the task PR's decisions,
+and let the implementation carry the corrections the plan's text
+lacks. Derive counts from the tree while you are at it: the card said
+two authority sites and the tree had three.
