@@ -1032,3 +1032,4 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-be12ac16","ts":"2026-09-02T11:19:43Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 10 item 3 — independence levels L2/L3 declared per tier and recorded in verdicts"},"task":"os-99829835","ts":"2026-09-02T11:21:09Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-99829835","ts":"2026-09-02T11:21:22Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T13:21:26Z"},"task":"os-99829835","ts":"2026-09-02T11:21:26Z","verb":"claim"}
