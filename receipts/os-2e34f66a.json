@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-2e34f66a",
-  "merge_base": "43937beceaad4455edce32ae4d0b79522f0bac89",
-  "head": "eb9300e3a48bfebf72b98ca4aef7481f91315af0",
+  "merge_base": "584648f695ea2fc61b0005a1ab9d0ea5c5d28f0a",
+  "head": "61c9f0a7e60e21a326bc07964cab26f42af4cc4c",
   "plan_path": "plans/os-2e34f66a.md",
   "plan_sha256": "2d1b71378eeb2949be7e2354a42a1b11124f0c701293a18a96a9b02cdbcd42e3",
   "diff_files": [
@@ -24,6 +24,7 @@
     "next/internal/admit/rubric_test.go",
     "next/internal/eval/calibration_test.go",
     "next/internal/eval/eval.go",
+    "next/internal/keyring/eval_test.go",
     "next/internal/keyring/keyring.go",
     "next/internal/obligation/human_test.go",
     "next/internal/obligation/obligation.go",
@@ -49,7 +50,7 @@
     "next/spec/tiers.md",
     "next/spec/verdicts.md"
   ],
-  "diff_sha256": "bf3ee76d5cfdf9e0ca747947bec5381d7e4b67e44b5c2e0e8e1a52c32f3dcdf6",
+  "diff_sha256": "3a6e3b509cf4a83768fa9161bc0f6906f05a6bc74095c8ee2c224e4b364b3303",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/plan/ ./internal/verdict/ ./internal/transition/ ./internal/admit/ ./internal/keyring/ ./internal/obligation/ ./internal/reconcile/ ./internal/envelope/ ./internal/eval/ ./cmd/seed/ -count=1",
