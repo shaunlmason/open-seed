@@ -1012,3 +1012,4 @@
 {"actor":"seed-next-implementer","data":{"to":"ready","transitioned":true},"task":"os-711b3028","ts":"2026-09-02T09:31:35Z","verb":"release"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T11:31:39Z"},"task":"os-a487b3b5","ts":"2026-09-02T09:31:39Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T13:31:42Z"},"task":"os-03e47abb","ts":"2026-09-02T09:31:42Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-dd78b64a","kind":"pr"},"task":"os-a487b3b5","ts":"2026-09-02T09:37:56Z","verb":"attach-evidence"}
