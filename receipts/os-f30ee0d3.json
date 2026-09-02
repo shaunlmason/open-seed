@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-f30ee0d3",
-  "merge_base": "6cc62827b7157429df58710aac1fb76c37d21e4e",
-  "head": "1ed03a57249f191fcfd78bd49b438411fc0146dd",
+  "merge_base": "0646ddeca4600c8b171a752fddd4997a76440a4d",
+  "head": "8207f71369d49d27c425a1377f47585a9a02caf1",
   "plan_path": "plans/os-f30ee0d3.md",
   "plan_sha256": "056b6811a54f035fc621cd97403ced2ef603db263159729ce4b6653fc78e1858",
   "diff_files": [
@@ -42,7 +42,7 @@
     "next/spec/projections.md",
     "next/spec/protocol.md"
   ],
-  "diff_sha256": "8e0721a6aade00087ed655bbd9b0ce37d4a413981e499b55514fc7e1983cfd50",
+  "diff_sha256": "dc89145b734a6dd00dbd7230a9e15e0f30e2df84b646b7a7e2f48adb501a865c",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/curation/ ./internal/keyring/ ./internal/admit/ ./internal/project/ ./internal/lane/ ./cmd/seed/ -count=1",
