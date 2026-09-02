@@ -69,11 +69,22 @@ Measured against `main` with #226 and #228 laid over it:
   charter's sentence made a test, and they are what keeps the drill
   red if a gate is rewritten so that the refusal moves.
 
-- **D2 — the corpus covers every gate, and coverage is derived.** The
-  gate list is a Go table pinned to `curation.md`'s gate table in both
-  directions (the tier table's precedent); the completeness drill
-  fails on a gate no poison names and on a poison naming no gate. The
-  corpus at landing, at least: `single-success` (one contract, two
+- **D2 — the corpus covers every gate, and coverage is derived from
+  the enforcement boundary, never authored for the drill.** Every
+  refusal of the proposal, contest and promotion rules and of the
+  lint's file half is a `curation.GateError` naming a gate registered
+  in `curation.Gates()` at init (item 2's D4; created here if #228
+  landed without it), and the constructor refuses an unregistered
+  name, so a refusal without a gate does not exist. The drill
+  enumerates that registry, the injection suite's move of deriving
+  the set from the boundary rather than from a list, pins it to
+  `curation.md`'s gate table in both directions, and fails on a
+  registered gate no poison names, on a poison naming no registered
+  gate, on a gate in the spec that no rule registers, and on a
+  registered gate the spec does not name. A gate added to the rules
+  without a corpus entry is therefore a red test, which is what makes
+  "full coverage" a claim the drill derives rather than one it is
+  told (review finding on #229). The corpus at landing, at least: `single-success` (one contract, two
   dead ends), `self-replay` (two contracts, one holder, in a family
   with two holders), `forged-support` (a position that is no
   observation; one on a failed contract; one beyond the tip),
@@ -142,11 +153,12 @@ Measured against `main` with #226 and #228 laid over it:
 
 1. `next/internal/admit/testdata/poisoning/corpus.json` and
    `residuals.json` (new).
-2. `next/internal/admit/poisoning_test.go` (new) — the gate table and
-   its spec pin, the corpus loader and the both-ways check, the
-   scripts, the three-part assertion, the residual drills.
-3. `next/internal/curation/` — the held-out and delivery arms the
-   scripts need exposed for assertion, if any.
+2. `next/internal/admit/poisoning_test.go` (new) — the registry
+   enumeration and its spec pin, the corpus loader and the both-ways
+   check, the scripts, the three-part assertion, the residual drills.
+3. `next/internal/curation/` — `Gate`, `Gates()` and `GateError` if
+   #228 landed without them, and the held-out and delivery arms the
+   scripts need exposed for assertion.
 4. `next/cmd/seed/modes_e2e_test.go` — the CLI arm.
 5. Any gate fix D5 requires, in its package, with the poison as the
    drill.
@@ -173,11 +185,14 @@ NOT `next/spec/transitions.json`, NOT `Makefile`, NOT `.seed/**`.
 
 **Boundary set (new, shown working):**
 
-1. **Coverage is derived.** The gate table equals `curation.md`'s in
-   both directions; every gate has at least one poison and every
-   poison names a gate; a declared poison with no script, and a
-   script with no declaration, fail the suite; an empty corpus or an
-   empty residual table fails rather than passing vacuously.
+1. **Coverage is derived.** The gate set comes from
+   `curation.Gates()`, the registry every curation refusal names; it
+   equals `curation.md`'s table in both directions; every registered
+   gate has at least one poison and every poison names a registered
+   gate; a gate registered in a drill-planted rule with no poison
+   fails, as does a declared poison with no script, a script with no
+   declaration, an empty corpus and an empty residual table, each
+   rather than passing vacuously.
 2. **Every poison fails at both ends.** For each corpus entry the
    named verb refuses at the named gate with the expected code or
    reason, no `lesson.promoted` for the poisoned hypothesis is
@@ -198,11 +213,17 @@ NOT `next/spec/transitions.json`, NOT `Makefile`, NOT `.seed/**`.
    `adversarial` optional for a `role` carrier; the pass not replayed
    at its position; the marker not checked; the ordering not checked;
    a fail accepted as survival; the delivery filter dropped; the lint
-   skipping provenance. And two on the drill itself: the both-ways
-   check dropped, and the gate table read from a hand list.
+   skipping provenance. And three on the drill itself: the both-ways
+   check dropped; coverage checked against the spec table instead of
+   the registry; a refusal raised outside `GateError`.
 6. `make check` green with coverage measured **cold**, at least three
    readings above the gate, and the suites pass **unprivileged** under
-   `setpriv --reuid=65534`.
+   `setpriv --reuid=65534 --regid=65534 --clear-groups`, which changes
+   the real and effective UID and GID and clears supplementary groups
+   so a root-group-readable path cannot mask a permission failure. The
+   invocation is recorded in the task PR's evidence rather than under
+   Validation Commands, because the receipt's run executes on a CI
+   runner that cannot drop to another uid.
 
 **Retention set (existing, shown unharmed):**
 
