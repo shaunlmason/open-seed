@@ -242,6 +242,62 @@ func TestGateBeforeRun(t *testing.T) {
 	}
 }
 
+// The per-run clone carries auto-gc disabled in its own config from
+// the moment it exists (plans/os-711b3028.md D2, D3): read with
+// --local, the scope the test binary's global config cannot satisfy,
+// because the earlier drill read the effective value and passed for
+// the wrong reason. Cleanup runs right after the checkout that arms
+// git's collector, which is the race this write removes.
+func TestWorkspaceCloneHasNoAutoGC(t *testing.T) {
+	dir, _, _, head := repo(t)
+	ws, err := NewWorkspace(dir, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ws.Cleanup()
+	for key, want := range map[string]string{
+		"gc.auto":        "0",
+		"gc.autoDetach":  "false",
+		"receive.autoGC": "false",
+	} {
+		out, err := exec.Command("git", "-C", ws.Repo, "config", "--local", "--get", key).CombinedOutput()
+		if err != nil {
+			t.Fatalf("%s unset in the clone's own config: %v %s", key, err, out)
+		}
+		if got := strings.TrimSpace(string(out)); got != want {
+			t.Errorf("%s = %q in the clone, want %q", key, got, want)
+		}
+	}
+}
+
+// The same GIT_CONFIG case for the clone (review finding on #232): the
+// workspace hardens its own config under the variable and leaves the
+// operator's selected file alone.
+func TestWorkspaceHardensDespiteGitConfigSelection(t *testing.T) {
+	dir, _, _, head := repo(t)
+	external := filepath.Join(t.TempDir(), "operator-config")
+	t.Setenv("GIT_CONFIG", external)
+	ws, err := NewWorkspace(dir, head)
+	if err != nil {
+		t.Fatalf("NewWorkspace under GIT_CONFIG: %v", err)
+	}
+	defer ws.Cleanup()
+	for key, want := range map[string]string{"gc.auto": "0", "gc.autoDetach": "false", "receive.autoGC": "false"} {
+		cmd := exec.Command("git", "-C", ws.Repo, "config", "--local", "--get", key)
+		cmd.Env = withoutGitConfigSelection(os.Environ())
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("%s unset in the clone's own config under GIT_CONFIG: %v %s", key, err, out)
+		}
+		if got := strings.TrimSpace(string(out)); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+	if b, err := os.ReadFile(external); err == nil {
+		t.Fatalf("the operator's selected config file was written: %q", b)
+	}
+}
+
 func TestRunnerProfileScrubsEnvironment(t *testing.T) {
 	dir, base, _, head := repo(t)
 	t.Setenv("SEED_TEST_SECRET", "hunter2")
