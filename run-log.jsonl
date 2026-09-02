@@ -1137,3 +1137,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-79b3bfae","kind":"receipt"},"task":"os-9075c308","ts":"2026-09-02T22:31:00Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-9075c308","ts":"2026-09-02T22:31:04Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 12 item 1 — the compromised-actor drill, the release gate in CI"},"task":"os-465e356e","ts":"2026-09-02T22:33:33Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-465e356e","ts":"2026-09-02T22:34:00Z","verb":"promote"}
