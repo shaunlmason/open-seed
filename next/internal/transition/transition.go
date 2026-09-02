@@ -1284,16 +1284,24 @@ func CheckCompleteness(verb, subject string, payload []byte) error {
 	// treated as strictly as any, or one no worker could reserve
 	// against; both are refused here naming what is legal.
 	if verb == "intent.filed" {
-		var filed struct {
-			Tier   string `json:"tier"`
-			Budget string `json:"budget"`
-		}
-		if err := json.Unmarshal(payload, &filed); err == nil {
-			if _, ok := Tier(filed.Tier); !ok {
-				return &VocabularyError{Verb: verb, Subject: subject, Field: "tier", Value: filed.Tier, Known: Tiers()}
+		// Each field is decoded on its own: a value that is not a JSON
+		// string (a number, an array) is no member of any table, and a
+		// decode failure must refuse rather than skip the check (review
+		// finding on the task PR).
+		for _, f := range []struct {
+			name  string
+			known func() []string
+			has   func(string) bool
+		}{
+			{"tier", Tiers, func(v string) bool { _, ok := Tier(v); return ok }},
+			{"budget", BudgetClasses, func(v string) bool { _, ok := BudgetCapacity(v); return ok }},
+		} {
+			var v string
+			if err := json.Unmarshal(m[f.name], &v); err != nil {
+				return &VocabularyError{Verb: verb, Subject: subject, Field: f.name, Value: strings.TrimSpace(string(m[f.name])), Known: f.known()}
 			}
-			if _, ok := BudgetCapacity(filed.Budget); !ok {
-				return &VocabularyError{Verb: verb, Subject: subject, Field: "budget", Value: filed.Budget, Known: BudgetClasses()}
+			if !f.has(v) {
+				return &VocabularyError{Verb: verb, Subject: subject, Field: f.name, Value: v, Known: f.known()}
 			}
 		}
 	}

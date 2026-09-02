@@ -399,6 +399,9 @@ func TestTierIsValidatedAgainstTheVocabulary(t *testing.T) {
 	if err := filed("", "small"); !errors.As(err, &inc) {
 		t.Fatalf("an empty tier still refuses as incomplete: %v", err)
 	}
+	if err := transition.CheckCompleteness("intent.filed", "c-1", []byte(`{"intent": "x", "tier": 1, "budget": "small", "routing": "core"}`)); err == nil {
+		t.Fatal("a persuaded dispatcher's non-string tier refuses too: the check never skips on a decode failure")
+	}
 	for _, tier := range transition.Tiers() {
 		if err := filed(tier, "small"); err != nil {
 			t.Fatalf("member %q files: %v", tier, err)

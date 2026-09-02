@@ -133,6 +133,20 @@ func TestCompletenessValidatesTheVocabularies(t *testing.T) {
 			t.Fatalf("class %q files: %v", class, err)
 		}
 	}
+	// A value that is not a JSON string is no member either, and the
+	// decode failure refuses rather than skipping the check.
+	for name, payload := range map[string]string{
+		"numeric tier":   `{"intent": "x", "tier": 1, "budget": "small", "routing": "core"}`,
+		"array budget":   `{"intent": "x", "tier": "trivial", "budget": ["small"], "routing": "core"}`,
+		"object tier":    `{"intent": "x", "tier": {"name": "trivial"}, "budget": "small", "routing": "core"}`,
+		"boolean budget": `{"intent": "x", "tier": "trivial", "budget": true, "routing": "core"}`,
+	} {
+		var ve *transition.VocabularyError
+		err := transition.CheckCompleteness("intent.filed", "c-1", []byte(payload))
+		if !errors.As(err, &ve) {
+			t.Fatalf("%s: a non-string value refuses as a vocabulary refusal, never skips the check: %v", name, err)
+		}
+	}
 	// The check is intent.filed's: other completeness verbs are as before.
 	if err := transition.CheckCompleteness("contract.returned", "c-1", []byte(`{"verdict": "3"}`)); err != nil {
 		t.Fatalf("contract.returned's completeness is unchanged: %v", err)
