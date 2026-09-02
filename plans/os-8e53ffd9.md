@@ -55,17 +55,42 @@ Measured, not assumed:
   Drift is a per-field comparison (D4), and a string with five things
   in it cannot say which one moved.
 
-- **D2 — grants cite the tuple; enrollment does not.** `actor.granted`
+- **D2 — grants cite the tuple; enrollment does not; and the FIRST
+  qualified grant retires the bridge for that actor.** `actor.granted`
   gains an OPTIONAL `tuple` (D1's object). The keyring's `Entry` stores
-  grants as `{Capability, Tuple *Tuple}` instead of `[]string`, with
-  `Grants()` keeping the old string view for every existing caller.
+  grants as `[]Grant{Capability, Tuple *Tuple}` instead of `[]string`,
+  with `Grants()` keeping the old string view for every existing caller
+  and a new `GrantTuples(actor, capability) []Tuple` — plural, because
+  grants accumulate and a singular accessor would be ambiguous the
+  moment an actor held two.
 
-  Optional is the bridge, and it is stated rather than smuggled: a grant
-  with no tuple is an **unqualified** grant and admits exactly as today,
-  so no existing chain, fixture or deployment changes meaning. A grant
-  with a tuple is a **qualified** grant, and D4 applies. Phase 10 item
-  2 is what makes evals mint qualified grants; this card gives the
-  grant somewhere to put one.
+  Optional is the bridge, and it is stated rather than smuggled: an
+  actor NONE of whose grants for the capability cite a tuple is
+  **unqualified** and admits exactly as today, so no existing chain,
+  fixture or deployment changes meaning. Phase 10 item 2 is what makes
+  evals mint qualified grants; this card gives the grant somewhere to
+  put one.
+
+  **The matching rule, since grants only accumulate** (review finding
+  on #215): the tree has no grant-level withdrawal, suspension and
+  re-enrollment preserve grants, and a rule that let any tuple-less
+  grant admit any run would mean a qualified grant appended later could
+  never constrain a worker enrolled before it. So the rule reads the
+  SET. At `run.started`, take every tuple cited by the claim holder's
+  `claim` grants: if the set is empty the holder is unqualified and the
+  run admits; if it is non-empty the run's tuple must EQUAL one member
+  (D1's per-field equality), else drift (D4). Consequences, each
+  drilled: the first qualified grant makes qualification authoritative
+  for that actor with no migration verb and no withdrawal — the bridge
+  grant is not removed, it simply stops being the only thing consulted;
+  a second qualified grant ADDS an admissible configuration rather than
+  replacing the first; and a tuple-less grant appended AFTER a qualified
+  one changes nothing, because the set is what is read.
+
+  Refused: retiring the bridge by a global switch. A deployment
+  qualifies actors one at a time as evals pass, and a switch that
+  flips everyone at once would leave every not-yet-evaluated actor
+  unable to run.
 
   Enrollment stays `{key, kind, name}`. The build plan says
   "enrollment/grants"; the charter says "grants cite the qualified
@@ -89,6 +114,30 @@ Measured, not assumed:
   see is the thing III.E row 6 forbids. Existing fixtures that append
   `run.started` raw gain the field; there are eleven such appends and
   the receipt counts them.
+
+  **And the declaration is checked against what the adapter actually
+  provisioned, before any execution is released** (review finding on
+  #215). `run.started` carries the caller's DECLARATION, admitted before
+  provisioning; on its own that is a promise, not a report. So the
+  adapter's report is a second, post-provision value: `Run` gains
+  `Tuple() tuple.Tuple`, the configuration the adapter RESOLVED, and
+  `Provision` — which already reads the chain and finds the admitted
+  start for the spec's fence (`verifyStarted`) — compares the resolved
+  tuple against the admitted one field by field and refuses
+  `ErrTupleMismatch` with full rollback on any difference, so no
+  workspace is ever handed to a caller for a configuration the ledger
+  did not admit. The comparison is the adapter's, inside `Provision`,
+  because that is the one place the resolved value exists and execution
+  has not yet started.
+
+  The v0 local adapter's resolved tuple is `harness` and `environment`
+  from what it built plus the three fields from the spec, and it says
+  so: it provisions a worktree, and a worktree cannot see which model a
+  lane process will call. That limit is honest and it is recorded; what
+  this card ships is the CHECK and its seam, drilled with a fake adapter
+  that resolves a different model and is refused with nothing left on
+  disk. A container or cloud adapter (Phase 13) resolves all five and
+  inherits the check unchanged.
 
   Refused: reporting the tuple on `run.settled`. Settlement is telemetry
   after the fact ("never authority", `executors.md`); drift must refuse
@@ -145,7 +194,33 @@ Measured, not assumed:
   vocabulary at `intent.filed`, which Phase 10 item 3 (levels declared
   per tier) owns; nothing in item 1 reads a tier.
 
-- **D8 — scope guard.** No verb is added to the ledger vocabulary
+- **D8 — `seed/2`, because a `seed/1` validator judges a tuple-bearing
+  grant differently** (review finding on #215). `actors.md` makes actor
+  payload shapes CHAIN VALIDITY, strictly decoded, so a `seed/1`
+  validator fails a grant carrying `tuple` at its position
+  (`bad_actor_event`) while this card's validator accepts it — exactly
+  the "validation rules that a conformant `seed/N-1` validator would
+  judge differently" `protocol.md`'s bump discipline names. The tuple
+  semantics therefore activate at **`seed/2`**, on the pattern
+  `actors.md` set for `seed/1`: `version.Seed2`, added to `Supported()`;
+  a gate (`tuple.Applies(active)`) beside `keyring.Applies`, which
+  itself becomes true for `seed/1` and later so actor semantics stay on;
+  at `seed/1` positions a grant's `tuple` field stays unknown-and-refused
+  and `run.started` does not require one, so every existing chain
+  verifies byte-for-byte as before; at `seed/2` positions the grant
+  field is accepted, `run.started` requires `tuple`, and D4 applies.
+  `protocol.md`'s version register gains the `seed/2` entry, the bump
+  lands as this PR editing that file plus the `system.protocol.upgraded
+  {"to": "seed/2"}` event, and fixtures that exercise tuples upgrade to
+  `seed/2` after `seed/1`.
+
+  A mixed-version drill pins the disagreement the finding describes
+  and shows it resolved: one chain, a grant with a tuple appended at a
+  `seed/2` position, verified by a build supporting only `seed/1` (which
+  refuses at the upgrade record with `version_mismatch`, never by
+  misjudging the grant) and by this build (which verifies).
+
+- **D9 — scope guard.** No verb is added to the ledger vocabulary
   (`run.started` and `actor.granted` grow a field each; `seed run start`
   is a CLI verb over an existing ledger verb, like `claim take`). No
   transition row moves. No exit code is allocated. `actor.enrolled` is
@@ -153,20 +228,27 @@ Measured, not assumed:
 
 ## Steps
 
+0. `next/internal/version/` — `Seed2` and `Supported()`;
+   `next/spec/protocol.md` — the `seed/2` register entry (D8).
 1. `next/internal/tuple/` — `Tuple`, `Parse` (strict), `Equal`,
-   `Diff` (the first differing field); unit-drilled including every
-   malformed shape.
+   `Diff` (the first differing field), `Applies(active)`; unit-drilled
+   including every malformed shape.
 2. `next/executor/executor.go` — `Tuple` becomes `tuple.Tuple`; the
-   local adapter reports `harness` and `environment` and leaves the
-   other three empty for the caller to fill; its test asserts it
-   invents nothing.
+   local adapter's static report carries `harness` and `environment`
+   and leaves the other three for the caller; `Run.Tuple()` reports the
+   RESOLVED configuration; `Provision` compares it to the admitted start
+   and refuses `ErrTupleMismatch` with rollback (D3); a fake adapter
+   drills the refusal.
 3. `next/internal/keyring/keyring.go` — `actor.granted` accepts optional
-   `tuple`; `Entry` stores `[]Grant{Capability, Tuple}`; `Grants()` keeps
-   the string view; a new `GrantTuple(actor, capability) *Tuple`.
+   `tuple` at `seed/2` positions only; `Entry` stores
+   `[]Grant{Capability, Tuple}`; `Grants()` keeps the string view;
+   `GrantTuples(actor, capability) []Tuple` (D2); `Applies` true for
+   `seed/1` and later.
 4. `next/internal/transition/transition.go` — `RunStartFact` gains
    `Tuple`; the fold reads it.
-5. `next/internal/admit/admit.go` — `run.started` requires `tuple`; the
-   drift check (D4) in the run rule, refusing `OutOfGrantError{…, Drift}`.
+5. `next/internal/admit/admit.go` — at `seed/2`, `run.started` requires
+   `tuple`; the drift check (D2's set rule, D4's per-field refusal) in
+   the run rule, refusing `OutOfGrantError{…, Drift}`.
 6. `next/cmd/seed/run.go` (new) — `seed run start`, deriving fence and
    reservation, filling the tuple from the adapter and flags,
    pre-flighting through `admit.Check`; `run_cli_test.go` gains its
@@ -177,7 +259,9 @@ Measured, not assumed:
    the loop's poll filter on it (D6); the modes fixture provisions its
    workers with qualified grants and proves a mismatched tuple is
    refused at `run.started` and unseen at `offer list`.
-9. Every fixture that appends `run.started` raw gains the field.
+9. Every fixture that appends `run.started` raw gains the field, and
+   every fixture that exercises tuples upgrades to `seed/2` after
+   `seed/1`; the mixed-version replay drill (D8).
 10. Specs: new `next/spec/qualification.md` (D1–D6, the bridge, the
     per-field drift rule, what item 2 adds); `actors.md` (the grant
     payload, `actor.qualified` still undefined and why);
@@ -190,21 +274,23 @@ Measured, not assumed:
 
 ## File Scope
 
-- `next/internal/tuple/**` (new), `next/executor/**`,
+- `next/internal/version/**`, `next/internal/tuple/**` (new),
+  `next/executor/**`,
   `next/internal/keyring/**`, `next/internal/transition/**`,
   `next/internal/admit/**`, `next/cmd/seed/run.go` (new),
   `next/cmd/seed/run_cli_test.go`, `next/cmd/seed/offer.go`,
   `next/cmd/seed/offer_cli_test.go`, `next/cmd/seed/modes_e2e_test.go`,
   `next/internal/loop/**` (the poll filter only), and every `_test.go`
   that appends `run.started` raw
-- `next/spec/qualification.md` (new), `next/spec/actors.md`,
+- `next/spec/qualification.md` (new), `next/spec/protocol.md` (the
+  `seed/2` register entry), `next/spec/actors.md`,
   `next/spec/executors.md`, `next/spec/offers.md`
 - `next/docs/progress.md`, `next/docs/decisions.md`, `memory/*`
 - `receipts/os-8e53ffd9.json`
 
 Nothing outside `next/**` except the work-product files above. In
 particular NOT `next/spec/transitions.json` and NOT
-`next/internal/envelope/**`: D8 says no row moves and no code is
+`next/internal/envelope/**`: D9 says no row moves and no code is
 allocated, and those are where a violation would land.
 
 ## Acceptance Criteria
@@ -213,10 +299,26 @@ allocated, and those are where a violation would land.
    qualified grant in any ONE of the five fields refuses `out_of_grant`
    (exit 14) naming the holder, the field, and both values; drilled per
    field, five rows, through `seed run start` against a real ledger.
-2. A matching tuple admits; a holder whose `claim` grant cites no tuple
-   admits any run (the bridge); a mismatch planted on the SIGNER's grant
-   with a match on the holder's admits, and the reverse refuses — so the
-   check is shown to read the holder.
+2. A matching tuple admits; a holder NONE of whose `claim` grants cite
+   a tuple admits any run (the bridge); a mismatch planted on the
+   SIGNER's grant with a match on the holder's admits, and the reverse
+   refuses — so the check is shown to read the holder. The set rule
+   (D2), each its own row: a holder with a bridge grant AND a later
+   qualified grant refuses a non-matching run (the bridge is retired);
+   a holder with two qualified grants admits either tuple and refuses a
+   third; a tuple-less grant appended after a qualified one changes
+   nothing.
+2b. An adapter whose resolved tuple differs from the admitted start in
+   any field is refused at `Provision` with `ErrTupleMismatch` and
+   leaves no workspace and no worktree registration behind; the local
+   adapter's resolved tuple equals its declaration; `Run.Tuple()` is
+   what was resolved, not what was declared.
+2c. A grant carrying `tuple` at a `seed/1` position fails verification
+   as `bad_actor_event` under this build too (the field activates at
+   `seed/2`); at a `seed/2` position it verifies. A build supporting
+   only `seed/1` refuses the chain at the `seed/2` upgrade record with
+   `version_mismatch`, never by misjudging the grant. Existing chains
+   with no upgrade verify byte-for-byte as before.
 3. `seed run start` fills `harness` and `environment` from
    `Adapter.Tuple()`, never invents principal, model or tool policy,
    refuses (usage) when a required field is neither supplied nor
@@ -235,11 +337,13 @@ allocated, and those are where a violation would land.
    still points at item 2.
 7. **Mutation evidence.** Each must fail a drill: drift comparing
    against the signer instead of the holder; the comparison skipping
-   any one field; `tuple` made optional on `run.started`; the adapter
-   inventing a model; `Grants()` losing a qualified grant from the
-   string view; the offer filter passing a tuple-naming offer to a
-   non-listed worker; and the drift refusal emitted under a code other
-   than `out_of_grant`.
+   any one field; the set rule consulting only the FIRST grant; `tuple`
+   made optional on `run.started` at `seed/2`; the adapter inventing a
+   model; `Provision` skipping the resolved-vs-admitted comparison;
+   `Grants()` losing a qualified grant from the string view; the offer
+   filter passing a tuple-naming offer to a non-listed worker; the
+   drift refusal emitted under a code other than `out_of_grant`; and
+   the tuple gate applied at `seed/1`.
 8. `make check` green with coverage measured **cold**, at least three
    readings above the gate, and the suites pass **unprivileged** under
    `setpriv --reuid=65534`.
@@ -248,7 +352,7 @@ allocated, and those are where a violation would land.
 
 ```sh
 cd next && gofmt -l . && go vet ./... && go build ./...
-cd next && go test ./internal/tuple/ ./internal/keyring/ ./internal/admit/ ./executor/ ./cmd/seed/ -count=1
+cd next && go test ./internal/version/ ./internal/tuple/ ./internal/keyring/ ./internal/admit/ ./internal/ledger/ ./executor/ ./cmd/seed/ -count=1
 cd next && go test ./... -count=1
 make check
 ```
