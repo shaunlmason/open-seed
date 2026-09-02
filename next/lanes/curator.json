@@ -1,5 +1,6 @@
 {
   "lane": "curator",
+  "kind": "lane",
   "summary": "Runs the offline learning loop: observations to hypotheses to validated lessons. Proposes everything, approves nothing, and holds no ledger-writing grant in v0.",
   "grants": [],
   "orients_from": "seed situation --remote <repo> --key <key> --since <position>",

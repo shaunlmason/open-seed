@@ -38,8 +38,19 @@ import (
 // fragment author reading the schema meets the obligation, not a
 // datatype.
 type Manifest struct {
-	// Lane is the charter's name for the role (§II.11).
+	// Lane is the manifest's name: one of the charter's six work-loop
+	// lanes (§II.11) or one of its non-loop roles. The JSON key is
+	// `lane` for both kinds, because the machinery is the same; Kind
+	// says which the name belongs to.
 	Lane string `json:"lane"`
+	// Kind is REQUIRED and one of KindLane or KindRole
+	// (plans/os-d6a52784.md D2). A lane is one of the charter's six
+	// and no other name may claim to be; a role is a part the charter
+	// defines outside the work loop (the supervisor, §II.9; governed
+	// observers, §8). Required rather than defaulted, so the six say
+	// what they are in their own files and the enumeration is a
+	// property of the manifests rather than of a sentence elsewhere.
+	Kind string `json:"kind"`
 	// Summary is the one-line statement of what the lane is for.
 	Summary string `json:"summary"`
 	// Grants are the capabilities the lane's key holds.
@@ -64,6 +75,22 @@ type Manifest struct {
 	// inferred from a directory listing, which would change under a
 	// rename.
 	Fragments []string `json:"fragments"`
+}
+
+// The two manifest kinds.
+const (
+	KindLane = "lane"
+	KindRole = "role"
+)
+
+// CharterLanes is the charter's closed enumeration, §II.11: "Six
+// lanes", numbered one through six. It is the ONE hand-written name
+// list this package holds, and it is the charter's rather than this
+// package's: Validate refuses a seventh lane by name, because a
+// directory anyone can drop a file into would otherwise enforce a
+// normative enumeration with nothing at all (plans/os-d6a52784.md D3).
+func CharterLanes() []string {
+	return []string{"dispatcher", "planner", "implementer", "verifier", "curator", "maintenance"}
 }
 
 // Finding is one validation failure, naming the lane, the field, and
@@ -158,6 +185,11 @@ func Load(dir string) ([]Manifest, error) {
 		if m.Lane == "" {
 			return nil, fmt.Errorf("%s: manifest names no lane", e.Name())
 		}
+		if m.Kind == "" {
+			return nil, fmt.Errorf("%s: manifest declares no kind: every manifest says whether it is one of "+
+				"the charter's six lanes (%q) or a role the charter defines outside the work loop (%q), "+
+				"and a default here would let the six acquire a claim nobody wrote", e.Name(), KindLane, KindRole)
+		}
 		if want := m.Lane + ".json"; e.Name() != want {
 			return nil, fmt.Errorf("%s: lane %q must live in %s", e.Name(), m.Lane, want)
 		}
@@ -197,6 +229,32 @@ func Validate(dir string, ms []Manifest) []Finding {
 		out = append(out, Finding{Lane: lane, Field: field, Message: msg})
 	}
 	used := map[string]bool{}
+
+	// The enumeration, as a property of the SET (plans/os-d6a52784.md
+	// D3): exactly the charter's six may be lanes, by name. A role is
+	// unconstrained in name, because §II.9 and §8 enumerate nothing.
+	charter := map[string]bool{}
+	for _, name := range CharterLanes() {
+		charter[name] = true
+	}
+	// Only the CLOSED half lives here: no name outside the six may be
+	// a lane. The other half, that all six are present, is a property
+	// of the shipped set and is asserted by cmd/seed's shipped-set
+	// drill; a fixture validating one manifest in isolation is not a
+	// deployment missing five lanes.
+	for _, m := range ms {
+		switch m.Kind {
+		case KindLane:
+			if !charter[m.Lane] {
+				add(m.Lane, "kind", fmt.Sprintf("claims to be a lane, and the charter's six are closed "+
+					"(SEED-NEXT.md §II.11: %s): a part outside the work loop is kind %q",
+					strings.Join(CharterLanes(), ", "), KindRole))
+			}
+		case KindRole:
+		default:
+			add(m.Lane, "kind", fmt.Sprintf("%q is not a manifest kind: %q or %q", m.Kind, KindLane, KindRole))
+		}
+	}
 
 	for _, m := range ms {
 		// Grants: real capabilities, asked of the keyring.

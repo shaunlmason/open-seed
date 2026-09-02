@@ -45,27 +45,35 @@ type identity struct {
 // person runs everything".
 //
 // It is exactly the charter's floor and no more: two key files on one
-// machine. The supervisor and observer the loop also needs are staged
-// as BACKGROUND identities, because no shipped lane grants what they
-// require (see buildMode).
+// machine. The supervisor and observer the loop also needs are the
+// charter's non-loop ROLES, provisioned from their own manifests in
+// every mode (see buildMode).
 var smallTeam = []identity{
 	{lane: "implementer", actor: "impl", seed: 51},
 	{lane: "verifier", actor: "verify", seed: 52},
 }
 
-// fleet is one identity per SHIPPED lane, built from the manifest set
-// rather than listed here, so a lane added to next/lanes/ joins the
-// fleet automatically.
+// fleet is one identity per SHIPPED LANE, built from the manifest set
+// rather than listed here. Filtered on kind (plans/os-d6a52784.md D7):
+// a manifest of kind role is the charter's supervisor or observer,
+// which invite and attest to work rather than take it, and a fleet
+// that provisioned them as workers would have a key both inviting work
+// and competing for it. The first draft ranged over every manifest, so
+// adding the role files would have grown the fleet to eight lanes
+// while the plan declared them non-lanes (review finding on #210).
 func fleetPlan(t *testing.T) []identity {
 	t.Helper()
 	var out []identity
 	seed := byte(60)
 	for _, m := range mustLoad(t) {
+		if m.Kind != lane.KindLane {
+			continue
+		}
 		out = append(out, identity{lane: m.Lane, actor: m.Lane, seed: seed})
 		seed++
 	}
-	if len(out) < 5 {
-		t.Fatalf("the fleet is one identity per shipped lane, got %d", len(out))
+	if len(out) != len(lane.CharterLanes()) {
+		t.Fatalf("the fleet is one identity per charter lane (%d), got %d", len(lane.CharterLanes()), len(out))
 	}
 	return out
 }
@@ -135,31 +143,33 @@ func buildMode(t *testing.T, plan []identity) *modeStand {
 	}
 	m.appendRaw = appendRaw
 
-	// TWO background identities, deliberately outside the identity
-	// plan, because the SHIPPED LANE SET CANNOT SUPPLY THEM.
-	//
-	// `offer.published` accepts only `supervise` or `operator`, and
-	// `merge.observed` only `observer` or `operator`. No lane manifest
-	// in next/lanes/ grants `supervise` or `observer` — the six lanes
-	// grant claim, dispatch, verdict, maintenance+operator, and (the
-	// curator) nothing. So a mode built purely from lanes could
-	// neither publish the offer its own workers poll for nor record
-	// the merge that ends the loop, and only the maintenance lane
-	// could do either, through `operator`, which is not its job.
-	//
-	// That is a gap in the LANE SET, not in these fixtures, and lanes
-	// are read-only in this card — so it is carded rather than papered
-	// over. Both are kept out of the identity plan so the grants
-	// assertion still measures only lane-derived identities.
-	for _, bg := range []struct {
-		name string
-		cap  string
-		seed byte
-	}{{"supervisor", "supervise", 59}, {"observer", "observer", 58}} {
-		path, pub, fp := writeWorkerKey(t, bg.seed)
-		m.keys[bg.name], m.fps[bg.name] = path, fp
-		appendRaw("actor.enrolled", fp, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": %q}`, pub, bg.name))
-		appendRaw("actor.granted", fp, `{"capability": "`+bg.cap+`"}`)
+	// The charter's non-loop ROLES, provisioned from their own
+	// manifests in every mode (plans/os-d6a52784.md D7). offer.published
+	// accepts supervise or operator and merge.observed accepts observer
+	// or operator; the supervisor (§II.9) and the governed observer
+	// (§8) are the parts the charter defines to hold them, outside the
+	// six lanes. An earlier draft staged both as identities this
+	// fixture invented, because no manifest granted either capability:
+	// honest then, and once the manifests exist, continuing to invent
+	// them would leave this fixture asserting exactly what it asserted
+	// before the gap closed. Their grants are the MANIFESTS', like every
+	// lane's, so the grants drill covers them too.
+	roleSeeds := map[string]byte{"supervisor": 59, "observer": 58}
+	for _, man := range mustLoad(t) {
+		if man.Kind != lane.KindRole {
+			continue
+		}
+		seed, ok := roleSeeds[man.Lane]
+		if !ok {
+			t.Fatalf("role %q shipped with no fixture seed: add one here rather than letting it be skipped", man.Lane)
+		}
+		path, pub, fp := writeWorkerKey(t, seed)
+		m.keys[man.Lane], m.fps[man.Lane] = path, fp
+		m.grants[man.Lane] = man.Grants
+		appendRaw("actor.enrolled", fp, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": %q}`, pub, man.Lane))
+		for _, g := range man.Grants {
+			appendRaw("actor.granted", fp, `{"capability": "`+g+`"}`)
+		}
 	}
 
 	for _, id := range plan {
@@ -200,6 +210,30 @@ func TestModeGrantsComeFromTheShippedManifests(t *testing.T) {
 	}
 	if len(m.grants["curator"]) != 0 {
 		t.Errorf("the curator holds no write grant at all, and the fixture carries that: %v", m.grants["curator"])
+	}
+	// The roles came from MANIFESTS, not from this file (D7): their
+	// grants equal what next/lanes/ ships, and they are not in the
+	// fleet's identity plan.
+	roles := 0
+	for _, man := range mustLoad(t) {
+		if man.Kind != lane.KindRole {
+			continue
+		}
+		roles++
+		if got := strings.Join(m.grants[man.Lane], ","); got != strings.Join(man.Grants, ",") {
+			t.Errorf("role %s: provisioned %q, its manifest says %v", man.Lane, got, man.Grants)
+		}
+		for _, id := range fleetPlan(t) {
+			if id.lane == man.Lane {
+				t.Errorf("role %s is in the fleet's identity plan: a role invites or attests, it does not take work", man.Lane)
+			}
+		}
+	}
+	if roles != 2 {
+		t.Errorf("the charter defines two non-loop roles (supervisor §II.9, observer §8), found %d", roles)
+	}
+	if got := len(fleetPlan(t)); got != 6 {
+		t.Errorf("the fleet is exactly the charter's six lanes after the role files are added, got %d", got)
 	}
 }
 

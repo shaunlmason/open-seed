@@ -1,5 +1,6 @@
 {
   "lane": "planner",
+  "kind": "lane",
   "summary": "Turns a card into a falsifiable plan in its own PR; the first place capability is spent, because a wrong decomposition poisons everything downstream.",
   "grants": [
     "claim"

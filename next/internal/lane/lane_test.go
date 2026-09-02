@@ -7,8 +7,10 @@ package lane
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -22,6 +24,7 @@ import (
 func good() Manifest {
 	return Manifest{
 		Lane:         "implementer",
+		Kind:         KindLane,
 		Summary:      "takes a card to a PR",
 		Grants:       []string{keyring.CapClaim},
 		OrientsFrom:  "seed situation --remote <repo> --key <key> --since <position>",
@@ -308,17 +311,211 @@ func TestManifestsAreStrict(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "implementer.json"),
-		[]byte(`{"lane": "implementer", "grants": [], "acts_thru": []}`), 0o644); err != nil {
+		[]byte(`{"lane": "implementer", "kind": "lane", "grants": [], "acts_thru": []}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Load(dir); err == nil {
 		t.Fatal("an unknown field must refuse rather than be ignored")
 	}
 	if err := os.WriteFile(filepath.Join(dir, "implementer.json"),
-		[]byte(`{"lane": "planner"}`), 0o644); err != nil {
+		[]byte(`{"lane": "planner", "kind": "lane"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Load(dir); err == nil || !strings.Contains(err.Error(), "must live in") {
 		t.Fatalf("the filename carries the lane's identity: %v", err)
 	}
+}
+
+// conformance: plans/os-d6a52784.md D2, AC5 — kind is REQUIRED, never
+// defaulted. A default would let the six existing manifests keep
+// passing while silently acquiring a claim nobody wrote.
+func TestKindIsRequired(t *testing.T) {
+	m := good()
+	m.Kind = ""
+	dir := fixture(t, m, map[string]string{"a.md": "role text"})
+	if _, err := Load(dir); err == nil || !strings.Contains(err.Error(), "declares no kind") {
+		t.Fatalf("a manifest with no kind is refused at load, not defaulted: %v", err)
+	}
+	m.Kind = "squad"
+	dir = fixture(t, m, map[string]string{"a.md": "role text"})
+	ms, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fs := Validate(dir, ms); len(fs) != 1 || fs[0].Field != "kind" {
+		t.Fatalf("an unknown kind is a finding on the kind field: %v", fs)
+	}
+}
+
+// conformance: D3, AC4 — the charter's six are CLOSED. A seventh lane
+// is refused BY NAME with a message citing §II.11; a role of any name
+// is accepted, because §II.9 and §8 enumerate nothing.
+func TestTheCharterSixAreClosed(t *testing.T) {
+	seventh := good()
+	seventh.Lane = "auditor"
+	dir := fixture(t, seventh, map[string]string{"a.md": "role text"})
+	ms, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fs := Validate(dir, ms)
+	if len(fs) != 1 || fs[0].Field != "kind" || !strings.Contains(fs[0].Message, "II.11") {
+		t.Fatalf("a seventh lane is refused by name, citing the charter: %v", fs)
+	}
+	role := good()
+	role.Lane = "auditor"
+	role.Kind = KindRole
+	role.Grants = []string{keyring.CapObserver}
+	role.ActsThrough, role.LivenessFrom = nil, nil
+	dir = fixture(t, role, map[string]string{"a.md": "role text"})
+	ms, err = Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fs := Validate(dir, ms); len(fs) != 0 {
+		t.Fatalf("a role may take any name: %v", fs)
+	}
+	// And every charter name IS accepted as a lane, so the list is
+	// the charter's and not shorter.
+	for _, name := range CharterLanes() {
+		m := good()
+		m.Lane = name
+		if name == "dispatcher" {
+			m.Grants = []string{keyring.CapDispatch}
+			m.ActsThrough, m.LivenessFrom = nil, nil
+		}
+		dir := fixture(t, m, map[string]string{"a.md": "role text"})
+		ms, err := Load(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range Validate(dir, ms) {
+			if f.Field == "kind" {
+				t.Errorf("%s is one of the charter's six and must be accepted as a lane: %v", name, f)
+			}
+		}
+	}
+}
+
+// conformance: D4, AC6 — the acts_through obligation turns on CapClaim,
+// not on kind. A role holding no claim declares no acts and is clean;
+// a role that DID hold claim would be obliged like a lane, so the rule
+// is shown to be about the grant rather than about the label.
+func TestActsThroughTurnsOnClaimNotKind(t *testing.T) {
+	role := good()
+	role.Lane, role.Kind = "supervisor", KindRole
+	role.Grants = []string{keyring.CapSupervise}
+	role.ActsThrough, role.LivenessFrom = nil, nil
+	dir := fixture(t, role, map[string]string{"a.md": "role text"})
+	ms, _ := Load(dir)
+	if fs := Validate(dir, ms); len(fs) != 0 {
+		t.Fatalf("a role holding no claim owes no acts: %v", fs)
+	}
+	role.Grants = []string{keyring.CapClaim}
+	dir = fixture(t, role, map[string]string{"a.md": "role text"})
+	ms, _ = Load(dir)
+	found := false
+	for _, f := range Validate(dir, ms) {
+		if f.Field == "acts_through" && strings.Contains(f.Message, "grants claim but declares no acts") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("a ROLE holding claim is obliged exactly like a lane: the rule is about the grant, not the kind")
+	}
+}
+
+// conformance: D6, AC2, AC3 — every capability the contract path
+// requires is granted by some shipped manifest. This is the drill whose
+// absence let three capabilities go ungranted through an entire phase.
+//
+// The verbs come from the CAPABILITY TABLE'S OWN SOURCE, not a list
+// here: a hand-listed drill cannot notice a verb it was never told
+// about, which is exactly how the gap survived. `operator` is excluded
+// from satisfying the check because it satisfies everything by
+// construction, so counting it would let the maintenance lane paper
+// over every future gap: the shape of the bug rather than the fix.
+func TestEveryRequiredCapabilityIsGrantedBySomeManifest(t *testing.T) {
+	dir := filepath.Join("..", "..", "lanes")
+	findings := requiredCapabilityGaps(t, dir)
+	if len(findings) != 0 {
+		t.Fatalf("capabilities the contract path requires and no shipped manifest grants:\n  %s",
+			strings.Join(findings, "\n  "))
+	}
+}
+
+// requiredCapabilityGaps is the derivation, exposed so the drill can be
+// run against a tree other than the shipped one (AC2: it must fail on
+// main's pre-fix lanes directory, naming all three gaps).
+func requiredCapabilityGaps(t *testing.T, dir string) []string {
+	t.Helper()
+	ms, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	granted := map[string]bool{}
+	for _, m := range ms {
+		for _, g := range m.Grants {
+			granted[g] = true
+		}
+	}
+	var out []string
+	for _, verb := range capabilityTableVerbs(t) {
+		accepted := keyring.AcceptedCapabilities(verb)
+		var need []string
+		for _, c := range accepted {
+			if c != keyring.CapOperator {
+				need = append(need, c)
+			}
+		}
+		if len(need) == 0 {
+			continue // operator-only by design: a human gate, not a gap
+		}
+		ok := false
+		for _, c := range need {
+			if granted[c] {
+				ok = true
+			}
+		}
+		if !ok {
+			out = append(out, fmt.Sprintf("%s needs one of {%s} and nothing grants any (operator excluded)",
+				verb, strings.Join(need, ", ")))
+		}
+	}
+	return out
+}
+
+// capabilityTableVerbs reads the verb literals out of
+// keyring.AcceptedCapabilities' own source. Verbs the table names by
+// constant (halt, upgrade, checkpoint) are operator- or
+// maintenance-gated system acts rather than contract-path ones and are
+// not read here; everything on the contract path is a literal case.
+func capabilityTableVerbs(t *testing.T) []string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("..", "keyring", "keyring.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	i := strings.Index(src, "func AcceptedCapabilities(")
+	if i < 0 {
+		t.Fatal("keyring.AcceptedCapabilities is no longer where this drill reads it")
+	}
+	body := src[i:]
+	if j := strings.Index(body, "\n}\n"); j >= 0 {
+		body = body[:j]
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, m := range regexp.MustCompile(`"([a-z]+\.[a-z.]+)"`).FindAllStringSubmatch(body, -1) {
+		if !seen[m[1]] {
+			seen[m[1]] = true
+			out = append(out, m[1])
+		}
+	}
+	if len(out) < 20 {
+		t.Fatalf("the capability table read too few verbs (%d): the scan is broken, and a scan that finds "+
+			"nothing agrees with everything", len(out))
+	}
+	return out
 }

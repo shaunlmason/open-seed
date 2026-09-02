@@ -1802,3 +1802,63 @@ here. Newest last.
   first draft of the plan still missed it. Leaving it stale would have
   left the documented worker-loop protocol false in the one place a
   worker reads to learn what exhaustion looks like.
+
+## The shipped role set could not publish an offer or observe a merge (os-d6a52784, plan #210)
+
+- **Neither two new lanes nor two grants on existing ones, and the
+  charter decided it.** §II.11 is a closed enumeration — "Six lanes",
+  numbered one through six, repeated in the glossary, cited by
+  `lanes.md`'s opening line and by III.J's own row — so a seventh edits
+  a normative list by implication. And both missing parts already exist
+  in the charter outside that list: the supervisor is §II.9, its own
+  section, and the observer is §8's governed observer. They are not
+  missing lanes; they are roles the charter kept out of the work loop
+  because neither takes work. Granting `supervise` to the dispatcher
+  would have been the same error smaller: that is the lane defined as
+  reading the most untrusted text.
+
+- **A required `kind`, never defaulted, and the six validated by name.**
+  Defaulting would have let the six existing manifests keep passing
+  while silently acquiring a claim nobody wrote. Making it required
+  meant editing the six to say `"kind": "lane"`, which was the point:
+  the enumeration became a property of the files. And without the
+  by-name check, the previous decision would have made it trivial to
+  add a seventh lane by dropping a file in a directory — the charter's
+  closed enumeration enforced by nothing. The COMPLETE half (all six
+  present) lives in the shipped-set drill rather than in `Validate`,
+  because a fixture validating one manifest in isolation is not a
+  deployment missing five lanes.
+
+- **`sealer` rides the verifier, not a third role** (review finding on
+  #210). `check.sealed` accepts `[sealer]` alone — no operator row —
+  and nothing granted it, so the coverage drill as first planned was
+  unsatisfiable. The charter's isolation requirement is specifically
+  from *implementation* grants (§7), and `sealed-checks.md`'s rule
+  forbids `claim` and `operator` by name, permitting `verdict`. The
+  positive argument is stronger: the check bodies are encrypted to the
+  verifier keyring, so a separate authoring identity would be one that
+  cannot read back what it wrote. Nothing was concentrated that was not
+  already — a compromised verifier key already decrypts every seal.
+
+- **`kind` governs the mode fixtures, or the closure is prose** (review
+  finding on #210). `fleetPlan` ranged over every manifest, so the two
+  role files would have provisioned supervisor and observer as fleet
+  lanes seven and eight while the plan declared them non-lanes. And the
+  fixtures had staged both as identities the test invented — honest
+  when no manifest granted the capabilities, and once the manifests
+  existed, continuing to invent them would have left the fixtures
+  asserting exactly what they asserted before the gap closed. The roles
+  are provisioned from their manifests now, and the fleet is drilled to
+  be exactly six.
+
+- **The coverage drill reads the capability table's source, and
+  `operator` does not count.** A hand-listed drill cannot notice a verb
+  it was never told about, which is how the gap survived a phase; the
+  verb literals come out of `keyring.AcceptedCapabilities` itself. And
+  `operator` satisfies everything by construction, so counting it would
+  let the maintenance lane paper over every future gap — the shape of
+  the bug rather than the fix. Both halves proved load-bearing by
+  paired mutation: with `supervise` removed from the manifest the drill
+  goes red, and with the drill also counting `operator` it wrongly goes
+  green; with `sealer` removed it goes red, and with the drill reading a
+  hand list it wrongly goes green.
