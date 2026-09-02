@@ -54,7 +54,12 @@ fields, which Phase 6 hardens):
    one is an observation a hypothesis may cite, and
    `curation.deadend.recorded` is the same shape with the charter's
    failure condition and environment, recorded standalone inside the
-   holder's window.
+   holder's window. The other direction, knowledge reaching a worker,
+   rides beside the packet rather than in it: the provisioned handoff
+   carries `.seed-run/lessons.json` next to `packet.json`
+   ([`executors.md`](executors.md)), because the four-part shape
+   refuses a fifth key and the ledger packet is the leaving worker's
+   fact, not the arriving one's briefing.
 
 Unknown keys refuse, at the top level and inside entries (the
 wire-parsing precedent). `packet_ref` is RESERVED: the

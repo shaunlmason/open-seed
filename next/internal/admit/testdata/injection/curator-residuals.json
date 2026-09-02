@@ -7,6 +7,11 @@
       "consequence": "bounded by the support floor: a proposal cites at least two admitted observations on two distinct non-failed contracts, re-judged from the record, so a persuaded curator can propose only what the trajectories already carry, and a proposal concludes nothing until a lesson PR the governance root reviews lands (next/spec/curation.md)"
     },
     {
+      "verb": "curation.hypothesis.contested",
+      "why_admitted": "contesting is the curator's attributable judgment over held-out evidence, the proposal's own no-fallback row",
+      "consequence": "bounded by the held-out rule: a contest cites admitted observations on contracts the applies-when selects and outside the support set, re-judged from the record, so a persuaded curator can close a hypothesis only with evidence the trajectories already carry, and the road out is a new proposal on its own support (next/spec/curation.md)"
+    },
+    {
       "verb": "escalation.raised",
       "why_admitted": "any lane may raise blocked(needs-you) per the charter; the curator joined the row with its proposal grant",
       "consequence": "freezes a contract until a human answers: denial of progress, never escalation of authority, attributable and reversible (next/spec/escalation.md)"

@@ -312,11 +312,11 @@ closed: intents and tool output are covered, mirrors are not.
 enforced in both directions. `message.acked` and `request.*` are named
 in [`protocol.md`](protocol.md) but appear in neither, being
 unimplemented, so the suite cannot speak about them. The `curation.*`
-edge closed with Phase 11 item 1: the three implemented verbs are in
-the catalog and the table, and the curator's own reachable set (the
-proposal, the raise, the standing-only relay) is derived from the
-boundary and pinned against its residual table exactly as the
-dispatcher's is ([`curation.md`](curation.md)).
+edge closed with Phase 11 items 1 and 2: the four implemented verbs
+are in the catalog and the table, and the curator's own reachable set
+(the proposal, the contest, the raise, the standing-only relay) is
+derived from the boundary and pinned against its residual table
+exactly as the dispatcher's is ([`curation.md`](curation.md)).
 
 ## The loop-verb registry
 

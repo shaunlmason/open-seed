@@ -148,6 +148,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `run.interrupted` | `supervise`, `operator` (the safe-point preemption request, once per active fence; conforming workers poll it and park deliberately with their packet — executors.md's Preemption section) |
 | `curation.deadend.recorded` | `claim`, `operator` (the window holder's candidate observation: failure condition and environment beside what was tried, inside the window, the fence matrix applying; a candidate has no field a conclusion could live in, curation.md) |
 | `curation.hypothesis.proposed` | `curate` (the fifth no-fallback row: operator already reaches claim.taken and the deliberate exits, so an operator fallback would let one key write a trajectory's observations and then conclude from them; the proposal is reachable through curate alone, and curate is disjoint from claim and operator at the grant, curation.md) |
+| `curation.hypothesis.contested` | `curate` (the contest is the curator's attributable judgment over held-out evidence the record already holds, the proposal's own no-fallback posture, curation.md) |
 | `curation.lesson.promoted` | `observer`, `operator` (the observation that a lesson file landed by PR, citing the admitted hypothesis it promotes: the merge.observed posture, curation.md) |
 
 A signer holding none of a verb's accepted capabilities refuses at exit

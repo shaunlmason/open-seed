@@ -66,6 +66,13 @@ type ProvisionSpec struct {
 	Started int
 	Packet  []byte
 	ObsDir  string
+	// Lessons is the surfacing set for the subject at claim time
+	// (plans/os-96850e5a.md D6), written beside the packet as
+	// lessons.json: a sibling file rather than a fifth packet key,
+	// because the ledger packet's four-part shape refuses unknown
+	// keys and the provisioned directory is the handoff, not the
+	// fact. Nil writes an empty list.
+	Lessons []byte
 }
 
 // Run is one provisioned execution run.
@@ -174,6 +181,14 @@ func (lw LocalWorktree) Provision(spec ProvisionSpec) (Run, error) {
 		return nil, err
 	}
 	if err := os.WriteFile(filepath.Join(runDir, "packet.json"), spec.Packet, 0o644); err != nil {
+		rollback()
+		return nil, err
+	}
+	lessons := spec.Lessons
+	if len(lessons) == 0 {
+		lessons = []byte("[]\n")
+	}
+	if err := os.WriteFile(filepath.Join(runDir, "lessons.json"), lessons, 0o644); err != nil {
 		rollback()
 		return nil, err
 	}

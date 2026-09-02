@@ -2287,3 +2287,53 @@ here. Newest last.
   contract and asserts parity with the dispatcher on the held and the
   blocked one.
 
+## Phase 11 item 2 — the promotion gate, the contested state, delivery (os-96850e5a, plan #228)
+
+- **The projection's `surfaces` is the record half only** (os-96850e5a,
+  D7 refined). The plan asked the `knowledge` projection to carry per
+  lesson `surfaces: true|false` with the reason. A projection build is
+  input-free and holds no repository, so the repository half of
+  surfacing (the anchor's ancestry and the file's digest) cannot be
+  computed there; the projection renders the record half (promoted and
+  not contested, the reason `contested` when false) and the readers
+  that hold a repository (`claim take --repo`, `seed situation --repo`,
+  `Provision`, `seed reconcile`) apply the rest. The spec says which
+  half is whose.
+
+- **A lint refusal is `lint_refused` under `checks_red`**
+  (os-96850e5a, D4 refined). The file half's refusal is a gate gone
+  red on content rather than on a command, and the plan allocates no
+  exit; `checks_red`'s family ("the verdict derives from what was
+  checked, and a red check forbids pass") is the one it belongs to, so
+  the refinement rides exit 20 with the gate in its message, beside
+  `carrier_absent` for the render's bound-eval refusal.
+
+- **The lint reads the fact for the file's repository-relative path**
+  (os-96850e5a, D4 refined). `seed knowledge lint <file>` must know
+  which promotion the file is, and a file names nothing but its
+  frontmatter's hypothesis; the verb resolves the file's path relative
+  to `--repo` and picks the admitted promotion on that hypothesis whose
+  anchor path equals it, refusing `not_found` for a file outside the
+  store or one no promotion cites. The frontmatter is judged against
+  THAT fact, so a lesson file cannot vouch for itself.
+
+- **The eval id keeps its derivation for unbound filings**
+  (os-96850e5a, D5 refined). The bound marker joins the subject hash
+  only when present, so every existing eval subject, fixture and
+  drill is unchanged, and an eval filed for one candidate and one for
+  another are two contracts.
+
+- **`seed reconcile --subject <h-id>` walks the promotions.** A
+  hypothesis subject is not a contract, so the fold-state lookup that
+  refuses an unknown contract would have refused it; the verb treats a
+  hypothesis-shaped subject as a request for its lesson findings alone.
+
+**Review fixes from item 1, carried into item 2.** The item 1 PR's
+review found four places where a curation check read a folded fact as
+an admitted one; the fixes (`WindowAdmitted`, `FailedAt`, the
+admitted-only fold with `AdmittedProposalBefore`, `UnderLessonsDir`)
+are in item 1's branch and ported here unchanged, with the same drills
+against the item 2 fixture (a grantless stranger key raw-pushing a
+claim, a dead end, a proposal and a pass). The contest and the
+promotion gates read the admitted fold, so an unadmitted proposal can
+be neither contested nor promoted.

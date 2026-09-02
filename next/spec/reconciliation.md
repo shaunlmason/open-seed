@@ -107,6 +107,7 @@ never the artifact store or the repository):
 | `chain_skipped` | an observed merge with no admitted `merge.requested` citing the verdict |
 | `unreconciled` | a pass verdict with no observed merge yet; not classified for an eval subject, whose verdict is its terminal fact ([`evals.md`](evals.md)) |
 | `verdict_unverified` | a folded verdict whose signer, replayed to the verdict's own position, held no verdict grant or was an implementing key — a raw-pushed verdict that never passed the verifier boundary |
+| `lesson_unverified` | a promoted, uncontested lesson whose fact does not resolve in the repository the reader holds (the anchor commit is not an ancestor of the head, or the file's bytes at the anchor do not hash to the fact's `digest`), on the hypothesis subject; evidence grade, since it needs the repository; such a fact never surfaces to a worker ([`curation.md`](curation.md)) |
 | `overridden` | the merge chain ran through an operator override — the sanctioned alternative, surfaced neutrally and by name, never as a divergence |
 | `override_unverified` | a folded override whose signer, replayed to its own position, held no operator standing — a raw-pushed override that substitutes for nothing |
 
@@ -137,8 +138,9 @@ artifact store and the repository:
   sha no longer resolves or is no longer an ancestor of that tip.
 
 `seed reconcile --ledger <dir> --repo <dir> [--subject <id>]
-[--artifacts <dir>]` walks one subject or every folded subject, merges
-both kinds, and returns the divergence set as envelope data at exit 0:
+[--artifacts <dir>]` walks one subject or every folded subject (a
+hypothesis subject walks its promotions instead), merges both kinds,
+and returns the divergence set as envelope data at exit 0:
 detection is a report, not a refusal — refusals stay operational
 (usage, unreadable store, chain trouble). Phase 9's loop consumes the
 same output.

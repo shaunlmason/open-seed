@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -67,8 +68,9 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 	// makes the instant explicit so a drill can advance it without
 	// waiting (next/spec/escalation.md).
 	nowFlag := fs.String("now", "", "RFC3339 instant ages are measured against (default: now)")
+	repo := fs.String("repo", "", "repository the surfacing lessons are verified against (default: their count is reported unverified)")
 	if err := fs.Parse(args); err != nil || !posture.resolved() || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "situation requires --ledger <dir> or --remote <repo> (not both) [--key <path>] [--subject <id>] [--since <position>]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "situation requires --ledger <dir> or --remote <repo> (not both) [--key <path>] [--subject <id>] [--since <position>] [--repo <dir>]"), stdout, stderr)
 	}
 	var sincePos int
 	haveSince := *since != ""
@@ -247,11 +249,33 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 		}
 		out = append(out, r)
 	}
+	windows := windowsHeld(st, fp, *subject)
+	// The lessons for each held subject (plans/os-96850e5a.md D6): the
+	// same surfacing set claim take delivers, verified against the
+	// repository; without one only the count, and the flag that would
+	// verify it.
+	unverified := 0
+	for _, w := range windows {
+		held, _ := w["subject"].(string)
+		surfaced, unresolved := curation.Surfacing(st.records, st.fold, *repo, held)
+		if *repo == "" {
+			unverified += len(unresolved)
+			continue
+		}
+		rows := []map[string]any{}
+		for _, l := range surfaced {
+			rows = append(rows, map[string]any{"lesson": l.Lesson, "hypothesis": l.Hypothesis, "applies_when": l.AppliesWhen, "carrier": l.Carrier, "digest": l.Digest})
+		}
+		w["lessons"] = rows
+	}
 	result := map[string]any{
 		"actor":       fp,
 		"obligations": out,
-		"windows":     windowsHeld(st, fp, *subject),
+		"windows":     windows,
 		"messages":    messagesFor(st, fp, *subject, sincePos, haveSince),
+	}
+	if *repo == "" && unverified > 0 {
+		result["lessons_unverified"] = map[string]any{"count": fmt.Sprintf("%d", unverified), "verify_with": "--repo <dir>"}
 	}
 	if haveSince {
 		result["since"] = *since

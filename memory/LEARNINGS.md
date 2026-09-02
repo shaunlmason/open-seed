@@ -1180,3 +1180,13 @@ the assertions read, and there is no copy to go stale.
   (`len(results)`, `len(list)`); grep for the old number across the
   packages before running the suite.
 
+- When a stacked card widens a function that an earlier card's drills
+  call (`HypothesisID(claim)` gaining exceptions), grep every test
+  file in the tree for the old arity before running the suite; `go
+  vet` reports the first file per package and hides the rest.
+- A projection build is input-free: anything that needs a repository
+  (ancestry, a file's digest) belongs to the readers that hold one,
+  and the projection carries only the record half with a note saying
+  so. Trying to verify in the build would have made `project rebuild`
+  depend on a checkout it is not given.
+

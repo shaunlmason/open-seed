@@ -156,14 +156,20 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   and never a new authority ([`obligations.md`](obligations.md)). The
   situation read consumes the same derivation at the ledger tip.
 
-- **`knowledge`** (`knowledge.json`): the curation pipeline's stages
-  ([`curation.md`](curation.md)): the stage counts, dead ends by
-  contract, hypotheses with their stage (`proposed`, `promoted`),
-  lessons, the unbound promotions and the anomaly count, from the
-  curation fold; `seed knowledge show` renders the same derivation at
-  the tip. The report carries a `knowledge` section with the stage
-  counts when the chain holds any curation fact, so builds of chains
-  that hold none stay byte-identical.
+- **`knowledge`** (`knowledge.json`, version 2): the curation
+  pipeline's stages ([`curation.md`](curation.md)): the stage counts
+  (observations, hypotheses, promoted, contested, lessons, unbound),
+  dead ends by contract, hypotheses with their stage (`proposed`,
+  `promoted`, `contested`) and `single_actor_family` where the actor
+  arm was waived, contests by hypothesis, lessons each with
+  `surfaces` and the reason when not (the record half: promoted and
+  not contested; the repository half, ancestry and digest, is the
+  reader's, since a build holds no repository), the unbound promotions
+  and the anomaly count, from the curation fold; `seed knowledge show`
+  renders the same derivation at the tip. The report carries a
+  `knowledge` section with the stage counts when the chain holds any
+  curation fact, so builds of chains that hold none stay
+  byte-identical.
 
 - **`cache`** (`cache.db`): the single-machine read-throughput
   surface — one SQLite database mirroring the views (`roster`,

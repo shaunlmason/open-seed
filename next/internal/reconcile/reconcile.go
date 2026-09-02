@@ -60,6 +60,14 @@ const ClassRunUnsettled = "run_unsettled"
 // PR).
 const ClassVerdictUnverified = "verdict_unverified"
 
+// ClassLessonUnverified is a promoted, uncontested lesson whose fact
+// does not resolve in the repository the reader holds
+// (plans/os-96850e5a.md D6): the anchor commit is not an ancestor of
+// the head, or the file's bytes at the anchor do not hash to the
+// fact's digest. Evidence grade: it needs the repository. Such a fact
+// never surfaces to a worker; this class is where it is reported.
+const ClassLessonUnverified = "lesson_unverified"
+
 // ClassUnsealed is an above-trivial subject at or past in_progress
 // with no sealed-checks commitment (plans/os-3128535a.md): reported
 // neutrally — the hard gate is verdict render's exit 24, and this

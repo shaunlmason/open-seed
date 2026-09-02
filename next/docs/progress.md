@@ -882,7 +882,33 @@ PR (an administrative card, not a Phase 9 item).
   standing-only relay; `next/spec/curation.md` and six spec edits).
 - 11.2 promotion gate (≥2-trajectory support, applies-when,
   provenance, last-validated; adversarial evaluation; contested state;
-  lessons at claim time) — os-96850e5a — planned (#228 merged)
+  lessons at claim time) — os-96850e5a — **in review** (task PR against
+  plan #228, stacked on item 1's: `applies_when` is a predicate over
+  record-derivable fields (`routing`, which the fold now reads, `tier`,
+  `paths`), one implementation for the boundary, the lint and the
+  delivery; the support rule gains the actor arm, two distinct holders
+  where the family the predicate selects has two, waived and recorded
+  as `single_actor_family` where it has one; the hypothesis id derives
+  from the claim and its exceptions, so an added exception is the road
+  out of a contest; `curation.hypothesis.contested` from `curate`
+  alone cites held-out observations on selected contracts outside the
+  support set, moves the fold to `contested`, closes the promotion and
+  removes the lesson from every delivery while keeping the file and
+  the facts; `lesson.promoted` carries `carrier`, `adversarial`,
+  `last_validated`, `expires` and `digest`, and its ledger half
+  requires an uncontested admitted hypothesis whose support still
+  passes and an authenticated pass on an eval filed after it with a
+  marker bound to it and to this lesson anchor, for every carrier; the
+  bound marker (`seed eval file --for-lesson --carrier`) and `seed
+  verdict render`'s `carrier_absent`; `seed knowledge lint`, the
+  gate's file half against the fact, the hypothesis and the
+  repository; every refusal a `GateError` at a gate `curation.Gates()`
+  registers; delivery from one derivation, verified against the
+  repository (anchor ancestry, digest) on `claim take --repo`, in the
+  provisioned `.seed-run/lessons.json` and in `seed situation --repo`,
+  the unverified reported as such; `lesson_unverified` at evidence
+  grade; the projection's `contested` stage and per-lesson
+  `surfaces`).
 - 11.3 poisoning drill — os-e2f1ad23 — planned (#229 merged)
 - 11.4 expiry, retirement, rollback by revert — os-0d537fbd — planned
   (#230 merged)
@@ -921,8 +947,10 @@ vocabulary is carded as os-be12ac16 with its plan in review (#219).
 Phase 11 has opened in parallel, depending on Phase 9 alone: item 1
 (os-f30ee0d3, the staged curation stores) is implemented against plan
 #226 and in review, so the curator holds its proposal grant and the
-three curation verbs exist; items 2 through 4 are planned (#228,
-#229, #230) and item 5's plan is in review (#231).
+curation verbs exist; item 2 (os-96850e5a, the promotion gate, the
+contested state and delivery at claim time) is implemented against
+plan #228 on top of item 1 and in review; items 3 and 4 are planned
+(#229, #230) and item 5's plan is in review (#231).
 Phase 9 was under way: item 5's derivation and read merged (#171) and
 its loop verbs merged (#173), so the lane-facing surface is whole in
 shape — `seed situation` says what is true and what is owed, and the

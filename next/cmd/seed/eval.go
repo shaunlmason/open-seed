@@ -202,7 +202,12 @@ func runEvalFile(args []string, stdout, stderr io.Writer) int {
 	repo := fs.String("repo", "", "repository the definition lives in")
 	name := fs.String("eval", "", "the definition to file")
 	tupleFlag := fs.String("tuple", "", "the configuration under re-test (a spot-check), as the strict JSON object")
+	forLesson := fs.String("for-lesson", "", "the hypothesis this eval is a counter-trajectory for, <h-id>@<position>")
+	carrier := fs.String("carrier", "", "the candidate revision the eval runs against, \"<path> @ <commit>\"")
 	parseErr := fs.Parse(args)
+	if parseErr == nil && (*forLesson == "") != (*carrier == "") {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "--for-lesson and --carrier bind an eval to a candidate together: both or neither"), stdout, stderr)
+	}
 	if env := usage(parseErr, fs.NArg()); env != nil || *repo == "" || *name == "" {
 		if env == nil {
 			env = usage(errors.New("missing"), 0)
@@ -239,7 +244,7 @@ func runEvalFile(args []string, stdout, stderr io.Writer) int {
 	}
 	prior := eval.Prior(ls.ctx.Lifecycle, def.Name, tu)
 	ls.done()
-	filing, err := eval.File(def, anchor, tu, prior)
+	filing, err := eval.FileBound(def, anchor, tu, prior, *forLesson, *carrier)
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}

@@ -15,6 +15,7 @@ import (
 	"io"
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 )
@@ -34,7 +35,11 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 		return render(failEnv, stdout, stderr)
 	}
 	subjects := st.fold.Subjects()
-	if *subject != "" {
+	if curation.IsHypothesisSubject(*subject) {
+		// A hypothesis subject: the lesson check below is the whole
+		// of its evidence grade.
+		subjects = nil
+	} else if *subject != "" {
 		if _, ok := st.fold.State(*subject); !ok {
 			return render(stampTip(envelope.Fail(envelope.ExitNotFound, "not_found",
 				fmt.Sprintf("no contract %s in the fold", *subject)), st.count), stdout, stderr)
@@ -63,6 +68,15 @@ func runReconcile(args []string, stdout, stderr io.Writer) int {
 		findings = append(findings, reconcile.Subject(id, s)...)
 		findings = append(findings, verdictFindings[id]...)
 		findings = append(findings, reconcile.Evidence(id, s, store, *repo)...)
+	}
+	if *subject == "" {
+		findings = append(findings, reconcile.Lessons(st.records, st.fold, *repo)...)
+	} else if curation.IsHypothesisSubject(*subject) {
+		for _, f := range reconcile.Lessons(st.records, st.fold, *repo) {
+			if f.Subject == *subject {
+				findings = append(findings, f)
+			}
+		}
 	}
 	if findings == nil {
 		findings = []reconcile.Finding{}

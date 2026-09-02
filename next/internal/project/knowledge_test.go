@@ -59,26 +59,33 @@ func TestKnowledgeProjectionPublishesTheStages(t *testing.T) {
 		add(root, version.Seed1, "contract.specified", subject, `{"acceptance": {"ref": "specs/thing.md @ abc1234", "executable": false}}`)
 		add(worker, version.Seed1, "claim.taken", subject, `{}`)
 	}
-	add(worker, version.Seed1, curation.DeadEndVerb, "c-1", `{"fence": "9", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
-	add(worker, version.Seed1, curation.DeadEndVerb, "c-2", `{"fence": "12", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
+	// The claims stand at 8 and 11, the dead ends at 12 and 13: the
+	// projection's fold re-judges each citation, so the fixture's
+	// observations are real ones inside admitted windows.
+	add(worker, version.Seed1, curation.DeadEndVerb, "c-1", `{"fence": "8", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
+	add(worker, version.Seed1, curation.DeadEndVerb, "c-2", `{"fence": "11", "tried": "x", "outcome": "y", "condition": "z", "environment": "w"}`)
 	claim := "retry once"
-	id := curation.HypothesisID(claim)
-	add(curator, version.Seed1, curation.HypothesisVerb, id, fmt.Sprintf(`{"claim": %q, "applies_when": "flaky", "support": ["c-1@13", "c-2@14"], "exceptions": [], "provenance": []}`, claim))
+	id := curation.HypothesisID(claim, nil)
+	add(curator, version.Seed1, curation.HypothesisVerb, id, fmt.Sprintf(`{"claim": %q, "applies_when": {"routing": "core"}, "support": ["c-1@12", "c-2@13"], "exceptions": [], "provenance": []}`, claim))
 	add(worker, version.Seed1, curation.HypothesisVerb, "h-000000000000", `{"claim": "x"}`)
-	add(root, version.Seed1, curation.LessonVerb, "h-ffffffffffff", `{"lesson": "next/knowledge/lessons/x.md @ 0123456", "hypothesis": "h-ffffffffffff@3", "pr": "pr/1 @ 0123456"}`)
+	add(root, version.Seed1, curation.LessonVerb, "h-ffffffffffff", `{"lesson": "next/knowledge/lessons/x.md @ 0123456", "hypothesis": "h-ffffffffffff@3", "pr": "pr/1 @ 0123456", "carrier": "knowledge", "adversarial": {"eval": "e", "verdict": "1"}, "last_validated": "2026-09-01T00:00:00Z", "expires": "2026-12-01T00:00:00Z", "digest": "`+strings.Repeat("a", 64)+`"}`)
+	other := "retry twice"
+	otherID := curation.HypothesisID(other, nil)
+	add(curator, version.Seed1, curation.HypothesisVerb, otherID, fmt.Sprintf(`{"claim": %q, "applies_when": {"routing": "core"}, "support": ["c-1@12", "c-2@13"], "exceptions": [], "provenance": []}`, other))
+	add(curator, version.Seed1, curation.ContestVerb, otherID, fmt.Sprintf(`{"hypothesis": "%s@17", "evidence": ["c-1@12"], "reason": "no"}`, otherID))
 
 	out2 := lockedTempOut(t, "after")
 	if _, err := project.Rebuild(dir, out2, project.Default(), resolve); err != nil {
 		t.Fatal(err)
 	}
 	view := currentView(t, out2, "knowledge")
-	for _, want := range []string{`"observations": 2`, `"hypotheses": 1`, `"promoted": 0`, `"lessons": 0`, `"unbound": 1`, `"anomalies": 1`, `"id": "` + id + `"`, `"stage": "proposed"`} {
+	for _, want := range []string{`"observations": 2`, `"hypotheses": 2`, `"promoted": 0`, `"contested": 1`, `"lessons": 0`, `"unbound": 1`, `"anomalies": 1`, `"id": "` + id + `"`, `"stage": "proposed"`, `"stage": "contested"`, `"single_actor_family": true`} {
 		if !strings.Contains(view, want) {
 			t.Errorf("the knowledge view carries %s: %s", want, view)
 		}
 	}
 	report := currentView(t, out2, "report")
-	if !strings.Contains(report, `"knowledge"`) || !strings.Contains(report, `"hypotheses": 1`) {
+	if !strings.Contains(report, `"knowledge"`) || !strings.Contains(report, `"hypotheses": 2`) || !strings.Contains(report, `"contested": 1`) {
 		t.Fatalf("the report counts the stages once a curation fact stands: %s", report)
 	}
 	if !strings.Contains(currentView(t, out, "report"), `"position": 6`) {
