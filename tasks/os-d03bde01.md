@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-02T03:50:36Z"
     lease_expires: "2026-09-02T04:50:36Z"
 created_at: "2026-09-01T14:19:51Z"
-updated_at: "2026-09-02T03:50:36Z"
+updated_at: "2026-09-02T04:25:17Z"
 ---
 
 Found while implementing the worker loop (os-abb206c8): budget
@@ -46,3 +46,7 @@ the spec to be updated with it.
 Scope: allocate a budget exit code, map the budget rule's refusals onto
 it, update next/spec/envelope.md and next/spec/budgets.md, and remove
 the pin.
+
+## Evidence ev-0b5f182f (, seed-next-implementer, 2026-09-02T04:25:17Z)
+
+receipts/os-d03bde01.json
