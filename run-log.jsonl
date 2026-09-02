@@ -1075,3 +1075,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T15:05:48Z"},"task":"os-99829835","ts":"2026-09-02T13:05:48Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:227","to":"ready"},"task":"os-6bd9ffff","ts":"2026-09-02T13:06:06Z","verb":"plan-unblock"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:228","to":"ready"},"task":"os-96850e5a","ts":"2026-09-02T13:06:10Z","verb":"plan-unblock"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-1923cfad","kind":"receipt"},"task":"os-711b3028","ts":"2026-09-02T13:26:56Z","verb":"attach-evidence"}
