@@ -1,12 +1,17 @@
 ---
 id: os-8e53ffd9
 title: 'next: Phase 10 item 1 — runtime tuples in enrollment and grants; adapters report the provisioned tuple; drift is out-of-grant'
-state: review
+state: done
 priority: P1
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-02T09:16:33Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/216
 created_at: "2026-09-02T07:29:45Z"
-updated_at: "2026-09-02T08:42:43Z"
+updated_at: "2026-09-02T09:16:33Z"
 ---
 
 Phase 10 (qualification and evaluation) item 1, the frontier named by
