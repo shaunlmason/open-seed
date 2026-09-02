@@ -8,8 +8,12 @@ report the **runtime tuple** actually provisioned. The interface is
 public — package `next/executor`, the module's one non-internal
 package — and the local worktree adapter is the first
 implementation; container, cloud-session, and enrolled-remote
-adapters are later phases' rows, and real tuple meaning is Phase
-10's (the v0 tuple is the honest stub `local-worktree/v0`).
+adapters are later phases' rows. The tuple is
+[`qualification.md`](qualification.md)'s five-field object
+(`internal/tuple`), reported twice: `Adapter.Tuple()` is the static,
+partial report of the fields the adapter controls, and `Run.Tuple()`
+is what a provision RESOLVED, checked against the admitted
+declaration before execution is released.
 
 ## The spend bracket
 
@@ -19,15 +23,29 @@ reservation gate:
 1. `budget.reserve` — capacity checked and decremented at admission
    ([`budgets.md`](budgets.md));
 2. `run.started` — the **spending-verb table's first entry**: strict
-   `{"fence": "<position>", "reservation": "<position>"}`, admitted
-   only while the subject is `in_progress`, citing the ACTIVE claim
-   fence and an open, **valid** reservation (the budget rule's
-   spending gate applies through the table, and the run rule
-   revalidates the specific citation position-accurately — the
-   laundering shape); once per fence, from {`supervise`,
-   `operator`};
+   `{"fence": "<position>", "reservation": "<position>"}` at `seed/1`
+   and strict `{"fence": "<position>", "reservation": "<position>",
+   "tuple": {…}}` from `seed/2`, where `tuple` is the runtime tuple
+   the run DECLARES ([`qualification.md`](qualification.md): required
+   there, refused before it); admitted only while the subject is
+   `in_progress`, citing the ACTIVE claim fence and an open, **valid**
+   reservation (the budget rule's spending gate applies through the
+   table, and the run rule revalidates the specific citation
+   position-accurately — the laundering shape); once per fence, from
+   {`supervise`, `operator`}; and, from `seed/2`, only under a
+   configuration the CLAIM HOLDER's `claim` grants cite, or under any
+   if they cite none (the set rule): a declaration differing from every
+   cited tuple in any field refuses `out_of_grant`. `seed run start`
+   is the verb: it derives the fence and reservation, fills `harness`
+   and `environment` from the adapter, takes `--principal`, `--model`
+   and `--tool-policy` from the caller, and pre-flights through
+   admission;
 3. **Provision** — refuses without the admitted `run.started` the
-   spec cites for its fence;
+   spec cites for its fence; and, where that start declared a tuple,
+   compares the tuple the adapter RESOLVED against it field by field
+   and refuses `ErrTupleMismatch` with full rollback (no worktree
+   registration, no allocation) on any difference, so no workspace is
+   handed out for a configuration the ledger did not admit;
 4. **Meter** — usage lines on the per-fence observation stream
    ([`observations.md`](observations.md), the `units` field);
 5. `run.settled` — the once-per-fence aggregate: strict
@@ -55,6 +73,16 @@ nothing is interpolated into a shell. Wake is the documented no-op
 returning nil: the wakeless poll-only drill proved polling loses
 only latency, and an advisory channel that does nothing is the
 honest v0. Dispose removes the worktree.
+
+The local adapter's static report is `harness: "local-worktree/v0"`
+and `environment: "detached-git-worktree"`, the two fields it
+controls; principal, model and tool policy it cannot know, and it
+never invents them. Its resolved tuple is those two from what it
+built plus the three from the admitted declaration, and it says so: a
+worktree cannot see which model a lane process will call. `Resolve` is
+the post-provision seam a drill sets to an adapter that resolves
+something else, which must be refused with nothing left on disk; a
+container or cloud adapter resolves all five and inherits the check.
 
 ## Disposal and the loss window
 

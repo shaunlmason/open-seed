@@ -8,6 +8,7 @@ package admit
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -135,5 +136,42 @@ func TestOfferAdmissionMatrix(t *testing.T) {
 	ctx = step(k.worker, version.Seed1, "submission.made", "c-1", submissionBody(fmt.Sprintf("%d", s.Claim.Fence)))
 	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "offer.published", "c-1", liveOfferBody, ctx.Tip)); err == nil {
 		t.Fatal("an offer on a review subject must refuse")
+	}
+}
+
+// conformance: review finding on the task PR — the tuples scope's
+// version gate reads the field's PRESENCE, not its length. A seed/1
+// validator strictly decodes eligibility as {capabilities, tiers} and
+// refuses the field however it is valued, so this validator must refuse
+// an explicit "tuples": [] or null on a seed/1 record exactly as it
+// refuses a populated list; at seed/2 an empty or null list is an
+// unscoped offer, and a list that is not a list of tuples refuses by
+// shape.
+func TestOfferTuplesFieldPresenceIsTheVersionGate(t *testing.T) {
+	ctx, k, step := offerFixture(t)
+	body := func(tuples string) string {
+		return `{"eligibility": {"capabilities": ["claim"], "tuples": ` + tuples + `}, "expires": "2027-01-01T00:00:00Z"}`
+	}
+	for name, tuples := range map[string]string{"empty list": "[]", "null": "null", "populated": `[{"principal": "acme", "harness": "h/1", "model": "m/1", "tool_policy": "p", "environment": "e"}]`} {
+		err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "offer.published", "c-1", body(tuples), ctx.Tip))
+		if err == nil || !strings.Contains(err.Error(), "tuple semantics activate at "+version.Seed2) {
+			t.Fatalf("%s: an explicit tuples field before seed/2 refuses by version: %v", name, err)
+		}
+	}
+	if err := Check(ctx, draftV(t, k.supervisor, version.Seed1, "offer.published", "c-1", liveOfferBody, ctx.Tip)); err != nil {
+		t.Fatalf("an offer without the field admits at seed/1 as before: %v", err)
+	}
+	ctx = step(k.signer, version.Seed1, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed2+`"}`)
+	for name, tuples := range map[string]string{"empty list": "[]", "null": "null"} {
+		if err := Check(ctx, draftV(t, k.supervisor, version.Seed2, "offer.published", "c-1", body(tuples), ctx.Tip)); err != nil {
+			t.Fatalf("%s: at seed/2 an empty scope is an unscoped offer: %v", name, err)
+		}
+	}
+	for name, tuples := range map[string]string{"not a list": `"acme"`, "object": `{"principal": "acme"}`, "malformed member": `[{"principal": "acme"}]`} {
+		err := Check(ctx, draftV(t, k.supervisor, version.Seed2, "offer.published", "c-1", body(tuples), ctx.Tip))
+		var oe *OfferError
+		if !errors.As(err, &oe) {
+			t.Fatalf("%s: a scope that is not a list of tuples refuses by shape: %v", name, err)
+		}
 	}
 }

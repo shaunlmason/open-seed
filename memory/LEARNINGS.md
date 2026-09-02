@@ -1090,3 +1090,28 @@ capability gap. **When a criterion says "all N", N is a claim the
 drill must derive, never a number the drill is told.** The cheap
 version, every time, was the same: find the source the list is a copy
 of, and read it.
+
+## A version gate written as equality is a gate that closes on the next version
+
+The lifecycle fold activated "at seed/1" as `e.V != version.Seed1 →
+skip`. It read as an activation boundary and behaved as one for two
+phases, because there was only one version past genesis. The moment
+`seed/2` existed, the same line silently dropped every claim, budget
+and offer record at `seed/2` positions, and the first drill to run
+under the new version refused two rules earlier than the one under
+test, with a message ("no open valid reservation stands") that named
+the symptom and not the cause.
+
+The fix is small (one named list in `internal/version`, consulted by
+both the fold and the keyring), and the lesson is the pattern: **an
+"activates at N" rule is a rule about N and every later version, and
+`== N` says the opposite**. Grep for `== version.` and `!= version.`
+before adding a version, not after the first drill fails. The
+exception is deliberate and rare: a gate that must NOT carry forward
+(a grandfathering boundary for one version's junk) is written as
+equality on purpose and says so in its comment.
+
+The companion rule from the same card: the list is a list, never an
+ordering. `Applies("seed/9")` must stay false on a build that has not
+registered `seed/9`, or a chain upgraded past what the build
+understands would fold under rules it never implemented.

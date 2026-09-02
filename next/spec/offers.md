@@ -24,7 +24,10 @@ contention refusal), not at offer time.
 {
   "eligibility": {
     "capabilities": ["claim"],
-    "tiers": ["trivial"]
+    "tiers": ["trivial"],
+    "tuples": [{"principal": "acme", "harness": "local-worktree/v0",
+                "model": "fable/5.1", "tool_policy": "default",
+                "environment": "detached-git-worktree"}]
   },
   "expires": "2026-09-01T00:00:00Z"
 }
@@ -38,7 +41,22 @@ contention refusal), not at offer time.
   already lets the operator act everywhere in it, so an operator can
   never claim work it cannot discover); `tiers` names the
   contract tiers the offer covers, matched against the subject's
-  filed tier.
+  filed tier; `tuples` (from `seed/2`, each the strict runtime tuple
+  of [`qualification.md`](qualification.md); refused before it)
+  names the configurations the offer wants, and is met by a worker
+  whose `claim` grants cite one of them, per field. A worker with no
+  cited tuple, or with only others, is not among them, and operator
+  standing satisfies this scope as it satisfies the rest. This is
+  III.J row 3's "strongest tuples by policy" as a scheduling INPUT
+  the supervisor writes, not a scheduler: ranking configurations is
+  Phase 10 item 2's eval results turned into offers. The field's
+  PRESENCE is what the version gate reads: an explicit `"tuples": []`
+  or `null` before `seed/2` refuses exactly as a populated list does,
+  because a `seed/1` validator strictly decodes eligibility as
+  `{capabilities, tiers}` and the two must agree on every `seed/1`
+  record. A raw-pushed offer with a malformed member folds to
+  **nothing** (an anomaly), never to an unscoped offer: a malformed
+  policy must not widen into a broader one.
 - `expires` is required RFC3339 and must lie **strictly after the
   event's own `ts`**: admission never reads a wall clock, so a
   born-dead offer refuses deterministically.
@@ -80,15 +98,20 @@ authority.
 ## Surfaces
 
 - `seed offer publish --ledger <dir> --subject <id> --key <path>
-  --expires <RFC3339> [--capability c]... [--tier t]...` — shapes the
-  payload and appends through the same validated path as every
-  append. Refusals reuse the established admission exits; no new exit
-  codes.
+  --expires <RFC3339> [--capability c]... [--tier t]... [--tuple
+  <json>]...` — shapes the payload and appends through the same
+  validated path as every append; each `--tuple` is parsed at the
+  door with the parser admission applies, so a malformed one refuses
+  as usage before anything is signed. Refusals reuse the established
+  admission exits; no new exit codes.
 - `seed offer list (--ledger <dir> | --remote <repo> [--ref <ref>]
   [--state <dir>]) --actor <fingerprint> [--now <RFC3339>]` — the
   worker's poll: live offers whose eligibility the actor meets, with
-  the subject's tier beside the scopes. An inactive or unknown actor
-  sees an empty list.
+  the subject's tier beside the scopes (`tuples` included, so a
+  qualified worker can see what it was invited under). An inactive or
+  unknown actor sees an empty list. The loop's poll consumes this
+  listing rather than reinventing eligibility, so the two agree by
+  construction.
 
   The posture pair is an exclusive-or, and the poll takes it for the
   same reason [`lanes.md`](lanes.md) gives for the orienting read:

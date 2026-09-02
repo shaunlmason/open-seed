@@ -22,9 +22,27 @@ const Protocol = "seed/0"
 // until a recorded decision moves it.
 const Seed1 = "seed/1"
 
+// Seed2 is the protocol version that activates runtime-tuple semantics
+// (next/spec/qualification.md; plans/os-8e53ffd9.md): actor.granted may
+// cite a tuple, run.started must declare one, and drift refuses as
+// out_of_grant. A seed/1 validator strictly decodes actor.granted as
+// {capability} and so judges a tuple-bearing grant differently, which
+// is next/spec/protocol.md's bump trigger; records at seed/1 positions
+// keep seed/1's judgment.
+const Seed2 = "seed/2"
+
 // Supported lists the protocol versions this build verifies and appends:
 // the genesis default plus every later version it implements. Verifiers
 // and admission points seed their default supported sets from it, so a
 // chain that upgrades to a version this build implements keeps verifying
 // without per-caller configuration.
-func Supported() []string { return []string{Protocol, Seed1} }
+func Supported() []string { return []string{Protocol, Seed1, Seed2} }
+
+// Activated reports whether the semantics seed/1 introduced (the actor
+// keyring, the lifecycle fold, budgets, offers) are active at a record
+// carrying version v: seed/1 and every later version this build
+// registers. A named list, never an ordering, so a version this build
+// has not registered activates nothing however it would sort
+// (plans/os-8e53ffd9.md D8). tuple.Applies is the narrower gate for
+// what seed/2 added on top.
+func Activated(v string) bool { return v == Seed1 || v == Seed2 }

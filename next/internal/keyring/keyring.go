@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -215,8 +216,36 @@ func AcceptedCapabilities(verb string) []string {
 
 // Applies reports whether the keyring semantics are active under the
 // given protocol version: seed/1 introduced them (next/spec/actors.md),
-// and records at earlier positions are grandfathered as inert.
-func Applies(active string) bool { return active == version.Seed1 }
+// records at earlier positions are grandfathered as inert, and every
+// later version keeps them (seed/2 adds tuple semantics on top,
+// tuple.Applies). Named versions rather than an ordering: an unknown
+// "seed/9" is not a version this build implements, and a keyring that
+// guessed it had actor semantics would be judging a chain it cannot
+// verify.
+func Applies(active string) bool { return version.Activated(active) }
+
+// GrantTuples returns every runtime tuple the actor's grants for the
+// capability cite, in grant order: the SET the qualification rule reads
+// (plans/os-8e53ffd9.md D2). Empty means unqualified for that
+// capability, never "any tuple".
+func (s *State) GrantTuples(actor, capability string) []tuple.Tuple {
+	e, ok := s.entries[actor]
+	if !ok || e.Tuples == nil {
+		return nil
+	}
+	return append([]tuple.Tuple(nil), e.Tuples[capability]...)
+}
+
+func cloneTuples(in map[string][]tuple.Tuple) map[string][]tuple.Tuple {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string][]tuple.Tuple, len(in))
+	for k, v := range in {
+		out[k] = append([]tuple.Tuple(nil), v...)
+	}
+	return out
+}
 
 // IsActorVerb reports whether the verb is in the actor.* namespace.
 func IsActorVerb(verb string) bool { return strings.HasPrefix(verb, "actor.") }
@@ -241,6 +270,14 @@ type Entry struct {
 	Standing Standing
 	Root     bool
 	Grants   []string
+	// Tuples holds, per capability, the runtime tuples this actor's
+	// grants cite (plans/os-8e53ffd9.md D2). It sits beside Grants
+	// rather than replacing it so every reader of the string view is
+	// untouched: a grant with no tuple contributes to Grants only, a
+	// grant with one to both. An actor with NO cited tuple for a
+	// capability is unqualified for it, and admits as before seed/2;
+	// one with any is qualified, and a run must match one of them.
+	Tuples map[string][]tuple.Tuple
 }
 
 // State is the keyring at one chain position.
@@ -305,6 +342,7 @@ func (s *State) Get(fp string) (Entry, bool) {
 	}
 	cp := *e
 	cp.Grants = append([]string(nil), e.Grants...)
+	cp.Tuples = cloneTuples(e.Tuples)
 	return cp, true
 }
 
@@ -406,6 +444,7 @@ func (s *State) Clone() *State {
 	for fp, e := range s.entries {
 		cp := *e
 		cp.Grants = append([]string(nil), e.Grants...)
+		cp.Tuples = cloneTuples(e.Tuples)
 		c.entries[fp] = &cp
 	}
 	return c
@@ -485,14 +524,38 @@ func (s *State) Advance(rec *event.Record) error {
 			return fmt.Errorf("actor %s is already enrolled and active", fp)
 		}
 	case VerbGranted:
+		// The payload shape is CHAIN VALIDITY (next/spec/actors.md), so
+		// the tuple field exists only where seed/2 is active: a seed/1
+		// record carrying one fails here exactly as a seed/1 validator
+		// fails it, and the two builds agree at every position
+		// (plans/os-8e53ffd9.md D8).
 		var p struct {
-			Capability string `json:"capability"`
+			Capability string          `json:"capability"`
+			Tuple      json.RawMessage `json:"tuple,omitempty"`
 		}
-		if err := strict(e.Payload, &p); err != nil {
-			return fmt.Errorf("%s payload: %v", e.Verb, err)
+		if tuple.Applies(e.V) {
+			if err := strict(e.Payload, &p); err != nil {
+				return fmt.Errorf("%s payload: %v", e.Verb, err)
+			}
+		} else {
+			var legacy struct {
+				Capability string `json:"capability"`
+			}
+			if err := strict(e.Payload, &legacy); err != nil {
+				return fmt.Errorf("%s payload: %v", e.Verb, err)
+			}
+			p.Capability = legacy.Capability
 		}
 		if p.Capability == "" {
 			return fmt.Errorf("%s must name a capability", e.Verb)
+		}
+		var cited *tuple.Tuple
+		if len(p.Tuple) > 0 {
+			parsed, err := tuple.Parse(p.Tuple)
+			if err != nil {
+				return fmt.Errorf("%s tuple: %v", e.Verb, err)
+			}
+			cited = &parsed
 		}
 		cur := s.entries[e.Subject]
 		if cur == nil {
@@ -509,6 +572,12 @@ func (s *State) Advance(rec *event.Record) error {
 			return fmt.Errorf("%s to %s: %v", e.Verb, e.Subject, err)
 		}
 		cur.Grants = append(cur.Grants, p.Capability)
+		if cited != nil {
+			if cur.Tuples == nil {
+				cur.Tuples = map[string][]tuple.Tuple{}
+			}
+			cur.Tuples[p.Capability] = append(cur.Tuples[p.Capability], *cited)
+		}
 	case VerbSuspended, VerbRevoked:
 		var p struct {
 			Reason string `json:"reason"`
@@ -538,7 +607,7 @@ func (s *State) Advance(rec *event.Record) error {
 			cur.Standing = StandingRevoked
 		}
 	default:
-		return fmt.Errorf("actor verb %q is not defined at %s (actor.qualified lands with qualification, build plan Phase 10)", e.Verb, version.Seed1)
+		return fmt.Errorf("actor verb %q is not defined at %s (actor.qualified cites eval results, which land with Phase 10 item 2, docs/next-build-plan.md)", e.Verb, e.V)
 	}
 	return nil
 }

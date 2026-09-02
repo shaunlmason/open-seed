@@ -788,6 +788,43 @@ against a card that named two capabilities) — so when a criterion says
 (`memory/LEARNINGS.md`). This exit record is card os-e6cdb3d9's task
 PR (an administrative card, not a Phase 9 item).
 
+## Phase 10 — Qualification and evaluation (docs/next-build-plan.md Phase 10; deps: 9 ✓)
+
+- 10.1 runtime tuples in grants, reported by adapters, drift as
+  out-of-grant — os-8e53ffd9 — **in review** (task PR against plan
+  #215: the five-field tuple spelled once in `internal/tuple`;
+  `actor.granted` citing an optional `tuple` at `seed/2` positions
+  only, the keyring keeping the set per capability beside the string
+  view of grants; `run.started` declaring a required `tuple` from
+  `seed/2` and refusing one before it; the set rule at admission
+  against the CLAIM HOLDER's `claim` grants (empty = unqualified, the
+  bridge; non-empty = equal one member per field, else
+  `out_of_grant` with a `Drift` detail naming the holder, the field
+  and both values, exit 14 unchanged); `seed run start` deriving fence
+  and reservation, filling harness and environment from the adapter
+  and never inventing principal, model or tool policy; `Run.Tuple()`
+  as the resolved configuration and `Provision` refusing
+  `ErrTupleMismatch` with rollback when the adapter resolves anything
+  else; `offer.published` scoping by `tuples` with `offer list` and
+  the loop's poll filtering on it; the `seed/2` register entry and
+  `version.Activated` as the named list the fold and keyring gate on;
+  `next/spec/qualification.md`. The III.J row 3 half routed here by
+  the Phase 9 exit record, "the planner receives the strongest tuples
+  by policy", lands as the offer's `tuples` scope, a scheduling input
+  the supervisor writes; ranking waits on item 2's eval results.
+  `actor.qualified` stays undefined until item 2, and the refusal says
+  so.)
+- 10.2 eval contracts through the production machinery; grants cite
+  passing tuples; spot-checks; suspension on failure — **next**
+- 10.3 independence levels L2/L3 declared per tier and recorded in
+  verdicts — os-711b3028 / os-be12ac16 (the tier vocabulary at
+  `intent.filed`) — not started
+- 10.4 rubric verdicts; calibration harness with authority suspension
+  on drift — not started
+- 10.5 trajectory-prefix regression harness; dispatcher re-triage rate
+  and planner unedited-approval rate (III.J row 3's metrics half,
+  routed here by the Phase 9 exit record) — not started
+
 ## Frontier
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
@@ -813,7 +850,11 @@ implementation (5(a) #171, 5(c) #173, 1a #188, 1c #191, 1b #192, 2
 out-of-item fixes (#175's task PR, os-9b3f3ef3, os-378e44f3, budget
 exhaustion's exit code #208), and the exit record above (card
 os-e6cdb3d9's task PR) are merged with every card closed.
-Phase 9 is under way: item 5's derivation and read merged (#171) and
+Phase 10 is under way: item 1 (os-8e53ffd9) is implemented against
+plan #215 and in review; the frontier is its merge, then item 2
+(eval contracts, plan-first), which `actor.qualified` and any ranking
+of tuples wait on.
+Phase 9 was under way: item 5's derivation and read merged (#171) and
 its loop verbs merged (#173), so the lane-facing surface is whole in
 shape — `seed situation` says what is true and what is owed, and the
 loop verbs are how a lane acts on it without hand-assembling protocol

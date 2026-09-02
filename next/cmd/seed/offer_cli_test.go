@@ -13,12 +13,14 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/loop"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -327,4 +329,118 @@ func claimFence(t *testing.T, ld, subject string) string {
 		t.Fatalf("no active claim on %s", subject)
 	}
 	return fmt.Sprintf("%d", s.Claim.Fence)
+}
+
+// conformance: plans/os-8e53ffd9.md D6 and AC5 — an offer may name the
+// runtime tuples it wants (III.J row 3's "strongest tuples by policy",
+// as a scheduling INPUT the supervisor writes): a qualified worker sees
+// it only if one of its cited tuples is named, an offer naming none
+// shows to every eligible worker, and the loop's poll agrees with the
+// listing because it IS the listing.
+func TestOfferTuplesScopeQualifiedWorkers(t *testing.T) {
+	ld, _, _, specCommit, priv, rootKey, keys, fps, _ := qualifiedLedger(t)
+	rootAppend(t, ld, priv, "actor.granted", fps["workerB"],
+		`{"capability": "claim", "tuple": `+drillTuple(map[string]string{"model": "fable/5.2"})+`}`)
+	offerFile(t, ld, priv, specCommit, "c-1")
+	publish := func(subject string, tuples ...string) (ledgerEnv, int) {
+		t.Helper()
+		args := []string{"offer", "publish", "--ledger", ld, "--subject", subject,
+			"--key", keys["supervisor"], "--expires", "2027-01-01T00:00:00Z"}
+		for _, tu := range tuples {
+			args = append(args, "--tuple", tu)
+		}
+		return runEnv(t, args...)
+	}
+	rootFP, err := event.Fingerprint(rootKey.Public().(ed25519.PublicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := func(actor string) int {
+		t.Helper()
+		return len(listOffers(t, ld, actor, ""))
+	}
+
+	// One tuple named: workerA (cites it) sees the offer; workerB
+	// (cites another) and the verifier (cites none) do not; the root's
+	// implicit operator satisfies every scope, tuples included, for the
+	// same reason it satisfies capabilities.
+	if e, code := publish("c-1", drillTuple(nil)); code != 0 {
+		t.Fatalf("publish with a tuple: %d %+v", code, e)
+	}
+	for name, want := range map[string]struct {
+		actor string
+		n     int
+	}{"workerA": {fps["workerA"], 1}, "workerB": {fps["workerB"], 0}, "verifier": {fps["verifier"], 0}, "root": {rootFP, 1}} {
+		if got := count(want.actor); got != want.n {
+			t.Fatalf("%s sees %d tuple-scoped offers, want %d", name, got, want.n)
+		}
+	}
+	rows := listOffers(t, ld, fps["workerA"], "")
+	if tuples, _ := rows[0].(map[string]any)["tuples"].([]any); len(tuples) != 1 {
+		t.Fatalf("the listing carries the offer's tuples: %+v", rows[0])
+	}
+
+	// An offer naming none shows to every eligible worker.
+	if e, code := publish("c-1"); code != 0 {
+		t.Fatalf("publish without tuples: %d %+v", code, e)
+	}
+	if count(fps["workerA"]) != 2 || count(fps["workerB"]) != 1 || count(fps["verifier"]) != 1 {
+		t.Fatalf("an unscoped offer shows to every eligible worker: A %d B %d verifier %d",
+			count(fps["workerA"]), count(fps["workerB"]), count(fps["verifier"]))
+	}
+
+	// Two named: both qualified workers see it.
+	offerFile(t, ld, priv, specCommit, "c-2")
+	if e, code := publish("c-2", drillTuple(nil), drillTuple(map[string]string{"model": "fable/5.2"})); code != 0 {
+		t.Fatalf("publish with two tuples: %d %+v", code, e)
+	}
+	if count(fps["workerA"]) != 3 || count(fps["workerB"]) != 2 {
+		t.Fatalf("an offer naming two configurations shows to a worker citing either: A %d B %d",
+			count(fps["workerA"]), count(fps["workerB"]))
+	}
+
+	// The loop's poll agrees with the listing: it consumes offer list
+	// rather than reinventing eligibility, so what workerB polls is
+	// exactly what workerB lists.
+	d, err := loop.New(implementerManifest(t), loopVerbs{}, []string{"--ledger", ld}, keys["workerB"],
+		loop.WorkFunc(func(string, loop.Situation) (int, error) { return 0, nil }), loop.WithBase("a..a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	polled, res := d.Poll()
+	if res.Refused() {
+		t.Fatalf("poll refused: %+v", res)
+	}
+	var listed []string
+	for _, r := range listOffers(t, ld, fps["workerB"], "") {
+		listed = append(listed, r.(map[string]any)["subject"].(string))
+	}
+	if strings.Join(polled, ",") != strings.Join(listed, ",") {
+		t.Fatalf("the poll and the listing disagree: polled %v, listed %v", polled, listed)
+	}
+
+	// A raw-pushed offer whose every tuple member is malformed is
+	// listed to NOBODY (review finding on the task PR): a malformed
+	// scope folds to nothing, never to an unscoped offer.
+	beforeA, beforeB := count(fps["workerA"]), count(fps["workerB"])
+	rawAppendAt(t, ld, workerRawKey(21), version.Seed2, "offer.published", "c-2",
+		`{"eligibility": {"tuples": [{"principal": "x"}]}, "expires": "2027-01-01T00:00:00Z"}`)
+	if count(fps["workerA"]) != beforeA || count(fps["workerB"]) != beforeB || count(fps["verifier"]) != 1 {
+		t.Fatalf("a malformed tuple scope widens nothing: A %d B %d verifier %d", count(fps["workerA"]), count(fps["workerB"]), count(fps["verifier"]))
+	}
+
+	// A malformed --tuple refuses as usage at the door, before anything
+	// is signed.
+	if e, code := publish("c-2", `{"principal": "x"}`); code != 64 || e.Error == nil || !strings.Contains(e.Error.Message, "tuple") {
+		t.Fatalf("a malformed --tuple refuses as usage naming the shape: %d %+v", code, e.Error)
+	}
+
+	// On a chain that never upgraded, the boundary refuses the scope
+	// by version: the pre-flight carries its refusal.
+	ld1, _, _, _, _, _, _, keys1, _ := offerLedgerAndSubject(t, "c-1")
+	e, code := runEnv(t, "offer", "publish", "--ledger", ld1, "--subject", "c-1", "--key", keys1["supervisor"],
+		"--expires", "2027-01-01T00:00:00Z", "--tuple", drillTuple(nil))
+	if code == 0 || e.Error == nil || !strings.Contains(e.Error.Message, "tuple semantics activate at "+version.Seed2) {
+		t.Fatalf("a tuple scope on a seed/1 chain refuses by version: %d %+v", code, e.Error)
+	}
 }

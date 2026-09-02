@@ -17,6 +17,7 @@ package admit
 import (
 	"crypto/ed25519"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"sort"
 	"strings"
 	"time"
@@ -30,6 +31,11 @@ import (
 // refuse, so illegality is judged by the rule set, never by the
 // synthesizer.
 type probeView struct {
+	// version is the chain's active protocol version: a probe must
+	// synthesize the payload shape THAT version admits, or the
+	// affordance list would say a verb is unavailable because the
+	// probe spoke the wrong dialect (plans/os-8e53ffd9.md).
+	version     string
 	now         string
 	expires     string
 	fence       string
@@ -74,6 +80,12 @@ const probePacket = `{"acceptance": ["probe"], "decisions": [], "base": "0000000
 // and the two-option floor a minimal decision needs
 // (next/spec/escalation.md).
 const probeEscalation = `{"question": "probe?", "options": [{"id": "a", "choice": "probe a"}, {"id": "b", "choice": "probe b"}]}`
+
+// probeTuple is the configuration the run.started probe declares at
+// seed/2. A probe asks "could a start be admitted here"; a holder whose
+// qualified grants cite something else would refuse it as drift, which
+// is the honest answer to that question for that holder.
+const probeTuple = `{"principal": "probe", "harness": "probe/0", "model": "probe/0", "tool_policy": "probe", "environment": "probe"}`
 
 // affordanceCatalog is every verb the envelope can list, each with
 // its payload synthesizer. Completeness is pinned by test: a catalog
@@ -186,6 +198,9 @@ var affordanceCatalog = []struct {
 		return `{` + v.fenceKV() + `"reservation": "` + v.reservation + `"}`
 	}},
 	{"run.started", func(v *probeView) string {
+		if tuple.Applies(v.version) {
+			return `{"fence": "` + v.fence + `", "reservation": "` + v.reservation + `", "tuple": ` + probeTuple + `}`
+		}
 		return `{"fence": "` + v.fence + `", "reservation": "` + v.reservation + `"}`
 	}},
 	{"run.settled", func(v *probeView) string {
@@ -236,6 +251,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		escalation:  "0",
 		position:    fmt.Sprintf("%d", ctx.Count),
 	}
+	v.version = ctx.Active
 	if ctx.Lifecycle != nil {
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			if s.Claim != nil {

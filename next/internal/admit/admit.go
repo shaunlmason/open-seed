@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"regexp"
 	"strconv"
 	"strings"
@@ -165,9 +166,27 @@ type OutOfGrantError struct {
 	Actor    string
 	Verb     string
 	Accepted []string
+	// Drift is the qualification refinement of the same family
+	// (plans/os-8e53ffd9.md D4): the actor holds the capability, but
+	// the run declares a configuration none of its qualified grants
+	// cite. Same exit, same wire code, a finer message: a refinement
+	// inside a family keeps the family's exit (next/spec/envelope.md).
+	Drift *Drift
+}
+
+// Drift names which field of the runtime tuple moved, and both values.
+type Drift struct {
+	Holder string
+	Field  string
+	Have   string
+	Cited  []string
 }
 
 func (e *OutOfGrantError) Error() string {
+	if e.Drift != nil {
+		return fmt.Sprintf("actor %s is qualified for %s under %d cited tuple(s) and the run declares a materially different configuration: %s is %q, and no cited tuple carries it (the closest cites %s) — an actor invoking a different configuration than its grant cites is out of grant (SEED-NEXT.md §II.5; next/spec/qualification.md)",
+			e.Drift.Holder, e.Verb, len(e.Drift.Cited), e.Drift.Field, e.Drift.Have, strings.Join(e.Drift.Cited, " | "))
+	}
 	return fmt.Sprintf("actor %s is not granted any of [%s], which %s accepts — grants are capability data checked at admission (plans/os-3979d48b.md)", e.Actor, strings.Join(e.Accepted, ", "), e.Verb)
 }
 
@@ -669,13 +688,36 @@ func Default() []Rule {
 				Eligibility *struct {
 					Capabilities []string `json:"capabilities"`
 					Tiers        []string `json:"tiers"`
+					// Raw, so PRESENCE is what the version gate reads:
+					// a seed/1 validator strictly decodes eligibility as
+					// {capabilities, tiers} and refuses the field however
+					// it is valued, and this one must agree on every
+					// seed/1 record (review finding on the task PR), so
+					// an explicit "tuples": [] or null before seed/2
+					// refuses exactly as a populated list does.
+					Tuples json.RawMessage `json:"tuples"`
 				} `json:"eligibility"`
 				Expires string `json:"expires"`
 			}
 			dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
 			dec.DisallowUnknownFields()
 			if err := dec.Decode(&p); err != nil {
-				return &OfferError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {eligibility{capabilities, tiers}, expires}: %v", err)}
+				return &OfferError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {eligibility{capabilities, tiers, tuples}, expires}: %v", err)}
+			}
+			if p.Eligibility != nil && p.Eligibility.Tuples != nil {
+				// Tuple scoping is seed/2's (plans/os-8e53ffd9.md D6).
+				if !tuple.Applies(c.Active) {
+					return &OfferError{Subject: subject, Reason: fmt.Sprintf("the offer scopes by runtime tuple and the chain is at %s: tuple semantics activate at %s", c.Active, version.Seed2)}
+				}
+				var members []json.RawMessage
+				if err := json.Unmarshal(p.Eligibility.Tuples, &members); err != nil {
+					return &OfferError{Subject: subject, Reason: fmt.Sprintf("eligibility.tuples is a list of runtime tuples: %v", err)}
+				}
+				for i, raw := range members {
+					if _, err := tuple.Parse(raw); err != nil {
+						return &OfferError{Subject: subject, Reason: fmt.Sprintf("eligibility.tuples[%d]: %v", i, err)}
+					}
+				}
 			}
 			var missing []string
 			if p.Eligibility == nil {
@@ -878,13 +920,23 @@ func Default() []Rule {
 			}
 			if verb == transition.RunStartedVerb {
 				var p struct {
-					Fence       string `json:"fence"`
-					Reservation string `json:"reservation"`
+					Fence       string          `json:"fence"`
+					Reservation string          `json:"reservation"`
+					Tuple       json.RawMessage `json:"tuple,omitempty"`
 				}
 				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
 				dec.DisallowUnknownFields()
 				if err := dec.Decode(&p); err != nil {
-					return &RunError{Subject: subject, Reason: fmt.Sprintf("the start payload is the strict object {fence, reservation}: %v", err)}
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("the start payload is the strict object {fence, reservation, tuple}: %v", err)}
+				}
+				// The declared configuration (plans/os-8e53ffd9.md D3):
+				// required once seed/2 is active, refused before it, so
+				// a chain that never upgraded keeps its judgment. The
+				// same decode RunStartValid re-runs at the record's own
+				// position (review finding on the task PR).
+				declared, reason := declaredTuple(c.Active, p.Tuple)
+				if reason != "" {
+					return &RunError{Subject: subject, Reason: reason}
 				}
 				if s.State != "in_progress" {
 					return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
@@ -918,6 +970,20 @@ func Default() []Rule {
 				}
 				if _, closed := view.ClosedBy[cited]; closed {
 					return &RunError{Subject: subject, Reason: fmt.Sprintf("the reservation at position %d is already effectively closed — a run needs an open reservation", cited)}
+				}
+				// The qualification SET rule (plans/os-8e53ffd9.md D2, D4):
+				// the CLAIM HOLDER's grants for claim cite zero or more
+				// tuples. Zero: unqualified, the bridge, admit. Any: the
+				// declared configuration must equal one member, per
+				// field, or the holder is invoking a configuration its
+				// grant does not cite. The holder, never the signer: the
+				// supervisor signs the start, the work executes under
+				// the holder's window.
+				if s.Claim != nil {
+					if d := tupleDrift(c.Keyring, s.Claim.Holder, declared); d != nil {
+						return &OutOfGrantError{Actor: rec.Event.Actor, Verb: verb,
+							Accepted: keyring.AcceptedCapabilities(verb), Drift: d}
+					}
 				}
 				return nil
 			}
@@ -1472,6 +1538,61 @@ func strictRunPayload(rec *event.Record, into any) bool {
 	return dec.Decode(into) == nil
 }
 
+// declaredTuple decodes a run.started's declaration under the version
+// it is judged at (plans/os-8e53ffd9.md D3, D8): required and strict
+// once seed/2 is active, refused before it, so a chain that never
+// upgraded keeps its judgment. A non-empty reason is the refusal, in
+// the run rule's own words; the admission rule and RunStartValid share
+// it so a raw-pushed start is judged exactly as a proposed one.
+func declaredTuple(v string, raw json.RawMessage) (*tuple.Tuple, string) {
+	if tuple.Applies(v) {
+		if len(raw) == 0 || string(raw) == "null" {
+			return nil, "the start declares no runtime tuple: a run with no configuration is a run nothing can qualify (next/spec/qualification.md)"
+		}
+		t, err := tuple.Parse(raw)
+		if err != nil {
+			return nil, err.Error()
+		}
+		return &t, ""
+	}
+	if len(raw) > 0 {
+		return nil, fmt.Sprintf("the start carries a runtime tuple and the chain is at %s: tuple semantics activate at %s (next/spec/protocol.md)", v, version.Seed2)
+	}
+	return nil, ""
+}
+
+// tupleDrift applies the qualification SET rule (plans/os-8e53ffd9.md
+// D2, D4) to one declaration: the CLAIM HOLDER's grants for claim cite
+// zero or more tuples. Zero: unqualified, the bridge, admissible. Any:
+// the declared configuration must equal one member, per field, or the
+// holder is invoking a configuration its grant does not cite, and the
+// returned Drift names the holder, the first field that moved, the
+// declared value and the cited set. The holder, never the signer: the
+// supervisor signs the start, the work executes under the holder's
+// window. A nil ring or a nil declaration (a seed/1 start) drifts
+// nothing.
+func tupleDrift(ring *keyring.State, holder string, declared *tuple.Tuple) *Drift {
+	if declared == nil || ring == nil {
+		return nil
+	}
+	cited := ring.GrantTuples(holder, keyring.CapClaim)
+	if len(cited) == 0 {
+		return nil
+	}
+	for _, t := range cited {
+		if t.Equal(*declared) {
+			return nil
+		}
+	}
+	field, have, _, _ := declared.Diff(cited[0])
+	shown := make([]string, 0, len(cited))
+	for _, t := range cited {
+		b, _ := json.Marshal(t)
+		shown = append(shown, string(b))
+	}
+	return &Drift{Holder: holder, Field: field, Have: have, Cited: shown}
+}
+
 // RunStartValid reports whether a folded run.started passed the
 // admission boundary at its own position (review findings on the
 // task PR and its follow-up: fold presence is never proof of
@@ -1493,8 +1614,9 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 		return false
 	}
 	var p struct {
-		Fence       string `json:"fence"`
-		Reservation string `json:"reservation"`
+		Fence       string          `json:"fence"`
+		Reservation string          `json:"reservation"`
+		Tuple       json.RawMessage `json:"tuple,omitempty"`
 	}
 	if !strictRunPayload(rec, &p) {
 		return false
@@ -1505,6 +1627,18 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 	if r, err := strconv.Atoi(strings.TrimSpace(p.Reservation)); err != nil || r != st.Reservation {
 		return false
 	}
+	// The declaration is re-judged under the record's own version and
+	// against the holder's cited set at this record's prefix (review
+	// finding on the task PR): a raw-pushed seed/2 start with no
+	// tuple, a malformed one, or one the holder's grants do not cite
+	// never passed the boundary, so it provisions nothing (Provision
+	// would otherwise skip the resolved-tuple comparison on a nil
+	// declaration), launders no settle, and blocks no legitimate
+	// start.
+	declared, reason := declaredTuple(rec.Event.V, p.Tuple)
+	if reason != "" {
+		return false
+	}
 	prefix := records[:st.Pos]
 	ring, _, err := keyring.StateAt(prefix)
 	if err != nil || ring == nil ||
@@ -1513,6 +1647,9 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 	}
 	prior, ok := table.StateAt(prefix, subject)
 	if !ok || prior.Claim == nil || prior.Claim.Fence != st.Fence {
+		return false
+	}
+	if tupleDrift(ring, prior.Claim.Holder, declared) != nil {
 		return false
 	}
 	for _, r := range prior.Reservations {
