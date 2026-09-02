@@ -38,7 +38,7 @@ var specCatalogVerbs = []string{
 	"progress.milestone", "wedge.declared",
 	"offer.published", "budget.reserve", "budget.settle", "budget.release",
 	"run.started", "run.settled", "run.interrupted",
-	"verdict.rendered", "check.sealed",
+	"verdict.rendered", "verdict.deferred", "check.sealed",
 	"merge.requested", "merge.observed", "merge.overridden",
 	"message.sent",
 	"curation.deadend.recorded", "curation.hypothesis.proposed", "curation.hypothesis.contested", "curation.lesson.promoted",

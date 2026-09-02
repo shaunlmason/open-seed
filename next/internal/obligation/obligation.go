@@ -55,6 +55,11 @@ const (
 	// escalated subject: the first says a human owes a decision, the
 	// second that the contract is stopped.
 	KindEscalationPending = "escalation.pending"
+	// KindVerdictHuman is a human-verdict deferral nobody has rendered
+	// over (plans/os-2e34f66a.md D4): owed by the operator lane, since
+	// a human is a key with operator standing, and discharged by the
+	// verdict.rendered such a key makes on the same submission.
+	KindVerdictHuman = "verdict.human"
 )
 
 // Lane names used where an obligation is owed by a role rather than
@@ -83,6 +88,8 @@ var factDischargers = map[string][]string{
 	// cancelling counts because it must cite the escalation it
 	// closes — an answer of "this work should not happen".
 	KindEscalationPending: {"contract.cancelled", "decision.recorded"},
+	// next/spec/verdicts.md: the human's render answers the deferral.
+	KindVerdictHuman: {"verdict.rendered"},
 }
 
 // mergeRequestVerb discharges a standing pass verdict that no merge
@@ -212,6 +219,11 @@ func subjectRows(subject string, s transition.SubjectState, table *transition.Ta
 	}
 	if s.Submission != nil && (s.Verdict == nil || s.Verdict.Submission != s.Submission.Pos) {
 		add(KindSubmissionPending, LaneVerifier, s.Submission.Pos, "", factDischargers[KindSubmissionPending])
+	}
+	// A deferral on the current window with no render after it: the
+	// verifier could not judge, and the debt moved to the human.
+	if s.Deferred != nil && (s.Verdict == nil || s.Verdict.Pos < s.Deferred.Pos) {
+		add(KindVerdictHuman, LaneOperator, s.Deferred.Pos, "", factDischargers[KindVerdictHuman])
 	}
 	// An eval's chain ends at its verdict (plans/os-03e47abb.md D10):
 	// it is never merged, its consequence is a qualification or a

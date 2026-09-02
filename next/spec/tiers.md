@@ -35,11 +35,13 @@ without a plan and carry no sealed checks; `standard` is the ordinary
 contract, the one every gate applies to; `critical` is the charter's
 "high-consequence" tier, the one humans review.
 
-The `human review` column is **declared here and consumed by nobody
-yet**: it is the row the verdict pipeline's human-verdict routing
-reads, and declaring it now is what makes "per tier" a table rather
-than three scattered string comparisons. `critical` behaves as
-`standard` at that site until that reader exists. The `independence`
+The `human review` column is **consumed by the human-verdict routing**
+(Phase 10 item 4, [`verdicts.md`](verdicts.md), "The rubric and the
+scorecard"): on a `yes` tier `verdict.rendered` admits only from a key
+holding a `verdict` grant beside operator standing, from the first
+render, and the machine verifier's one act is the deferral that hands
+the human its receipt; declaring it as a column is what makes "per
+tier" a table rather than three scattered string comparisons. The `independence`
 column is consumed: it is the minimum level a verdict on the tier must
 achieve ([`verdicts.md`](verdicts.md), "Independence levels"), read by
 the verdict rule, the merge chain's reapplication, `seed verdict

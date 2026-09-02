@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gowebpki/jcs"
+
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -54,6 +56,45 @@ type Definition struct {
 	// Acceptance is the acceptance spec's repository-relative path,
 	// under this definition's fixture/.
 	Acceptance string `json:"acceptance"`
+	// Kind is empty for an ordinary eval (a configuration proving
+	// itself for work) or "calibration" (plans/os-2e34f66a.md D5): a
+	// rubric spec whose known verdict is a human-scored gold
+	// scorecard, committed to by digest and held outside the tree,
+	// judged by the verifier under calibration.
+	Kind        string       `json:"kind,omitempty"`
+	Calibration *Calibration `json:"calibration,omitempty"`
+}
+
+// KindCalibration marks a calibration definition.
+const KindCalibration = "calibration"
+
+// CalibrationFloor is the agreement a verifier must reach against the
+// gold to qualify: policy on the protected spec surface
+// (next/spec/evals.md states the figure; a drill pins the two), never
+// a runtime argument. A definition may raise it and never lower it.
+const CalibrationFloor = 0.8
+
+// Calibration is a calibration definition's commitment: the gold
+// scorecard's digest ("sha256:<hex>"), and an optional floor above the
+// spec's.
+type Calibration struct {
+	Gold  string  `json:"gold"`
+	Floor float64 `json:"floor,omitempty"`
+}
+
+// goldRE is the commitment's grammar.
+var goldRE = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+
+// IsCalibration reports whether the definition calibrates verifiers.
+func (d Definition) IsCalibration() bool { return d.Kind == KindCalibration }
+
+// Floor is the agreement the definition holds a verifier to: the
+// spec's figure, or the definition's own where it raises it.
+func (d Definition) Floor() float64 {
+	if d.Calibration != nil && d.Calibration.Floor > CalibrationFloor {
+		return d.Calibration.Floor
+	}
+	return CalibrationFloor
 }
 
 // Dir is the definition's repository-relative directory.
@@ -100,6 +141,24 @@ func Load(repo string) ([]Definition, error) {
 		}
 		if sol, err := os.ReadDir(filepath.Join(repo, Root, d.Name, "solution")); err != nil || len(sol) == 0 {
 			return nil, fmt.Errorf("eval %s: solution/ must carry the reference solution's files", d.Name)
+		}
+		switch d.Kind {
+		case "":
+			if d.Calibration != nil {
+				return nil, fmt.Errorf("eval %s: a calibration commitment on a definition whose kind is not %q", d.Name, KindCalibration)
+			}
+		case KindCalibration:
+			if d.Calibration == nil || !goldRE.MatchString(d.Calibration.Gold) {
+				return nil, fmt.Errorf("eval %s: a calibration definition commits to its gold scorecard as {\"calibration\": {\"gold\": \"sha256:<digest>\"}}", d.Name)
+			}
+			if d.Calibration.Floor != 0 && d.Calibration.Floor < CalibrationFloor {
+				return nil, fmt.Errorf("eval %s: the declared floor %g is below the spec's %g: a definition may raise the floor and never lower it (next/spec/evals.md)", d.Name, d.Calibration.Floor, CalibrationFloor)
+			}
+			if d.Calibration.Floor > 1 {
+				return nil, fmt.Errorf("eval %s: the declared floor %g is not a fraction", d.Name, d.Calibration.Floor)
+			}
+		default:
+			return nil, fmt.Errorf("eval %s: kind %q is neither empty nor %q", d.Name, d.Kind, KindCalibration)
 		}
 		out = append(out, d)
 	}
@@ -339,6 +398,10 @@ const (
 	KindDisqualify = "disqualify"
 	KindOffer      = "offer"
 	KindSpotCheck  = "spot-check"
+	// KindDefect is the defect filing drift owes (plans/os-2e34f66a.md
+	// D5): the dispatcher's, naming the calibration contract and the
+	// disagreeing items, idempotent through the ledger.
+	KindDefect = "defect"
 
 	LaneSupervise = keyring.CapSupervise
 	LaneDispatch  = keyring.CapDispatch
@@ -385,6 +448,122 @@ type Inputs struct {
 	// OfferTTL is how long an offer Due publishes stays live; the
 	// default is a day.
 	OfferTTL time.Duration
+	// Gold is the operator lane's gold scorecards by definition name
+	// (plans/os-2e34f66a.md D5), held outside the tree and supplied to
+	// the derivation; a calibration whose gold is absent owes nothing
+	// and notes gold_missing.
+	Gold map[string]Gold
+}
+
+// GoldItem is one human-scored rubric item.
+type GoldItem struct {
+	ID    string `json:"id"`
+	Score string `json:"score"`
+}
+
+// Gold is a human-scored gold scorecard with the digest of its
+// canonical bytes, the commitment a definition names.
+type Gold struct {
+	Items  []GoldItem `json:"items"`
+	Digest string     `json:"-"`
+}
+
+// ParseGold decodes a gold scorecard strictly and digests its
+// canonical (RFC 8785) bytes.
+func ParseGold(raw []byte) (Gold, error) {
+	var g struct {
+		Items []GoldItem `json:"items"`
+	}
+	dec := json.NewDecoder(strings.NewReader(string(raw)))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&g); err != nil {
+		return Gold{}, fmt.Errorf("a gold scorecard is the strict object {items: [{id, score}]}: %v", err)
+	}
+	if len(g.Items) == 0 {
+		return Gold{}, errors.New("a gold scorecard scores at least one item")
+	}
+	seen := map[string]bool{}
+	for _, it := range g.Items {
+		if it.ID == "" || seen[it.ID] || (it.Score != "pass" && it.Score != "fail") {
+			return Gold{}, fmt.Errorf("gold item %q: ids are unique and non-empty, scores pass or fail", it.ID)
+		}
+		seen[it.ID] = true
+	}
+	b, err := json.Marshal(g)
+	if err != nil {
+		return Gold{}, err
+	}
+	canonical, err := jcs.Transform(b)
+	if err != nil {
+		return Gold{}, err
+	}
+	sum := sha256.Sum256(canonical)
+	return Gold{Items: g.Items, Digest: hex.EncodeToString(sum[:])}, nil
+}
+
+// LoadGold reads the gold scorecards a directory holds, one
+// <name>.json per calibration definition; a definition with no file
+// is simply absent, and a file that does not parse refuses by name.
+func LoadGold(dir string, defs []Definition) (map[string]Gold, error) {
+	out := map[string]Gold{}
+	if dir == "" {
+		return out, nil
+	}
+	for _, d := range defs {
+		if !d.IsCalibration() {
+			continue
+		}
+		raw, err := os.ReadFile(filepath.Join(dir, d.Name+".json"))
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		g, err := ParseGold(raw)
+		if err != nil {
+			return nil, fmt.Errorf("gold %s: %v", d.Name, err)
+		}
+		out[d.Name] = g
+	}
+	return out, nil
+}
+
+// Agreement is the fraction of gold items the verifier's payload items
+// agree with (plans/os-2e34f66a.md D5): the same score at low
+// uncertainty. High uncertainty is not agreement, since the verifier
+// declined to decide. The disagreeing items are named.
+func Agreement(scored []transition.ScoreItem, gold []GoldItem) (float64, []string) {
+	byID := map[string]transition.ScoreItem{}
+	for _, it := range scored {
+		byID[it.ID] = it
+	}
+	agree := 0
+	var disagreeing []string
+	for _, g := range gold {
+		it, ok := byID[g.ID]
+		if ok && it.Score == g.Score && it.Uncertainty == "low" {
+			agree++
+			continue
+		}
+		disagreeing = append(disagreeing, g.ID)
+	}
+	if len(gold) == 0 {
+		return 0, nil
+	}
+	return float64(agree) / float64(len(gold)), disagreeing
+}
+
+// DriftClass is the defect class drift files under.
+const DriftClass = "calibration_drift"
+
+// DriftDefectID is the stable id a drift defect files under: the
+// maintenance loop's shape (class and subject hashed), so a second
+// derivation re-files the same id and the boundary refuses the
+// duplicate.
+func DriftDefectID(contract string) string {
+	sum := sha256.Sum256([]byte(DriftClass + "\x00" + contract))
+	return "d-" + hex.EncodeToString(sum[:8])
 }
 
 // Due derives the acts owed at the declared instant (D5). Mints come
@@ -424,6 +603,12 @@ func Due(in Inputs) Report {
 			})
 			rep.Acts = append(rep.Acts, Act{Kind: KindOffer, Verb: transition.OfferPublishedVerb, Subject: subject,
 				Payload: string(payload), Lane: LaneSupervise, Because: "the eval is ready and no offer is live"})
+		}
+		// Calibration (plans/os-2e34f66a.md D5): the verifier's
+		// scorecard against the gold, never the pass or fail.
+		if def, ok := Find(in.Evals, s.Eval.Name); ok && def.IsCalibration() {
+			rep = calibrate(in, def, subject, s, rep)
+			continue
 		}
 		// Mints: an authenticated pass whose receipt recomputes green.
 		if pass := admit.AuthenticPass(in.Ctx, subject, s); pass != nil {
@@ -544,12 +729,89 @@ func recompute(in Inputs, subject string, s transition.SubjectState, pass *trans
 }
 
 func holds(ring *keyring.State, actor string, t tuple.Tuple) bool {
-	for _, have := range ring.GrantTuples(actor, keyring.CapClaim) {
+	return holdsFor(ring, actor, keyring.CapClaim, t)
+}
+
+func holdsFor(ring *keyring.State, actor, capability string, t tuple.Tuple) bool {
+	for _, have := range ring.GrantTuples(actor, capability) {
 		if have.Equal(t) {
 			return true
 		}
 	}
 	return false
+}
+
+// calibrate derives what one calibration eval owes (plans/os-2e34f66a.md
+// D5): with the gold supplied and matching the commitment, the
+// verifier's authenticated verdict is compared item by item; agreement
+// at or above the floor owes the verdict qualification for the
+// verifier's declared tuple, below it the tuple-wide disqualification
+// and the dispatcher's defect filing naming the disagreeing items.
+func calibrate(in Inputs, def Definition, subject string, s transition.SubjectState, rep Report) Report {
+	gold, ok := in.Gold[def.Name]
+	if !ok {
+		rep.Notes = append(rep.Notes, Note{Kind: "gold_missing", Subject: subject,
+			Detail: fmt.Sprintf("no gold scorecard was supplied for calibration %s (--gold <dir>/%s.json); nothing is owed on a calibration the derivation cannot score", def.Name, def.Name)})
+		return rep
+	}
+	if "sha256:"+gold.Digest != def.Calibration.Gold {
+		rep.Notes = append(rep.Notes, Note{Kind: "gold_mismatch", Subject: subject,
+			Detail: fmt.Sprintf("the supplied gold's digest sha256:%s is not the definition's commitment %s; nothing is scored against a gold the tree did not commit to", gold.Digest, def.Calibration.Gold)})
+		return rep
+	}
+	fact := admit.AuthenticVerdict(in.Ctx, subject, s)
+	if fact == nil {
+		return rep
+	}
+	switch {
+	case fact.Tuple == nil:
+		rep.Notes = append(rep.Notes, Note{Kind: "no_declaration", Subject: subject,
+			Detail: "the verdict declares no tuple, so nothing qualifies: calibration is for the configuration the verifier rendered under"})
+		return rep
+	case fact.Scorecard == nil:
+		rep.Notes = append(rep.Notes, Note{Kind: "no_scorecard", Subject: subject,
+			Detail: "the verdict cites no scorecard, so there is nothing to compare to the gold"})
+		return rep
+	}
+	agreement, disagreeing := Agreement(fact.Scorecard.Items, gold.Items)
+	floor := def.Floor()
+	verifier := fact.Signer
+	if agreement >= floor {
+		if !alreadyCited(in.Ring, verifier, subject, fact.Pos, false) {
+			payload, _ := json.Marshal(map[string]any{
+				"capability": keyring.CapVerdict, "tuple": *fact.Tuple, "contract": subject, "verdict": fmt.Sprintf("%d", fact.Pos),
+			})
+			rep.Acts = append(rep.Acts, Act{Kind: KindMint, Verb: keyring.VerbQualified, Subject: verifier,
+				Payload: string(payload), Lane: LaneSupervise,
+				Because: fmt.Sprintf("the calibration's verdict at position %d agrees with the gold on %.0f%% of items, at or above the floor %.0f%%", fact.Pos, agreement*100, floor*100)})
+		}
+		return rep
+	}
+	// Drift: tuple-wide, every verifier holding the configuration.
+	for _, actor := range in.Ring.Actors() {
+		if !holdsFor(in.Ring, actor, keyring.CapVerdict, *fact.Tuple) || alreadyCited(in.Ring, actor, subject, fact.Pos, true) {
+			continue
+		}
+		payload, _ := json.Marshal(map[string]any{
+			"capability": keyring.CapVerdict, "tuple": *fact.Tuple, "contract": subject, "verdict": fmt.Sprintf("%d", fact.Pos),
+			"reason": fmt.Sprintf("the calibration %s drifted at position %d under this configuration: agreement %.0f%% below the floor %.0f%% on %s", subject, fact.Pos, agreement*100, floor*100, strings.Join(disagreeing, ", ")),
+		})
+		rep.Acts = append(rep.Acts, Act{Kind: KindDisqualify, Verb: keyring.VerbDisqualified, Subject: actor,
+			Payload: string(payload), Lane: LaneSupervise,
+			Because: fmt.Sprintf("the calibration's verdict at position %d drifted below the floor under a configuration this actor holds", fact.Pos)})
+	}
+	id := DriftDefectID(subject)
+	if _, filed := in.Ctx.Lifecycle.State(id); !filed {
+		payload, _ := json.Marshal(map[string]string{
+			"intent":  fmt.Sprintf("defect %s on %s: the verifier %s drifted at position %d, agreement %.0f%% below the floor %.0f%%, disagreeing on %s", DriftClass, subject, verifier, fact.Pos, agreement*100, floor*100, strings.Join(disagreeing, ", ")),
+			"tier":    "trivial",
+			"budget":  "small",
+			"routing": "core",
+		})
+		rep.Acts = append(rep.Acts, Act{Kind: KindDefect, Verb: "intent.filed", Subject: id, Payload: string(payload), Lane: LaneDispatch,
+			Because: fmt.Sprintf("drift on %s files a defect naming the contract and the disagreeing items, once per contract", subject)})
+	}
+	return rep
 }
 
 func alreadyCited(ring *keyring.State, actor, contract string, verdictPos int, disqualified bool) bool {
@@ -565,14 +827,26 @@ func alreadyCited(ring *keyring.State, actor, contract string, verdictPos int, d
 // latest qualification is older than the interval and which no open
 // eval already names.
 func spotChecks(in Inputs, rep Report) Report {
-	fold := in.Ctx.Lifecycle
 	filed := map[string]bool{}
 	for _, actor := range in.Ring.Actors() {
-		for _, held := range in.Ring.GrantTuples(actor, keyring.CapClaim) {
+		for _, capability := range []string{keyring.CapClaim, keyring.CapVerdict} {
+			rep = spotCheckFor(in, rep, filed, actor, capability)
+		}
+	}
+	return rep
+}
+
+// spotCheckFor is one actor's spot checks for one capability: claim
+// qualifications re-run their eval, verdict qualifications their
+// calibration (plans/os-2e34f66a.md D5), aging alike.
+func spotCheckFor(in Inputs, rep Report, filed map[string]bool, actor, capability string) Report {
+	fold := in.Ctx.Lifecycle
+	{
+		for _, held := range in.Ring.GrantTuples(actor, capability) {
 			var latest *keyring.Qualification
 			for i := range in.Ring.Qualifications(actor) {
 				q := in.Ring.Qualifications(actor)[i]
-				if q.Capability == keyring.CapClaim && !q.Disqualified && q.Tuple.Equal(held) {
+				if q.Capability == capability && !q.Disqualified && q.Tuple.Equal(held) {
 					latest = &q
 				}
 			}
@@ -587,7 +861,7 @@ func spotChecks(in Inputs, rep Report) Report {
 			} else if in.Now.Sub(ts) <= in.After {
 				continue
 			}
-			key := tupleKey(&held)
+			key := capability + ":" + tupleKey(&held)
 			if filed[key] {
 				continue
 			}

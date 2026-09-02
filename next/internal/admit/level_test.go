@@ -21,7 +21,7 @@ import (
 )
 
 type levelKeys struct {
-	signer, holder, supervisor, verifier ed25519.PrivateKey
+	signer, holder, supervisor, verifier, human ed25519.PrivateKey
 }
 
 // levelStand is a chain at the given top version with a holder, a
@@ -39,9 +39,9 @@ type levelStand struct {
 func levelFixture(t *testing.T, top string) *levelStand {
 	t.Helper()
 	store, resolve, signer := seededStore(t)
-	k := levelKeys{signer: signer, holder: fixtureKey(t, 2), supervisor: fixtureKey(t, 11), verifier: fixtureKey(t, 3)}
+	k := levelKeys{signer: signer, holder: fixtureKey(t, 2), supervisor: fixtureKey(t, 11), verifier: fixtureKey(t, 3), human: fixtureKey(t, 4)}
 	st := &levelStand{keys: k, top: top}
-	all := []ed25519.PrivateKey{k.signer, k.holder, k.supervisor, k.verifier}
+	all := []ed25519.PrivateKey{k.signer, k.holder, k.supervisor, k.verifier, k.human}
 	loose := func(fp string) (ed25519.PublicKey, bool) {
 		for _, p := range all {
 			if fpOf(t, p) == fp {
@@ -55,10 +55,14 @@ func levelFixture(t *testing.T, top string) *levelStand {
 		key  ed25519.PrivateKey
 		name string
 		cap  string
-	}{{k.holder, "holder", keyring.CapClaim}, {k.supervisor, "supervisor", keyring.CapSupervise}, {k.verifier, "verifier", keyring.CapVerdict}} {
+	}{{k.holder, "holder", keyring.CapClaim}, {k.supervisor, "supervisor", keyring.CapSupervise}, {k.verifier, "verifier", keyring.CapVerdict}, {k.human, "human", keyring.CapVerdict}} {
 		appendSignedV(t, store, loose, signer, version.Seed1, keyring.VerbEnrolled, fpOf(t, e.key), enrollBody(t, e.key, "agent", e.name))
 		appendSignedV(t, store, loose, signer, version.Seed1, keyring.VerbGranted, fpOf(t, e.key), `{"capability": "`+e.cap+`"}`)
 	}
+	// The human: a verdict grant AND operator standing, the tree's
+	// structural proxy for a person (plans/os-2e34f66a.md D4), which
+	// a human-review tier's render needs.
+	appendSignedV(t, store, loose, signer, version.Seed1, keyring.VerbGranted, fpOf(t, k.human), `{"capability": "`+keyring.CapOperator+`"}`)
 	step := func(priv ed25519.PrivateKey, v, verb, subject, payload string) *Context {
 		t.Helper()
 		appendSignedV(t, store, loose, priv, v, verb, subject, payload)
@@ -112,7 +116,12 @@ func levelBody(verdict string, subPos int, level, tup string) string {
 
 func (st *levelStand) render(t *testing.T, subject, body string) error {
 	t.Helper()
-	return Check(st.ctx, draftV(t, st.keys.verifier, st.top, transition.VerdictRenderedVerb, subject, body, st.ctx.Tip))
+	return st.renderAs(t, st.keys.verifier, subject, body)
+}
+
+func (st *levelStand) renderAs(t *testing.T, key ed25519.PrivateKey, subject, body string) error {
+	t.Helper()
+	return Check(st.ctx, draftV(t, key, st.top, transition.VerdictRenderedVerb, subject, body, st.ctx.Tip))
 }
 
 func verdictRefusal(t *testing.T, name string, err error, want string) {
@@ -192,16 +201,18 @@ func TestLevelShortOfTheTierRefuses(t *testing.T) {
 	if !strings.Contains(err.Error(), "critical") || !strings.Contains(err.Error(), "L2") || !strings.Contains(err.Error(), "L1") {
 		t.Fatalf("the refusal names all three: %v", err)
 	}
-	if err := st.render(t, "c-crit", levelBody("pass", subC, "L2", other)); err != nil {
+	// critical and the unknown tier require human review from Phase
+	// 10 item 4 (plans/os-2e34f66a.md D4): the human renders there.
+	if err := st.renderAs(t, st.keys.human, "c-crit", levelBody("pass", subC, "L2", other)); err != nil {
 		t.Fatalf("L2 satisfies critical: %v", err)
 	}
 	subW := st.drive("c-wiz", filedTier("wizard"), specBody, base)
-	err = st.render(t, "c-wiz", levelBody("pass", subW, "L2", other))
+	err = st.renderAs(t, st.keys.human, "c-wiz", levelBody("pass", subW, "L2", other))
 	if !errors.As(err, &lse) || lse.Required != transition.L3 {
 		t.Fatalf("an unknown tier requires L3, the strictest row: %v", err)
 	}
 	subWX := st.drive("c-wizx", filedTier("wizard"), execGatedSpec, base)
-	if err := st.render(t, "c-wizx", levelBody("pass", subWX, "L3", "")); err != nil {
+	if err := st.renderAs(t, st.keys.human, "c-wizx", levelBody("pass", subWX, "L3", "")); err != nil {
 		t.Fatalf("L3 satisfies every tier, the unknown one included: %v", err)
 	}
 	subT := st.drive("c-triv", filedTier("trivial"), specBody, base)
@@ -234,11 +245,11 @@ func TestLevelsAreReappliedAlongTheMergeChain(t *testing.T) {
 	// A raw tier-short fail does not lock pass out: a proper L2 pass
 	// admits, and the request citing it admits.
 	st.step(k.verifier, version.Seed4, transition.VerdictRenderedVerb, "c-crit", levelBody("fail", sub, "L1", ""))
-	if err := st.render(t, "c-crit", levelBody("pass", sub, "L2", other)); err != nil {
+	if err := st.renderAs(t, k.human, "c-crit", levelBody("pass", sub, "L2", other)); err != nil {
 		t.Fatalf("a tier-short raw fail locks nothing: %v", err)
 	}
 	passPos := st.ctx.Count
-	st.step(k.verifier, version.Seed4, transition.VerdictRenderedVerb, "c-crit", levelBody("pass", sub, "L2", other))
+	st.step(k.human, version.Seed4, transition.VerdictRenderedVerb, "c-crit", levelBody("pass", sub, "L2", other))
 	if err := request(passPos); err != nil {
 		t.Fatalf("the request citing the authenticated L2 pass admits: %v", err)
 	}

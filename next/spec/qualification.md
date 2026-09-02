@@ -111,6 +111,20 @@ qualifies actors one at a time as evals pass, and a switch that flips
 everyone at once would leave every not-yet-evaluated actor unable to
 run.
 
+## The set rule at render
+
+From `seed/4` the same rule applies to `verdict.rendered`'s declared
+tuple (plans/os-2e34f66a.md D5): take every tuple cited by the
+SIGNER's `verdict` grants, the ones calibration mints
+([`evals.md`](evals.md), "Calibration"). Empty and never cited: the
+bridge, the verifier renders as before. Non-empty: the declared tuple
+must equal a member, or the render is out of grant. Empty and once
+cited (every configuration disqualified by drift): nothing admits
+until a calibration passes again, the same closed bridge as for
+`claim`. A calibration eval is where a configuration proves itself,
+so the rule never gates a render on an eval subject, exactly as
+`run.started` on one; an undeclared render is the bridge either way.
+
 ## Drift is per field, against the holder, and out of grant
 
 "Materially different" is every field, in v0. The charter leaves

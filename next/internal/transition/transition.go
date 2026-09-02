@@ -452,6 +452,11 @@ type SubjectState struct {
 	// later verdict can never bury an authentic fail
 	// (plans/os-d2497eb7.md).
 	SubmissionFails []VerdictFact
+	// Deferred is the standing human-verdict deferral on the current
+	// submission window, cleared on each submission.made
+	// (plans/os-2e34f66a.md D4); a later render on the window must
+	// come from a key with operator standing beside its verdict grant.
+	Deferred *DeferralFact
 	// Override is the current window's admitted operator override,
 	// cleared on each submission.made; a raw-pushed second override
 	// in one window stays an anomaly, never the fact.
@@ -561,6 +566,73 @@ type VerdictFact struct {
 	// recorded the literal L1 whatever its acceptance supported, and is
 	// judged by seed/3's rule.
 	Levels bool
+	// Scorecard is the rubric scoring the verdict cites, nil where the
+	// payload carried none (plans/os-2e34f66a.md D2): the artifact's
+	// digest and, per item, the two enums the derivation reads, so
+	// every boundary reapplies the derivation from the record alone.
+	Scorecard *ScorecardRef
+}
+
+// ScoreItem is the payload half of one scored rubric item: the id and
+// exactly the two enums the derivation reads. Evidence and notes are
+// bulk and stay in the artifact.
+type ScoreItem struct {
+	ID          string `json:"id"`
+	Score       string `json:"score"`
+	Uncertainty string `json:"uncertainty"`
+}
+
+// ScorecardRef is the scorecard as the verdict carries it.
+type ScorecardRef struct {
+	Digest string      `json:"digest"`
+	Items  []ScoreItem `json:"items"`
+}
+
+// The derivation's refinement codes (plans/os-2e34f66a.md D3), under
+// exit 20 checks_red.
+const (
+	CodeRubricRed    = "rubric_red"
+	CodeHumanVerdict = "human_verdict"
+)
+
+// DeriveScores is the one derivation every boundary applies to the
+// payload's items (D3): an item at high uncertainty forbids both
+// verdicts (human_verdict, the item named); a fail item forbids pass
+// (rubric_red, the item named) and leaves fail; all pass at low
+// permits pass. Returned as the permitted verdict ("" when a human
+// must judge), the refinement code and the item it names.
+func DeriveScores(items []ScoreItem) (verdict, code, item string) {
+	for _, it := range items {
+		if it.Uncertainty != "low" {
+			return "", CodeHumanVerdict, it.ID
+		}
+	}
+	for _, it := range items {
+		if it.Score != "pass" {
+			return "fail", CodeRubricRed, it.ID
+		}
+	}
+	return "pass", "", ""
+}
+
+// VerdictDeferredVerb is the human-verdict deferral (plans/os-2e34f66a.md
+// D4): a fact admitted in review by a verdict key, changing no state,
+// naming the items its scorecard left at high uncertainty; it creates
+// the verdict.human obligation the operator lane owes.
+const VerdictDeferredVerb = "verdict.deferred"
+
+// DeferralFact is the folded deferral on the current submission: the
+// receipt the verifier computed (what the human's render cites, since
+// sealed checks encrypt to keys without operator standing and a human
+// can never unseal), its scorecard where the spec carries a rubric,
+// and the items it left at high uncertainty.
+type DeferralFact struct {
+	Pos        int
+	Signer     string
+	Submission int
+	Receipt    string
+	Scorecard  string
+	Items      []string
 }
 
 // RequestFact is the latest merge.requested and its citation: exactly
@@ -855,6 +927,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 					Submission   string          `json:"submission"`
 					Independence string          `json:"independence"`
 					Tuple        json.RawMessage `json:"tuple"`
+					Scorecard    json.RawMessage `json:"scorecard"`
 				}
 				if json.Unmarshal(e.Payload, &v) == nil && v.Verdict != "" {
 					cited := -1
@@ -870,6 +943,14 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 							s.Anomalies++
 						}
 					}
+					if len(v.Scorecard) > 0 && string(v.Scorecard) != "null" {
+						var ref ScorecardRef
+						if err := json.Unmarshal(v.Scorecard, &ref); err == nil && ref.Digest != "" {
+							fact.Scorecard = &ref
+						} else {
+							s.Anomalies++
+						}
+					}
 					s.Verdict = &fact
 					// The lockout scans the whole submission window, so
 					// a later raw verdict can never bury an authentic
@@ -877,6 +958,30 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 					if v.Verdict == "fail" && s.Submission != nil && cited == s.Submission.Pos {
 						s.SubmissionFails = append(s.SubmissionFails, fact)
 					}
+				}
+			}
+			continue
+		}
+		if e.Verb == VerdictDeferredVerb {
+			// The deferral changes no state: a fact on the current
+			// submission window, kept until the next submission
+			// (plans/os-2e34f66a.md D4). Whether it passed the boundary
+			// is the reader's question, the RunStartValid posture.
+			if s, ok := f.states[e.Subject]; ok {
+				var d struct {
+					Receipt    string   `json:"receipt"`
+					Scorecard  string   `json:"scorecard"`
+					Submission string   `json:"submission"`
+					Items      []string `json:"items"`
+				}
+				if json.Unmarshal(e.Payload, &d) == nil && d.Receipt != "" && s.Submission != nil {
+					if cited, err := strconv.Atoi(strings.TrimSpace(d.Submission)); err == nil && cited == s.Submission.Pos {
+						s.Deferred = &DeferralFact{Pos: pos, Signer: e.Actor, Submission: cited, Receipt: d.Receipt, Scorecard: d.Scorecard, Items: d.Items}
+					} else {
+						s.Anomalies++
+					}
+				} else {
+					s.Anomalies++
 				}
 			}
 			continue
@@ -1229,6 +1334,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			// and the override both bind to the submission they judged
 			// (plans/os-d2497eb7.md).
 			s.SubmissionFails = nil
+			s.Deferred = nil
 			s.Override = nil
 		}
 		if e.Verb == MergeObservedVerb {

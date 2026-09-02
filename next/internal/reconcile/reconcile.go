@@ -69,6 +69,14 @@ const ClassVerdictUnverified = "verdict_unverified"
 // never surfaces to a worker; this class is where it is reported.
 const ClassLessonUnverified = "lesson_unverified"
 
+// ClassScorecardUnverified is a folded verdict citing a scorecard the
+// artifact store does not hold intact, or whose stored items disagree
+// with the payload's (plans/os-2e34f66a.md D3): receipt_mismatch's
+// posture one artifact over. Evidence grade, since it needs the store;
+// the record-derivable half (a payload whose own items refute its
+// verdict) is refused at every boundary and classifies nothing here.
+const ClassScorecardUnverified = "scorecard_unverified"
+
 // ClassIndependenceUnverified is a folded verdict whose recorded
 // independence level the records do not support, or which is short of
 // its subject's tier (plans/os-99829835.md D5): verdict_unverified's

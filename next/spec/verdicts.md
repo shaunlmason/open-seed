@@ -292,6 +292,112 @@ on an **above-trivial subject with no commitment refuses exit 24
 the verifier boundary where checks run; the trivial tier is exempt
 (`sealed-checks.md`).
 
+## The rubric and the scorecard
+
+Acceptance that cannot be a command (tone, judgment, taste) is a
+**rubric the verifier scores item by item with cited evidence and
+explicit uncertainty, never a single holistic score** (SEED-NEXT.md
+§7; plans/os-2e34f66a.md D1 to D4). The rubric is a section of the
+acceptance spec, `## Rubric`, whose bullets are items `- <id>:
+<criterion>` ([`acceptance.md`](acceptance.md), "The rubric"), read at
+the anchor exactly as the commands are (`plan.Rubric`); a spec may
+carry both sections, gate-before-run covers the rubric as it covers
+the commands, and a rubric with a duplicate, empty or non-slug id
+refuses at render as `spec_unrunnable`.
+
+**The scorecard is an artifact the verdict cites; the
+derivation-bearing half travels in the signed payload.** The
+verifier's scoring is one JCS-canonical scorecard in the artifact
+store, `{"contract", "submission", "items": [{"id", "score":
+"pass"|"fail", "evidence": ["<path> @ <commit>#L<a>-L<b>" |
+"transcript:<n>", …], "uncertainty": "low"|"high", "note"?}]}`, and
+`verdict.rendered` gains optional **`scorecard`** from `seed/4`:
+`{"digest", "items": [{"id", "score", "uncertainty"}]}`, the
+artifact's digest and, per item, exactly the two enums the derivation
+reads. Evidence and notes are bulk and stay in the artifact; ids and
+two enums are coordination facts, on the record so every boundary that
+consumes a verdict reapplies the derivation from the record alone
+(admission carries no artifact store by design). `seed verdict render
+--scorecard <file>` validates it against the rubric and the receipt:
+every rubric item scored exactly once, an unknown id refuses, every
+item cites at least one evidence reference (an anchored path resolving
+in the repository at its commit, or a transcript the receipt carries,
+never prose), `note` within the classification budget (512 bytes),
+`uncertainty` two values because the charter asks for explicit
+uncertainty and a routing decision, and three would invite the middle.
+A spec with a rubric renders only over a scorecard; a scorecard on a
+spec without one refuses at usage.
+
+**Render derives the verdict from the scorecard exactly as from the
+transcripts** (`transition.DeriveScores`): `pass` requires every item
+`pass` at `low`; a `fail` item forbids `pass`, refusing exit **20
+`rubric_red`** naming the item, and leaves `fail` renderable; an item
+at `high` forbids BOTH verdicts, refusing exit **20 `human_verdict`**
+naming the item, since low confidence routes to a human; and with a
+rubric the verdict IS the derivation's, so `fail` over a scorecard
+whose every item passes refuses too. The admission rule reapplies the
+same derivation to the payload's items (a verdict whose own items
+refute it never lands), and **`verdictBoundary` reapplies it** beside
+the grant, the disjointness and the level, so a folded verdict that
+fails its own derivation authenticates nothing: `merge.requested` and
+`merge.observed` citing it refuse, and the red-verdict lockout does
+not count it. That is the record-derivable half. The artifact half is
+`seed reconcile`'s: a cited scorecard that does not retrieve, or whose
+stored items disagree with the payload's, classifies
+**`scorecard_unverified`** ([`reconciliation.md`](reconciliation.md)),
+`receipt_mismatch`'s posture one artifact over. **The residual,
+stated:** a verifier that signs a self-consistent false record (every
+item `pass` in the payload and the artifact, over work that deserved
+none) is the verifier's lie, which L1, calibration
+([`evals.md`](evals.md), "Calibration") and reconcile answer, as they
+answer a false pass over a red receipt today.
+
+**The human verdict is a deferral fact and an operator-standing
+verifier key, never an escalation.** `verdict.deferred` (catalog
+growth under `verdict.*`, `seed/4`) is a fact admitted in `review` by
+a `verdict` key under L1, changing no state, carrying `{"receipt",
+"submission", "scorecard"?, "items"?}`: the receipt the verifier
+computed, the bound submission, and where the spec carries a rubric
+its scorecard and the ids it scored at `high`. It creates the
+obligation **`verdict.human`** owed by the operator lane
+([`obligations.md`](obligations.md)), and **a human is a key with
+operator standing**: the tree's one structural proxy for a person,
+the standing `decision.recorded` demands, where enrollment `kind` is
+an assertion that decides nothing. After a deferral, and on a tier
+whose `human review` column is `yes` ([`tiers.md`](tiers.md)) from the
+first render, `verdict.rendered` on that submission admits only from
+a signer holding an explicit `verdict` grant AND operator standing (a
+governance root's implicit standing or an explicit `operator` grant),
+under L1 like any verifier; a `verdict`-only key, the deferring one
+included, refuses `human_verdict`, at render and at admission, and
+raw-pushed authenticates nothing for the merge chain
+(`verdictBoundary` reapplies the standing). `verdict.rendered`'s
+accepted set stays `verdict` alone: operator standing is a second
+requirement on these submissions, never a fallback, so III.G's "no
+disguised verdict" holds. On a human-review tier the deferral is the
+only machine act and may carry no items: the whole verdict defers, the
+charter's "humans review only high-tier work" made structural.
+
+**The human renders over the deferral's receipt.** Sealed checks
+encrypt to verdict keys disjoint from `claim` and `operator`
+([`sealed-checks.md`](sealed-checks.md)), so a key with operator
+standing is never a recipient and can compute no receipt on a sealed
+subject. The machine verifier computes the receipt at `seed verdict
+defer`, stores it and cites it; the human's `seed verdict render`
+retrieves that receipt intact from the store rather than recomputing,
+validates its own scorecard against the rubric and that receipt, and
+cites the same digest, so `seed verdict check` and reconcile recompute
+it under a capable key as for any verdict. One deferral per window: a
+second refuses, and so does one over a submission already judged; a
+new submission clears it.
+
+Refused: routing through `escalation.raised`. An escalation freezes
+the contract and its answer returns the subject to `ready`, so the
+verdict could never follow the decision on the submission it judged;
+a deferral leaves the subject in `review` for the human's render.
+`seed verdict defer --scorecard` appends the deferral; `seed
+situation` surfaces the debt.
+
 ## Visibility
 
 The contracts view is unchanged by 6.1: surfacing verdicts, submissions,
@@ -311,6 +417,23 @@ and disjointness checks above.
   `independence` column, the verdict rule's equality and tier checks
   with `level_short`, the fold's recorded level and tuple, the merge
   chain's reapplication, and `independence_unverified`.
+- III.G row 7 (qualitative residue: acceptance that cannot be a
+  command is a rubric the verifier scores item by item with cited
+  evidence and explicit uncertainty, never a single holistic score;
+  low-confidence items route to human verdict; rubric calibration runs
+  against a human-scored gold set with automatic authority suspension
+  on drift) — the rubric and the scorecard above, `rubric_red` and
+  `human_verdict`, the deferral and the operator-standing render, the
+  boundary's reapplication, `scorecard_unverified`, and calibration
+  ([`evals.md`](evals.md)); drilled at the boundary, in the fold, at
+  the terminal and end to end in the modes fixture.
+- III.O row 2 (verifier calibration: scheduled sampling against a
+  human gold set; automatic authority suspension on drift; defect
+  contract filed) — calibration definitions with the gold held outside
+  the tree, agreement against the spec-pinned floor, the `verdict`
+  qualification and its tuple-wide disqualification, the dispatcher's
+  defect filing, and the spot-check aging verdict qualifications
+  ([`evals.md`](evals.md), "Calibration").
 - III.G row 4 (clean per-run isolation; parallel verdicts never
   collide; cleanup fires pass or fail; enumerable, self-executed
   inputs) — the workspace, the runner profile, and their drills.

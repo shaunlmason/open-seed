@@ -10,6 +10,7 @@
 package main
 
 import (
+	"crypto/ed25519"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -31,6 +32,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/plan"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -46,6 +48,8 @@ func runVerdict(args []string, stdout, stderr io.Writer) int {
 		return runVerdictReceipt(args[1:], stdout, stderr)
 	case "render":
 		return runVerdictRender(args[1:], stdout, stderr)
+	case "defer":
+		return runVerdictDefer(args[1:], stdout, stderr)
 	case "check":
 		return runVerdictCheck(args[1:], stdout, stderr)
 	}
@@ -269,10 +273,11 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	principal := fs.String("principal", "", "the principal the verifier ran as: a judgment the workspace cannot make")
 	model := fs.String("model", "", "the verifier's model as <family>/<version> or <provider>/<family>/<version>")
 	toolPolicy := fs.String("tool-policy", "", "the verifier's tool policy profile")
+	scorecardPath := fs.String("scorecard", "", "the verifier's item-by-item scoring of the spec's rubric (required when the spec carries one)")
 	parseErr := fs.Parse(args)
 	missing := ""
 	if *repo == "" || (*verdictFlag != "pass" && *verdictFlag != "fail") {
-		missing = "and --repo <dir> --verdict pass|fail [--artifacts <dir>] [--timeout <dur>] [--principal <p> --model <m> --tool-policy <t>]"
+		missing = "and --repo <dir> --verdict pass|fail [--artifacts <dir>] [--timeout <dur>] [--principal <p> --model <m> --tool-policy <t>] [--scorecard <file>]"
 	}
 	declaring := *principal != "" || *model != "" || *toolPolicy != ""
 	if declaring && (*principal == "" || *model == "" || *toolPolicy == "") {
@@ -336,35 +341,82 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 				fmt.Sprintf("a fail verdict at position %d already judged the bound submission — a red verdict locks pass out until a new submission (contract.returned, re-claim, resubmit; next/spec/verdicts.md)", locked.Pos)), st.count), stdout, stderr)
 		}
 	}
-	// The "contracts carry sealed checks" gate, enforced at the
-	// verifier boundary (plans/os-3128535a.md): above the trivial
-	// tier a subject with no commitment does not render; the trivial
-	// tier is exempt.
-	if s.Sealed == nil && transition.TierGates(s.Tier).SealedChecksRequired {
-		return render(stampTip(envelope.Fail(envelope.ExitUnsealed, "unsealed",
-			fmt.Sprintf("contract %s (tier %q) carries no sealed-checks commitment — above the trivial tier contracts carry sealed checks, sealed before the first claim (next/spec/sealed-checks.md)", *subject, s.Tier)), st.count), stdout, stderr)
+	// The rubric (plans/os-2e34f66a.md D1): the spec's residue, read
+	// at its anchor exactly as the commands are; a spec with one
+	// renders only over a scorecard.
+	rubric, failEnv := rubricAt(*repo, s, st.count)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
 	}
-	sealedIn, sealFail := unsealChecks(st.records, s, signer, artifact.Open(artifactsDir(*artifacts, *repo)))
-	if sealFail != nil {
-		return render(stampTip(sealFail, st.count), stdout, stderr)
+	if len(rubric) > 0 && *scorecardPath == "" {
+		return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("the acceptance spec carries a rubric of %d items — render needs --scorecard <file>, the verifier's item-by-item scoring with cited evidence and explicit uncertainty (next/spec/verdicts.md)", len(rubric))), st.count), stdout, stderr)
 	}
-	in.Sealed = sealedIn
-	// The bound eval's carrier (plans/os-96850e5a.md D5): a
-	// counter-trajectory judged without the candidate applied proves
-	// nothing about it, so a subject whose marker names a carrier
-	// renders only when the carrier commit is an ancestor of the
-	// submission head.
-	if s.Eval != nil && s.Eval.Carrier != "" {
-		_, carrierCommit, _ := curation.AnchorParts(s.Eval.Carrier)
-		_, head, _ := strings.Cut(in.Base, "..")
-		if !gitIsAncestor(*repo, carrierCommit, head) {
-			return render(stampTip(envelope.Fail(envelope.ExitChecksRed, "carrier_absent",
-				fmt.Sprintf("the eval is bound to carrier %s and the submission head %s does not descend from it — the lesson was never applied, so its survival cannot be judged (next/spec/evals.md)", s.Eval.Carrier, head)), st.count), stdout, stderr)
+	if len(rubric) == 0 && *scorecardPath != "" {
+		return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage", "the acceptance spec carries no rubric, so there is nothing a scorecard scores"), st.count), stdout, stderr)
+	}
+	// The human verdict (D4): on a human-review tier, or after a
+	// deferral on this window, the render is a human's; a key with
+	// no operator standing refuses here rather than drafting a
+	// verdict admission would refuse.
+	fp, _ := event.Fingerprint(signer.Public().(ed25519.PublicKey))
+	if version.LevelsApply(ls.ctx.Active) {
+		if human, why := admit.HumanVerdictRequired(s, ls.ctx.Count); human && !admit.OperatorStanding(ls.ctx.Keyring, fp) {
+			return render(stampTip(envelope.Fail(envelope.ExitChecksRed, transition.CodeHumanVerdict,
+				fmt.Sprintf("%s — the render is a human's, a key with operator standing beside its verdict grant, and %s holds no operator standing (next/spec/verdicts.md)", why, fp)), st.count), stdout, stderr)
 		}
 	}
-	r, err := verdict.Compute(in)
-	if err != nil {
-		return render(stampTip(verdictFailEnvelope(err), st.count), stdout, stderr)
+	// The human renders over the deferral's receipt (D4): a key with
+	// operator standing is never a sealed-checks recipient, so the
+	// receipt is the one the deferring verifier computed and cited,
+	// retrieved intact from the store rather than recomputed; the
+	// machine verifier computes its own.
+	var r *verdict.Receipt
+	digest := ""
+	if s.Deferred != nil && version.LevelsApply(ls.ctx.Active) && admit.OperatorStanding(ls.ctx.Keyring, fp) {
+		body, err := artifact.Open(artifactsDir(*artifacts, *repo)).Get(s.Deferred.Receipt)
+		if err != nil {
+			return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
+				fmt.Sprintf("the deferral's receipt %s is not retrievable intact from the artifact store: %v — the human renders over the receipt the verifier computed, and it must survive verbatim", s.Deferred.Receipt, err)), st.count), stdout, stderr)
+		}
+		var loaded verdict.Receipt
+		if err := json.Unmarshal(body, &loaded); err != nil {
+			return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
+				fmt.Sprintf("the deferral's receipt %s does not parse: %v", s.Deferred.Receipt, err)), st.count), stdout, stderr)
+		}
+		r, digest = &loaded, s.Deferred.Receipt
+	} else {
+		// The "contracts carry sealed checks" gate, enforced at the
+		// verifier boundary (plans/os-3128535a.md): above the trivial
+		// tier a subject with no commitment does not render; the trivial
+		// tier is exempt.
+		if s.Sealed == nil && transition.TierGates(s.Tier).SealedChecksRequired {
+			return render(stampTip(envelope.Fail(envelope.ExitUnsealed, "unsealed",
+				fmt.Sprintf("contract %s (tier %q) carries no sealed-checks commitment — above the trivial tier contracts carry sealed checks, sealed before the first claim (next/spec/sealed-checks.md)", *subject, s.Tier)), st.count), stdout, stderr)
+		}
+		sealedIn, sealFail := unsealChecks(st.records, s, signer, artifact.Open(artifactsDir(*artifacts, *repo)))
+		if sealFail != nil {
+			return render(stampTip(sealFail, st.count), stdout, stderr)
+		}
+		in.Sealed = sealedIn
+		// The bound eval's carrier (plans/os-96850e5a.md D5): a
+		// counter-trajectory judged without the candidate applied proves
+		// nothing about it, so a subject whose marker names a carrier
+		// renders only when the carrier commit is an ancestor of the
+		// submission head.
+		if s.Eval != nil && s.Eval.Carrier != "" {
+			_, carrierCommit, _ := curation.AnchorParts(s.Eval.Carrier)
+			_, head, _ := strings.Cut(in.Base, "..")
+			if !gitIsAncestor(*repo, carrierCommit, head) {
+				return render(stampTip(envelope.Fail(envelope.ExitChecksRed, "carrier_absent",
+					fmt.Sprintf("the eval is bound to carrier %s and the submission head %s does not descend from it — the lesson was never applied, so its survival cannot be judged (next/spec/evals.md)", s.Eval.Carrier, head)), st.count), stdout, stderr)
+			}
+		}
+		computed, err := verdict.Compute(in)
+		if err != nil {
+			return render(stampTip(verdictFailEnvelope(err), st.count), stdout, stderr)
+		}
+		r = computed
 	}
 	// Render derives the permissible verdict from the transcripts it
 	// just executed: pass over any red check refuses, naming the
@@ -376,9 +428,39 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 				fmt.Sprintf("rendering pass refused: %q exited %d — the verdict derives from the transcripts, and a red check forbids pass (fail stays renderable)", tr.Cmd, tr.Exit)), st.count), stdout, stderr)
 		}
 	}
-	digest, err := storeReceipt(r, artifactsDir(*artifacts, *repo))
-	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	// The scorecard (D2, D3): validated against the rubric and the
+	// receipt, stored, and the verdict derived from its items exactly
+	// as from the transcripts.
+	var scoreRef *transition.ScorecardRef
+	if *scorecardPath != "" {
+		sc, failEnv := loadScorecard(*scorecardPath, *subject, s, rubric, r, *repo, st.count)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
+		}
+		ref, err := sc.Ref()
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		}
+		derived, code, item := transition.DeriveScores(ref.Items)
+		switch {
+		case code == transition.CodeHumanVerdict:
+			return render(stampTip(envelope.Fail(envelope.ExitChecksRed, transition.CodeHumanVerdict,
+				fmt.Sprintf("rendering refused: item %q is scored at high uncertainty — low confidence routes to a human verdict (seed verdict defer), and neither pass nor fail is renderable over it", item)), st.count), stdout, stderr)
+		case *verdictFlag == "pass" && derived == "fail":
+			return render(stampTip(envelope.Fail(envelope.ExitChecksRed, transition.CodeRubricRed,
+				fmt.Sprintf("rendering pass refused: item %q scores fail — the verdict derives from the scorecard, and a failing item forbids pass (fail stays renderable)", item)), st.count), stdout, stderr)
+		}
+		if _, err := storeScorecard(sc, artifactsDir(*artifacts, *repo)); err != nil {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		}
+		scoreRef = &ref
+	}
+	if digest == "" {
+		stored, err := storeReceipt(r, artifactsDir(*artifacts, *repo))
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		}
+		digest = stored
 	}
 	// The submission citation is DERIVED, and on the remote path the
 	// tip can move between drafting and landing. `recheckDerivation`
@@ -392,7 +474,7 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	// change it and re-running acceptance per attempt would buy
 	// nothing.
 	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
-		return verdictPayload(ctx, *subject, *verdictFlag, digest, declared)
+		return verdictPayload(ctx, *subject, *verdictFlag, digest, declared, scoreRef)
 	}
 	payload, env := derive(ls.ctx)
 	if env != nil {
@@ -409,6 +491,200 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 			out["verdict"] = *verdictFlag
 			out["submission"] = strconv.Itoa(s.Submission.Pos)
 			out["independence"] = level
+			if scoreRef != nil {
+				out["scorecard"] = scoreRef.Digest
+				out["items"] = scoreRef.Items
+			}
+			return out
+		}}, signer, stdout, stderr)
+}
+
+// rubricAt reads the rubric of the subject's acceptance spec at its
+// anchor from the repository (plans/os-2e34f66a.md D1), the commands'
+// own read; a rubric the parser refuses is a spec that cannot decide.
+func rubricAt(repo string, s transition.SubjectState, count int) ([]plan.Item, *envelope.Envelope) {
+	if s.Acceptance == nil {
+		return nil, nil
+	}
+	path, commit, ok := curation.AnchorParts(s.Acceptance.Ref)
+	if !ok {
+		return nil, nil
+	}
+	body, err := exec.Command("git", "-C", repo, "show", commit+":"+path).Output()
+	if err != nil {
+		return nil, stampTip(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid",
+			fmt.Sprintf("acceptance spec %s does not resolve at its anchored commit in %s", s.Acceptance.Ref, repo)), count)
+	}
+	items, err := plan.Rubric(body)
+	if err != nil {
+		return nil, stampTip(envelope.Fail(envelope.ExitSpecUnrunnable, "spec_unrunnable",
+			fmt.Sprintf("acceptance spec %s: %v — a rubric that cannot be scored item by item cannot decide", s.Acceptance.Ref, err)), count)
+	}
+	return items, nil
+}
+
+// loadScorecard reads and validates the verifier's scorecard against
+// the rubric, the receipt and the repository, naming the part that
+// refuses.
+func loadScorecard(path, subject string, s transition.SubjectState, rubric []plan.Item, r *verdict.Receipt, repo string, count int) (*verdict.Scorecard, *envelope.Envelope) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --scorecard: %v", err))
+	}
+	sc, err := verdict.ParseScorecard(raw)
+	if err != nil {
+		return nil, stampTip(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), count)
+	}
+	if s.Submission == nil {
+		return nil, stampTip(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no submission stands on %s", subject)), count)
+	}
+	if err := verdict.Validate(sc, subject, s.Submission.Pos, rubric, r, repo); err != nil {
+		return nil, stampTip(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), count)
+	}
+	return sc, nil
+}
+
+// storeScorecard writes the canonical scorecard into the artifact
+// store and returns its digest, the citation the verdict carries.
+func storeScorecard(sc *verdict.Scorecard, artifacts string) (string, error) {
+	canonical, err := sc.Canonical()
+	if err != nil {
+		return "", err
+	}
+	return artifact.Open(artifacts).Put(canonical)
+}
+
+// runVerdictDefer is the human-verdict deferral (plans/os-2e34f66a.md
+// D4): the verifier's scorecard, validated and stored as at render,
+// with at least one item at high uncertainty, and verdict.deferred
+// appended naming those items. The subject stays in review for the
+// human's render.
+func runVerdictDefer(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("verdict defer", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	f := bindLoopFlags(fs)
+	repo := fs.String("repo", "", "source repository the submission range names")
+	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
+	timeout := fs.Duration("timeout", 0, "per-command wall-clock bound (default 10m)")
+	scorecardPath := fs.String("scorecard", "", "the verifier's scoring, with the items it could not judge at high uncertainty (required when the spec carries a rubric)")
+	parseErr := fs.Parse(args)
+	missing := ""
+	if *repo == "" {
+		missing = "and --repo <dir> [--scorecard <file>] [--artifacts <dir>] [--timeout <dur>]"
+	}
+	if env := f.usage("verdict defer", parseErr, fs.NArg(), missing); env != nil {
+		return render(env, stdout, stderr)
+	}
+	subject := f.subject
+	signer, env := loopSigner(*f.keyPath, *f.as)
+	if env != nil {
+		return render(env, stdout, stderr)
+	}
+	ls, env := openLoopSession(f)
+	if env != nil {
+		return render(env, stdout, stderr)
+	}
+	defer ls.done()
+	if !version.LevelsApply(ls.ctx.Active) {
+		return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("the chain is at %s: the human-verdict deferral activates at %s (next/spec/verdicts.md)", ls.ctx.Active, version.Seed4)), ls.ctx.Count), stdout, stderr)
+	}
+	st, failEnv := ls.verdictState()
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	in, s, failEnv := st.verdictInput(*subject, *repo, *timeout, true)
+	if failEnv != nil {
+		return render(stampTip(failEnv, st.count), stdout, stderr)
+	}
+	rubric, failEnv := rubricAt(*repo, s, st.count)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	humanTier := transition.TierGates(s.Tier).HumanReview
+	if len(rubric) > 0 && *scorecardPath == "" {
+		return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("the acceptance spec carries a rubric of %d items — defer needs --scorecard <file>, the items it could not judge scored at high uncertainty", len(rubric))), st.count), stdout, stderr)
+	}
+	if len(rubric) == 0 && *scorecardPath != "" {
+		return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage", "the acceptance spec carries no rubric, so there is nothing a scorecard scores"), st.count), stdout, stderr)
+	}
+	if len(rubric) == 0 && !humanTier {
+		return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("nothing to defer: the acceptance spec carries no rubric and tier %q does not route every verdict to a human, so render instead", s.Tier)), st.count), stdout, stderr)
+	}
+	sealedIn, sealFail := unsealChecks(st.records, s, signer, artifact.Open(artifactsDir(*artifacts, *repo)))
+	if sealFail != nil {
+		return render(stampTip(sealFail, st.count), stdout, stderr)
+	}
+	in.Sealed = sealedIn
+	r, err := verdict.Compute(in)
+	if err != nil {
+		return render(stampTip(verdictFailEnvelope(err), st.count), stdout, stderr)
+	}
+	receipt, err := storeReceipt(r, artifactsDir(*artifacts, *repo))
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	scorecard := ""
+	var deferred []string
+	if *scorecardPath != "" {
+		sc, failEnv := loadScorecard(*scorecardPath, *subject, s, rubric, r, *repo, st.count)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
+		}
+		for _, it := range sc.Items {
+			if it.Uncertainty == "high" {
+				deferred = append(deferred, it.ID)
+			}
+		}
+		if len(deferred) == 0 && !humanTier {
+			return render(stampTip(envelope.Fail(envelope.ExitUsage, "usage", "every item is scored at low uncertainty: nothing to defer, render instead"), st.count), stdout, stderr)
+		}
+		if scorecard, err = storeScorecard(sc, artifactsDir(*artifacts, *repo)); err != nil {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		}
+	}
+	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
+		if ctx == nil || ctx.Lifecycle == nil {
+			return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", "no lifecycle view to bind the deferral to")
+		}
+		cur, ok := ctx.Lifecycle.State(*subject)
+		if !ok || cur.Submission == nil {
+			return nil, envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no submission stands on %s", *subject))
+		}
+		fields := map[string]any{"receipt": receipt, "submission": strconv.Itoa(cur.Submission.Pos)}
+		if scorecard != "" {
+			fields["scorecard"] = scorecard
+		}
+		if len(deferred) > 0 {
+			fields["items"] = deferred
+		}
+		b, err := json.Marshal(fields)
+		if err != nil {
+			return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
+		}
+		return b, nil
+	}
+	payload, env := derive(ls.ctx)
+	if env != nil {
+		return render(stampTip(env, st.count), stdout, stderr)
+	}
+	summary := receiptSummary(*subject, r, receipt)
+	return ls.commit(f, loopAct{verb: transition.VerdictDeferredVerb, payload: payload, derive: derive,
+		resultAt: func(int) map[string]any {
+			out := map[string]any{}
+			for k, v := range summary {
+				out[k] = v
+			}
+			out["submission"] = strconv.Itoa(s.Submission.Pos)
+			out["owed_by"] = "lane:operator"
+			if scorecard != "" {
+				out["scorecard"] = scorecard
+			}
+			if deferred != nil {
+				out["items"] = deferred
+			}
 			return out
 		}}, signer, stdout, stderr)
 }
@@ -430,7 +706,7 @@ func verdictLevel(ctx *admit.Context, subject string, declared *tuple.Tuple) str
 // produced the review state, read from the view being judged against,
 // and records the level that view supports with the declaration it was
 // computed from (plans/os-99829835.md D2, D3).
-func verdictPayload(ctx *admit.Context, subject, v, receipt string, declared *tuple.Tuple) ([]byte, *envelope.Envelope) {
+func verdictPayload(ctx *admit.Context, subject, v, receipt string, declared *tuple.Tuple, scorecard *transition.ScorecardRef) ([]byte, *envelope.Envelope) {
 	if ctx == nil || ctx.Lifecycle == nil {
 		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", "no lifecycle view to bind the verdict to")
 	}
@@ -447,6 +723,9 @@ func verdictPayload(ctx *admit.Context, subject, v, receipt string, declared *tu
 	}
 	if declared != nil && version.LevelsApply(ctx.Active) {
 		fields["tuple"] = declared
+	}
+	if scorecard != nil && version.LevelsApply(ctx.Active) {
+		fields["scorecard"] = scorecard
 	}
 	b, err := json.Marshal(fields)
 	if err != nil {
