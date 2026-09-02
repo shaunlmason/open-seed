@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-02T10:36:51Z"
     lease_expires: "2026-09-02T12:57:03Z"
 created_at: "2026-09-01T14:55:14Z"
-updated_at: "2026-09-02T10:57:03Z"
+updated_at: "2026-09-02T11:00:23Z"
 ---
 
 Found while building the injection conformance suite (os-b779b4c7),
@@ -50,3 +50,7 @@ Scope: the tier vocabulary, validated at intent.filed, with the two
 authority sites reading from it; update next/spec/lanes.md's residual
 table and remove the characterization pin in
 internal/admit/injection_test.go.
+
+## Evidence ev-75cd19c2 (pr, seed-next-implementer, 2026-09-02T11:00:23Z)
+
+https://github.com/shaunlmason/open-seed/pull/222
