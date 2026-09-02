@@ -975,3 +975,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-e6cdb3d9","ts":"2026-09-02T06:57:19Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-157acad2","kind":"review"},"task":"os-d6a52784","ts":"2026-09-02T07:14:21Z","verb":"attach-evidence"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-d6a52784","ts":"2026-09-02T07:20:36Z","verb":"close"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:213","to":"ready"},"task":"os-e6cdb3d9","ts":"2026-09-02T07:23:21Z","verb":"plan-unblock"}
