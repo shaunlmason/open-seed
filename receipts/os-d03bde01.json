@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "task": "os-d03bde01",
+  "merge_base": "9e95601cb1b6f5cd69d20afcafeebbb08ac37bc3",
+  "head": "e86b01cb213ecb6a8faa26275c9dadc465250e96",
+  "plan_path": "plans/os-d03bde01.md",
+  "plan_sha256": "46559e51d8a60b6e99826857bba9f567a3313760c81dfd045e1105e40d366199",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/budgetcode_cli_test.go",
+    "next/cmd/seed/loop_e2e_test.go",
+    "next/cmd/seed/remote.go",
+    "next/docs/decisions.md",
+    "next/internal/admit/admit.go",
+    "next/internal/envelope/envelope.go",
+    "next/internal/envelope/envelope_test.go",
+    "next/spec/budgets.md",
+    "next/spec/envelope.md",
+    "next/spec/loop-verbs.md"
+  ],
+  "diff_sha256": "b86fc8d81fd3ff5c67d7994b6333a07d30169d031fec654a12e2fb5adce52e8b",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/envelope/ ./internal/admit/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
