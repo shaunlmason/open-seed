@@ -1,6 +1,10 @@
 # Incubation build output: the binary is built here, never installed on PATH
 # (docs/next-build-plan.md section 0), and never committed.
 bin/
+# A `go build ./cmd/seed` run from this module root writes the binary here
+# (`go build ./...` writes nothing); it was committed twice as a build side
+# effect and is untracked since os-a487b3b5.
+/seed
 # Observation-channel scratch (fixed default: per-executor files, lossy).
 var/
 # Coverage artifacts from make check-next.

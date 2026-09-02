@@ -1115,3 +1115,16 @@ The companion rule from the same card: the list is a list, never an
 ordering. `Applies("seed/9")` must stay false on a build that has not
 registered `seed/9`, or a chain upgraded past what the build
 understands would fold under rules it never implemented.
+
+## `go build ./...` writes nothing; `go build ./cmd/seed` writes a landmine
+
+Two build spellings that read alike behave oppositely. With a
+multi-package pattern (`./...`) `go build` compiles and DISCARDS every
+executable, which is why `make check` never dirties the tree; with a
+single main package (`./cmd/seed`) it writes `seed` into the current
+directory, which for a run from `next/` is `next/seed`, a 12 MB file
+that was committed twice by builds nobody meant to commit and then had
+to be reverted by hand before every commit. The repository-level fix is
+one ignore rule (os-a487b3b5); the habit is to build into `next/bin/`
+(`go build -o bin/seed ./cmd/seed`), the path the build plan already
+names, or to use `go run ./cmd/seed`.

@@ -2037,3 +2037,13 @@ here. Newest last.
   run-start fold now treat a malformed tuple as a malformed payload:
   no fact, one anomaly, the `run.settled` posture the tree already
   had.
+
+- **`next/seed` is untracked and ignored; the build is unchanged**
+  (os-a487b3b5). The 12 MB binary was committed twice as a side effect
+  of a hand-run `go build ./cmd/seed` from the module root (#135, #137)
+  and then had to be reverted before every commit in every worktree
+  where a build ran. `check-next` runs `go build ./...`, which with a
+  multi-package pattern discards every executable, so there was no
+  output path to point it at; the fix is the index removal and one
+  ignore rule beside `bin/`, and the file stays on disk in existing
+  checkouts as an ignored one.
