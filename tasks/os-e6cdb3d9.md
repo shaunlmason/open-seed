@@ -1,16 +1,13 @@
 ---
 id: os-e6cdb3d9
 title: 'next: Phase 9 exit record'
-state: in_progress
+state: blocked
 priority: P1
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-ed1449c68d11a754
-    claimed_at: "2026-09-02T06:53:33Z"
-    lease_expires: "2026-09-02T07:53:33Z"
+blocked_on:
+    - plan:213
 created_at: "2026-09-02T06:53:07Z"
-updated_at: "2026-09-02T06:53:33Z"
+updated_at: "2026-09-02T06:57:19Z"
 ---
 
 Phase 9 (lanes, escalation, maintenance) is complete once #212 merges,

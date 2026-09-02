@@ -972,3 +972,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 9 exit record"},"task":"os-e6cdb3d9","ts":"2026-09-02T06:53:09Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-e6cdb3d9","ts":"2026-09-02T06:53:30Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T07:53:33Z"},"task":"os-e6cdb3d9","ts":"2026-09-02T06:53:33Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-e6cdb3d9","ts":"2026-09-02T06:57:19Z","verb":"transition"}
