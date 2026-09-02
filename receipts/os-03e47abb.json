@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-03e47abb",
-  "merge_base": "3ae56a3f20f4b6578242b58fc339833d69398617",
-  "head": "fea63e591c7f89b0903683c593bbde46596c83b4",
+  "merge_base": "75dc756b4bafa160f8ce649ec533418ede50220f",
+  "head": "b6dd67946bffa7df610337cdb8234fd42a5fe8c5",
   "plan_path": "plans/os-03e47abb.md",
   "plan_sha256": "375d77ea057ff95652560bdeb2a6b6baad5430b99c4ffbdba8ab8968751849af",
   "diff_files": [
@@ -51,7 +51,7 @@
     "next/spec/qualification.md",
     "next/spec/reconciliation.md"
   ],
-  "diff_sha256": "28a3ff5e2d106abde0135aadda7c048184a51d8a3db9a5df6bc7e940d0a8b8ef",
+  "diff_sha256": "3e6e2af235e5991d371b839c0a3e20b19b27f818e7413698ec22325e254d9b1e",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/version/ ./internal/tuple/ ./internal/eval/ ./internal/keyring/ ./internal/transition/ ./internal/admit/ ./internal/verdict/ ./internal/obligation/ ./internal/reconcile/ ./cmd/seed/ -count=1",
