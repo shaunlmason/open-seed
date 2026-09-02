@@ -1048,3 +1048,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-f30ee0d3","ts":"2026-09-02T11:43:30Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T13:59:42Z"},"task":"os-6bd9ffff","ts":"2026-09-02T11:59:42Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-6bd9ffff","ts":"2026-09-02T12:09:37Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"next: Phase 11 item 2 — promotion gate (≥2-trajectory support, applies-when, provenance, last-validated); adversarial evaluation for behavior-changing lessons; contested state; lessons delivered at claim time"},"task":"os-96850e5a","ts":"2026-09-02T12:10:09Z","verb":"create"}
