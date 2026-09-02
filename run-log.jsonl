@@ -1147,3 +1147,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: the cache carries no ts column, so evidence is queryable by position but not by time (III.G row 10)"},"task":"os-74ce2261","ts":"2026-09-02T23:54:40Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: revocation reaps the revoked holder's open claims on the revocation alone (III.E row 8's reap arm; Phase 12 item 1 follow-up)"},"task":"os-32d06c65","ts":"2026-09-02T23:55:48Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 11 exit record — III.K walked row by row, the flywheel's chore conversion and the poisoning drill named (progress.md)"},"task":"os-efb2a099","ts":"2026-09-02T23:56:52Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-a026f5ea","ts":"2026-09-02T23:57:30Z","verb":"transition"}
