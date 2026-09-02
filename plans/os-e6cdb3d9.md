@@ -60,7 +60,7 @@ every charter row is walked regardless, and an unmet row is recorded and
 | row | status | by |
 |---|---|---|
 | 1. Role definitions for all six lanes as grants + conventions, composable from ordered fragments, checked by validation | **met** | #188 (manifests + fragments + `internal/lane`); #212 adds the `kind` field and refuses a seventh lane by name, so "six" is enforced rather than counted |
-| 2. Dispatcher least standing capability; injection conformance suite (intents, mirrors, tool output quoted as data) | **met, two-thirds** | #192: intents and tool output covered; the mirror arm cannot be met because `request.*` has zero transition rows. Recorded in `lanes.md` and routed already: whichever card lands `request.*` inherits the corpus |
+| 2. Dispatcher least standing capability; injection conformance suite (intents, mirrors, tool output quoted as data) | **UNMET, not claimed** | the row is CONJUNCTIVE and the mirror arm cannot be met: `request.*`, the verb family mirror edits and dashboard actions enter by, has zero transition rows, so there is nothing to fire the corpus at. Intents and tool output are covered by #192; least standing capability by #188's allowlist. `lanes.md` says "whichever card lands `request.*` inherits the corpus", and the build plan names no such card — so this row is routed by this card, see D2. (The first draft of this table wrote "met, two-thirds", which is the ticked-by-paragraph move D2 forbids; review finding on #213) |
 | 3. Dispatcher re-triage rate and planner unedited-approval rate tracked; planner receives the strongest tuples by policy | **UNMET, not claimed** | nothing in the tree: no rate is computed anywhere, and "strongest tuples" presupposes Phase 10's tuple system. Routed by this card, see D2 |
 | 4. Maintenance runs green unattended and is audited as an ordinary actor | **met** | #205, with `TestMaintainHoldsNoPrivatePowers` as the audit-posture pin |
 | 5. Escalations carry packet + question + minimal decision; waiting ones surface with age; resolution latency tracked | **met** | #200: `escalation.pending` with the raising `ts`; `seed decision record` reports `resolved_after_seconds`, derived from the chain and stored nowhere (`escalation.md`) |
@@ -75,17 +75,34 @@ every charter row is walked regardless, and an unmet row is recorded and
   sentence naming this card as the record's task PR. A record that
   looks like the last four is a record a reader can diff.
 
-- **D2 — row 3 is routed to Phase 10, in the build plan's own text,
-  and III.J row 3 joins Phase 10's exit line.** This is the move the
+- **D2 — the two unmet rows are routed in the build plan's own text,
+  and each joins its landing phase's exit line.** This is the move the
   Phase 8 record made for III.I rows 3 and 5, and the reason is the
   same: an unmet row that nobody is assigned is a row that stays unmet.
-  "Strongest tuples by policy" is Phase 10 item 1 already in substance
-  (runtime tuples in grants); the two rates are lane-quality metrics
-  that are meaningless without the eval harness, so they land beside
-  Phase 10 item 5's trajectory-prefix regression harness for lane
-  decision points, which is where a dispatcher's re-triage and a
-  planner's unedited approval become observable. The edit is one
-  sentence in each item and one clause on the exit line.
+
+  *Row 3 → Phase 10.* "Strongest tuples by policy" is Phase 10 item 1
+  already in substance (runtime tuples in grants); the two rates are
+  lane-quality metrics that are meaningless without the eval harness,
+  so they land beside Phase 10 item 5's trajectory-prefix regression
+  harness for lane decision points, which is where a dispatcher's
+  re-triage and a planner's unedited approval become observable.
+
+  *Row 2's mirror arm → Phase 13 item 4.* The charter defines
+  `request.*` as "inbound proposals from projection surfaces (mirror
+  edits, dashboard actions)", and the build plan names the family
+  nowhere — the word "mirror" does not appear in it. Phase 13 item 4
+  ("federation read remotes and cross-repo request ingress") is the
+  one item in the ingress family, so the `request.*` rows land there,
+  with the clause that landing them closes the injection corpus's
+  mirror arm: the corpus already exists and already sweeps the
+  projections that a mirror renders from
+  (`TestProjectionsCarryPayloadsVerbatimIncludingHostileText`), so
+  what the arm waits on is the verb, not the drill. III.J row 2 joins
+  Phase 13's exit line beside III.I.
+
+  Refused, for row 2: recording it "met, two-thirds". A conjunctive
+  criterion two-thirds met is unmet, and a fraction in the status
+  column is how a reader stops noticing which third is missing.
 
   Refused: claiming row 3 on the strength of the report projection's
   existing refusal-rate section. A refusal rate is an affordance-gap
@@ -123,7 +140,10 @@ every charter row is walked regardless, and an unmet row is recorded and
    planner lane receives the strongest tuples by policy (III.J row
    3)"; item 5 gains "dispatcher re-triage rate and planner
    unedited-approval rate tracked (III.J row 3)"; Phase 10's exit line
-   gains "+ III.J row 3" (D2).
+   gains "+ III.J row 3". Phase 13 item 4 gains "and the `request.*`
+   rows that mirror edits and dashboard actions enter by, closing the
+   injection corpus's mirror arm (III.J row 2)"; Phase 13's exit line
+   gains III.J row 2 beside III.I (D2).
 2. `next/docs/progress.md` — the Phase 9 exit paragraph (D1, D3, D4),
    inserted where the Phase 8 record sits relative to its phase.
 3. Receipt; evidence; review.
@@ -131,7 +151,8 @@ every charter row is walked regardless, and an unmet row is recorded and
 ## File Scope
 
 - `next/docs/progress.md`
-- `docs/next-build-plan.md` (the three D2 edits only)
+- `docs/next-build-plan.md` (the five D2 edits only: three for row 3,
+  two for row 2)
 - `receipts/os-e6cdb3d9.json`
 
 Nothing else. No file under `next/**` other than `progress.md`.
@@ -141,10 +162,13 @@ Nothing else. No file under `next/**` other than `progress.md`.
 1. The record opens with the exit line's three criteria, each naming
    the drill on `main` that backs it, and every drill named exists
    under that name (a reviewer can `grep -n "^func <name>"`).
-2. All six III.J rows appear, each with a status and a PR citation, and
-   row 3 says **UNMET** in those letters with its Phase 10 routing.
+2. All six III.J rows appear, each with a status and a PR citation;
+   rows 2 and 3 say **UNMET** in those letters, with row 3's Phase 10
+   routing and row 2's Phase 13 routing. No row's status is a
+   fraction.
 3. `docs/next-build-plan.md` names III.J row 3 in Phase 10 items 1
-   and 5 and on Phase 10's exit line, and nowhere else changes.
+   and 5 and on Phase 10's exit line, and III.J row 2 in Phase 13
+   item 4 and on Phase 13's exit line — and nowhere else changes.
 4. The frontier line names Phase 10 item 1 and states its derivation.
 5. `make check` green; `scripts/seed validate` green. No Go file, no
    spec file, no test file in the diff.
@@ -156,5 +180,5 @@ Nothing else. No file under `next/**` other than `progress.md`.
 ```sh
 make check
 scripts/seed validate
-git diff --stat origin/main -- next/ docs/ | grep -vE 'progress.md|next-build-plan.md' | grep -q . && echo SCOPE-VIOLATION || echo scope ok
+git diff --name-only origin/main -- next/ docs/ | grep -vE '^next/docs/progress.md$|^docs/next-build-plan.md$' | grep -q . && echo SCOPE-VIOLATION || echo scope ok
 ```
