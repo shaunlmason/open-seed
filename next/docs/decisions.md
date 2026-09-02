@@ -2129,3 +2129,31 @@ here. Newest last.
   project and reconcile drills verify unchanged after this card), so no
   two validators disagree on chain validity; only the cooperative
   boundary refuses, which `actors.md` records as bump-free by design.
+
+## The client's private git dir arms auto-gc in production (os-711b3028, plan #224)
+
+- **Every construction, not only init (D1).** `NewClient` writes the
+  three keys after the init-or-stat on every open. Refused: writing
+  only when absent, because a stat-and-branch can drift from what the
+  drill asserts and three idempotent config writes cost less than the
+  branch. Refused: a `GIT_CONFIG_GLOBAL` in production, because the
+  invoking process's global config is the operator's and the engine
+  writes nothing there. A write that fails is `NewClient`'s error,
+  named by key: a git that cannot configure its own repository cannot
+  be trusted to fetch from it either.
+- **Two sites, not one (D2).** The card named the client; the tree has
+  the verifier's per-run clone too, whose `Cleanup` runs right after
+  the checkout that arms the collector. The keys are written between
+  the clone and the checkout, repository-locally, so no config outside
+  the workspace is consulted or written.
+- **The drills read `--local` (D3).** `TestClientGitDirHasNoAutoGC`
+  passed before this card for the wrong reason: the process-wide
+  global `TestMain` installs satisfied `git config --get`. It now reads
+  the repository's own scope; an older-build drill stages a bare dir
+  with the keys unset, asserts the hardening on the no-init path, and
+  asserts a second construction leaves the config bytes unchanged; a
+  workspace drill reads the clone's own scope. The test-side hardening
+  and the fixture guard of os-c4e8b57a stay as they were.
+- **No production failure was observed**, only the test-side one; the
+  two spec sentences say what the engine promises (nothing it made
+  mutates after it exits), not that a failure happened.

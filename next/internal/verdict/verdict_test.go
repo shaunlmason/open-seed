@@ -242,6 +242,34 @@ func TestGateBeforeRun(t *testing.T) {
 	}
 }
 
+// The per-run clone carries auto-gc disabled in its own config from
+// the moment it exists (plans/os-711b3028.md D2, D3): read with
+// --local, the scope the test binary's global config cannot satisfy,
+// because the earlier drill read the effective value and passed for
+// the wrong reason. Cleanup runs right after the checkout that arms
+// git's collector, which is the race this write removes.
+func TestWorkspaceCloneHasNoAutoGC(t *testing.T) {
+	dir, _, _, head := repo(t)
+	ws, err := NewWorkspace(dir, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ws.Cleanup()
+	for key, want := range map[string]string{
+		"gc.auto":        "0",
+		"gc.autoDetach":  "false",
+		"receive.autoGC": "false",
+	} {
+		out, err := exec.Command("git", "-C", ws.Repo, "config", "--local", "--get", key).CombinedOutput()
+		if err != nil {
+			t.Fatalf("%s unset in the clone's own config: %v %s", key, err, out)
+		}
+		if got := strings.TrimSpace(string(out)); got != want {
+			t.Errorf("%s = %q in the clone, want %q", key, got, want)
+		}
+	}
+}
+
 func TestRunnerProfileScrubsEnvironment(t *testing.T) {
 	dir, base, _, head := repo(t)
 	t.Setenv("SEED_TEST_SECRET", "hunter2")

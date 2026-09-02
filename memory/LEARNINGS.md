@@ -1141,3 +1141,12 @@ threads before implementing, answer each in the task PR's decisions,
 and let the implementation carry the corrections the plan's text
 lacks. Derive counts from the tree while you are at it: the card said
 two authority sites and the tree had three.
+
+- **An effective-value assertion can pass for the wrong reason.**
+  `git config --get` reads every scope, so a drill asserting a
+  repository-local property against it is satisfied by a process-wide
+  global the test harness installed for other reasons (os-711b3028:
+  the client's git dir drill passed before the client wrote anything).
+  Assert the scope you mean (`--local`), and for a write that must
+  happen on every open, stage the state an older build would leave and
+  prove the second open changes nothing.

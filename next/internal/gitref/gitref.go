@@ -51,7 +51,40 @@ func NewClient(stateDir, remote, ref string) (*Client, error) {
 			return nil, err
 		}
 	}
+	if err := hardenGitDir(gitDir); err != nil {
+		return nil, err
+	}
 	return &Client{Remote: remote, Ref: ref, gitDir: gitDir, cacheDir: cacheDir}, nil
+}
+
+// noAutoGC is the repository-local configuration every git dir the
+// engine creates for itself carries (plans/os-711b3028.md D1, D2):
+// the client's private transport dir and the verifier's per-run
+// clone are ephemeral, engine-owned state, and a collector git
+// detaches after a fetch, a receive or a checkout would mutate them
+// after the process that armed it has exited. A caller removing its
+// state dir (a CI job cleaning a workspace) then hits the same
+// directory-not-empty failure the drills hit under t.TempDir.
+var noAutoGC = [][2]string{
+	{"gc.auto", "0"},
+	{"gc.autoDetach", "false"},
+	{"receive.autoGC", "false"},
+}
+
+// hardenGitDir writes noAutoGC into the git dir on every construction,
+// not only at init: a state dir an older build created is hardened the
+// first time a new build opens it, and three idempotent config writes
+// cost less than a stat-and-branch that could drift from what the
+// drill asserts. A write that fails is the client's error, named by
+// key: a git that cannot configure its own repository cannot be
+// trusted to fetch from it either.
+func hardenGitDir(gitDir string) error {
+	for _, kv := range noAutoGC {
+		if _, err := runGit(gitDir, "config", kv[0], kv[1]); err != nil {
+			return fmt.Errorf("harden %s: %w", kv[0], err)
+		}
+	}
+	return nil
 }
 
 func runGit(gitDir string, args ...string) (string, error) {

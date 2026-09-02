@@ -63,6 +63,15 @@ func NewWorkspace(repoDir, head string) (*Workspace, error) {
 		// isolation real; the drill corrupts every clone-side object
 		// and asserts the parent still verifies.
 		{"clone", "--quiet", "--no-checkout", "--no-hardlinks", repoDir, ws.Repo},
+		// The clone carries auto-gc disabled before anything runs in
+		// it (plans/os-711b3028.md D2): a checkout arms git's
+		// collector, and this clone's Cleanup runs right after the
+		// commands that arm it, which is exactly the race a detached
+		// gc loses against a directory removal. Repository-local, so
+		// no config outside the workspace is consulted or written.
+		{"-C", ws.Repo, "config", "gc.auto", "0"},
+		{"-C", ws.Repo, "config", "gc.autoDetach", "false"},
+		{"-C", ws.Repo, "config", "receive.autoGC", "false"},
 		{"-C", ws.Repo, "checkout", "--quiet", "--detach", head},
 		{"-C", ws.Repo, "remote", "remove", "origin"},
 	}

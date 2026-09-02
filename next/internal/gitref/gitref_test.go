@@ -638,18 +638,66 @@ func TestClientGitDirHasNoAutoGC(t *testing.T) {
 	if _, err := NewClient(state, bareRemote(t), "refs/seed/ledger"); err != nil {
 		t.Fatal(err)
 	}
-	gitDir := filepath.Join(state, "gitdir")
+	assertLocalNoAutoGC(t, filepath.Join(state, "gitdir"), "the client's git dir")
+}
+
+// assertLocalNoAutoGC reads each key with --local, the repository's
+// own scope, which the process-wide global TestMain installs cannot
+// satisfy (plans/os-711b3028.md D3): before that plan the drill read
+// the effective value and passed for the wrong reason.
+func assertLocalNoAutoGC(t *testing.T, gitDir, what string) {
+	t.Helper()
 	for key, want := range map[string]string{
 		"gc.auto":        "0",
 		"gc.autoDetach":  "false",
 		"receive.autoGC": "false",
 	} {
-		out, err := exec.Command("git", "-C", gitDir, "config", "--get", key).CombinedOutput()
+		out, err := exec.Command("git", "-C", gitDir, "config", "--local", "--get", key).CombinedOutput()
 		if err != nil {
-			t.Fatalf("%s unset on the client's git dir: %v %s", key, err, out)
+			t.Fatalf("%s unset in %s's own config: %v %s", key, what, err, out)
 		}
 		if got := strings.TrimSpace(string(out)); got != want {
-			t.Errorf("%s = %q, want %q — a detached gc under a t.TempDir outlives the test that made it", key, got, want)
+			t.Errorf("%s = %q in %s, want %q — a detached gc under this dir outlives the process that armed it", key, got, what, want)
 		}
+	}
+}
+
+// An older build's state dir carries no configuration at all: the
+// git dir exists, so NewClient does not init, and the write must
+// happen on that path too (D1: every construction, never only init).
+// A second construction changes nothing, which is what makes the
+// unconditional write safe to run on every open.
+func TestClientHardensAnOlderBuildsGitDir(t *testing.T) {
+	state := t.TempDir()
+	gitDir := filepath.Join(state, "gitdir")
+	if out, err := exec.Command("git", "init", "-q", "--bare", gitDir).CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v %s", err, out)
+	}
+	hardenGitRepo(t, gitDir)
+	for _, key := range []string{"gc.auto", "gc.autoDetach", "receive.autoGC"} {
+		if out, err := exec.Command("git", "-C", gitDir, "config", "--local", "--unset", key).CombinedOutput(); err != nil {
+			t.Fatalf("unset %s to stage the older build's dir: %v %s", key, err, out)
+		}
+	}
+	if out, err := exec.Command("git", "-C", gitDir, "config", "--local", "--get", "gc.auto").CombinedOutput(); err == nil {
+		t.Fatalf("the staged dir still carries gc.auto=%s: the drill would prove nothing", strings.TrimSpace(string(out)))
+	}
+	if _, err := NewClient(state, bareRemote(t), "refs/seed/ledger"); err != nil {
+		t.Fatal(err)
+	}
+	assertLocalNoAutoGC(t, gitDir, "the older build's git dir")
+	before, err := os.ReadFile(filepath.Join(gitDir, "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewClient(state, bareRemote(t), "refs/seed/ledger"); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(filepath.Join(gitDir, "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("a second NewClient rewrote the config:\n%s\n--- became ---\n%s", before, after)
 	}
 }
