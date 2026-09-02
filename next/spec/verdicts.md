@@ -21,14 +21,16 @@ arrives only through `merge.observed`, behind the full chain rule
 ([`reconciliation.md`](reconciliation.md)). Its payload is strict:
 
 ```json
-{"verdict": "pass" | "fail", "receipt": "<sha256 hex>", "submission": "<position>", "independence": "L1"}
+{"verdict": "pass" | "fail", "receipt": "<sha256 hex>", "submission": "<position>", "independence": "L1" | "L2" | "L3", "tuple"?: {…}}
 ```
 
 Unknown keys refuse; `verdict` admits only the two literals;
-`independence` admits only `"L1"` in v0 — the level vocabulary widens
-when Phase 10 item 3 declares levels per tier, a column on the tier
-table [`tiers.md`](tiers.md) now declares, and the verdict records the
-level actually achieved. `submission` is the chain position of the
+`independence` is the level the record supports, exactly (the section
+below): the literal `"L1"` alone before `seed/4`, the ordered
+vocabulary from it. `tuple`, from `seed/4`, is the verifier's declared
+runtime configuration ([`qualification.md`](qualification.md)'s five
+fields, strict), present when the verifier declared one and refused
+before `seed/4`. `submission` is the chain position of the
 `submission.made` that put the subject in its current `review` state
 (the fold records it): a verdict is bound to the submission it judges,
 and citing any other position refuses. `receipt` is the SHA-256 digest
@@ -56,6 +58,80 @@ to it like any signer.
 Because `review` is outside `in_progress`, no fence is active: a
 verdict citing one refuses under the established fence rule (a fence
 dies with its claim window).
+
+## Independence levels (L1, L2, L3) from `seed/4`
+
+The charter's levels (§7, "Independence is failure-domain separation")
+are **ordered**, achieved is **computed from the record, never
+asserted**, and the tier table declares the minimum per tier
+([`tiers.md`](tiers.md), the `independence` column: `trivial` L1,
+`standard` L1, `critical` L2, the strictest row L3). Any achieved level
+at or above the requirement satisfies it, which is III.G's "L2 or L3"
+for high-consequence tiers. From `seed/4` (plans/os-99829835.md):
+
+- **L1** holds for every admitted verdict: the key and workspace
+  disjointness above.
+- **L2** holds when the verifier's declared `tuple` differs from the
+  claim window's admitted `run.started` declaration in model
+  **provider or family**, or in **harness name**: the charter's
+  "different model family or provider, different harness image".
+  Principal, tool policy, environment and versions do not count; a
+  three-part model (`<provider>/<family>/<version>`) compares provider
+  and family, a two-part one family alone, so two providers serving
+  one family through one harness are L2. A window with no admitted
+  declaration supports no L2.
+- **L3** holds when the record proves deterministic-first verification
+  on a distinct path: the acceptance is executable and gated, and the
+  cited receipt **reproduces**, `verdict check`'s recomputation from
+  the verifier's own checkout yielding the cited digest. That is the
+  record-backed determinism predicate: a nondeterministic command, a
+  model call that answers differently, or an evidence path the
+  implementer could shape yields a different transcript digest and
+  fails to reproduce. Distinct acquisition is the workspace rule
+  above. The boundary checks the executable-and-gated half (it runs
+  nothing); recomputation and reconcile's evidence grade check the
+  reproduction. What the record cannot prove is stated: the `exec`
+  profile declares the network rather than denying it, and a
+  deterministic command that still reaches a model is caught only when
+  the model disagrees with itself; the denying profile is Phase 13's
+  adapter.
+
+**The verifier declares its tuple at render, as the supervisor declares
+the worker's at start.** `seed verdict render --principal <p> --model
+<m> --tool-policy <t>` fills `harness` and `environment` from the
+workspace adapter it verifies in and never invents the three it cannot
+know. The declaration is a declaration, not a report: what the
+verifier ran as is what its operator says, exactly as the worker's is;
+the qualification machinery that would prove it is
+[`evals.md`](evals.md) applied to verifier keys, Phase 10 item 4's.
+
+**Enforced at admission, at render, and along the merge chain.** The
+verdict rule requires `independence` to be a member of the vocabulary
+and to **equal** the level the record supports (a claim below the
+computed level would underreport the audit data the level exists to
+produce; one above it asserts what the record does not show), and the
+level to satisfy the tier's requirement, read through `TierGates`. A
+level short of the tier refuses exit **17 `not_independent`** with the
+refining code **`level_short`** ([`envelope.md`](envelope.md)): the
+family's answer, "this verifier cannot judge this contract", stands,
+and the word says it is the configuration rather than the key. `seed
+verdict render` computes the achieved level from the same facts before
+drafting, so the client never drafts a doomed verdict, and on a tier
+the record cannot satisfy without a declaration it refuses at usage
+naming the three flags. The fold records the level and the tuple, and
+**the merge chain reapplies both**: the boundary `merge.requested`,
+`merge.observed`, `contract.returned` and the red-verdict lockout
+consult refuses a folded verdict whose recorded level the record does
+not support or which is short of the subject's tier, so a raw-pushed
+`critical` verdict at `L1` cannot be laundered into `done`;
+[`reconciliation.md`](reconciliation.md)'s `independence_unverified`
+surfaces the same two conditions and the evidence-grade reproduction,
+a sealed subject's under an identity able to unseal (`seed reconcile
+--key`, the maintenance actor's key), never skipped silently.
+
+Before `seed/4` the level is the literal `L1` and a declaration has
+nowhere to go; a `seed/3` chain keeps `seed/3`'s judgment
+([`protocol.md`](protocol.md)).
 
 ## The verifier workspace
 
@@ -229,6 +305,12 @@ and disjointness checks above.
   implementing key; override its own verb) — the `verdict` capability
   row, the L1 independence rule with exit 17, the operator-fallback
   omission; the override verb itself is 6.4.
+- III.G row 1 (independence levels L1–L3 defined, declared per tier,
+  enforced at verdict time, recorded in the verdict; high-consequence
+  tiers require L2 or L3) — the levels section above, the tier table's
+  `independence` column, the verdict rule's equality and tier checks
+  with `level_short`, the fold's recorded level and tuple, the merge
+  chain's reapplication, and `independence_unverified`.
 - III.G row 4 (clean per-run isolation; parallel verdicts never
   collide; cleanup fires pass or fail; enumerable, self-executed
   inputs) — the workspace, the runner profile, and their drills.

@@ -307,6 +307,11 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	if errors.As(err, &fe) {
 		return envelope.Fail(envelope.ExitFenced, "fenced_out", err.Error())
 	}
+	var lse *admit.LevelShortError
+	if errors.As(err, &lse) {
+		// The family's exit with the refining code (next/spec/envelope.md).
+		return envelope.Fail(envelope.ExitNotIndependent, "level_short", err.Error())
+	}
 	var nie *admit.NotIndependentError
 	if errors.As(err, &nie) {
 		return envelope.Fail(envelope.ExitNotIndependent, "not_independent", err.Error())

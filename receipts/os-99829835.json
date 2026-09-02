@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "task": "os-99829835",
+  "merge_base": "6cc62827b7157429df58710aac1fb76c37d21e4e",
+  "head": "3704926d7de25fd8b5323b18d8e926d39029385a",
+  "plan_path": "plans/os-99829835.md",
+  "plan_sha256": "4f4e229208a66576698a551d6c0ac28f6c5eba524e315b440ddbab183061804b",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/level_cli_test.go",
+    "next/cmd/seed/level_modes_e2e_test.go",
+    "next/cmd/seed/maintain.go",
+    "next/cmd/seed/reconcile.go",
+    "next/cmd/seed/remote.go",
+    "next/cmd/seed/verdict.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/level_test.go",
+    "next/internal/maintain/maintain.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/reconcile/evidence.go",
+    "next/internal/reconcile/reconcile.go",
+    "next/internal/transition/level_test.go",
+    "next/internal/transition/tier_test.go",
+    "next/internal/transition/transition.go",
+    "next/internal/tuple/tuple.go",
+    "next/internal/tuple/tuple_test.go",
+    "next/internal/version/version.go",
+    "next/internal/version/version_test.go",
+    "next/lanes/verifier.json",
+    "next/spec/envelope.md",
+    "next/spec/lanes.md",
+    "next/spec/protocol.md",
+    "next/spec/qualification.md",
+    "next/spec/reconciliation.md",
+    "next/spec/tiers.md",
+    "next/spec/verdicts.md"
+  ],
+  "diff_sha256": "d13f29949decd79db07075ad86bc02c131c844b24ba43a2060851e1487693362",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/version/ ./internal/transition/ ./internal/admit/ ./internal/envelope/ ./internal/reconcile/ ./internal/project/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

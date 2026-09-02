@@ -230,6 +230,91 @@ func (e *ContentionError) Error() string {
 	return fmt.Sprintf("contract %s is already claimed by %s (fence %d, held since position %d) — exclusivity is granted at admission, one claim at a time", e.Subject, e.Holder, e.Fence, e.Fence)
 }
 
+// LevelShortError is the level-short refusal (exit 17 not_independent
+// refining level_short; plans/os-99829835.md D3): the level the record
+// supports for this verdict does not meet the level the subject's tier
+// requires. The family's answer, "this verifier cannot judge this
+// contract", is already right; the refining word says it is the
+// configuration rather than the key.
+type LevelShortError struct {
+	Subject, Tier      string
+	Required, Achieved transition.Level
+}
+
+func (e *LevelShortError) Error() string {
+	return fmt.Sprintf("verdict on %s refused: tier %q requires independence %s and the record supports %s — a verifier's configuration that cannot separate from the work's cannot judge a high-consequence contract (next/spec/verdicts.md, next/spec/tiers.md)", e.Subject, e.Tier, e.Required, e.Achieved)
+}
+
+// LevelAchieved computes the independence level the record supports
+// for a verdict on the subject (plans/os-99829835.md D1, D3): the
+// highest that holds. L3 when the acceptance is executable and gated,
+// the deterministic-first path whose reproduction half is left to
+// recomputation since the boundary runs nothing; L2 when the
+// verifier's declared tuple differs from the window's admitted
+// declaration in model provider or family, or in harness name
+// (versions, principal, tool policy and environment do not count); L1
+// otherwise, the disjointness every admitted verdict already has.
+// Shared by the verdict rule, the merge chain, render and reconcile,
+// so the four never disagree on what a record supports.
+func LevelAchieved(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState, declared *tuple.Tuple) transition.Level {
+	if s.Acceptance != nil && s.Acceptance.Executable && s.Acceptance.Gated {
+		return transition.L3
+	}
+	if declared != nil {
+		if window := submissionDeclaration(records, table, subject, s); window != nil {
+			if tuple.SeparatesModel(declared.Model, window.Model) || tuple.SeparatesHarness(declared.Harness, window.Harness) {
+				return transition.L2
+			}
+		}
+	}
+	return transition.L1
+}
+
+// submissionDeclaration is the tuple the claim window that produced the
+// bound submission declared through its admitted run.started, nil
+// where no submission stands, the submission cites no window, or no
+// admitted start declared one: windowDeclaration's lookup, taken from
+// records and the table so reconcile can share it without a Context.
+func submissionDeclaration(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState) *tuple.Tuple {
+	if s.Submission == nil {
+		return nil
+	}
+	fence, _, ok := submissionWindow(records, subject, s.Submission.Pos)
+	if !ok {
+		return nil
+	}
+	for i := range s.RunStarts {
+		st := s.RunStarts[i]
+		if st.Fence == fence && RunStartValid(records, table, subject, st) {
+			return st.Tuple
+		}
+	}
+	return nil
+}
+
+// levelBoundary reapplies the level and the tier to a folded verdict
+// (plans/os-99829835.md D3, review finding on the plan PR): a
+// raw-pushed verdict whose recorded level the record does not support,
+// or which is short of the subject's tier, authenticates nothing, so
+// it cannot be laundered into done through an admitted merge chain and
+// the red-verdict lockout does not count it. A verdict at a version
+// before the levels keeps that version's judgment.
+func levelBoundary(c *Context, subject, verb string, s transition.SubjectState, fact transition.VerdictFact) *transition.ChainError {
+	if !fact.Levels {
+		return nil
+	}
+	achieved := LevelAchieved(c.Records, c.Table, subject, s, fact.Tuple)
+	if fact.Independence != string(achieved) {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the cited verdict at position %d records independence %q and the record supports %s — a level the record does not support is not launderable through the admitted chain", fact.Pos, fact.Independence, achieved)}
+	}
+	if required := transition.TierGates(s.Tier).Independence; !achieved.Satisfies(required) {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the cited verdict at position %d achieved %s and tier %q requires %s — a level short of the tier authenticates nothing", fact.Pos, achieved, s.Tier, required)}
+	}
+	return nil
+}
+
 // NotIndependentError is the L1 independence refusal (exit 17
 // not_independent, next/spec/verdicts.md): the verdict signer is an
 // implementing key on this contract — a claimant, past or present, or
@@ -612,15 +697,16 @@ func Default() []Rule {
 				return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: rec.Event.Verb}
 			}
 			var p struct {
-				Verdict      string `json:"verdict"`
-				Receipt      string `json:"receipt"`
-				Submission   string `json:"submission"`
-				Independence string `json:"independence"`
+				Verdict      string          `json:"verdict"`
+				Receipt      string          `json:"receipt"`
+				Submission   string          `json:"submission"`
+				Independence string          `json:"independence"`
+				Tuple        json.RawMessage `json:"tuple"`
 			}
 			dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
 			dec.DisallowUnknownFields()
 			if err := dec.Decode(&p); err != nil {
-				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {verdict, receipt, submission, independence}: %v", err)}
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {verdict, receipt, submission, independence, tuple?}: %v", err)}
 			}
 			var missing []string
 			for _, f := range []struct{ name, v string }{{"verdict", p.Verdict}, {"receipt", p.Receipt}, {"submission", p.Submission}, {"independence", p.Independence}} {
@@ -637,8 +723,21 @@ func Default() []Rule {
 			if !receiptDigestRE.MatchString(p.Receipt) {
 				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("receipt %q is not a lowercase-hex sha256 digest of the receipt's JCS bytes", p.Receipt)}
 			}
-			if p.Independence != "L1" {
-				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("independence %q is not the v0 literal \"L1\" — the level vocabulary widens when Phase 10 declares levels per tier", p.Independence)}
+			// The level vocabulary and the verifier's declaration are
+			// seed/4's (plans/os-99829835.md D3, D4): before it the
+			// literal L1 alone, and no tuple, so a seed/3 chain keeps
+			// seed/3's judgment.
+			if version.LevelsApply(c.Active) {
+				if _, ok := transition.ParseLevel(p.Independence); !ok {
+					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("independence %q is not a level: the vocabulary is L1, L2, L3 (next/spec/verdicts.md)", p.Independence)}
+				}
+			} else {
+				if len(p.Tuple) > 0 {
+					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the verdict declares a tuple and the chain is at %s: the verifier's declaration activates at %s (next/spec/protocol.md)", c.Active, version.Seed4)}
+				}
+				if p.Independence != "L1" {
+					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("independence %q is not the literal \"L1\": the level vocabulary widens at %s (next/spec/verdicts.md)", p.Independence, version.Seed4)}
+				}
 			}
 			if s.Submission == nil {
 				return &VerdictError{Subject: subject, Reason: "the fold records no submission on this review subject, so there is nothing to bind a verdict to"}
@@ -662,6 +761,28 @@ func Default() []Rule {
 			}
 			if rec.Event.Actor == s.Submission.Signer {
 				return &NotIndependentError{Subject: subject, Actor: rec.Event.Actor, Role: "the bound submission's signer"}
+			}
+			// The level is exactly what the records support, and it
+			// satisfies the tier (plans/os-99829835.md D3): a claim
+			// below the computed level would underreport the audit
+			// data the level exists to produce, a claim above it
+			// would assert what the record does not show.
+			if version.LevelsApply(c.Active) {
+				var declared *tuple.Tuple
+				if len(p.Tuple) > 0 {
+					t, err := tuple.Parse(p.Tuple)
+					if err != nil {
+						return &VerdictError{Subject: subject, Reason: "the verifier's declared tuple: " + err.Error()}
+					}
+					declared = &t
+				}
+				achieved := LevelAchieved(c.Records, c.Table, subject, s, declared)
+				if claimed, _ := transition.ParseLevel(p.Independence); claimed != achieved {
+					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("independence %s is not the level the record supports: the records support %s — the verdict records exactly the level achieved, never less and never more (next/spec/verdicts.md)", claimed, achieved)}
+				}
+				if required := transition.TierGates(s.Tier).Independence; !achieved.Satisfies(required) {
+					return &LevelShortError{Subject: subject, Tier: s.Tier, Required: required, Achieved: achieved}
+				}
 			}
 			return nil
 		}},
@@ -1499,7 +1620,7 @@ func verdictBoundary(c *Context, subject, verb string, s transition.SubjectState
 		return &transition.ChainError{Subject: subject, Verb: verb,
 			Reason: fmt.Sprintf("the cited verdict at position %d was signed by implementing key %s — L1 independence is not launderable through the admitted chain", fact.Pos, signer)}
 	}
-	return nil
+	return levelBoundary(c, subject, verb, s, fact)
 }
 
 // authenticFail returns the first fail verdict in the current
@@ -1590,7 +1711,7 @@ func verdictBoundaryAt(c *Context, subject, verb string, s transition.SubjectSta
 		return &transition.ChainError{Subject: subject, Verb: verb,
 			Reason: fmt.Sprintf("the cited verdict at position %d was signed by implementing key %s — L1 independence never held", fact.Pos, signer)}
 	}
-	return nil
+	return levelBoundary(c, subject, verb, s, fact)
 }
 
 // qualifiedFail is authenticFail with the boundary replayed to each

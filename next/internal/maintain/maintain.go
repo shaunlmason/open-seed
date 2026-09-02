@@ -29,6 +29,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/verdict"
 )
 
 // Corroboration is the LEDGER-side half of a reap's evidence: facts at
@@ -155,6 +156,11 @@ type Deps struct {
 	Thresholds obs.Thresholds
 	Store      *artifact.Store
 	Repo       string
+	// Unseal opens a sealed subject's checks under the maintenance
+	// actor's identity, for the L3 reproduction the evidence grade
+	// runs (plans/os-99829835.md D5); a subject it cannot open is
+	// reported skipped with the reason, never passed over silently.
+	Unseal func(s transition.SubjectState) (*verdict.SealedInput, error)
 	// Obligations are the rows the obligation projection derived. The
 	// unsettled-run lint CONSUMES these; re-deriving the anchoring
 	// here would put it in two places (D2).
@@ -187,7 +193,7 @@ func Run(d Deps) (Report, error) {
 		Filed: []Filing{}, Rebuilt: []string{}, Refusals: []Refusal{},
 	}
 	d.reap(&rep)
-	rep.Findings = append(rep.Findings, d.lint()...)
+	rep.Findings = append(rep.Findings, d.lint(&rep)...)
 	d.file(&rep)
 	if err := d.rebuild(&rep); err != nil {
 		return rep, err
@@ -290,7 +296,7 @@ func ReapPacket(s transition.SubjectState, fence int, c obs.Classification, corr
 // lint lands by adding a class WITH the spec that pairs it to its
 // fact; an open-ended list would make this loop a policy surface,
 // which is what "audited as an ordinary actor" denies.
-func (d Deps) lint() []reconcile.Finding {
+func (d Deps) lint(rep *Report) []reconcile.Finding {
 	if d.Fold == nil {
 		return nil
 	}
@@ -300,9 +306,23 @@ func (d Deps) lint() []reconcile.Finding {
 	// green, and omitting exactly the divergence this loop is
 	// chartered to reconcile (D2.5).
 	if d.Store != nil && d.Repo != "" {
+		// The chain and the fold ride along so the L3 reproduction
+		// runs here as it does under `seed reconcile` (review finding
+		// on the item 3 task PR: a wrapper passing nil disabled it for
+		// every maintenance pass); what the actor's key cannot open is
+		// a skip the report carries.
+		repro := reconcile.Reproduction{Records: d.Records, Fold: d.Fold, Unseal: d.Unseal,
+			NotAttempted: func(subject, why string) {
+				state := ""
+				if s, ok := d.Fold.State(subject); ok {
+					state = s.State
+				}
+				rep.Skipped = append(rep.Skipped, Skip{Subject: subject, State: state,
+					Because: "the L3 verdict's receipt was not reproduced: " + why})
+			}}
 		for _, id := range d.Fold.Subjects() {
 			if s, ok := d.Fold.State(id); ok {
-				out = append(out, reconcile.Evidence(id, s, d.Store, d.Repo)...)
+				out = append(out, reconcile.EvidenceAt(id, s, d.Store, d.Repo, repro)...)
 			}
 		}
 	}

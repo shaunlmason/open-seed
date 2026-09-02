@@ -113,4 +113,46 @@ func (t Tuple) Complete() bool {
 // protocol version: seed/2 introduced them (next/spec/qualification.md)
 // and every later registered version keeps them, as a named list, never
 // an ordering; records at earlier positions keep their earlier judgment.
-func Applies(active string) bool { return active == version.Seed2 || active == version.Seed3 }
+func Applies(active string) bool {
+	return active == version.Seed2 || active == version.Seed3 || active == version.Seed4
+}
+
+// ModelLineage splits a model string by the convention of
+// next/spec/qualification.md: "<family>/<version>" or, since the levels
+// (plans/os-99829835.md D1), "<provider>/<family>/<version>". A
+// three-part model names its provider; a two-part one names none, and
+// a bare string is its own family. Versions are never part of the
+// lineage: a newer build of the same family is the same failure domain.
+func ModelLineage(model string) (provider, family string) {
+	parts := strings.Split(model, "/")
+	switch {
+	case len(parts) >= 3:
+		return parts[0], parts[1]
+	case len(parts) == 2:
+		return "", parts[0]
+	default:
+		return "", model
+	}
+}
+
+// SeparatesModel reports whether two model strings name different
+// failure domains in the charter's sense ("different model family or
+// provider"): the families differ, or both name a provider and the
+// providers differ. A provider named on one side only is not a
+// difference the record can prove, so it does not count.
+func SeparatesModel(a, b string) bool {
+	pa, fa := ModelLineage(a)
+	pb, fb := ModelLineage(b)
+	if fa != fb {
+		return true
+	}
+	return pa != "" && pb != "" && pa != pb
+}
+
+// SeparatesHarness reports whether two harness strings name different
+// harnesses: the name before the version, "<name>/<version>" by the
+// same convention, so a newer build of one harness is one failure
+// domain and a different harness image is another.
+func SeparatesHarness(a, b string) bool {
+	return strings.SplitN(a, "/", 2)[0] != strings.SplitN(b, "/", 2)[0]
+}

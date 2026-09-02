@@ -1174,3 +1174,19 @@ the assertions read, and there is no copy to go stale.
   Assert the scope you mean (`--local`), and for a write that must
   happen on every open, stage the state an older build would leave and
   prove the second open changes nothing.
+- The receipt binds the approved plan's bytes at the MERGE-BASE, not at
+  the commit the anchor names. A drill on a planned tier must cite a
+  file the fixture repository actually holds at the base of the
+  submission range; citing `plans/<subject>.md` against a fixture with
+  no such tree fails `chain_invalid` at render, two steps after the
+  approval was staged.
+- A fixture on the remote posture cannot reach a ledger-only verb.
+  Stage the fact through the library under the fixture's background
+  rule (signed by a key the authorization check accepts) and record
+  the gap; widening the verb in a task PR is scope the plan did not
+  grant.
+- Above the trivial tier every render pays for the seal, so a drill
+  that wants reconcile to reproduce a receipt without a key uses the
+  trivial tier: the one tier whose subjects are unsealed and whose
+  executable gated spec still reaches L3.
+

@@ -143,6 +143,10 @@ type ContractVerdict struct {
 	Position string `json:"position"`
 	Verdict  string `json:"verdict"`
 	Receipt  string `json:"receipt"`
+	// Independence is the level the verdict recorded
+	// (plans/os-99829835.md D5), verbatim from the payload; empty on
+	// a fact that carried none.
+	Independence string `json:"independence,omitempty"`
 }
 
 // ContractMerge is the admitted merge.observed: its chain position
@@ -211,11 +215,13 @@ type ContractClaim struct {
 // omitted on budget-inactive subjects; Version "11" the
 // execution-run facts (plans/os-1dad487d.md), omitted on run-free
 // subjects; Version "12" the safe-point interrupts
-// (plans/os-0f718b4e.md), omitted on interrupt-free subjects — each
+// (plans/os-0f718b4e.md), omitted on interrupt-free subjects; Version
+// "13" the verdict's independence level (plans/os-99829835.md), which
+// changes the bytes of every prefix carrying a verdict — each
 // republishing under a new build id via the version-in-identity
 // machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "12", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "13", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -290,7 +296,8 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 				e.Acceptance = &ContractAcceptance{Ref: s.Acceptance.Ref, Executable: s.Acceptance.Executable, Gated: s.Acceptance.Gated}
 			}
 			if s.Verdict != nil {
-				e.Verdict = &ContractVerdict{Position: fmt.Sprintf("%d", s.Verdict.Pos), Verdict: s.Verdict.Verdict, Receipt: s.Verdict.Receipt}
+				e.Verdict = &ContractVerdict{Position: fmt.Sprintf("%d", s.Verdict.Pos), Verdict: s.Verdict.Verdict, Receipt: s.Verdict.Receipt,
+					Independence: s.Verdict.Independence}
 			}
 			if s.Requested != nil {
 				pos := fmt.Sprintf("%d", s.Requested.Pos)
