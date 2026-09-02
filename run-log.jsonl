@@ -1081,3 +1081,4 @@
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:229","to":"ready"},"task":"os-e2f1ad23","ts":"2026-09-02T13:28:31Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T15:36:07Z"},"task":"os-99829835","ts":"2026-09-02T13:36:07Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T15:57:37Z"},"task":"os-f30ee0d3","ts":"2026-09-02T13:57:37Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-f5c610b7","kind":"pr"},"task":"os-99829835","ts":"2026-09-02T14:18:11Z","verb":"attach-evidence"}
