@@ -538,6 +538,12 @@ var affordanceCatalog = []struct {
 	{"verdict.rendered", func(v *probeView) string {
 		return `{"verdict": "pass", "receipt": "0000000000000000000000000000000000000000000000000000000000000000", "submission": "` + v.submission + `", "independence": "L1"}`
 	}},
+	// The deferral (plans/os-2e34f66a.md D4): a scorecard citation and
+	// one deferred item, on the bound submission; refused before
+	// seed/4 by version, and by the deferral rule where none is legal.
+	{"verdict.deferred", func(v *probeView) string {
+		return `{"scorecard": "0000000000000000000000000000000000000000000000000000000000000000", "submission": "` + v.submission + `", "items": ["probe"]}`
+	}},
 	{"check.sealed", func(v *probeView) string {
 		return `{"commitment": "0000000000000000000000000000000000000000000000000000000000000000"}`
 	}},

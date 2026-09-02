@@ -393,6 +393,15 @@ ordered fragment list prevents.
   ([`curation.md`](curation.md), "Expiry, retirement and
   applicability" and "Bloat"), the mapping there naming each drill.
 
+- III.G row 7 and III.O row 2 (rubric verdicts scored item by item
+  with cited evidence and explicit uncertainty; low-confidence items
+  routed to a human verdict; calibration against a human-scored gold
+  set with automatic authority suspension on drift and a defect
+  filed) — met by Phase 10 item 4 ([`verdicts.md`](verdicts.md), "The
+  rubric and the scorecard"; [`evals.md`](evals.md), "Calibration"):
+  the verifier lane's summary and fragment carry the scorecard and
+  the deferral.
+
 ## A gap the mode fixtures surfaced
 
 No shipped manifest grants `supervise` or `observer`, while

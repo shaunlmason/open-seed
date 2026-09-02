@@ -135,6 +135,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `wedge.declared` | `operator` (operator judgment in v0; the maintenance lane inherits it later) |
 | `merge.requested` | `claim`, `operator` (asking for the merge is the work lane's act; the payload cites the pass verdict, reconciliation.md) |
 | `merge.observed` | `observer`, `operator` (the observer lane records forge fact behind the full chain rule, reconciliation.md) |
+| `verdict.deferred` | `verdict` (the human-verdict deferral, the verifier's own act naming what it could not judge; the same no-fallback row, and after it a render on the submission needs operator standing beside the verdict grant, verdicts.md) |
 | `verdict.rendered` | `verdict` (deliberately no operator fallback: III.G names operator override its own attributable verb, never a disguised verdict — that verb is 6.4's; a governance root that judges holds an explicit verdict grant, and L1 independence applies to every signer, verdicts.md) |
 | `check.sealed` | `sealer` (the second no-fallback row: operator already stands in the claim and submission lanes, so an operator fallback here would put authoring and implementation authority on one capability and the capability audit could prove nothing, sealed-checks.md) |
 | `contract.returned` | `dispatch`, `operator` (returning a fail-verdicted contract to the queue is queue management; the payload cites the authenticated red verdict, lifecycle.md) |

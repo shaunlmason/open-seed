@@ -82,6 +82,11 @@
     the literal `L1` alone admits under a `seed/4` validator too, and
     the eval semantics of `seed/3` hold at `seed/4` alike (the gate is
     a named list), so every existing chain verifies byte for byte.
+    Phase 10 item 4 adds to the entry (plans/os-2e34f66a.md D6):
+    `verdict.rendered`'s optional `scorecard`, the `verdict.deferred`
+    verb, and `actor.qualified`/`actor.disqualified` for capability
+    `verdict`, each refused at a `seed/3` position by version
+    ([`verdicts.md`](verdicts.md), [`evals.md`](evals.md)).
     Two later additions ride the same entry (plans/os-6bd9ffff.md D4,
     D5, D7; [`trajectories.md`](trajectories.md)): `contract.specified`
     gains the `ready` origin, the dispatcher's re-specification of an
@@ -200,7 +205,11 @@ admission).
 - `submission.*` — `made` (branch, evidence refs).
 - `verdict.*` — `rendered` (pass/fail, receipt, independence level
   achieved: `L1` alone before `seed/4`, `L1`/`L2`/`L3` with the
-  verifier's declared tuple from it, [`verdicts.md`](verdicts.md)).
+  verifier's declared tuple from it, and from `seed/4` the optional
+  `scorecard`, the rubric's derivation-bearing half,
+  [`verdicts.md`](verdicts.md)); `deferred` (from `seed/4`: the
+  human-verdict deferral, the receipt and the items the verifier
+  could not judge, on the bound submission).
 - `merge.*` / `check.*` — `requested`, `observed` (external-fact
   observations).
 - `offer.*` — `published` (the supervisor's eligibility-scoped,

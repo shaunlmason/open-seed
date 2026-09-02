@@ -406,6 +406,10 @@ func (e *NotIndependentError) Error() string {
 type VerdictError struct {
 	Subject string
 	Reason  string
+	// Code is the refinement the rubric derivation names
+	// (plans/os-2e34f66a.md D3): rubric_red or human_verdict under
+	// checks_red; empty for every other verdict refusal.
+	Code string
 }
 
 func (e *VerdictError) Error() string {
@@ -770,11 +774,12 @@ func Default() []Rule {
 				Submission   string          `json:"submission"`
 				Independence string          `json:"independence"`
 				Tuple        json.RawMessage `json:"tuple"`
+				Scorecard    json.RawMessage `json:"scorecard"`
 			}
 			dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
 			dec.DisallowUnknownFields()
 			if err := dec.Decode(&p); err != nil {
-				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {verdict, receipt, submission, independence, tuple?}: %v", err)}
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {verdict, receipt, submission, independence, tuple?, scorecard?}: %v", err)}
 			}
 			var missing []string
 			for _, f := range []struct{ name, v string }{{"verdict", p.Verdict}, {"receipt", p.Receipt}, {"submission", p.Submission}, {"independence", p.Independence}} {
@@ -802,6 +807,9 @@ func Default() []Rule {
 			} else {
 				if len(p.Tuple) > 0 {
 					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the verdict declares a tuple and the chain is at %s: the verifier's declaration activates at %s (next/spec/protocol.md)", c.Active, version.Seed4)}
+				}
+				if len(p.Scorecard) > 0 {
+					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the verdict cites a scorecard and the chain is at %s: rubric verdicts activate at %s (next/spec/verdicts.md)", c.Active, version.Seed4)}
 				}
 				if p.Independence != "L1" {
 					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("independence %q is not the literal \"L1\": the level vocabulary widens at %s (next/spec/verdicts.md)", p.Independence, version.Seed4)}
@@ -851,6 +859,130 @@ func Default() []Rule {
 				if required := transition.TierGates(s.Tier).Independence; !achieved.Satisfies(required) {
 					return &LevelShortError{Subject: subject, Tier: s.Tier, Required: required, Achieved: achieved}
 				}
+				// The scorecard's record half (plans/os-2e34f66a.md D2,
+				// D3): the payload's items are what every boundary
+				// derives from, so a verdict whose own items refute it
+				// never lands. The evidence stays in the artifact,
+				// which admission cannot read by design.
+				if len(p.Scorecard) > 0 && string(p.Scorecard) != "null" {
+					ref, err := parseScorecardRef(p.Scorecard)
+					if err != nil {
+						return &VerdictError{Subject: subject, Reason: err.Error()}
+					}
+					derived, code, item := transition.DeriveScores(ref.Items)
+					switch {
+					case code == transition.CodeHumanVerdict:
+						return &VerdictError{Subject: subject, Code: code, Reason: fmt.Sprintf("item %q is scored at high uncertainty: low confidence routes to a human verdict (verdict.deferred), and neither pass nor fail is renderable over it", item)}
+					case p.Verdict == "pass" && derived == "fail":
+						return &VerdictError{Subject: subject, Code: transition.CodeRubricRed, Reason: fmt.Sprintf("item %q scores fail: the verdict derives from the scorecard, and a failing item forbids pass (fail stays renderable)", item)}
+					case p.Verdict != derived:
+						return &VerdictError{Subject: subject, Reason: fmt.Sprintf("verdict %s over a scorecard whose every item passes at low uncertainty: with a rubric the verdict is the derivation's, and the scorecard says %s", p.Verdict, derived)}
+					}
+				}
+				// The human verdict (D4): on a human-review tier, or
+				// after a deferral on this window, the render is a
+				// human's, and a human is a key with operator standing
+				// beside its verdict grant.
+				if human, why := HumanVerdictRequired(s, len(c.Records)); human && !OperatorStanding(c.Keyring, rec.Event.Actor) {
+					return &VerdictError{Subject: subject, Code: transition.CodeHumanVerdict, Reason: fmt.Sprintf("%s, and %s holds no operator standing — a human is a key with operator standing beside its verdict grant, and a verdict-only key cannot stand in for one", why, rec.Event.Actor)}
+				}
+				// The set rule at render (D5), exactly as at run.started:
+				// the verifier's grants for verdict cite zero or more
+				// tuples, and a declared configuration outside the set
+				// is out of grant until a calibration eval passes
+				// again. An eval subject is where the configuration
+				// proves itself, so the rule never gates it there.
+				if d := tupleDrift(c.Keyring, rec.Event.Actor, declared, s.Eval != nil, keyring.CapVerdict); d != nil {
+					return &OutOfGrantError{Actor: rec.Event.Actor, Verb: rec.Event.Verb,
+						Accepted: keyring.AcceptedCapabilities(rec.Event.Verb), Drift: d}
+				}
+			}
+			return nil
+		}},
+		{Name: "deferral", Check: func(c *Context, rec *event.Record) error {
+			// The human-verdict deferral (plans/os-2e34f66a.md D4): a
+			// fact admitted in review by a verdict key that is no
+			// implementing key, on the bound submission, citing the
+			// receipt it computed (the human's render cites it, since
+			// a key with operator standing is never a sealed-checks
+			// recipient and cannot compute one) and, where the spec
+			// carries a rubric, its scorecard and the items left at
+			// high uncertainty; on a human-review tier the whole
+			// verdict defers and the items may be empty. It changes no
+			// state and creates the verdict.human obligation. One per
+			// window: a second deferral refuses, and so does one over
+			// a submission already judged.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil || rec.Event.Verb != transition.VerdictDeferredVerb {
+				return nil
+			}
+			subject := rec.Event.Subject
+			if !version.LevelsApply(c.Active) {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the chain is at %s: the human-verdict deferral activates at %s (next/spec/verdicts.md)", c.Active, version.Seed4)}
+			}
+			s, ok := c.Lifecycle.State(subject)
+			if !ok {
+				return &transition.InvalidTransitionError{Subject: subject, Verb: rec.Event.Verb}
+			}
+			if s.State != "review" {
+				return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: rec.Event.Verb}
+			}
+			var p struct {
+				Receipt    string   `json:"receipt"`
+				Scorecard  string   `json:"scorecard,omitempty"`
+				Submission string   `json:"submission"`
+				Items      []string `json:"items,omitempty"`
+			}
+			dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
+			dec.DisallowUnknownFields()
+			if err := dec.Decode(&p); err != nil {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the deferral is the strict object {receipt, submission, scorecard?, items?}: %v", err)}
+			}
+			var missing []string
+			if strings.TrimSpace(p.Receipt) == "" {
+				missing = append(missing, "receipt")
+			}
+			if strings.TrimSpace(p.Submission) == "" {
+				missing = append(missing, "submission")
+			}
+			if len(missing) > 0 {
+				return &transition.IncompleteError{Verb: rec.Event.Verb, Subject: subject, Missing: missing}
+			}
+			if !receiptDigestRE.MatchString(p.Receipt) {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("receipt %q is not a lowercase-hex sha256 digest of the receipt's JCS bytes", p.Receipt)}
+			}
+			if p.Scorecard != "" && !receiptDigestRE.MatchString(p.Scorecard) {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("scorecard %q is not a lowercase-hex sha256 digest of the scorecard's JCS bytes", p.Scorecard)}
+			}
+			if len(p.Items) > 0 && p.Scorecard == "" {
+				return &VerdictError{Subject: subject, Reason: "items name what a scorecard left at high uncertainty, and the deferral cites no scorecard"}
+			}
+			if len(p.Items) == 0 && !transition.TierGates(s.Tier).HumanReview {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("nothing is deferred: name the items the scorecard scored at high uncertainty, since tier %q does not route every verdict to a human", s.Tier)}
+			}
+			if s.Submission == nil {
+				return &VerdictError{Subject: subject, Reason: "the fold records no submission on this review subject, so there is nothing to defer"}
+			}
+			if p.Submission != fmt.Sprintf("%d", s.Submission.Pos) {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("submission %q is not the bound submission at position %d — a deferral defers exactly the submission under judgment", p.Submission, s.Submission.Pos)}
+			}
+			seen := map[string]bool{}
+			for _, id := range p.Items {
+				if strings.TrimSpace(id) == "" || seen[id] {
+					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("items name each deferred rubric item once, non-empty: got %q", id)}
+				}
+				seen[id] = true
+			}
+			if s.Deferred != nil {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("a deferral already stands at position %d on this submission: one deferral, one human verdict", s.Deferred.Pos)}
+			}
+			if s.Verdict != nil && s.Verdict.Submission == s.Submission.Pos {
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("the submission is judged already at position %d: a deferral precedes the verdict it hands to a human, never follows one", s.Verdict.Pos)}
+			}
+			if s.PriorClaimants[rec.Event.Actor] {
+				return &NotIndependentError{Subject: subject, Actor: rec.Event.Actor, Role: "a claimant, past or present"}
+			}
+			if rec.Event.Actor == s.Submission.Signer {
+				return &NotIndependentError{Subject: subject, Actor: rec.Event.Actor, Role: "the bound submission's signer"}
 			}
 			return nil
 		}},
@@ -1173,7 +1305,7 @@ func Default() []Rule {
 				// supervisor signs the start, the work executes under
 				// the holder's window.
 				if s.Claim != nil {
-					if d := tupleDrift(c.Keyring, s.Claim.Holder, declared, s.Eval != nil); d != nil {
+					if d := tupleDrift(c.Keyring, s.Claim.Holder, declared, s.Eval != nil, keyring.CapClaim); d != nil {
 						return &OutOfGrantError{Actor: rec.Event.Actor, Verb: verb,
 							Accepted: keyring.AcceptedCapabilities(verb), Drift: d}
 					}
@@ -1247,7 +1379,7 @@ func Default() []Rule {
 					return &transition.ChainError{Subject: rec.Event.Subject, Verb: verb,
 						Reason: fmt.Sprintf("the filing carries an eval marker and the chain is at %s: eval semantics activate at %s (next/spec/evals.md)", c.Active, version.Seed3)}
 				}
-				return checkEvalMarker(rec.Event.Subject, filed.Eval)
+				return checkEvalMarker(c.Active, rec.Event.Subject, filed.Eval)
 			}
 			if verb != keyring.VerbQualified && verb != keyring.VerbDisqualified {
 				return nil
@@ -1290,36 +1422,70 @@ func Default() []Rule {
 				return refuse(fmt.Sprintf("the cited verdict position %d is not on the chain", pos))
 			}
 			var fact *transition.VerdictFact
-			if verb == keyring.VerbQualified {
+			switch {
+			case p.Capability == keyring.CapVerdict:
+				// A calibration qualifies or disqualifies on agreement
+				// with the gold, whichever way the verdict went
+				// (plans/os-2e34f66a.md D5): the cited verdict is the
+				// eval's authenticated one, pass or fail. The cited
+				// contract must be a calibration (review finding on
+				// the task PR): an ordinary eval's verdict proves a
+				// configuration for work and says nothing about the
+				// verifier's judgment, so citing one would mint verdict
+				// authority past the calibration gate.
+				if s.Eval.Kind != transition.EvalKindCalibration {
+					return refuse(fmt.Sprintf("the cited contract is not a calibration: a %s qualification cites a calibration eval's verdict, the one compared to a committed gold, and %q is filed as an ordinary eval", keyring.CapVerdict, s.Eval.Name))
+				}
+				if fact = AuthenticVerdict(c, p.Contract, s); fact == nil || fact.Pos != pos {
+					return refuse(fmt.Sprintf("position %d is not the calibration's authenticated verdict: a verdict qualification cites the verdict whose scorecard was compared to the gold, rendered by a verdict-granted key disjoint from the implementer", pos))
+				}
+			case verb == keyring.VerbQualified:
 				if fact = authenticPass(c, p.Contract, s); fact == nil || fact.Pos != pos {
 					return refuse(fmt.Sprintf("position %d is not the eval's authenticated pass verdict: a qualification cites the pass that proved the configuration, rendered by a verdict-granted key disjoint from the implementer", pos))
 				}
-			} else {
+			default:
 				if fact = windowFail(s, pos); fact == nil || verdictBoundaryAt(c, p.Contract, "", s, *fact) != nil {
 					return refuse(fmt.Sprintf("position %d is not an authenticated fail verdict on the eval: a disqualification cites the fail that ended the configuration", pos))
 				}
 			}
-			fence, holder, ok := submissionWindow(c.Records, p.Contract, fact.Submission)
-			if !ok {
-				return refuse(fmt.Sprintf("the verdict's submission at position %d cites no claim window", fact.Submission))
-			}
-			var declared *tuple.Tuple
-			for i := range s.RunStarts {
-				st := s.RunStarts[i]
-				if st.Fence == fence && RunStartValid(c.Records, c.Table, p.Contract, st) {
-					declared = st.Tuple
-					break
+			if p.Capability == keyring.CapVerdict {
+				// Calibration (plans/os-2e34f66a.md D5): the verifier
+				// under calibration is the verdict's signer, and the
+				// configuration it proved is the tuple the render
+				// declared, never a window's.
+				if fact.Tuple == nil {
+					return refuse("the cited verdict declares no tuple: the verifier's declared configuration is what calibration qualifies, and the render declared none")
 				}
-			}
-			if declared == nil {
-				return refuse(fmt.Sprintf("the claim window at fence %d carries no admitted run.started declaring a tuple: the configuration that ran is what qualifies, and nothing declared one", fence))
-			}
-			if !declared.Equal(cited) {
-				field, _, want, _ := cited.Diff(*declared)
-				return refuse(fmt.Sprintf("the cited tuple differs from the configuration the run declared: %s was %q in the run — a qualification is for the configuration that ran, never another", field, want))
-			}
-			if verb == keyring.VerbQualified && rec.Event.Subject != holder {
-				return refuse(fmt.Sprintf("the qualified actor %s is not the holder of the window that ran (%s): the supervisor declares, the holder executes, and the holder is who the eval qualifies", rec.Event.Subject, holder))
+				if !fact.Tuple.Equal(cited) {
+					field, _, want, _ := cited.Diff(*fact.Tuple)
+					return refuse(fmt.Sprintf("the cited tuple differs from the configuration the verifier declared: %s was %q at the render — a calibration is for the configuration that rendered, never another", field, want))
+				}
+				if verb == keyring.VerbQualified && rec.Event.Subject != fact.Signer {
+					return refuse(fmt.Sprintf("the qualified actor %s is not the verdict's signer (%s): calibration qualifies the verifier that rendered", rec.Event.Subject, fact.Signer))
+				}
+			} else {
+				fence, holder, ok := submissionWindow(c.Records, p.Contract, fact.Submission)
+				if !ok {
+					return refuse(fmt.Sprintf("the verdict's submission at position %d cites no claim window", fact.Submission))
+				}
+				var declared *tuple.Tuple
+				for i := range s.RunStarts {
+					st := s.RunStarts[i]
+					if st.Fence == fence && RunStartValid(c.Records, c.Table, p.Contract, st) {
+						declared = st.Tuple
+						break
+					}
+				}
+				if declared == nil {
+					return refuse(fmt.Sprintf("the claim window at fence %d carries no admitted run.started declaring a tuple: the configuration that ran is what qualifies, and nothing declared one", fence))
+				}
+				if !declared.Equal(cited) {
+					field, _, want, _ := cited.Diff(*declared)
+					return refuse(fmt.Sprintf("the cited tuple differs from the configuration the run declared: %s was %q in the run — a qualification is for the configuration that ran, never another", field, want))
+				}
+				if verb == keyring.VerbQualified && rec.Event.Subject != holder {
+					return refuse(fmt.Sprintf("the qualified actor %s is not the holder of the window that ran (%s): the supervisor declares, the holder executes, and the holder is who the eval qualifies", rec.Event.Subject, holder))
+				}
 			}
 			if !tsNotBefore(rec.Event.TS, c.Records[pos].Event.TS) {
 				return refuse(fmt.Sprintf("the record's ts %s precedes the cited verdict's %s: a qualification cannot predate the verdict it cites", rec.Event.TS, c.Records[pos].Event.TS))
@@ -1798,7 +1964,10 @@ func verdictBoundary(c *Context, subject, verb string, s transition.SubjectState
 		return &transition.ChainError{Subject: subject, Verb: verb,
 			Reason: fmt.Sprintf("the cited verdict at position %d was signed by implementing key %s — L1 independence is not launderable through the admitted chain", fact.Pos, signer)}
 	}
-	return levelBoundary(c, subject, verb, s, fact)
+	if err := levelBoundary(c, subject, verb, s, fact); err != nil {
+		return err
+	}
+	return scoreBoundary(c.Keyring, subject, verb, s, fact)
 }
 
 // authenticFail returns the first fail verdict in the current
@@ -1862,6 +2031,17 @@ func authenticPass(c *Context, subject string, s transition.SubjectState) *trans
 	return s.Verdict
 }
 
+// AuthenticVerdict is the subject's latest admitted verdict, pass or
+// fail, when its signer passed the verifier boundary at the verdict's
+// own position (plans/os-2e34f66a.md D5): what a calibration compares
+// to its gold, whichever way it went.
+func AuthenticVerdict(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {
+	if s.Verdict == nil || verdictBoundaryAt(c, subject, "", s, *s.Verdict) != nil {
+		return nil
+	}
+	return s.Verdict
+}
+
 // verdictBoundaryAt is verdictBoundary replayed to the verdict's own
 // position (plans/os-03e47abb.md D2; review finding on the task PR):
 // the signer held a verdict grant THERE, so a raw-pushed verdict from an
@@ -1889,7 +2069,92 @@ func verdictBoundaryAt(c *Context, subject, verb string, s transition.SubjectSta
 		return &transition.ChainError{Subject: subject, Verb: verb,
 			Reason: fmt.Sprintf("the cited verdict at position %d was signed by implementing key %s — L1 independence never held", fact.Pos, signer)}
 	}
-	return levelBoundary(c, subject, verb, s, fact)
+	if err := levelBoundary(c, subject, verb, s, fact); err != nil {
+		return err
+	}
+	return scoreBoundary(ring, subject, verb, s, fact)
+}
+
+// scoreBoundary reapplies the rubric derivation and the human-verdict
+// standing to a folded verdict (plans/os-2e34f66a.md D3, D4): a verdict
+// whose own items refute it, or a machine verdict on a submission a
+// human owed, authenticates nothing, so the merge chain cannot cite
+// it and the lockout does not count it. The ring is the one the
+// caller judges standing at: the tip for the live boundary, the
+// verdict's own position for the replay.
+func scoreBoundary(ring *keyring.State, subject, verb string, s transition.SubjectState, fact transition.VerdictFact) *transition.ChainError {
+	if !fact.Levels {
+		return nil
+	}
+	if fact.Scorecard != nil {
+		derived, code, item := transition.DeriveScores(fact.Scorecard.Items)
+		if code == transition.CodeHumanVerdict {
+			return &transition.ChainError{Subject: subject, Verb: verb,
+				Reason: fmt.Sprintf("the cited verdict at position %d scores item %q at high uncertainty — a verdict that fails its own derivation authenticates nothing", fact.Pos, item)}
+		}
+		if fact.Verdict != derived {
+			named := "every item scored pass"
+			if item != "" {
+				named = fmt.Sprintf("item %q scored fail", item)
+			}
+			return &transition.ChainError{Subject: subject, Verb: verb,
+				Reason: fmt.Sprintf("the cited verdict at position %d records %s over %s — a verdict that fails its own derivation authenticates nothing", fact.Pos, fact.Verdict, named)}
+		}
+	}
+	if human, why := HumanVerdictRequired(s, fact.Pos); human && !OperatorStanding(ring, fact.Signer) {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the cited verdict at position %d is a machine's where %s: its signer %s holds no operator standing, and a human's verdict is not launderable through a verdict-only key", fact.Pos, why, fact.Signer)}
+	}
+	return nil
+}
+
+// HumanVerdictRequired reports whether a verdict at the position on
+// the current submission is a human's (plans/os-2e34f66a.md D4): the
+// tier's human-review column, or a deferral standing on the window
+// before the position.
+func HumanVerdictRequired(s transition.SubjectState, pos int) (bool, string) {
+	if transition.TierGates(s.Tier).HumanReview {
+		return true, fmt.Sprintf("tier %q requires human review", s.Tier)
+	}
+	if s.Deferred != nil && s.Deferred.Pos < pos {
+		return true, fmt.Sprintf("the verifier deferred at position %d naming %s", s.Deferred.Pos, strings.Join(s.Deferred.Items, ", "))
+	}
+	return false, ""
+}
+
+// OperatorStanding is the tree's one structural proxy for a person:
+// a governance root's implicit standing or an explicit operator grant.
+func OperatorStanding(ring *keyring.State, fp string) bool {
+	return ring != nil && (ring.IsActiveRoot(fp) || ring.HasAnyCapability(fp, []string{keyring.CapOperator}))
+}
+
+// parseScorecardRef decodes the payload half of a scorecard strictly:
+// a sha256 digest and items with unique non-empty ids and the two
+// enums.
+func parseScorecardRef(raw json.RawMessage) (*transition.ScorecardRef, error) {
+	var ref transition.ScorecardRef
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&ref); err != nil {
+		return nil, fmt.Errorf("scorecard is the strict object {digest, items: [{id, score, uncertainty}]}: %v", err)
+	}
+	if !receiptDigestRE.MatchString(ref.Digest) {
+		return nil, fmt.Errorf("scorecard digest %q is not a lowercase-hex sha256 digest of the scorecard's JCS bytes", ref.Digest)
+	}
+	seen := map[string]bool{}
+	for _, it := range ref.Items {
+		if strings.TrimSpace(it.ID) == "" || seen[it.ID] {
+			return nil, fmt.Errorf("scorecard items name each rubric item once, non-empty: got %q", it.ID)
+		}
+		seen[it.ID] = true
+		if it.Score != "pass" && it.Score != "fail" {
+			return nil, fmt.Errorf("scorecard item %q scores %q: the vocabulary is pass, fail", it.ID, it.Score)
+		}
+		if it.Uncertainty != "low" && it.Uncertainty != "high" {
+			return nil, fmt.Errorf("scorecard item %q carries uncertainty %q: the vocabulary is low, high", it.ID, it.Uncertainty)
+		}
+	}
+	return &ref, nil
 }
 
 // qualifiedFail is authenticFail with the boundary replayed to each
@@ -2089,7 +2354,7 @@ func declaredTuple(v string, raw json.RawMessage) (*tuple.Tuple, string) {
 // supervisor signs the start, the work executes under the holder's
 // window. A nil ring or a nil declaration (a seed/1 start) drifts
 // nothing.
-func tupleDrift(ring *keyring.State, holder string, declared *tuple.Tuple, eval bool) *Drift {
+func tupleDrift(ring *keyring.State, holder string, declared *tuple.Tuple, eval bool, capability string) *Drift {
 	if declared == nil || ring == nil {
 		return nil
 	}
@@ -2100,13 +2365,13 @@ func tupleDrift(ring *keyring.State, holder string, declared *tuple.Tuple, eval 
 	if eval {
 		return nil
 	}
-	cited := ring.GrantTuples(holder, keyring.CapClaim)
+	cited := ring.GrantTuples(holder, capability)
 	if len(cited) == 0 {
 		// Two empty sets (plans/os-03e47abb.md D4): a holder never
 		// cited is unqualified and bridges; a holder whose every
 		// cited configuration was disqualified admits nothing. The
 		// bridge does not reopen.
-		if ring.EverCited(holder, keyring.CapClaim) {
+		if ring.EverCited(holder, capability) {
 			return &Drift{Holder: holder}
 		}
 		return nil
@@ -2181,7 +2446,7 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 	if !ok || prior.Claim == nil || prior.Claim.Fence != st.Fence {
 		return false
 	}
-	if tupleDrift(ring, prior.Claim.Holder, declared, prior.Eval != nil) != nil {
+	if tupleDrift(ring, prior.Claim.Holder, declared, prior.Eval != nil, keyring.CapClaim) != nil {
 		return false
 	}
 	for _, r := range prior.Reservations {
@@ -2466,16 +2731,30 @@ func strictJSON(raw []byte, into any) error {
 // carrier an anchored path. A bound marker names the hypothesis and
 // the exact candidate revision the eval is for, on the record at
 // filing.
-func checkEvalMarker(subject string, raw json.RawMessage) error {
+func checkEvalMarker(active, subject string, raw json.RawMessage) error {
 	var m struct {
 		Name    string          `json:"name"`
 		Tuple   json.RawMessage `json:"tuple"`
 		Lesson  string          `json:"lesson"`
 		Carrier string          `json:"carrier"`
+		Kind    string          `json:"kind"`
 	}
 	if err := strictJSON(raw, &m); err != nil {
 		return &transition.ChainError{Subject: subject, Verb: "intent.filed",
-			Reason: fmt.Sprintf("the eval marker is the strict object {name, tuple?, lesson?, carrier?}: %v", err)}
+			Reason: fmt.Sprintf("the eval marker is the strict object {name, tuple?, lesson?, carrier?, kind?}: %v", err)}
+	}
+	// The kind is a seed/4 field (plans/os-2e34f66a.md D5, D6): it
+	// marks a calibration, the one kind whose verdict qualifies a
+	// verifier, and a seed/3 validator's marker has no such field.
+	if m.Kind != "" {
+		if !version.LevelsApply(active) {
+			return &transition.ChainError{Subject: subject, Verb: "intent.filed",
+				Reason: fmt.Sprintf("the eval marker names a kind and the chain is at %s: calibration activates at %s (next/spec/evals.md)", active, version.Seed4)}
+		}
+		if m.Kind != transition.EvalKindCalibration {
+			return &transition.ChainError{Subject: subject, Verb: "intent.filed",
+				Reason: fmt.Sprintf("the eval marker's kind %q is neither absent nor %q", m.Kind, transition.EvalKindCalibration)}
+		}
 	}
 	if (m.Lesson == "") != (m.Carrier == "") {
 		return &transition.ChainError{Subject: subject, Verb: "intent.filed",

@@ -235,6 +235,11 @@ func AcceptedCapabilities(verb string) []string {
 	// only, no operator fallback — the one such row, see CapVerdict.
 	case "verdict.rendered":
 		return []string{CapVerdict}
+	// The human-verdict deferral (plans/os-2e34f66a.md D4): the
+	// verifier's own act, the same no-fallback row, since a deferral
+	// names what the verifier could not judge.
+	case "verdict.deferred":
+		return []string{CapVerdict}
 	// The staged curation stores (plans/os-f30ee0d3.md): a dead end is
 	// the window holder's candidate observation (the fence matrix
 	// applies); the proposal is the curator's alone, the fifth
@@ -744,12 +749,15 @@ func (s *State) Advance(rec *event.Record) error {
 		if p.Capability == "" {
 			return fmt.Errorf("%s must name a capability", e.Verb)
 		}
-		if p.Capability != CapClaim {
+		if p.Capability == CapVerdict && !version.LevelsApply(e.V) {
+			return fmt.Errorf("%s for capability verdict is not defined at %s: calibration activates at %s (next/spec/evals.md)", e.Verb, e.V, version.Seed4)
+		}
+		if p.Capability != CapClaim && p.Capability != CapVerdict {
 			// An eval proves a configuration for WORK (plans/os-03e47abb.md
 			// D1; review finding on the task PR): a qualification
 			// grants claim and nothing else, or a supervise key could
 			// mint operator standing through a green eval.
-			return fmt.Errorf("%s qualifies the %s capability only, got %q: an eval proves a configuration for work, never another authority", e.Verb, CapClaim, p.Capability)
+			return fmt.Errorf("%s qualifies the %s or %s capability only, got %q: an eval proves a configuration for work or for judgment, never another authority", e.Verb, CapClaim, CapVerdict, p.Capability)
 		}
 		if len(p.Tuple) == 0 {
 			return fmt.Errorf("%s must cite the runtime tuple it qualifies", e.Verb)
@@ -804,7 +812,23 @@ func (s *State) Advance(rec *event.Record) error {
 				kept = append(kept, have)
 			}
 			if !removed {
-				return fmt.Errorf("%s: actor %s holds no admissible %s grant citing that tuple, so there is nothing to disqualify", e.Verb, e.Subject, p.Capability)
+				// A verifier holding verdict by a bare grant renders
+				// under the bridge, every configuration admissible and
+				// none cited; its first failed calibration disqualifies
+				// the configuration it rendered under and closes the
+				// bridge, so a drifted verifier does not keep rendering
+				// because nothing had cited its tuple yet (review
+				// finding on the task PR). The bridge is the never
+				// cited's, so once cited there is nothing left to
+				// disqualify, exactly as before.
+				bridging := p.Capability == CapVerdict && slices.Contains(cur.Grants, CapVerdict) && !cur.everCited[CapVerdict]
+				if !bridging {
+					return fmt.Errorf("%s: actor %s holds no admissible %s grant citing that tuple, so there is nothing to disqualify", e.Verb, e.Subject, p.Capability)
+				}
+				cur.markCited(p.Capability)
+			}
+			if cur.Tuples == nil {
+				cur.Tuples = map[string][]tuple.Tuple{}
 			}
 			cur.Tuples[p.Capability] = kept
 			q.Disqualified = true

@@ -7,12 +7,15 @@ package main
 // spec reaches L3 with one family.
 
 import (
+	"crypto/ed25519"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/loop"
 	"github.com/shaunlmason/open-seed/next/internal/seal"
@@ -22,6 +25,39 @@ import (
 
 // upgradeTo walks the remote chain's active version up to the named
 // one, one register entry at a time.
+// deferAs is the verifier lane's whole-verdict deferral on a
+// human-review tier (plans/os-2e34f66a.md D4).
+func (m *modeStand) deferAs(t *testing.T, actor, subject string) {
+	t.Helper()
+	e, code := runEnv(t, append(append([]string{"verdict", "defer"}, m.posture()...), "--subject", subject, "--repo", m.src, "--key", m.keys[actor])...)
+	if code != 0 || e.Result["owed_by"] != "lane:operator" {
+		t.Fatalf("%s defers %s: %d %+v", actor, subject, code, e.Error)
+	}
+}
+
+// human enrolls the human: the root key with an explicit verdict grant
+// beside its implicit operator standing, addressed as "human".
+func (m *modeStand) human(t *testing.T) {
+	t.Helper()
+	if _, ok := m.keys["human"]; ok {
+		return
+	}
+	raw, err := os.ReadFile(m.priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := event.ParsePrivateKey(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fp, err := event.Fingerprint(key.Public().(ed25519.PublicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.appendRaw("actor.granted", fp, `{"capability": "verdict"}`)
+	m.keys["human"] = m.priv
+}
+
 func (m *modeStand) upgradeTo(t *testing.T, to string) {
 	t.Helper()
 	for _, v := range []string{version.Seed2, version.Seed3, version.Seed4} {
@@ -171,9 +207,18 @@ func TestSmallTeamCriticalContractReachesDoneAtL2(t *testing.T) {
 		!strings.Contains(e.Error.Message, "critical") || !strings.Contains(e.Error.Message, "L2") {
 		t.Fatalf("the same model family on a critical contract refuses level_short naming the tier and the requirement: %d %+v", code, e.Error)
 	}
+	// The critical tier's render is a human's (plans/os-2e34f66a.md
+	// D4): the verifier without operator standing refuses
+	// human_verdict, and with it renders.
 	e, code = m.renderAs(t, "verify", subject, "other/1")
+	if code != 20 || e.Error == nil || e.Error.Code != "human_verdict" {
+		t.Fatalf("a verdict-only key on a critical contract refuses human_verdict: %d %+v", code, e.Error)
+	}
+	m.deferAs(t, "verify", subject)
+	m.human(t)
+	e, code = m.renderAs(t, "human", subject, "other/1")
 	if code != 0 || e.Result["independence"] != "L2" {
-		t.Fatalf("a second model family renders L2: %d %+v", code, e)
+		t.Fatalf("a second model family renders L2 over the deferral: %d %+v", code, e)
 	}
 	m.land(t, subject, "impl", "pr/4")
 	if e, code := runEnv(t, "verdict", "check", "--ledger", m.materialize(t), "--subject", subject,
@@ -194,7 +239,12 @@ func TestFleetExecutableCriticalContractReachesDoneAtL3(t *testing.T) {
 	if got := m.work(t, "implementer", "fable/5.1"); got != subject {
 		t.Fatalf("the loop took the critical contract: %s", got)
 	}
-	e, code := m.renderAs(t, "verifier", subject, "fable/5.1")
+	// The critical tier's render is a human's (plans/os-2e34f66a.md
+	// D4): the fleet's verifier defers, the human renders over its
+	// receipt.
+	m.deferAs(t, "verifier", subject)
+	m.human(t)
+	e, code := m.renderAs(t, "human", subject, "fable/5.1")
 	if code != 0 || e.Result["independence"] != "L3" {
 		t.Fatalf("an executable gated spec renders L3 under one family: %d %+v", code, e)
 	}
