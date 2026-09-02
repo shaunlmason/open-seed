@@ -110,6 +110,7 @@ func (t Tuple) Complete() bool {
 }
 
 // Applies reports whether tuple semantics are active under the given
-// protocol version: seed/2 introduced them (next/spec/qualification.md),
-// and records at earlier positions keep their earlier judgment.
-func Applies(active string) bool { return active == version.Seed2 }
+// protocol version: seed/2 introduced them (next/spec/qualification.md)
+// and every later registered version keeps them, as a named list, never
+// an ordering; records at earlier positions keep their earlier judgment.
+func Applies(active string) bool { return active == version.Seed2 || active == version.Seed3 }

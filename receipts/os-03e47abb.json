@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "task": "os-03e47abb",
+  "merge_base": "75dc756b4bafa160f8ce649ec533418ede50220f",
+  "head": "b6dd67946bffa7df610337cdb8234fd42a5fe8c5",
+  "plan_path": "plans/os-03e47abb.md",
+  "plan_sha256": "375d77ea057ff95652560bdeb2a6b6baad5430b99c4ffbdba8ab8968751849af",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/eval.go",
+    "next/cmd/seed/eval_cli_test.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/modes_e2e_test.go",
+    "next/cmd/seed/verdict.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/evals/fix-the-check/eval.json",
+    "next/evals/fix-the-check/fixture/accept.md",
+    "next/evals/fix-the-check/fixture/check.sh",
+    "next/evals/fix-the-check/fixture/greet.sh",
+    "next/evals/fix-the-check/solution/greet.sh",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/affordances_test.go",
+    "next/internal/admit/eval_test.go",
+    "next/internal/admit/qualification.go",
+    "next/internal/eval/eval.go",
+    "next/internal/eval/eval_test.go",
+    "next/internal/keyring/eval_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/obligation/obligation.go",
+    "next/internal/obligation/obligation_test.go",
+    "next/internal/reconcile/reconcile.go",
+    "next/internal/reconcile/reconcile_test.go",
+    "next/internal/transition/eval_test.go",
+    "next/internal/transition/transition.go",
+    "next/internal/tuple/tuple.go",
+    "next/internal/tuple/tuple_test.go",
+    "next/internal/verdict/input.go",
+    "next/internal/version/version.go",
+    "next/lanes/dispatcher.json",
+    "next/lanes/supervisor.json",
+    "next/spec/actors.md",
+    "next/spec/envelope.md",
+    "next/spec/evals.md",
+    "next/spec/lanes.md",
+    "next/spec/lifecycle.md",
+    "next/spec/obligations.md",
+    "next/spec/protocol.md",
+    "next/spec/qualification.md",
+    "next/spec/reconciliation.md"
+  ],
+  "diff_sha256": "3e6e2af235e5991d371b839c0a3e20b19b27f818e7413698ec22325e254d9b1e",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/version/ ./internal/tuple/ ./internal/eval/ ./internal/keyring/ ./internal/transition/ ./internal/admit/ ./internal/verdict/ ./internal/obligation/ ./internal/reconcile/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

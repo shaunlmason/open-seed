@@ -47,6 +47,17 @@ func TestSubjectClassifiesInducedDivergences(t *testing.T) {
 			transition.SubjectState{State: "review", Tier: triv, Verdict: pass}, []string{ClassUnreconciled}},
 		"fail verdict alone is not unreconciled": {
 			transition.SubjectState{State: "review", Tier: triv, Verdict: fail}, nil},
+		"a judged eval is complete, never unreconciled": {
+			// plans/os-03e47abb.md D10: the eval's verdict is its
+			// terminal fact and no merge is owed.
+			transition.SubjectState{State: "review", Tier: triv, Verdict: pass,
+				Eval: &transition.EvalInfo{Name: "fix-the-check"}}, nil},
+		"an eval merged around the chain still diverges": {
+			// The exclusion is one class wide: an eval that reached
+			// done with no pass verdict is merge_without_verdict like
+			// any subject.
+			transition.SubjectState{State: "done", Tier: triv, Merged: merged,
+				Eval: &transition.EvalInfo{Name: "fix-the-check"}}, []string{ClassMergeWithoutVerdict}},
 		"above-trivial implementation with no commitment": {
 			transition.SubjectState{State: "in_progress", Tier: "standard"}, []string{ClassUnsealed}},
 		"above-trivial sealed subject is clean": {

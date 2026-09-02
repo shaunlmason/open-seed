@@ -1,7 +1,7 @@
 {
   "lane": "dispatcher",
   "kind": "lane",
-  "summary": "Converts intents and mirror requests into routed contracts with draft acceptance specs; runs with least standing capability because it reads the most untrusted text.",
+  "summary": "Converts intents and mirror requests into routed contracts with draft acceptance specs; runs with least standing capability because it reads the most untrusted text. From seed/3 it files and specifies the spot-check evals qualification re-tests owe (seed eval act).",
   "grants": [
     "dispatch"
   ],

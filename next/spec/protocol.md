@@ -55,6 +55,19 @@
     validator too, so every existing chain verifies byte for byte; a
     `seed/1`-only validator refuses an upgraded chain at the first
     `seed/2` record by version, never by misjudging the grant.
+  - `seed/3` — activates the eval semantics ([`evals.md`](evals.md)):
+    `intent.filed` may carry the `eval` marker, and `actor.qualified`
+    and `actor.disqualified` are defined. Actor payload shapes are
+    chain validity ([`actors.md`](actors.md)), so a `seed/2` validator's
+    unknown-verb arm fails a chain carrying either verb as
+    `bad_actor_event` at its position while this validator accepts it:
+    the two judge the same record differently, hence the bump, which
+    makes a `seed/2`-only validator refuse an upgraded chain at the
+    first `seed/3` record by version rather than as corruption. At
+    `seed/2` positions both verbs stay unknown-and-refused under a
+    `seed/3` validator too, and the marker is neither read by the fold
+    nor admitted at the boundary, so every existing chain verifies byte
+    for byte.
 
 ## Canonical event form
 
@@ -147,11 +160,14 @@ admission).
 - `system.*` — `genesis`, `halt.declared`, `halt.lifted`, `checkpoint`,
   `protocol.upgraded`.
 - `actor.*` — `enrolled`, `granted`, `suspended`, `revoked`, `qualified`
-  (cites eval results and the runtime tuple). Payload schemas and
-  standing semantics: [`actors.md`](actors.md), active from `seed/1`.
-- `intent.*` / `contract.*` — `intent.filed`, `contract.specified`
-  (acceptance spec gate passed; sealed commitment), `contract.blocked`,
-  `contract.cancelled` ….
+  (cites eval results and the runtime tuple) and its inverse
+  `disqualified`, both from `seed/3` ([`evals.md`](evals.md)). Payload
+  schemas and standing semantics: [`actors.md`](actors.md), active from
+  `seed/1`.
+- `intent.*` / `contract.*` — `intent.filed` (from `seed/3` optionally
+  carrying the `eval` marker, [`evals.md`](evals.md)),
+  `contract.specified` (acceptance spec gate passed; sealed
+  commitment), `contract.blocked`, `contract.cancelled` ….
 - `claim.*` — `taken` (carries fence), `released`, `parked`, `reaped`
   (packet ref), `wedge.declared`.
 - `plan.*` — `proposed`, `approved` (observation of the plan PR merge).

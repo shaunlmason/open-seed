@@ -31,12 +31,21 @@ const Seed1 = "seed/1"
 // keep seed/1's judgment.
 const Seed2 = "seed/2"
 
+// Seed3 is the protocol version that activates the qualification verbs
+// (next/spec/evals.md; plans/os-03e47abb.md): actor.qualified mints a
+// grant from an eval's verdict, actor.disqualified suspends one, and
+// intent.filed may mark a contract as an eval. A seed/2 validator fails
+// a chain carrying either verb as bad_actor_event (actor payload shapes
+// are chain validity), which is the bump trigger; records at earlier
+// positions keep their earlier judgment.
+const Seed3 = "seed/3"
+
 // Supported lists the protocol versions this build verifies and appends:
 // the genesis default plus every later version it implements. Verifiers
 // and admission points seed their default supported sets from it, so a
 // chain that upgrades to a version this build implements keeps verifying
 // without per-caller configuration.
-func Supported() []string { return []string{Protocol, Seed1, Seed2} }
+func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3} }
 
 // Activated reports whether the semantics seed/1 introduced (the actor
 // keyring, the lifecycle fold, budgets, offers) are active at a record
@@ -45,4 +54,11 @@ func Supported() []string { return []string{Protocol, Seed1, Seed2} }
 // has not registered activates nothing however it would sort
 // (plans/os-8e53ffd9.md D8). tuple.Applies is the narrower gate for
 // what seed/2 added on top.
-func Activated(v string) bool { return v == Seed1 || v == Seed2 }
+func Activated(v string) bool { return v == Seed1 || v == Seed2 || v == Seed3 }
+
+// EvalApplies reports whether the qualification verbs and the eval
+// marker on intent.filed are defined at a record carrying version v:
+// seed/3 exactly (plans/os-03e47abb.md D8). It lives here rather than
+// beside the eval package because the keyring and the fold gate on it
+// and the eval derivation reads both.
+func EvalApplies(v string) bool { return v == Seed3 }

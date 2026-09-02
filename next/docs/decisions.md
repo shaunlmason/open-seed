@@ -2130,6 +2130,109 @@ here. Newest last.
   two validators disagree on chain validity; only the cooperative
   boundary refuses, which `actors.md` records as bump-free by design.
 
+## Phase 10 item 2 — eval contracts and the qualification verbs (os-03e47abb, plan #217)
+
+- **A key holding no eval lane refuses `out_of_grant`; a lane key is
+  owed the other lane's acts** (os-03e47abb, AC7 refined). The plan's
+  criterion says the supervisor performs its subset and reports the
+  rest as owed by the other lane, and that "a key holding none refuses
+  each `out_of_grant` with nothing appended, reported, never retried".
+  Both read literally: `seed eval act` classifies by the key. One
+  holding `supervise`, `dispatch` or `operator` performs what its
+  grants admit and reports the rest under `owed` with the lane that
+  owns it, exit 0; one holding none of the three gets every act under
+  `refused` with code `out_of_grant`, nothing signed, exit 14. A
+  verifier running the act is the drilled case. Attempting the append
+  and letting the boundary refuse would have produced the same rows at
+  the cost of a session per act.
+
+- **Each act is one derivation at one instant** (os-03e47abb, AC5
+  refined). A spot-check the dispatcher files becomes `ready`, and the
+  offer it then owes is the supervisor's. The criterion phrases the
+  two as separate invocations ("under the dispatcher's key files and
+  specifies … reporting the offer as owed by the supervisor, and under
+  the supervisor's key publishes it"), and the implementation keeps it
+  so rather than looping to a fixpoint inside one act: `Due` is read
+  once, at the declared `--as-of`, and what the performed acts make
+  due next surfaces on the next act. A fixpoint loop would have had
+  one invocation sign acts the derivation it reported never listed.
+
+- **The eval marker is refused at an earlier tip, not merely unread**
+  (os-03e47abb, D8 refined). The plan gates the field in the fold at
+  `seed/3`. Admission gates it too, on presence read raw, for the
+  reason item 1 gated the offer's `tuples`: a `seed/2` validator's fold
+  would read a marked filing as an ordinary contract, so admitting one
+  at a `seed/2` tip would have two validators agree the chain is valid
+  and disagree on what the contract is. The refusal names the version.
+
+- **A duplicate disqualification refuses as "nothing to disqualify"**
+  (os-03e47abb, D4 refined). The rule's one-verdict-one-consequence
+  check is reached only for a tuple still admissible; the keyring's
+  preview runs first in the grant rule and finds the tuple already
+  removed. Same outcome, earlier rule, and the message is the more
+  useful one: the actor holds no admissible grant citing that tuple.
+
+- **`authenticPass` reads the fold's latest verdict, so a later raw
+  verdict shadows an earlier authenticated pass** (os-03e47abb). The
+  fold keeps one verdict per subject, the latest, and the rule
+  authenticates that one. A raw-pushed pass by the implementer after a
+  real pass therefore makes the mint refuse rather than admit: the
+  shadowing fails closed, which is the direction that matters, and a
+  chain carrying such a push is what `verdict_unverified` surfaces.
+
+- **The recomputation seam is `verdict.InputFor`, and sealed evals
+  mint nothing yet** (os-03e47abb, step 6). `seed verdict check`'s
+  input assembly moved from `cmd/seed` into the package so `Due` calls
+  the same function; the CLI delegates. A subject carrying a sealed
+  commitment is noted `receipt_unchecked` rather than unsealed, because
+  the derivation holds no identity to unseal with; every shipped eval
+  is trivial-tier and unsealed, and the note names the gap.
+
+- **The fixture returns a stand, not a context** (os-03e47abb, review
+  of the admit drills). The item 1 drills return `ctx` and a `step`
+  closure and reassign `ctx` from each step's return. The eval fixture
+  drives several subjects from inside closures the test never sees
+  return values from, and the first draft read a stale context two
+  subjects behind. The fixture now returns a struct whose `ctx` every
+  step rewrites and every assertion reads through.
+
+- **A qualification grants `claim` and nothing else** (os-03e47abb,
+  review finding on #221). The keyring decoded any non-empty capability
+  and added it to the string view of grants, so a `supervise` key could
+  have minted `operator` or `verdict` standing for a holder through a
+  green eval, escaping the supervisor's own boundary. The plan fixed the
+  field to `claim`; the keyring now refuses anything else as chain
+  validity, and the drill rows name `operator`, `verdict` and `dispatch`.
+
+- **The verifier boundary is replayed to the verdict's own position**
+  (os-03e47abb, review finding on #221, D2 made literal). `authenticPass`
+  and the fail path read the TIP keyring, so a raw-pushed verdict from
+  an ungranted key became authentic once the key was granted `verdict`
+  later, and a legitimate verdict stopped qualifying anything once its
+  signer was suspended. Both are now judged at `fact.Pos`
+  (`verdictBoundaryAt`, the `VerifyVerdicts` replay), with a drill for
+  each direction: a later grant does not reach back, and a later
+  suspension does not unmake a pass. The red-verdict lockout keeps its
+  tip-keyring reading, which is a different question (whether a fail
+  stands NOW), untouched by this card.
+
+- **The marker is bound to the named definition: by path at the
+  boundary, by anchor in the derivation** (os-03e47abb, review finding
+  on #221). The qualification rule required only that the contract
+  carry a marker, so a dispatch key could file an "eval" with a
+  trivially green gated acceptance of its own, let a real verifier
+  produce a real receipt, and have the supervisor's `eval act` mint.
+  The boundary reads no repository, so it binds what it can: the
+  acceptance spec must be the named definition's fixture
+  (`next/evals/<name>/fixture/…`, executable and gated). `Due` binds
+  the rest: the ref must equal the shipped definition's `Anchor.Ref`
+  at its reviewed commit, or the contract is noted `unbound` and
+  neither offered, minted from nor disqualified from (a fake eval that
+  fails must not disqualify everyone either). Spot-check filings are
+  bound by construction, since `File` writes the anchor. `EvalRoot`
+  moved to `internal/transition` so the boundary and the eval package
+  read one layout.
+
 ## The client's private git dir arms auto-gc in production (os-711b3028, plan #224)
 
 - **Every construction, not only init (D1).** `NewClient` writes the

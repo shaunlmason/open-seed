@@ -18,7 +18,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -33,6 +35,13 @@ const (
 	VerbGranted   = "actor.granted"
 	VerbSuspended = "actor.suspended"
 	VerbRevoked   = "actor.revoked"
+	// The qualification verbs (plans/os-03e47abb.md D2, D4;
+	// next/spec/evals.md), defined at seed/3: a qualification is a
+	// grant with evidence, minted from an eval's pass verdict for the
+	// tuple the run declared; a disqualification suspends that grant,
+	// citing the fail that ended it.
+	VerbQualified    = "actor.qualified"
+	VerbDisqualified = "actor.disqualified"
 )
 
 // These mirror ledger.UpgradeVerb, genesis.Verb, halt.DeclareVerb, and
@@ -114,6 +123,13 @@ func Known(capability string) bool {
 // later phases append rows (claim rights by squad and tier, verdict
 // rights, curation-proposal rights) when their verbs land.
 func AcceptedCapabilities(verb string) []string {
+	// The qualification verbs are the first actor.* rows that are not
+	// operator-only (plans/os-03e47abb.md D7): the charter's supervisor
+	// mints and suspends, attributably, with no operator ceremony, and
+	// operator stays the standing human override.
+	if verb == VerbQualified || verb == VerbDisqualified {
+		return []string{CapSupervise, CapOperator}
+	}
 	if IsActorVerb(verb) {
 		return []string{CapOperator}
 	}
@@ -224,16 +240,79 @@ func AcceptedCapabilities(verb string) []string {
 // verify.
 func Applies(active string) bool { return version.Activated(active) }
 
-// GrantTuples returns every runtime tuple the actor's grants for the
-// capability cite, in grant order: the SET the qualification rule reads
-// (plans/os-8e53ffd9.md D2). Empty means unqualified for that
-// capability, never "any tuple".
+// GrantTuples returns every runtime tuple the actor's grants and
+// qualifications for the capability cite and no disqualification has
+// since removed, in application order: the ADMISSIBLE set the
+// qualification rule reads (plans/os-8e53ffd9.md D2;
+// plans/os-03e47abb.md D4). Empty means either never qualified or
+// wholly disqualified; EverCited tells the two apart.
 func (s *State) GrantTuples(actor, capability string) []tuple.Tuple {
 	e, ok := s.entries[actor]
 	if !ok || e.Tuples == nil {
 		return nil
 	}
 	return append([]tuple.Tuple(nil), e.Tuples[capability]...)
+}
+
+// EverCited reports whether any grant or qualification ever cited a
+// tuple for the actor's capability. An actor for which it is true and
+// whose admissible set is empty has had every configuration
+// disqualified, and admits nothing: the bridge is for the never
+// qualified, and does not reopen (plans/os-03e47abb.md D4).
+func (s *State) EverCited(actor, capability string) bool {
+	e, ok := s.entries[actor]
+	return ok && e.everCited[capability]
+}
+
+// Qualifications returns the actor's applied qualification events, in
+// application order, for the derivation that schedules re-tests.
+func (s *State) Qualifications(actor string) []Qualification {
+	e, ok := s.entries[actor]
+	if !ok {
+		return nil
+	}
+	return append([]Qualification(nil), e.Qualifications...)
+}
+
+// Actors returns every enrolled fingerprint, sorted, for derivations
+// that walk the keyring rather than one entry.
+func (s *State) Actors() []string {
+	out := make([]string, 0, len(s.entries))
+	for fp := range s.entries {
+		out = append(out, fp)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func (e *Entry) citeTuple(capability string, t tuple.Tuple) {
+	if e.Tuples == nil {
+		e.Tuples = map[string][]tuple.Tuple{}
+	}
+	for _, have := range e.Tuples[capability] {
+		if have.Equal(t) {
+			return
+		}
+	}
+	e.Tuples[capability] = append(e.Tuples[capability], t)
+}
+
+func (e *Entry) markCited(capability string) {
+	if e.everCited == nil {
+		e.everCited = map[string]bool{}
+	}
+	e.everCited[capability] = true
+}
+
+func cloneCited(in map[string]bool) map[string]bool {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]bool, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
 
 func cloneTuples(in map[string][]tuple.Tuple) map[string][]tuple.Tuple {
@@ -277,7 +356,34 @@ type Entry struct {
 	// grant with one to both. An actor with NO cited tuple for a
 	// capability is unqualified for it, and admits as before seed/2;
 	// one with any is qualified, and a run must match one of them.
+	// From seed/3 this is the ADMISSIBLE set: a disqualification
+	// removes its tuple here and the entry remembers it was cited.
 	Tuples map[string][]tuple.Tuple
+	// Qualifications is every actor.qualified and actor.disqualified
+	// applied to this actor, in application order, for the derivation
+	// that schedules re-tests (plans/os-03e47abb.md D5): the latest
+	// per (capability, tuple) says whether the tuple is admissible and
+	// the attested instant it was last proven.
+	Qualifications []Qualification
+	// everCited records, per capability, that some grant or
+	// qualification has ever cited a tuple, so an actor whose whole
+	// admissible set was disqualified is told apart from one never
+	// qualified: the bridge does not reopen (D4).
+	everCited map[string]bool
+}
+
+// Qualification is one applied actor.qualified or actor.disqualified:
+// the capability and tuple it cites, the eval contract and the verdict
+// position it acted on, the record's own attested TS (the time anchor
+// spot-checks age from), and whether it disqualified.
+type Qualification struct {
+	Capability   string
+	Tuple        tuple.Tuple
+	Contract     string
+	Verdict      int
+	TS           string
+	Disqualified bool
+	Reason       string
 }
 
 // State is the keyring at one chain position.
@@ -343,6 +449,8 @@ func (s *State) Get(fp string) (Entry, bool) {
 	cp := *e
 	cp.Grants = append([]string(nil), e.Grants...)
 	cp.Tuples = cloneTuples(e.Tuples)
+	cp.Qualifications = append([]Qualification(nil), e.Qualifications...)
+	cp.everCited = cloneCited(e.everCited)
 	return cp, true
 }
 
@@ -445,6 +553,8 @@ func (s *State) Clone() *State {
 		cp := *e
 		cp.Grants = append([]string(nil), e.Grants...)
 		cp.Tuples = cloneTuples(e.Tuples)
+		cp.Qualifications = append([]Qualification(nil), e.Qualifications...)
+		cp.everCited = cloneCited(e.everCited)
 		c.entries[fp] = &cp
 	}
 	return c
@@ -573,11 +683,95 @@ func (s *State) Advance(rec *event.Record) error {
 		}
 		cur.Grants = append(cur.Grants, p.Capability)
 		if cited != nil {
-			if cur.Tuples == nil {
-				cur.Tuples = map[string][]tuple.Tuple{}
-			}
-			cur.Tuples[p.Capability] = append(cur.Tuples[p.Capability], *cited)
+			cur.citeTuple(p.Capability, *cited)
+			cur.markCited(p.Capability)
 		}
+	case VerbQualified, VerbDisqualified:
+		// Defined at seed/3 positions only (plans/os-03e47abb.md D8):
+		// before it the verb is unknown and the chain fails here, at
+		// its position, exactly as a seed/2 validator fails it.
+		if !version.EvalApplies(e.V) {
+			return fmt.Errorf("actor verb %q is not defined at %s: the qualification verbs activate at %s (next/spec/evals.md)", e.Verb, e.V, version.Seed3)
+		}
+		var p struct {
+			Capability string          `json:"capability"`
+			Tuple      json.RawMessage `json:"tuple"`
+			Contract   string          `json:"contract"`
+			Verdict    string          `json:"verdict"`
+			Reason     string          `json:"reason,omitempty"`
+		}
+		if err := strict(e.Payload, &p); err != nil {
+			return fmt.Errorf("%s payload: %v", e.Verb, err)
+		}
+		if p.Capability == "" {
+			return fmt.Errorf("%s must name a capability", e.Verb)
+		}
+		if p.Capability != CapClaim {
+			// An eval proves a configuration for WORK (plans/os-03e47abb.md
+			// D1; review finding on the task PR): a qualification
+			// grants claim and nothing else, or a supervise key could
+			// mint operator standing through a green eval.
+			return fmt.Errorf("%s qualifies the %s capability only, got %q: an eval proves a configuration for work, never another authority", e.Verb, CapClaim, p.Capability)
+		}
+		if len(p.Tuple) == 0 {
+			return fmt.Errorf("%s must cite the runtime tuple it qualifies", e.Verb)
+		}
+		cited, err := tuple.Parse(p.Tuple)
+		if err != nil {
+			return fmt.Errorf("%s tuple: %v", e.Verb, err)
+		}
+		if p.Contract == "" {
+			return fmt.Errorf("%s must cite the eval contract it acted on", e.Verb)
+		}
+		verdictPos, err := strconv.Atoi(strings.TrimSpace(p.Verdict))
+		if err != nil || verdictPos < 0 {
+			return fmt.Errorf("%s verdict %q is not a chain position", e.Verb, p.Verdict)
+		}
+		if e.Verb == VerbDisqualified && p.Reason == "" {
+			return fmt.Errorf("%s requires a reason", e.Verb)
+		}
+		if e.Verb == VerbQualified && p.Reason != "" {
+			return fmt.Errorf("%s carries no reason: the cited verdict is the reason", e.Verb)
+		}
+		cur := s.entries[e.Subject]
+		if cur == nil {
+			return fmt.Errorf("%s subject %s is not enrolled", e.Verb, e.Subject)
+		}
+		if cur.Standing == StandingRevoked {
+			return fmt.Errorf("actor %s is revoked; revocation is terminal", e.Subject)
+		}
+		q := Qualification{Capability: p.Capability, Tuple: cited, Contract: p.Contract, Verdict: verdictPos, TS: e.TS, Reason: p.Reason}
+		if e.Verb == VerbQualified {
+			// A qualification IS a grant with evidence: it grants the
+			// capability if absent and adds the tuple to the admissible
+			// set, under the same disjointness rule a grant obeys.
+			if err := sealerDisjoint(cur, p.Capability); err != nil {
+				return fmt.Errorf("%s to %s: %v", e.Verb, e.Subject, err)
+			}
+			if !slices.Contains(cur.Grants, p.Capability) {
+				cur.Grants = append(cur.Grants, p.Capability)
+			}
+			cur.citeTuple(p.Capability, cited)
+			cur.markCited(p.Capability)
+		} else {
+			// Nothing to disqualify is a refusal, so a disqualification
+			// always names a configuration that was admissible.
+			kept := cur.Tuples[p.Capability][:0:0]
+			removed := false
+			for _, have := range cur.Tuples[p.Capability] {
+				if have.Equal(cited) {
+					removed = true
+					continue
+				}
+				kept = append(kept, have)
+			}
+			if !removed {
+				return fmt.Errorf("%s: actor %s holds no admissible %s grant citing that tuple, so there is nothing to disqualify", e.Verb, e.Subject, p.Capability)
+			}
+			cur.Tuples[p.Capability] = kept
+			q.Disqualified = true
+		}
+		cur.Qualifications = append(cur.Qualifications, q)
 	case VerbSuspended, VerbRevoked:
 		var p struct {
 			Reason string `json:"reason"`

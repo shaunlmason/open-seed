@@ -76,6 +76,15 @@ func TestKindsAriseFromTheirFacts(t *testing.T) {
 				Submission: &transition.SubmissionFact{Pos: 8, Signer: "aa"},
 				Verdict:    &transition.VerdictFact{Pos: 9, Verdict: "fail", Submission: 8}},
 		},
+		"a pass verdict on an eval owes no merge": {
+			// The verdict is the eval's terminal fact: its consequence
+			// is a qualification, never a merge (plans/os-03e47abb.md
+			// D10), so the obligation projection carries no row.
+			state: transition.SubjectState{State: "review", Since: 8,
+				Submission: &transition.SubmissionFact{Pos: 8, Signer: "aa"},
+				Verdict:    &transition.VerdictFact{Pos: 9, Verdict: "pass", Submission: 8},
+				Eval:       &transition.EvalInfo{Name: "fix-the-check"}},
+		},
 		"blocked is owed by the operator lane": {
 			state: transition.SubjectState{State: "blocked", Since: 4},
 			want:  []string{KindContractBlocked},
