@@ -42,6 +42,9 @@ type curationStand struct {
 	deadEnd7, deadEnd8, deadEnd9, raise5              int
 	claim, id                                         string
 	v                                                 string
+	// level is the independence an eval pass records; L1 unless a
+	// drill sets it (the level vocabulary applies from seed/4).
+	level string
 }
 
 func deadEndBody(fence string) string {
@@ -427,8 +430,12 @@ func (st *curationStand) evalRun(t *testing.T, subject, lesson, carrier, verdict
 	if signer == nil {
 		signer = st.verifier
 	}
+	level := st.level
+	if level == "" {
+		level = "L1"
+	}
 	st.ctx = st.step(signer, v, "verdict.rendered", subject,
-		fmt.Sprintf(`{"verdict": %q, "receipt": "%s", "submission": "%d", "independence": "L1"}`, verdict, strings.Repeat("0", 64), sub))
+		fmt.Sprintf(`{"verdict": %q, "receipt": "%s", "submission": "%d", "independence": %q}`, verdict, strings.Repeat("0", 64), sub, level))
 	return pos
 }
 
@@ -842,6 +849,39 @@ func TestRawPushedContestsAndPromotionsBindNothing(t *testing.T) {
 				t.Fatalf("contest at %d: valid=%v", pos, valid)
 			}
 		}
+	}
+}
+
+// The promotion's pass authentication applies the level rule from
+// seed/4 (plans/os-99829835.md D3) through the one implementation the
+// verdict rule and the merge chain share, installed into the curation
+// package at init: a pass recorded at a level the record does not
+// support (L1 on an executable gated eval that supports L3), pushed
+// past the verdict boundary, is not survival, and the same pass at the
+// level the record supports is.
+func TestPromotionPassAuthenticationAppliesTheLevelRule(t *testing.T) {
+	if curation.PassLevelCheck == nil {
+		t.Fatal("admit installs the level half of the pass authentication into curation at init")
+	}
+	st := curationFixture(t)
+	hp := st.admitHypothesis(t)
+	st.ctx = st.step(st.root, st.v, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed4+`"}`)
+	st.v = version.Seed4
+	anchor := curation.LessonsDir + "/retry.md @ 0123456"
+	st.level = "L1"
+	short := st.evalRun(t, "eval-short", cite(st.id, hp), anchor, "pass", nil)
+	if err := Check(st.ctx, draftV(t, st.observer, st.v, curation.LessonVerb, st.id, lessonBody(st.id, hp, "fix-the-check", short), st.ctx.Tip)); err == nil || gate(t, err) != curation.GatePromotionAdversary {
+		t.Fatalf("a pass recorded at L1 on a record that supports L3 is not survival: %v", err)
+	}
+	st.level = "L3"
+	full := st.evalRun(t, "eval-full", cite(st.id, hp), anchor, "pass", nil)
+	if err := Check(st.ctx, draftV(t, st.observer, st.v, curation.LessonVerb, st.id, lessonBody(st.id, hp, "fix-the-check", full), st.ctx.Tip)); err != nil {
+		t.Fatalf("the same pass at the level the record supports is survival: %v", err)
+	}
+	// The fold agrees: the level-short pass binds no promotion.
+	st.ctx = st.step(st.observer, st.v, curation.LessonVerb, st.id, lessonBody(st.id, hp, "fix-the-check", short))
+	if fold := curation.Fold(st.ctx.Records); len(fold.LessonsOf(st.id)) != 0 || len(fold.Unbound) != 1 {
+		t.Fatalf("a promotion citing the level-short pass folds unbound: %+v", fold.Unbound)
 	}
 }
 

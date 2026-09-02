@@ -547,6 +547,20 @@ type VerdictFact struct {
 	Receipt    string
 	Signer     string
 	Submission int
+	// Independence is the level the verdict recorded, verbatim
+	// (plans/os-99829835.md D3): the boundary requires it to equal the
+	// level the record supports, and the merge chain and reconcile
+	// re-judge it from the same facts.
+	Independence string
+	// Tuple is the verifier's declared configuration, nil where the
+	// payload carried none or one that did not parse (dropped and
+	// counted, the RunStartFact posture).
+	Tuple *tuple.Tuple
+	// Levels reports whether the record sits at a version where the
+	// level vocabulary applies (version.LevelsApply): a seed/3 verdict
+	// recorded the literal L1 whatever its acceptance supported, and is
+	// judged by seed/3's rule.
+	Levels bool
 }
 
 // RequestFact is the latest merge.requested and its citation: exactly
@@ -836,16 +850,26 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			// binds nothing.
 			if s, ok := f.states[e.Subject]; ok {
 				var v struct {
-					Verdict    string `json:"verdict"`
-					Receipt    string `json:"receipt"`
-					Submission string `json:"submission"`
+					Verdict      string          `json:"verdict"`
+					Receipt      string          `json:"receipt"`
+					Submission   string          `json:"submission"`
+					Independence string          `json:"independence"`
+					Tuple        json.RawMessage `json:"tuple"`
 				}
 				if json.Unmarshal(e.Payload, &v) == nil && v.Verdict != "" {
 					cited := -1
 					if n, err := strconv.Atoi(strings.TrimSpace(v.Submission)); err == nil {
 						cited = n
 					}
-					fact := VerdictFact{Pos: pos, Verdict: v.Verdict, Receipt: v.Receipt, Signer: e.Actor, Submission: cited}
+					fact := VerdictFact{Pos: pos, Verdict: v.Verdict, Receipt: v.Receipt, Signer: e.Actor, Submission: cited,
+						Independence: v.Independence, Levels: version.LevelsApply(e.V)}
+					if len(v.Tuple) > 0 && string(v.Tuple) != "null" {
+						if t, err := tuple.Parse(v.Tuple); err == nil {
+							fact.Tuple = &t
+						} else {
+							s.Anomalies++
+						}
+					}
 					s.Verdict = &fact
 					// The lockout scans the whole submission window, so
 					// a later raw verdict can never bury an authentic
@@ -1412,6 +1436,60 @@ type TierRow struct {
 	PlanRequired         bool
 	SealedChecksRequired bool
 	HumanReview          bool
+	// Independence is the minimum level a verdict on the tier must
+	// achieve (plans/os-99829835.md D1; next/spec/tiers.md), satisfied
+	// by any achieved level at or above it.
+	Independence Level
+}
+
+// Level is an independence level (SEED-NEXT.md §7 "Independence is
+// failure-domain separation"; plans/os-99829835.md D1): ordered,
+// achieved is the highest that holds, and a tier's requirement is
+// satisfied by any level at or above it.
+type Level string
+
+const (
+	// L1 is distinct keys and workspaces: the disjointness every
+	// admitted verdict already has.
+	L1 Level = "L1"
+	// L2 is a distinct runtime tuple: the verifier declared a different
+	// model provider or family, or a different harness, from the
+	// window's admitted declaration.
+	L2 Level = "L2"
+	// L3 is deterministic-first verification on a distinct path: an
+	// executable, gated acceptance whose receipt reproduces from the
+	// verifier's own checkout.
+	L3 Level = "L3"
+)
+
+// Levels lists the vocabulary in order: what a refusal names as legal.
+func Levels() []Level { return []Level{L1, L2, L3} }
+
+// ParseLevel reads a payload literal, byte for byte.
+func ParseLevel(v string) (Level, bool) {
+	for _, l := range Levels() {
+		if string(l) == v {
+			return l, true
+		}
+	}
+	return "", false
+}
+
+// Rank is the level's place in the order; an unknown level ranks below
+// every known one, so it satisfies nothing.
+func (l Level) Rank() int {
+	for i, k := range Levels() {
+		if k == l {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+// Satisfies reports whether the level meets a requirement: at or above
+// it in the order, which is III.G's "L2 or L3" for one requirement.
+func (l Level) Satisfies(required Level) bool {
+	return l.Rank() > 0 && l.Rank() >= required.Rank()
 }
 
 // tierTable mirrors the normative table in next/spec/tiers.md. The
@@ -1419,9 +1497,9 @@ type TierRow struct {
 // term, standard the ordinary contract every gate applies to, critical
 // the "high-consequence" tier humans review.
 var tierTable = map[string]TierRow{
-	TrivialTier: {PlanRequired: false, SealedChecksRequired: false, HumanReview: false},
-	"standard":  {PlanRequired: true, SealedChecksRequired: true, HumanReview: false},
-	"critical":  {PlanRequired: true, SealedChecksRequired: true, HumanReview: true},
+	TrivialTier: {PlanRequired: false, SealedChecksRequired: false, HumanReview: false, Independence: L1},
+	"standard":  {PlanRequired: true, SealedChecksRequired: true, HumanReview: false, Independence: L1},
+	"critical":  {PlanRequired: true, SealedChecksRequired: true, HumanReview: true, Independence: L2},
 }
 
 // strictestRow is what every reader of a missing row takes: plan
@@ -1429,7 +1507,7 @@ var tierTable = map[string]TierRow{
 // never fudged into a relaxation, the BudgetCapacity posture applied to
 // authority, and the reason a raw-pushed unknown tier is judged exactly
 // as it was before the vocabulary existed.
-var strictestRow = TierRow{PlanRequired: true, SealedChecksRequired: true, HumanReview: true}
+var strictestRow = TierRow{PlanRequired: true, SealedChecksRequired: true, HumanReview: true, Independence: L3}
 
 // Tier resolves a filed tier to its row. An unknown tier has no row.
 func Tier(name string) (TierRow, bool) {

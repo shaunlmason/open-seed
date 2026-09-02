@@ -16,6 +16,7 @@ package main
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -32,6 +33,8 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/project"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/verdict"
 )
 
 func runMaintain(args []string, stdout, stderr io.Writer) int {
@@ -94,14 +97,21 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 
 	sess := &maintainSession{dir: *dir, st: st, signer: signer}
 	deps := maintain.Deps{
-		Now:         now,
-		Records:     st.records,
-		Table:       st.table,
-		Fold:        st.fold,
-		Obs:         snapshot,
-		Thresholds:  obs.DefaultThresholds(),
-		Store:       store,
-		Repo:        *repo,
+		Now:        now,
+		Records:    st.records,
+		Table:      st.table,
+		Fold:       st.fold,
+		Obs:        snapshot,
+		Thresholds: obs.DefaultThresholds(),
+		Store:      store,
+		Repo:       *repo,
+		Unseal: func(s transition.SubjectState) (*verdict.SealedInput, error) {
+			in, fail := unsealChecks(st.records, s, signer, store)
+			if fail != nil {
+				return nil, errors.New(fail.Error.Message)
+			}
+			return in, nil
+		},
 		Obligations: rows,
 		Corroborate: func(subject string, fence int) maintain.Corroboration {
 			// The one shared derivation, from the package that owns

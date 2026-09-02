@@ -23,6 +23,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/verdict"
 )
 
 // Evidence runs the checks a projection build cannot: the cited
@@ -30,12 +31,75 @@ import (
 // to the attested head by clean ancestry, and the merged commit must
 // still sit under the target tip.
 func Evidence(id string, s transition.SubjectState, store *artifact.Store, repo string) []Finding {
+	return EvidenceAt(id, s, store, repo, Reproduction{})
+}
+
+// Reproduction is what the L3 reproduction needs beyond the store and
+// the repository (plans/os-99829835.md D5): the chain and its fold,
+// which the verifier's input seam reads; Unseal, which opens a sealed
+// subject's checks under an identity able to unseal, because a sealed
+// receipt recomputes only with its sealed transcripts; and
+// NotAttempted, told of a sealed L3 verdict the caller could not open,
+// so that a reproduction is never skipped silently (review finding on
+// the task PR). With no records or fold the grade covers everything
+// but the reproduction.
+type Reproduction struct {
+	Records      []*event.Record
+	Fold         *transition.Fold
+	Unseal       func(s transition.SubjectState) (*verdict.SealedInput, error)
+	NotAttempted func(subject, why string)
+}
+
+func (r Reproduction) notAttempted(subject, why string) {
+	if r.NotAttempted != nil {
+		r.NotAttempted(subject, why)
+	}
+}
+
+// EvidenceAt is Evidence with the reproduction's inputs in hand:
+// `seed reconcile` and the maintenance loop pass the chain, its fold
+// and the unseal hook their key allows.
+func EvidenceAt(id string, s transition.SubjectState, store *artifact.Store, repo string, rep Reproduction) []Finding {
+	var out []Finding
+	// The L3 reproduction (plans/os-99829835.md D1, D5): a verdict that
+	// recorded deterministic-first verification cites a receipt that
+	// recomputes from the verifier's own checkout to the cited digest;
+	// one that does not is an L3 the evidence does not support. A
+	// sealed subject's receipt carries its sealed transcripts, so it
+	// recomputes only under an identity able to unseal: the caller's
+	// hook opens it, and a subject the hook cannot open is reported
+	// rather than passed over.
+	if s.Verdict != nil && s.Verdict.Levels && s.Verdict.Independence == string(transition.L3) && rep.Records != nil && rep.Fold != nil {
+		var sealed *verdict.SealedInput
+		attempt := true
+		if s.Sealed != nil {
+			if rep.Unseal == nil {
+				attempt = false
+				rep.notAttempted(id, "the subject carries sealed checks and no identity able to unseal was supplied")
+			} else if in, err := rep.Unseal(s); err != nil {
+				attempt = false
+				rep.notAttempted(id, err.Error())
+			} else {
+				sealed = in
+			}
+		}
+		if attempt {
+			digest, err := reproduce(rep.Records, rep.Fold, s, id, repo, sealed)
+			if err != nil || digest != s.Verdict.Receipt {
+				why := "the recomputed receipt digest differs from the cited " + s.Verdict.Receipt
+				if err != nil {
+					why = err.Error()
+				}
+				out = append(out, Finding{Subject: id, Class: ClassIndependenceUnverified,
+					Detail: fmt.Sprintf("the verdict at position %d records L3 and its receipt does not reproduce from the verifier's own checkout: %s — deterministic-first verification is what the reproduction proves", s.Verdict.Pos, why)})
+			}
+		}
+	}
 	if s.Merged == nil || s.Merged.SHA == "" || s.Verdict == nil {
 		// Record-derivable classes already cover chains this
 		// incomplete; there is no evidence to grade.
-		return nil
+		return out
 	}
-	var out []Finding
 	merged := s.Merged.SHA
 	// The attested comparison needs the receipt; the target check
 	// below does not, so lost evidence never hides a rewritten target
@@ -95,4 +159,20 @@ func Lessons(records []*event.Record, fold *transition.Fold, repo string) []Find
 			Detail: fmt.Sprintf("the promotion of %s does not resolve in the repository: %s — a fact a worker would be handed must verify before it surfaces", u.Lesson, u.Reason)})
 	}
 	return out
+}
+
+// reproduce recomputes the receipt for the subject's bound submission
+// exactly as `seed verdict check` does, through the verifier's own
+// input seam, and returns its digest.
+func reproduce(records []*event.Record, fold *transition.Fold, s transition.SubjectState, subject, repo string, sealed *verdict.SealedInput) (string, error) {
+	in, err := verdict.InputFor(records, fold, s, subject, repo, 0)
+	if err != nil {
+		return "", err
+	}
+	in.Sealed = sealed
+	r, err := verdict.Compute(in)
+	if err != nil {
+		return "", err
+	}
+	return r.Digest()
 }

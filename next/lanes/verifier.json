@@ -1,7 +1,7 @@
 {
   "lane": "verifier",
   "kind": "lane",
-  "summary": "Renders verdicts at the declared independence level, never with an implementing key on the same contract.",
+  "summary": "Renders verdicts at the independence level the record supports, declaring its own runtime tuple where the tier requires separation from the work, never with an implementing key on the same contract.",
   "grants": [
     "verdict",
     "sealer"

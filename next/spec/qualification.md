@@ -30,9 +30,14 @@ One strict JSON object, spelled once in `internal/tuple`:
 Every field is a non-empty string; unknown fields refuse, so a
 misspelling cannot pass as an absent field; `null` is not a tuple.
 `harness` and `model` carry their versions as `<name>/<version>` and
-`<family>/<version>` by convention, which the parser does not police:
-what it polices is presence, because drift is a per-field comparison
-and a missing field is a field that cannot drift.
+`<family>/<version>` by convention, and `model` may name its provider
+as `<provider>/<family>/<version>` (plans/os-99829835.md), which the
+parser does not police: what it polices is presence, because drift is
+a per-field comparison and a missing field is a field that cannot
+drift. The convention is read by one comparison only, the independence
+level's ([`verdicts.md`](verdicts.md)): a three-part model compares
+provider and family, a two-part one family alone, and harness names
+compare before their versions.
 
 Refused: one string with five things in it. Drift must say WHICH field
 moved, and a packed string cannot.
@@ -160,6 +165,17 @@ after the fact; drift must refuse BEFORE the spend, and the spending
 verb is `run.started`. Refused: a new `run.provisioned` verb. The
 adapter provisions only against an admitted start for its fence, so
 the start IS the moment the configuration is committed to.
+
+## The verifier's declaration
+
+From `seed/4` the verifier declares its own tuple the same way, at
+render: `verdict.rendered` may carry `tuple`, `seed verdict render`
+takes `--principal`, `--model` and `--tool-policy` and fills the two
+adapter fields from the workspace it verifies in, and the level rule
+compares that declaration against the window's admitted `run.started`
+to establish L2 ([`verdicts.md`](verdicts.md)). It is a declaration
+exactly as the worker's is; what would prove it is
+[`evals.md`](evals.md) applied to verifier keys.
 
 ## Surfaces
 

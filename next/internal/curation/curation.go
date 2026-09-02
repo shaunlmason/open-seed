@@ -989,7 +989,7 @@ func adversarialSurvived(records []*event.Record, table *transition.Table, fold 
 	if filed <= hypothesisPos {
 		return refuse(fmt.Sprintf("the eval was filed at position %d, before the hypothesis at %d: a counter-trajectory is constructed against the candidate, never before it existed", filed, hypothesisPos))
 	}
-	if fact := AuthenticPass(records, evalSubject, es); fact == nil || fact.Pos != pos {
+	if fact := AuthenticPass(records, table, evalSubject, es); fact == nil || fact.Pos != pos {
 		return refuse(fmt.Sprintf("position %d is not the eval's authenticated pass verdict: survival is a pass rendered by a verdict-granted key disjoint from the implementer, replayed at its own position", pos))
 	}
 	return nil
@@ -1003,12 +1003,24 @@ func EvalBound(s transition.SubjectState) bool {
 		strings.HasPrefix(s.Acceptance.Ref, transition.EvalFixturePrefix(s.Eval.Name))
 }
 
+// PassLevelCheck is the level half of a pass's authentication (the
+// verifier boundary's rule from seed/4, plans/os-99829835.md D3): the
+// verdict's recorded independence equals the level the record
+// supports and satisfies the tier. The rule lives in internal/admit
+// beside LevelAchieved, the one implementation the verdict rule, the
+// merge chain, render and reconcile share, and admit installs it here
+// at init so the fold's promotion replay applies it too; nil means no
+// level rule is installed, which no seed binary runs with (the drill
+// in internal/admit pins the installation).
+var PassLevelCheck func(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState, fact transition.VerdictFact) bool
+
 // AuthenticPass is the subject's latest verdict when it is a pass
 // rendered by a key that held a verdict grant at the verdict's own
-// position and is disjoint from the implementer (the verifier
-// boundary's L1 rule, replayed to the position as FailedAt replays
-// it); nil otherwise.
-func AuthenticPass(records []*event.Record, subject string, s transition.SubjectState) *transition.VerdictFact {
+// position, disjoint from the implementer (the verifier boundary's L1
+// rule, replayed to the position as FailedAt replays it), and, where
+// the level vocabulary applies, at the level the record supports; nil
+// otherwise.
+func AuthenticPass(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState) *transition.VerdictFact {
 	if s.Verdict == nil || s.Verdict.Verdict != "pass" || s.Verdict.Pos < 0 || s.Verdict.Pos > len(records) {
 		return nil
 	}
@@ -1017,6 +1029,9 @@ func AuthenticPass(records []*event.Record, subject string, s transition.Subject
 		return nil
 	}
 	if s.PriorClaimants[s.Verdict.Signer] || (s.Submission != nil && s.Verdict.Signer == s.Submission.Signer) {
+		return nil
+	}
+	if PassLevelCheck != nil && !PassLevelCheck(records, table, subject, s, *s.Verdict) {
 		return nil
 	}
 	return s.Verdict

@@ -837,6 +837,33 @@ PR (an administrative card, not a Phase 9 item).
   metrics; calibration is item 4.)
 - 10.3 independence levels L2/L3 declared per tier and recorded in
   verdicts — not started; its table is built: **the tier vocabulary**
+  verdicts — **in review** (os-99829835, task PR against plan #223:
+  `seed/4` activates the ordered level vocabulary, `verdict.rendered`'s
+  `independence` widening from the literal `L1` to `L1`/`L2`/`L3` and
+  optionally carrying the verifier's declared `tuple`; the tier table's
+  `independence` column (`trivial` and `standard` L1, `critical` L2,
+  the strictest row L3) is read through `TierGates`; the level is
+  computed, never asserted — L2 when the verifier's declaration differs
+  from the window's admitted `run.started` in model provider or family
+  (the optional `<provider>/<family>/<version>` convention) or in
+  harness name, L3 when the acceptance is executable and gated with the
+  receipt's reproduction at evidence grade, L1 otherwise — and the
+  claimed level must equal it (a shape refusal naming both) and satisfy
+  the tier (`level_short`, exit 17's refinement); `verdictBoundary`
+  reapplies both along the merge chain, so a raw-pushed `critical`
+  verdict at `L1` authenticates nothing; `seed verdict render` takes
+  `--principal`, `--model` and `--tool-policy` (all three or none, usage
+  on a pre-`seed/4` chain), fills the adapter's two fields, computes the
+  level before drafting and refuses at usage when a required
+  declaration is missing; `verdict check` and the contracts view render
+  the level; reconcile classifies `independence_unverified` (the record
+  half, and the receipt's reproduction, sealed subjects under `--key`,
+  the maintenance loop reporting what its key cannot open); the
+  contracts projection republishes as version 13; `EvalApplies`
+  is the named list `{seed/3, seed/4}`; both modes drive a `critical`
+  contract to `done`, small-team at L2 with a second model family and
+  fleet at L3 on an executable gated spec); its table is built: **the
+  tier vocabulary**
   (os-be12ac16, merged as #222 against plan #219) is **done** —
   `next/spec/tiers.md` declares `trivial`, `standard` and `critical`
   with a plan-required, sealed-checks-required and human-review column
@@ -849,8 +876,8 @@ PR (an administrative card, not a Phase 9 item).
   had three) read the table through `TierGates`, an unknown tier taking
   the strictest row; the injection suite's characterization pin is
   replaced by the vocabulary drill, with mis-tiering (filing the valid
-  `trivial`) kept pinned as tier provenance's residual. Item 3 adds the
-  `independence` column.
+  `trivial`) kept pinned as tier provenance's residual. Item 3 added
+  the `independence` column.
 - 10.4 rubric verdicts; calibration harness with authority suspension
   on drift — not started
 - 10.5 trajectory-prefix regression harness; dispatcher re-triage rate
@@ -963,6 +990,15 @@ out-of-item fixes (#175's task PR, os-9b3f3ef3, os-378e44f3, budget
 exhaustion's exit code #208), and the exit record above (card
 os-e6cdb3d9's task PR) are merged with every card closed.
 Phase 10 is under way: item 1 (os-8e53ffd9) merged (#216 against plan
+#215); item 2 (os-03e47abb) merged (#221 against plan #217), so
+`actor.qualified` is defined; the tier vocabulary (os-be12ac16) merged
+(#222 against plan #219); item 3 (os-99829835) is implemented against
+plan #223 and in review, so a verdict's level is computed from the
+records and held to its tier. The plans for item 4 (#225), item 5
+(#227) and Phase 11 items 1 (#226) and 2 (#228) are merged; the plans
+for Phase 11 items 3, 4 and 5 (#229, #230, #231) are in review. The
+frontier is item 3's merge, then item 4 (rubric verdicts and the
+calibration harness).
 #215); item 2 (os-03e47abb) is implemented against plan #217 and in
 review, and `actor.qualified` is now defined. The frontier is item 2's
 merge, then item 3 (independence levels per tier), whose tier

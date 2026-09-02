@@ -164,7 +164,12 @@ there, the support passed there, the claim was not already proposed)
 and not contested at the tip; its support still satisfies the arms;
 `carrier` is a member; the stamps are present and ordered; and
 `adversarial` is REQUIRED for every carrier: its verdict is an
-authenticated pass, replayed at its own position, on a subject whose
+authenticated pass (the signer held `verdict` at the verdict's own
+position, was no implementer of the eval, and, from `seed/4`, recorded
+the independence level the record supports at or above the tier's:
+the verdict rule's own level check, installed into the curation
+package by `admit` at init so the fold's replay applies it too),
+replayed at its own position, on a subject whose
 `eval` marker names that eval AND binds it to this hypothesis and to
 this lesson anchor ([`evals.md`](evals.md)), filed after the
 hypothesis's position. One implementation, `curation.CheckPromotion`,
