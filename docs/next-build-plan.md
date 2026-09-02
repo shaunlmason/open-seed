@@ -307,15 +307,20 @@ lanes-operable and loop-completeness gates (§5).
 ### Phase 10 — Qualification and evaluation  *(deps: 9)*
 
 1. Runtime tuples in enrollment/grants; adapters report provisioned tuple; drift =
-   out-of-grant.
+   out-of-grant; the planner lane receives the strongest tuples by policy (III.J row
+   3, routed here by the Phase 9 exit record).
 2. Eval contracts against fixture repos through the production machinery; grants cite
    passing tuples; scheduled spot-checks; suspension on failure.
 3. Independence levels L2/L3 declared per tier and recorded in verdicts.
 4. Rubric verdicts (per-item, evidence-cited, uncertainty-marked); calibration harness
    against a gold set with authority suspension on drift.
-5. Trajectory-prefix regression harness for lane decision points.
+5. Trajectory-prefix regression harness for lane decision points; dispatcher re-triage
+   rate and planner unedited-approval rate tracked (III.J row 3, routed here by the
+   Phase 9 exit record: both are lane-quality metrics that are meaningless without this
+   harness).
 
-*Exit:* charter III.E (tuples) + III.G (levels, calibration) + III.O eval items.
+*Exit:* charter III.E (tuples) + III.G (levels, calibration) + III.O eval items + III.J
+row 3.
 
 ### Phase 11 — Curator and flywheel  *(deps: 9)*
 
@@ -370,15 +375,18 @@ adapter), and the doctor reports which Phase 13 criteria remain open until then.
 2. Remaining executor adapters: container, cloud agent session, enrolled remote
    worker (III.H).
 3. Non-primary forge adapter for the forge extras (III.N).
-4. Federation read remotes and cross-repo request ingress (III.N).
+4. Federation read remotes and cross-repo request ingress (III.N), and the `request.*`
+   rows that mirror edits and dashboard actions enter by, closing the injection corpus's
+   mirror arm (III.J row 2, routed here by the Phase 9 exit record: the corpus already
+   sweeps the projections a mirror renders from, so what the arm waits on is the verb).
 5. A2A-shaped cross-organization boundary (III.N).
 6. Machine-protocol surface exposing the CLI's verbs with identical semantics, and
    platform parity (including Windows) documented and tested (III.I — the row the
    Phase 8 exit routes here; the CLI stays the complete interface, so this adds a
    second surface over the same rule set, never a second semantics).
 
-*Exit:* the named III.F/III.H/III.I/III.N criteria green; the conformance report shows
-Part III complete at the enforced self-hosted posture.
+*Exit:* the named III.F/III.H/III.I/III.N criteria green, and III.J row 2 beside III.I;
+the conformance report shows Part III complete at the enforced self-hosted posture.
 
 ## 3. Backlog (true extras, not conformance-blocking)
 

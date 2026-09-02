@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task": "os-e6cdb3d9",
+  "merge_base": "e5085b888677d4f796a237a6faacf7ebb126dac9",
+  "head": "65ee63db7f94755e8aa1fcf370bfc2a3f9b513e9",
+  "plan_path": "plans/os-e6cdb3d9.md",
+  "plan_sha256": "767e0d4b98b1de6417918ba49f9bccfc2efc746695df62d995234b7508a49a9f",
+  "diff_files": [
+    "docs/next-build-plan.md",
+    "next/docs/progress.md"
+  ],
+  "diff_sha256": "7e84b4749707067757c65bd964693c200b8cfee32b4181d99167a9cdcc875b48",
+  "validation": [
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed validate",
+      "exit": 0
+    },
+    {
+      "cmd": "git diff --name-only origin/main -- next/ docs/ | grep -vE '^next/docs/progress.md$|^docs/next-build-plan.md$' | grep -q . \u0026\u0026 echo SCOPE-VIOLATION || echo scope ok",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
