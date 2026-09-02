@@ -10,8 +10,10 @@ import (
 	"crypto/ed25519"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/version"
@@ -98,7 +100,14 @@ func TestGrantDelegation(t *testing.T) {
 	}
 
 	ctx = step(signer, version.Seed1, keyring.VerbGranted, fpOf(t, maintainer), `{"capability": "`+keyring.CapMaintenance+`"}`)
-	if err := Check(ctx, draftV(t, maintainer, version.Seed1, "system.checkpoint", "system", `{"n": 1}`, ctx.Tip)); err != nil {
+	// The payload is a real snapshot citation now: the checkpoint rule
+	// refuses an arbitrary one (plans/os-8a5f14bb.md D4.5), and this
+	// drill is about the GRANT, so it must not fail for shape.
+	cp, perr := checkpoint.Payload(strings.Repeat("a", 64), ctx.Count)
+	if perr != nil {
+		t.Fatal(perr)
+	}
+	if err := Check(ctx, draftV(t, maintainer, version.Seed1, checkpoint.Verb, "system", string(cp), ctx.Tip)); err != nil {
 		t.Fatalf("a maintenance grant must admit checkpoints, got %v", err)
 	}
 	err := Check(ctx, draftV(t, maintainer, version.Seed1, "system.halt.declared", "system", `{"reason": "x"}`, ctx.Tip))

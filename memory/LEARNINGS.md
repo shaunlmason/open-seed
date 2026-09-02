@@ -850,6 +850,120 @@ is attached in `actGated`, not by any manifest, so the sweep is over
 `loopverb.Names()` with a manifest constructed to declare all of them —
 never over whatever subset a fixture happens to carry.
 
+## A drill that reads the report is not a drill that reads the chain (os-8a5f14bb)
+
+The maintenance loop's first reap never landed. `claim.reaped` is a
+claim-scoped event, so the fence rule refuses one whose payload does
+not cite the active window — and the first `ReapPacket` returned the
+bare four-part packet with no `{"fence": "<position>"}` beside it.
+
+What caught it was the drill that **folded the chain back** and looked
+for the `claim.reaped` record. A drill asserting the report's `reaped`
+list would have been just as green either way, because the pass
+genuinely decided to reap; it was the append that the boundary
+refused, and the refusal landed in a `refusals` list nobody was
+reading.
+
+The general form: **when a verb's whole job is to change the ledger,
+the assertion belongs in the ledger.** A report is the actor's account
+of what it meant to do.
+
+## A mutation the boundary refuses is not a mutation (os-8a5f14bb)
+
+Testing "a lint finding must never raise an escalation", the mutation
+was to make the filing path raise one instead. The drill stayed green —
+which looked like a weak assertion. It was not: the fixture's subjects
+were `in_progress` and `done`, and `escalation.raised` admits only from
+`ready` or `review`, so the mutated code path refused at the boundary
+and fell through to the original filing. **The mutation never
+executed.**
+
+The tell is the one already recorded on #202: a mutation that changes
+nothing means the drill never reached the code. Here it meant something
+narrower and worth separating out — the mutation never reached the code
+*either*, so the experiment was void rather than the drill weak.
+
+What settled it was proving the assertion LIVE directly: plant an
+`escalation.raised` signed by the maintenance key into the fixture and
+watch the drill fail. That also improved the assertion, which had been
+scanning for the bare verb and would have fired on another lane's
+escalation; it now names the actor.
+
+**When a mutation cannot be made to execute, prove the assertion fires
+by planting the condition it forbids.**
+
+## A snapshot is one record behind its own checkpoint, by construction (os-8a5f14bb)
+
+The checkpoint round-trip drill compared the fetched snapshot against a
+rebuild from the chain's tip, and two projections differed. Nothing was
+wrong: the snapshot materializes position N, the checkpoint event is
+appended *after* it at N, so the tip is N+1 — and the report projection
+counts that very checkpoint.
+
+This is the failure mode that tempts you to "fix" working code, the
+inverse of the usual one (#202 recorded its sibling: a drill failing
+because the fix worked). The fix was to compare against the prefix the
+snapshot NAMES. **A materialization is evidence about a position, and
+the position it names is the only one it can be checked against.**
+
+## Running as root masks the permission failures CI will find (os-8a5f14bb)
+
+`make check` was green locally and red in CI on a `TempDir RemoveAll
+cleanup: permission denied`. `project.Rebuild` locks its published
+build trees (0555 directories) by design, so Go's `t.TempDir()` cleanup
+cannot remove them — unless the process is root, which ignores the
+permission bits entirely.
+
+The card's own acceptance criterion said "the suites pass
+unprivileged". Coverage was measured cold, as asked; the unprivileged
+run was skipped because everything was already green, which is exactly
+when it is worth the least and costs the most to skip.
+
+Two things follow. **The unprivileged run is not a formality when the
+container is root** — it is the only run that sees this class of
+failure at all. And **the fix already existed in the tree**:
+`cmd/seed/project_cli_test.go` carries a `t.Cleanup` that walks the
+output and chmods directories writable, with a comment naming "an
+unprivileged runner". A new drill against a locked surface needs the
+same cleanup, registered AFTER the `t.TempDir()` it unlocks so LIFO
+ordering runs it first.
+
+## A mutation you cannot revert is a mutation you will ship (os-8a5f14bb)
+
+A mutation test left a deliberate defect in the shipped tree, and review
+caught it rather than any drill. The revert was:
+
+```sh
+git checkout cmd/seed/maintain.go 2>/dev/null || cp /tmp/m2.bak internal/maintain/maintain.go
+```
+
+`cmd/seed/maintain.go` was a NEW file, so `git checkout` had nothing to
+restore, failed into `/dev/null`, and the fallback restored **a
+different file**. The tree kept the mutation. Everything afterwards was
+green, and green is exactly what the mutation predicted: it made the
+filing path try an escalation first, which that fixture always refused,
+so the loop fell through to the correct behavior.
+
+Three things follow.
+
+**Revert by construction, not by command.** Snapshot the file you are
+about to mutate and restore that same path — `cp X X.bak` then `cp
+X.bak X` — never a `git` verb whose behavior depends on whether the
+file is tracked, and never with the failure silenced.
+
+**Verify the revert, not the tests.** A passing suite cannot tell "the
+mutation is gone" from "the mutation is inert here". The check that
+works is a diff or a grep for the mutation's own text.
+
+**An inert mutation is a void experiment, not a passing one.** This
+mutation could never land: `escalation.raised` requires a packet, so
+the payload was refused on shape before any rule about escalations ran.
+Re-running it with a WELL-FORMED payload against a subject in `review`
+made it land, and the guard fired immediately. The rule already
+recorded on #202 — a mutation that changes nothing means the drill
+never reached the code — has a second half: it may equally mean the
+mutation never reached the code, and the two are told apart only by
+making the mutation land.
 ## Two workers stepped in sequence do not race (os-6a08b166)
 
 The fleet fixture's middle arm needed a genuinely refused `claim take`.

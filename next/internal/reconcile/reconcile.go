@@ -14,6 +14,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -35,6 +36,20 @@ const (
 	ClassAttestedDivergence = "attested_divergence"
 	ClassTargetRewritten    = "target_rewritten"
 )
+
+// ClassRunUnsettled is a metered run whose fence never settled
+// (plans/os-8a5f14bb.md D2). It is the one class Phase 9's maintenance
+// loop adds, and it is CONSUMED from internal/obligation rather than
+// re-derived here.
+//
+// The reason is the whole subtlety: post-close settlement is valid, so
+// the flag is position-anchored — raised only once the subject has
+// taken a subsequent claim window or reached a terminal state. A
+// closed-without-settle predicate written fresh here would look
+// obviously right and would file spurious findings against every park
+// and reap in flight. Two copies of that anchoring is exactly the
+// failure the projection exists to prevent.
+const ClassRunUnsettled = "run_unsettled"
 
 // ClassVerdictUnverified is record-derivable like the fold classes but
 // needs the raw records: a folded verdict whose signer never satisfied
@@ -217,4 +232,21 @@ func Classify(records []*event.Record, f *transition.Fold) []Finding {
 	out = append(out, VerifyVerdicts(records, f)...)
 	out = append(out, VerifySeals(records, f)...)
 	return append(out, VerifyOverrides(records, f)...)
+}
+
+// Unsettled renders the obligation projection's run.unsettled rows as
+// findings. It is a translation, not a derivation: the anchoring that
+// decides WHEN a run counts as unsettled stays in internal/obligation,
+// and this function would report nothing at all if that projection
+// stopped emitting the kind.
+func Unsettled(rows []obligation.Row) []Finding {
+	var out []Finding
+	for _, r := range rows {
+		if r.Kind != obligation.KindRunUnsettled {
+			continue
+		}
+		out = append(out, Finding{Subject: r.Subject, Class: ClassRunUnsettled,
+			Detail: fmt.Sprintf("a metered run opened at position %d has no run.settled and the window can no longer settle it (owed by %s) — telemetry, never authority, but a run nobody settled is a run nobody metered", r.Since, r.OwedBy)})
+	}
+	return out
 }

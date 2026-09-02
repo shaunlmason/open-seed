@@ -1554,6 +1554,106 @@ here. Newest last.
   in the window by construction rather than by timing. A race
   reproduced by sleeping passes green on a slower runner.
 
+## Phase 9 item 3 — the unattended maintenance loop (os-8a5f14bb, plan #203)
+
+- **A reap answers an unanswered request, never a timeout.** The plan's
+  first draft named "the claim's own lease elapsed" as the fact
+  corroborating silence. **There is no lease** — the word appears once
+  in the whole `next/` spec tree, in the sentence denying it
+  (`observations.md`: *"Seed holds no lease: a claim stands until a
+  deliberate exit or a reap"*). Implementing it would have meant
+  inventing lease semantics or picking an undeclared threshold.
+
+  The corroboration that exists is better, and `executors.md` named
+  this card as its consumer: the force path, where a worker that
+  **ignores its interrupt** is killed and reaped. So a reap requires
+  the `expired`/`wedged` classification **and** an admitted
+  `run.interrupted` on the active fence, or an admitted
+  `wedge.declared`. Both are judged by whether the fact passed the
+  boundary at its own position (`admit.InterruptRequested`,
+  `admit.WedgeDeclared`), so a raw unprivileged interrupt corroborates
+  nothing.
+
+  That changes what a reap MEANS: not "long enough has passed" but
+  "someone asked, and nothing happened", which is the only
+  corroboration a channel declared lossy can support — and it is why
+  there is no threshold in this lane to tune.
+
+- **`wedge.declared` needed its own derivation, and the reason is worth
+  recording.** Unlike `run.interrupted` it is a FREE verb: no
+  transition-table row, no fold fact, so there is nothing on
+  `SubjectState` to consume and the records are the only place the
+  declaration exists. `admit.WedgeDeclared` sits beside
+  `InterruptRequested` rather than in `internal/maintain`, because "did
+  this fact pass the boundary at its own position" is one question and
+  belongs in the package that answers it for everything else.
+
+- **`no_data` carries no reap path whatever**, however old the claim,
+  and corroboration does not rescue it. A stream holding nothing looks
+  exactly like a worker that died before its first line AND exactly
+  like one whose lossy channel dropped everything. The drill plants the
+  corroboration standing, because that is the case where an
+  almost-right rule would reap.
+
+- **The evidence-grade checks moved into `internal/reconcile`.** They
+  lived unexported in `cmd/seed/reconcile.go` — attested-head
+  reconciliation, target-rewrite detection, receipt retrievability —
+  and they are the ones that see divergence with no record to derive it
+  from. A maintenance pass built on `reconcile.Classify` alone reports
+  **clean** over a rewritten target: green, and omitting exactly the
+  divergence this loop is chartered to reconcile (review finding on
+  #203). One implementation, two callers.
+
+  The drill for it carries a CONTROL: it asserts the pass reports
+  `target_rewritten` and that `Classify` over the same ledger does
+  **not**. Without the control the drill would pass on a pass that
+  reported everything for some other reason, and "consumes the complete
+  result" would be untested.
+
+- **A checkpoint persists a snapshot a fresh reader can start from.**
+  "Checkpoint (signed)" would have let every acceptance criterion pass
+  with an unusable checkpoint. The payload is now the strict
+  `{format, snapshot, location, position}`, validated at admission,
+  with the canonical materialization written to the artifact store
+  first — so the event cannot name a location nothing can fetch.
+
+  **Shape at the door, contents at the read**, and the split is forced
+  rather than chosen: `admit.Context` carries no artifact store,
+  because admission reads the ledger alone, so retrievability is not a
+  fact admission can establish. The reader fetches, verifies against
+  the signed hash, and starts. Saying which check lives where is the
+  honest version of "validated at admission".
+
+- **The unsettled-run lint is CONSUMED from `internal/obligation`**,
+  never re-derived. The anchoring is the whole subtlety: post-close
+  settlement is valid, so the flag rises only once the subject has
+  taken a subsequent window or reached a terminal state. The mutation
+  that replaces it with a closed-without-settle predicate looks
+  obviously right and files a finding against every run in flight.
+
+- **A finding files a defect contract, never an escalation.** An
+  escalation freezes a contract and demands a human decision; a finding
+  is work somebody should do. Consequence, stated rather than buried:
+  this loop can create work, which is authority — bounded by being
+  attributable and by filing nothing but contracts, since it cannot
+  claim what it files.
+
+  Filing is idempotent **through the ledger itself**: the defect id is
+  a stable hash of class and subject, so a second pass re-files the
+  same subject and the boundary refuses the duplicate. A maintenance
+  loop that remembers what it filed is one that can forget.
+
+- **`seed maintain run` is a verb although `seed loop run` was
+  refused**, and the asymmetry is the argument rather than an exception
+  to it. The worker loop has no verb because Seed does not own the
+  work. The maintenance lane's work IS Seed's own: there is no work
+  step to supply.
+
+- **Refused acts are reported and the pass continues; broken effects
+  stop it.** A refusal is the boundary doing its job and the rest of
+  the pass is still worth running. A store that will not write or a
+  rebuild that will not build stops the pass, because continuing would
+  checkpoint a state that was never materialized.
 ## Phase 9 item 4 — small-team and fleet fixtures (os-6a08b166, plan #204)
 
 - **The terminal reconciliation surface was missing, not merely
