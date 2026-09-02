@@ -1243,6 +1243,31 @@ the assertions read, and there is no copy to go stale.
   loop retries against a refreshed one; carry the derivation in the
   act so every attempt recomputes it, even when the payload itself
   holds nothing derived.
+- A coverage claim is only as good as its derivation: enumerate the
+  registry the rules construct refusals from (`curation.Gates()`) and
+  fail on any gate no drill attacks, rather than hand-listing the gates
+  a drill covers. The registry and the spec table pinned both ways
+  keep the three from drifting apart.
+- When a script fixes positions ahead of time (an eval marker citing
+  where the hypothesis WILL land), compute the cited position from the
+  count before the records land and assert equality with where the
+  fact actually landed, rather than subtracting a constant from the
+  last record's position: the constant drifts the first time the
+  fixture adds a record.
+- A validity check that recurses into the validity of every earlier
+  fact of the same kind is exponential in the count of those facts,
+  even when each level is a linear scan. Split it into the arms (never
+  recursive) and the ordering rule, and find "the latest admitted one
+  before here" in one forward pass that judges each candidate through
+  the arms and the ordering against the latest it has admitted so far.
+  The refold drill from the previous item caught the retirement
+  ordering's first cut within a second.
+- Key a fold's per-path maps by the path, not the anchor, when the
+  readers' questions are about the path; the first drill that asks
+  `fold.Lessons[path]` will say so.
+- Two parallel shell calls share one working directory: a `cd` in one
+  moves the other. Use absolute paths in every call that runs beside
+  another, or a merge intended for one worktree lands in another.
 - Before designing a human's act, check what the human's key can and
   cannot hold. The sealed-checks recipient set excludes operator
   standing, so a "human = verdict + operator" key can never compute a

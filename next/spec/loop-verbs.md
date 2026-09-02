@@ -92,7 +92,7 @@ submit → deliberate exit:
 
 | Act | Verb | Derives | Takes |
 | --- | --- | --- | --- |
-| `claim take` | `claim.taken` | — | `--repo <dir>` optional: the surfacing lessons are verified against it and returned as `lessons` (`[{lesson, hypothesis, applies_when, carrier, digest}]`, present on every claim, empty when nothing matches), the facts that do not resolve as `lessons_unresolved`; without it `lessons` is empty and `lessons_unverified` counts what a repository would have verified ([`curation.md`](curation.md)) |
+| `claim take` | `claim.taken` | — | `--now <RFC3339>` optional (default: the wall clock; admission reads no clock): the instant the lessons' expiry is read at, an expired or retired lesson never surfacing ([`curation.md`](curation.md)); `--repo <dir>` optional: the surfacing lessons are verified against it and returned as `lessons` (`[{lesson, hypothesis, applies_when, carrier, digest}]`, present on every claim, empty when nothing matches), the facts that do not resolve as `lessons_unresolved`; without it `lessons` is empty and `lessons_unverified` counts what a repository would have verified ([`curation.md`](curation.md)) |
 | `claim release` | `claim.released` | fence | `--packet` |
 | `claim park` | `claim.parked` | fence | `--packet`, `--question`/`--option` |
 | `submission make` | `submission.made` | fence, plan anchor | `--packet` |

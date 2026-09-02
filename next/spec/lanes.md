@@ -369,6 +369,19 @@ ordered fragment list prevents.
   for the input-handling half, **two-thirds met**: intents and tool
   output are covered and mirrors are not, because `request.*` is
   unlanded. Three residuals are named and pinned rather than closed.
+- III.K row 4 "Trajectories are treated as untrusted inputs; the
+  poisoning drill fails to achieve promotion in CI" — met by the
+  curator poisoning drill ([`curation.md`](curation.md), "The
+  poisoning drill"): this suite's shape turned on the curation gates,
+  a corpus of scripted poisons derived from the gate registry, each
+  asserted to fail at both ends, five residuals named and pinned, and a
+  CLI arm in the modes fixture; `make check` runs it.
+- III.K rows 6, 7 and 9 (the stamps and expiry-for-revalidation,
+  retirement keeping evidence, rollback by revert; dead ends
+  un-retired on environment change and dead-end applicability;
+  knowledge bloat managed) — met by Phase 11 item 4
+  ([`curation.md`](curation.md), "Expiry, retirement and
+  applicability" and "Bloat"), the mapping there naming each drill.
 
 - III.G row 7 and III.O row 2 (rubric verdicts scored item by item
   with cited evidence and explicit uncertainty; low-confidence items

@@ -257,7 +257,7 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 	unverified := 0
 	for _, w := range windows {
 		held, _ := w["subject"].(string)
-		surfaced, unresolved := curation.Surfacing(st.records, st.fold, *repo, held)
+		surfaced, unresolved := curation.Surfacing(st.records, st.fold, *repo, held, now)
 		if *repo == "" {
 			unverified += len(unresolved)
 			continue

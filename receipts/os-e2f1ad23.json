@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "task": "os-e2f1ad23",
+  "merge_base": "43937beceaad4455edce32ae4d0b79522f0bac89",
+  "head": "df09967c7cb4c30ecf54127ce05a9be0bb71fe71",
+  "plan_path": "plans/os-e2f1ad23.md",
+  "plan_sha256": "476e48ffaa0930fab756f78ade43373edd00d27c60e5b0220e2dee0538f306bf",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/modes_e2e_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/poisoning_scripts_test.go",
+    "next/internal/admit/poisoning_test.go",
+    "next/internal/admit/testdata/poisoning/corpus.json",
+    "next/internal/admit/testdata/poisoning/residuals.json",
+    "next/spec/curation.md",
+    "next/spec/lanes.md"
+  ],
+  "diff_sha256": "cda37bfcf6a97d5c95914c4c8be1029ef841a924ef4aefbddff2bc292bdbc0ab",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/curation/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

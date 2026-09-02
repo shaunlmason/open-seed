@@ -39,4 +39,33 @@ expires: 2026-12-02
 
 Item 1 lints the presence of these keys (`curation.Lint`, applied to
 every file here by drill); item 2 lints their content against the
-promotion gate; item 4 reads the dates.
+promotion gate; item 4 reads the dates, and lints the structure and
+the store's dedup.
+
+## Body
+
+After the frontmatter, the body carries these sections, in this
+order (`curation.LintStructure`):
+
+```
+## Claim
+## Evidence
+## Applies when
+```
+
+The frontmatter carries exactly the keys above and no other. The
+store holds one file per hypothesis (`curation.LintDuplicates`):
+revalidation moves a file's stamps forward in place, so a second file
+citing the same hypothesis is a duplicate, and the lint names it.
+
+## Expiry and retirement
+
+A lesson is expired at an instant at or past its `expires`; an expired
+lesson leaves the surfacing set and is flagged stale wherever the
+store is shown. Revalidation is a PR moving `last-validated` and
+`expires` forward and a new `curation.lesson.promoted` for the same
+path at the new anchor, through the whole promotion gate. Retirement
+(`curation.lesson.retired`) revokes the conclusion and keeps this file,
+its hypothesis and every observation; a regression rolls back by
+reverting the promotion PR, one command, and the observer records the
+revert's merge as the retirement's `pr`.

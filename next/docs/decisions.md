@@ -2471,6 +2471,98 @@ moved tip; the act now carries a derivation that recomputes the set
 against every refreshed view (the payload holds nothing derived, so
 the re-derivation cannot diverge and only refreshes the result), and
 the response reports the set at the tip the claim landed on.
+## Phase 11 item 3 — the poisoning drill (os-e2f1ad23, plan #229)
+
+**The corpus is a JSON declaration and the scripts are Go, joined both
+ways.** The plan's D1 names the shape; the choice worth recording is
+that a poison's expectation is either a registered gate or a reason
+string, never both, and that the reasons are the three refusals the
+boundary raises outside the registry (out of grant, the grant's
+disjointness, the acceptance's gate). A poison expecting a gate is
+judged by `GateError.Gate`; one expecting a reason by the error's text,
+except out of grant, which is judged by type so the message can change.
+
+**The lint poisons have one end.** The file half judges a lesson the
+ledger already promoted; its "achieved" end is the file passing `seed
+knowledge lint` under `make check`, which gates the lesson PR. The
+drill asserts the refusal at the gate and says so, rather than
+pretending a claim-time check the delivery does not make.
+
+**A residual that closed while the drill was being written.**
+Scripting the promotion poisons showed that a promotion pushed past the
+boundary bound in the fold and was a delivery candidate, and the same
+held for a contest. Both were named as this drill's sixth residual for
+a day, then fixed where the plan's D5 says such a thing is fixed: in
+the gate's own package, by item 2's review (the fold re-judges contests
+and promotions through the same `CheckContest` and `CheckPromotion`
+the boundary runs, which moved the adversarial arm into `curation`).
+The residual became two poisons, `raw-pushed-promotion` and
+`raw-pushed-contest`, each pushing the refused fact past the boundary
+and asserting the fold bound nothing.
+
+**The CLI arm reads the hypothesis position from `knowledge show`.**
+The propose envelope stamps the tip, not the fact's position; the
+lessons e2e drill already reads the fold's view, and the arm does the
+same rather than deriving a position from the tip.
+
+## Phase 11 item 4 — expiry, retirement, dead-end applicability, bloat (os-0d537fbd)
+
+**Expiry is a derivation at an instant, at-or-past.** `curation.Expired`
+compares the declared instant with the fact's `expires` and calls the
+lesson expired at the second its stamp names; no `lesson.expired` fact
+exists, and admission never reads a clock: the reads that surface
+lessons (`claim take`, `seed situation`, the projection) take the
+instant as a declared input, the offer-liveness posture.
+
+**The fold keeps the latest promotion per path, keyed by path.**
+`State.Lessons` and `State.Retired` are keyed by the lesson path, not
+the anchor: a revalidation is a new anchor for the same path, and the
+questions the readers ask (is this path retired, what stands for it)
+are questions about the path. The previous anchor-keyed map with a
+same-path sweep was replaced when the first drill asked
+`fold.Lessons[path]`.
+
+**The revalidation order is judged in one forward pass.** Promotion
+validity now has two halves: the arms (`checkPromotionArms`, every gate
+but the order) and the order against the latest admitted promotion of
+the path, which `LatestPromotionBefore` finds by judging each earlier
+promotion through the arms and the order against the latest it has
+admitted so far. The first cut asked `PromotionValid` recursively for
+every earlier promotion and turned exponential in the number of
+promotions of a path, which the item 2 refold drill
+(`TestFoldingManyPromotionsNeverRefolds`) caught at once; the same
+shape closes the retirement's standing check (`RetirementStanding`).
+
+**A second retirement over a standing one refuses.** D2 names the
+gate for a non-latest promotion; a retirement over a standing
+retirement of the same promotion is refused at the same gate
+(`retirement.promotion`), since the promotion it would revoke no
+longer stands. Otherwise a second `expired` after a `regression` would
+silently rewrite the standing reason.
+
+**The retirement probe prefers the queried subject's own promotion.**
+The affordance list's retirement probe cites the queried hypothesis's
+standing promotion where one stands, else the first unretired path, so
+the list on a hypothesis answers for that hypothesis and still lists
+the verb for a contract subject the way the promotion probe does.
+
+**The dedup lint names the unpromoted file as the duplicate.** With
+the fold given, the file the admitted promotion cites is the original
+and any other file citing the hypothesis is the duplicate; without the
+fold (the poison drill's bare stand), the first by name. The first cut
+called the alphabetically later file the duplicate, which named the
+promoted file when the duplicate sorted first.
+
+**The stale finding's threshold is inclusive.** `--stale-after 0`
+files on expiry itself, consistent with `Expired`'s at-or-past; a
+positive threshold files once the instant is at or past expiry plus
+the threshold.
+
+**The knowledge projection declares input consumption.** An instant is
+an input, and a build at another instant is another build; the stale
+flags ride the declared observation inputs' `as_of`, the one family
+that carries one, so a bare `AsOf` with no declared family declares
+nothing and the build id never collides across instants.
 
 ## Phase 10 item 4 — rubric verdicts, the human verdict, calibration (os-2e34f66a)
 

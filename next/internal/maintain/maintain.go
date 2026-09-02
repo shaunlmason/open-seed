@@ -23,6 +23,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
+	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
@@ -148,7 +149,11 @@ type Deps struct {
 	// reason obs.Classify takes one: a pass must be reproducible, and
 	// a maintenance loop that consulted a wall clock could not be
 	// replayed.
-	Now        time.Time
+	Now time.Time
+	// StaleAfter is how long past its expiry a lesson may stand,
+	// unrevalidated and unretired, before the lesson_stale lint files
+	// it (plans/os-0d537fbd.md D5); zero files on expiry itself.
+	StaleAfter time.Duration
 	Records    []*event.Record
 	Table      *transition.Table
 	Fold       *transition.Fold
@@ -327,6 +332,10 @@ func (d Deps) lint(rep *Report) []reconcile.Finding {
 		}
 	}
 	out = append(out, reconcile.Unsettled(d.Obligations)...)
+	// The stale half reads the declared instant, the one clock a pass
+	// has (plans/os-0d537fbd.md D5): what nobody revalidated or
+	// retired becomes work, never a retirement the loop performs.
+	out = append(out, reconcile.LessonsStale(curation.Fold(d.Records), d.Now, d.StaleAfter)...)
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Subject != out[j].Subject {
 			return out[i].Subject < out[j].Subject

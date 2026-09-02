@@ -1795,6 +1795,27 @@ func checkCuration(c *Context, rec *event.Record) error {
 		// promotion is judged here exactly as the fold re-judges it at
 		// its own position (review finding on the task PR).
 		return curation.CheckPromotion(c.Records, c.Table, c.Lifecycle, subject, l)
+	case curation.RetireVerb:
+		// Retirement (plans/os-0d537fbd.md D2): the cited promotion is
+		// the latest admitted one of its path, the reason's field
+		// rides it, and superseded_by names a later admitted
+		// promotion. The fold re-judges it through the same check.
+		r, err := curation.ParseRetirement(subject, rec.Event.Payload)
+		if err != nil {
+			return err
+		}
+		_, err = curation.CheckRetirement(c.Records, c.Table, subject, r)
+		return err
+	case curation.DeadEndRetireVerb, curation.DeadEndUnretireVerb:
+		// A dead end retires and un-retires on the environment, by a
+		// curator's attributable act (plans/os-0d537fbd.md D3): the
+		// citation is an admitted dead end, the environment moved,
+		// and the standing act is the one the verb expects.
+		d, err := curation.ParseDeadEndRetirement(rec.Event.Verb, subject, rec.Event.Payload)
+		if err != nil {
+			return err
+		}
+		return curation.CheckDeadEndRetirement(c.Records, c.Table, rec.Event.Verb, subject, d)
 	}
 	return nil
 }

@@ -218,9 +218,13 @@ admission).
   on the subject its claim and exceptions derive),
   `hypothesis.contested` (the curator's held-out counter-evidence, on
   the hypothesis), `lesson.promoted` (the PR observation, on the
-  hypothesis, citing the adversarial evaluation it survived), all four
-  from [`curation.md`](curation.md) as additive catalog growth, active
-  from `seed/1`; `lesson.retired` waits on Phase 11 item 4.
+  hypothesis, citing the adversarial evaluation it survived),
+  `lesson.retired` (the observation that a promotion is revoked, on the
+  hypothesis, by regression, supersession or expiry; the evidence
+  stays), `deadend.retired` and `deadend.unretired` (the curator's
+  judgment that a dead end's environment moved, on the contract), all
+  seven from [`curation.md`](curation.md) as additive catalog growth,
+  active from `seed/1`.
 
 ## Data classification (summary)
 

@@ -167,11 +167,14 @@ type ReportReconciliation struct {
 // count (plans/os-96850e5a.md): the section changes the bytes of
 // every prefix carrying a curation fact, so an unchanged tip
 // republishes under a new build id rather than keeping a tree without
-// it (review finding on the item 3 PR). Inputs marks it as the one
-// input-consuming projection, everything else staying byte-identical
+// it (review finding on the item 3 PR). Version "12" moves with the
+// section again: the retired and stale counts, the latter judged at
+// the declared instant (plans/os-0d537fbd.md D4). Inputs marks it as
+// an input-consuming projection; the knowledge projection is the
+// other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "11", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "12", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -253,6 +256,13 @@ func buildReport(records []*event.Record, in Inputs) (map[string][]byte, error) 
 	view, err := reportView(records)
 	if err != nil {
 		return nil, err
+	}
+	// The knowledge counts are judged at the declared instant where
+	// one is declared (plans/os-0d537fbd.md D4): the stale count is
+	// the one section field an instant changes.
+	if at := instantOf(in); at != nil && view.Knowledge != nil {
+		stages := DeriveKnowledgeAt(records, at).Stages
+		view.Knowledge = &stages
 	}
 	if in.Obs != nil {
 		section, err := observationSection(records, in)
