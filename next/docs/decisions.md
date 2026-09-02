@@ -1802,3 +1802,68 @@ here. Newest last.
   first draft of the plan still missed it. Leaving it stale would have
   left the documented worker-loop protocol false in the one place a
   worker reads to learn what exhaustion looks like.
+
+## Phase 9 item 5(b) — the situation read carries the caller's mail (os-8451d939, plan #209)
+
+- **Notices, not bodies, and the constraint decided it rather than
+  taste.** `message.sent` needs **no capability at all** — the
+  standing-only verb any enrolled active actor appends — and
+  `lanes.md`'s residual table names it "the one that RELAYS", bounded
+  only by a size lint a short instruction sails through. `situation` is
+  the single surface every lane fragment names as the one it orients
+  from, taken on **every wake, unbidden**. A body there would let any
+  enrolled actor write prose into the read of every lane in the
+  deployment. So the notice carries sender, contract, position and
+  size: generated identifiers, a count, and nothing a sender chose.
+
+  Sanitization was refused rather than attempted. The residual table's
+  own point is that a size bound does not stop a short instruction, and
+  no sanitizer of prose was going to do better against the exact
+  channel the suite already names as the sharpest one.
+
+- **And the body IS readable, by a deliberate second act.** The first
+  draft deferred `seed message read` and marked 5(b) complete anyway,
+  which was wrong on the build plan's own words and on promotion's
+  requirement that a lane work entirely through Seed verbs: a lane that
+  learns mail exists and cannot obtain it has not been given its mail
+  (review finding on #209).
+
+  The deferral's stated reason did not survive its own argument. What
+  makes bodies unacceptable in `situation` is that `situation` is read
+  unbidden; a read naming one position is the "reader must choose to
+  look" case the residual analysis already accepts, taken **after** a
+  notice said who sent the thing. The two surfaces differ exactly where
+  it matters, so an argument against one is not an argument against the
+  other.
+
+- **A malformed address reaches NOBODY, not everybody.** The first
+  draft collapsed absent and malformed into one broadcast case, so
+  `{"to": ["<fp>", 7]}` would have widened delivery from one intended
+  recipient to every actor on an encoding slip — contradicting the same
+  plan's own "and only those" (review finding on #209).
+
+  Absent and malformed are different facts. An absent `to` is a sender
+  who said nothing about addressing, and reading that as everyone reads
+  what is there. A malformed `to` is a sender who said something the
+  projection cannot read, and **every** resolution invents intent —
+  including the tempting middle option of delivering to the well-formed
+  entries, since nothing in the payload says the malformed one was not
+  a recipient encoded wrongly. A typo costs delivery, not the message:
+  the keyless whole-board read applies no caller filter, so an
+  undeliverable message stays discoverable.
+
+- **The refusal for "not yours" is `not_found`, byte for byte what
+  "nothing there" gets.** Four reasons a caller gets no body share one
+  construction site, so the indistinguishability is a property rather
+  than four strings that happen to match today. `not_recipient` (exit
+  23) was NOT reused: it names the sealed-envelope recipient set, whose
+  answer is "re-seal to the current set", and sharing a code across two
+  different answers is what `envelope.md`'s allocation rule forbids —
+  the rule os-d03bde01 had just finished drilling.
+
+- **Unread is the cursor and nothing else.** No `message.read` verb, no
+  stored read-state, `message.acked` still unimplemented. The position
+  a lane carries forward IS its read cursor; a verb recording that
+  someone looked would hand it a second cursor to disagree with the one
+  it already has. An ack means "I acted on this", which a cursor cannot
+  derive, and that is why the charter keeps it separate.
