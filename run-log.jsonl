@@ -957,3 +957,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:210","to":"ready"},"task":"os-d6a52784","ts":"2026-09-02T05:44:18Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T06:44:27Z"},"task":"os-8451d939","ts":"2026-09-02T05:44:27Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-72848f9c","kind":"pr"},"task":"os-8451d939","ts":"2026-09-02T06:07:12Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-a85e9dfd","kind":"receipt"},"task":"os-8451d939","ts":"2026-09-02T06:07:15Z","verb":"attach-evidence"}
