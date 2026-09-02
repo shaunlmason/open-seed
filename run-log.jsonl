@@ -980,3 +980,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-d71da447","kind":"pr"},"task":"os-e6cdb3d9","ts":"2026-09-02T07:29:34Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-a0035808","kind":"receipt"},"task":"os-e6cdb3d9","ts":"2026-09-02T07:29:37Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-2b290a4b","kind":"check"},"task":"os-e6cdb3d9","ts":"2026-09-02T07:29:40Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-e6cdb3d9","ts":"2026-09-02T07:29:44Z","verb":"transition"}
