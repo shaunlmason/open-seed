@@ -279,7 +279,8 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 // has said nothing about what it has seen.
 func messagesFor(st *verdictState, fp, only string, sincePos int, haveSince bool) []map[string]any {
 	out := []map[string]any{}
-	for _, m := range project.DeriveMessages(st.records) {
+	isContract := func(subject string) bool { _, ok := st.fold.State(subject); return ok }
+	for _, m := range project.DeriveMessages(st.records, isContract) {
 		if only != "" && m.Subject != only {
 			continue
 		}
@@ -293,11 +294,16 @@ func messagesFor(st *verdictState, fp, only string, sincePos int, haveSince bool
 			continue
 		}
 		row := map[string]any{
-			"from":    m.From,
-			"subject": m.Subject,
-			"at":      fmt.Sprintf("%d", m.At),
-			"bytes":   fmt.Sprintf("%d", m.Bytes),
-			"unread":  !haveSince || m.At > sincePos,
+			"from":   m.From,
+			"at":     fmt.Sprintf("%d", m.At),
+			"bytes":  fmt.Sprintf("%d", m.Bytes),
+			"unread": !haveSince || m.At > sincePos,
+		}
+		// The subject is a contract id or it is absent: an event
+		// subject that resolves to nothing on the chain is prose a
+		// sender chose, and it does not ride this read.
+		if m.Subject != "" {
+			row["subject"] = m.Subject
 		}
 		if m.Undeliverable {
 			row["undeliverable"] = true

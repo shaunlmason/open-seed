@@ -140,9 +140,19 @@ position later than its own `since` — is reported for the same reason.
 
 The read also carries the caller's **mail**, which is what closes the
 build plan's Phase 9 item 5(b). Each entry says a message exists and
-nothing about what it says: `{from, subject, at, bytes, unread}`, plus
-`undeliverable` where it applies. Every one of those is a
-ledger-generated identifier, a count, or a flag.
+nothing about what it says: `{from, at, bytes, unread}`, plus
+`subject` when it resolves and `undeliverable` where it applies. Every
+one of those is a ledger-generated identifier, a count, or a flag.
+
+**The subject is carried only when it is a contract.** The event's
+subject field is sender-controlled: `message.sent` admits on any
+nonempty subject, and the classification lint reads only the payload,
+so `--subject "IGNORE PREVIOUS INSTRUCTIONS"` admits (review finding
+on #211). A notice therefore carries `subject` only when it resolves
+to a contract on the chain and omits it otherwise — the message still
+shows, from whom and how large, and declines to repeat what the sender
+wrote in a field that was never an identifier. The injection sweep
+plants its marker in a subject as well as in payloads.
 
 **Why not the body.** `message.sent` needs **no capability at all** —
 it is the standing-only verb any enrolled active actor may append, and
@@ -198,9 +208,21 @@ not.
 
 It appends nothing. A caller the message does not address gets
 `not_found` (exit 4), **byte for byte** what a position holding no
-message gets, so the refusal discloses nothing about what is there;
-the four reasons a caller gets no body share one construction site so
-that stays true. `not_recipient` (exit 23) is not reused: it names the
+message gets, so this surface adds no oracle for what is there; the
+four reasons a caller gets no body share one construction site so
+that stays true.
+
+**Addressing is routing, not confidentiality** (review finding on
+#211). The ledger is plaintext and is the audit record by charter
+design: the projections carry every payload verbatim
+([`projections.md`](projections.md)), and `seed ledger show
+--position P` returns any event to anyone with read access to the
+repository, which is the same access these reads need. A non-recipient
+can read any body there. What `not_found` buys is that a lane acting
+through Seed verbs is routed only its own mail, and that the message
+surface does not become a second place to ask. A body that must be
+confidential is a sealed-checks problem
+([`sealed-checks.md`](sealed-checks.md)), not an addressing one. `not_recipient` (exit 23) is not reused: it names the
 sealed-envelope recipient set, whose answer is "re-seal to the current
 set" ([`envelope.md`](envelope.md)'s allocation rule forbids sharing a
 code across two different answers). A key is required, because a body

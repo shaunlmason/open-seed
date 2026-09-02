@@ -21,11 +21,21 @@ package main
 //     cursor to disagree with the one it already carries.
 //   - NOT a new refusal code. A caller the message does not address
 //     gets not_found, byte for byte what a position holding no message
-//     gets, so the refusal discloses nothing about what is there.
-//     not_recipient (exit 23) is emphatically not reused: it names the
-//     sealed-envelope recipient set, whose answer is "re-seal to the
-//     current set" (next/spec/envelope.md's allocation rule forbids
-//     sharing a code across two different answers).
+//     gets, so THIS SURFACE does not become an oracle for what is
+//     there. not_recipient (exit 23) is emphatically not reused: it
+//     names the sealed-envelope recipient set, whose answer is "re-seal
+//     to the current set" (next/spec/envelope.md's allocation rule
+//     forbids sharing a code across two different answers).
+//   - NOT confidentiality. Addressing is ROUTING (review finding on
+//     #211). The ledger is plaintext and is the audit record by charter
+//     design: the projections carry every payload verbatim, and
+//     `seed ledger show --position P` returns any event to anyone with
+//     read access to the repository, which is the same access these
+//     reads need. A non-recipient can read any body there. What
+//     not_found buys is that a lane acting through Seed verbs is routed
+//     only its own mail, and that the message surface adds no second
+//     oracle; a body that must be confidential is a sealed-checks
+//     problem (next/spec/sealed-checks.md), not an addressing one.
 //   - NOT a mailbox. One message at one position; the listing is
 //     situation's job.
 
@@ -116,11 +126,17 @@ func runMessageRead(args []string, stdout, stderr io.Writer) int {
 	if !notice.Addresses(fp) {
 		return render(stampTip(messageNotFound(pos), st.count), stdout, stderr)
 	}
-	return render(stampTip(envelope.OK(map[string]any{
-		"from":    rec.Event.Actor,
-		"subject": rec.Event.Subject,
-		"at":      fmt.Sprintf("%d", pos),
-		"ts":      rec.Event.TS,
-		"body":    string(rec.Event.Payload),
-	}), st.count), stdout, stderr)
+	result := map[string]any{
+		"from": rec.Event.Actor,
+		"at":   fmt.Sprintf("%d", pos),
+		"ts":   rec.Event.TS,
+		"body": string(rec.Event.Payload),
+	}
+	// Same rule as the notice: the subject is a contract id or absent.
+	// This is the deliberate read and the body is prose by definition,
+	// but a field that CLAIMS to be an identifier must be one.
+	if _, ok := st.fold.State(rec.Event.Subject); ok {
+		result["subject"] = rec.Event.Subject
+	}
+	return render(stampTip(envelope.OK(result), st.count), stdout, stderr)
 }

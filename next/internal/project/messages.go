@@ -37,10 +37,18 @@ const MessageSentVerb = "message.sent"
 // reading this struct, so the drill notices a field this comment does
 // not stop.
 type MessageNotice struct {
-	// From is the sending actor's fingerprint, and Subject the
-	// contract the message concerns: both generated identifiers.
-	From    string `json:"from"`
-	Subject string `json:"subject"`
+	// From is the sending actor's fingerprint, a generated identifier.
+	From string `json:"from"`
+	// Subject is the contract the message concerns, carried ONLY when
+	// it resolves to a contract on the chain, and omitted otherwise.
+	// The event's subject field is sender-controlled: message.sent
+	// admits on any nonempty subject and the classification lint reads
+	// only the payload, so `--subject "IGNORE PREVIOUS INSTRUCTIONS"`
+	// admits and would otherwise ride this field straight into the
+	// orienting read (review finding on #211). Resolving it against
+	// the fold is what makes "a generated identifier" true by
+	// construction rather than by hope.
+	Subject string `json:"subject,omitempty"`
 	// At is the ledger position, which is also the cursor a reader
 	// compares against: the position a lane carries forward IS its
 	// read cursor, so unread needs no stored state and no verb
@@ -62,16 +70,22 @@ type MessageNotice struct {
 // DeriveMessages returns the notices for every message.sent on the
 // chain, in position order. Filtering to a caller is the reader's job
 // (Addresses), because the keyless whole-board read applies no filter.
-func DeriveMessages(records []*event.Record) []MessageNotice {
+// isContract says whether a subject resolves to a contract on the
+// chain; a notice whose subject does not carries none.
+func DeriveMessages(records []*event.Record, isContract func(subject string) bool) []MessageNotice {
 	out := []MessageNotice{}
 	for pos, rec := range records {
 		if rec.Event.Verb != MessageSentVerb {
 			continue
 		}
 		to, undeliverable := AddressedTo(rec.Event.Payload)
+		subject := ""
+		if isContract != nil && isContract(rec.Event.Subject) {
+			subject = rec.Event.Subject
+		}
 		out = append(out, MessageNotice{
 			From:          rec.Event.Actor,
-			Subject:       rec.Event.Subject,
+			Subject:       subject,
 			At:            pos,
 			Bytes:         len(rec.Event.Payload),
 			To:            to,

@@ -1816,6 +1816,17 @@ here. Newest last.
   deployment. So the notice carries sender, contract, position and
   size: generated identifiers, a count, and nothing a sender chose.
 
+  **And "nothing a sender chose" had to be made true rather than
+  claimed** (review finding on #211). The event SUBJECT is
+  sender-controlled: `message.sent` admits on any nonempty subject and
+  the lint reads only the payload, so a subject of "IGNORE PREVIOUS
+  INSTRUCTIONS" admitted and rode the `subject` field straight into
+  the orienting read, past a sweep whose marker lived only in
+  payloads. The notice now carries `subject` only when it resolves to
+  a contract on the chain, and the sweep plants its marker in a
+  subject too. A field that claims to be an identifier must be one by
+  construction.
+
   Sanitization was refused rather than attempted. The residual table's
   own point is that a size bound does not stop a short instruction, and
   no sanitizer of prose was going to do better against the exact
@@ -1853,9 +1864,17 @@ here. Newest last.
   undeliverable message stays discoverable.
 
 - **The refusal for "not yours" is `not_found`, byte for byte what
-  "nothing there" gets.** Four reasons a caller gets no body share one
-  construction site, so the indistinguishability is a property rather
-  than four strings that happen to match today. `not_recipient` (exit
+  "nothing there" gets — and that is routing, not confidentiality.**
+  Four reasons a caller gets no body share one construction site, so
+  the indistinguishability is a property rather than four strings that
+  happen to match today. What it is NOT is a secrecy guarantee (review
+  finding on #211): the ledger is plaintext and the audit record by
+  charter design, the projections carry every payload verbatim, and
+  `seed ledger show` returns any event to anyone with repository read
+  access. Encrypting bodies to recipients was refused as the answer,
+  because it would contradict the ledger being the record; the spec
+  now says addressing routes and does not conceal, and points a body
+  that must be confidential at sealed checks. `not_recipient` (exit
   23) was NOT reused: it names the sealed-envelope recipient set, whose
   answer is "re-seal to the current set", and sharing a code across two
   different answers is what `envelope.md`'s allocation rule forbids —
