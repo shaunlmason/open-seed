@@ -2452,11 +2452,15 @@ at its position, and `CheckPromotion` is the ONE implementation the
 boundary and the fold share, which moved the adversarial arm and the
 L1 pass authentication (`curation.AuthenticPass`, the same rule
 `FailedAt` replays) out of `admit` into `curation`, so the two cannot
-disagree by construction. When Phase 10 item 3's levels land, the
-promotion's pass authentication must gain the level rule beside the
-grant and the disjointness, or a raw-pushed level-short pass on a
-high-tier eval would authenticate at promotion; that is the one
-follow-up this refactor leaves. (3) `LintFile` validated the caller's
+disagree by construction. Phase 10 item 3's levels landed on main
+while this was in review, and the promotion's pass authentication
+gained the level rule with them: `admit` installs its `levelBoundary`
+into `curation.PassLevelCheck` at init, so the fold's promotion replay
+applies the same level rule the verdict rule and the merge chain
+apply, from seed/4, with no second copy of `LevelAchieved`; a pass
+pushed past the verdict boundary at a level the record does not
+support is not survival, and the drill pins both the installation and
+the refusal. (3) `LintFile` validated the caller's
 working-tree body and hashed the anchored bytes separately, so a valid
 frontmatter in a later edit could stand in for the invalid promoted
 one; the lint now reads the bytes at the anchor first, refuses at

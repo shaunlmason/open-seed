@@ -246,6 +246,17 @@ func (e *LevelShortError) Error() string {
 	return fmt.Sprintf("verdict on %s refused: tier %q requires independence %s and the record supports %s — a verifier's configuration that cannot separate from the work's cannot judge a high-consequence contract (next/spec/verdicts.md, next/spec/tiers.md)", e.Subject, e.Tier, e.Required, e.Achieved)
 }
 
+// The level half of a pass's authentication is installed into the
+// curation package at init (plans/os-96850e5a.md, review fixes): the
+// fold's promotion replay authenticates the adversarial pass through
+// curation.AuthenticPass, and the level rule must be the same one the
+// verdict rule and the merge chain apply, not a second copy.
+func init() {
+	curation.PassLevelCheck = func(records []*event.Record, table *transition.Table, subject string, s transition.SubjectState, fact transition.VerdictFact) bool {
+		return levelBoundary(&Context{Records: records, Table: table}, subject, "", s, fact) == nil
+	}
+}
+
 // LevelAchieved computes the independence level the record supports
 // for a verdict on the subject (plans/os-99829835.md D1, D3): the
 // highest that holds. L3 when the acceptance is executable and gated,
