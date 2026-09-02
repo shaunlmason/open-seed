@@ -1,12 +1,17 @@
 ---
 id: os-d03bde01
 title: 'next: budget exhaustion refuses as chain_invalid; no budget exit code exists'
-state: review
+state: done
 priority: P2
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-02T05:44:05Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/208
 created_at: "2026-09-01T14:19:51Z"
-updated_at: "2026-09-02T04:39:30Z"
+updated_at: "2026-09-02T05:44:05Z"
 ---
 
 Found while implementing the worker loop (os-abb206c8): budget
