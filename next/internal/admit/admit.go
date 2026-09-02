@@ -130,6 +130,62 @@ func ContextAt(store *ledger.Store, opts ...Option) (*Context, error) {
 	}, nil
 }
 
+// ContextOver builds the admission context over an ALREADY-VERIFIED
+// prefix of records, without a store: the frame a lane decided from
+// at every position of one chain (plans/os-6bd9ffff.md D1), which the
+// trajectory recorder and replayer derive from the same rules
+// admission enforces. Verification is the caller's: a prefix of a
+// chain VerifyFromGenesis accepted is itself verified, and nothing
+// here re-checks a signature. The resolver, the keyring, the halt
+// state, the active version and the fold are the ones ContextAt
+// derives, computed from the records rather than replayed from disk,
+// so the two agree position for position (pinned by drill). An empty
+// prefix has no genesis and no context.
+func ContextOver(records []*event.Record) (*Context, error) {
+	if len(records) == 0 {
+		return nil, genesis.ErrNoGenesis
+	}
+	payload, err := genesis.Parse(records[0])
+	if err != nil {
+		return nil, fmt.Errorf("admission context: %w: %v", genesis.ErrNoGenesis, err)
+	}
+	resolve, err := payload.Resolver(records[0].Event.Actor)
+	if err != nil {
+		return nil, err
+	}
+	ring, active, err := keyring.StateAt(records)
+	if err != nil {
+		return nil, err
+	}
+	if keyring.Applies(active) && ring.Seeded() {
+		resolve = ring.Resolver()
+	}
+	table, err := transition.Default()
+	if err != nil {
+		return nil, fmt.Errorf("admission context: %w", err)
+	}
+	tip, err := records[len(records)-1].Event.Hash()
+	if err != nil {
+		return nil, err
+	}
+	supported := map[string]bool{}
+	for _, v := range version.Supported() {
+		supported[v] = true
+	}
+	return &Context{
+		Count:     len(records),
+		Tip:       tip,
+		Active:    active,
+		Halt:      halt.StateAt(records),
+		Resolve:   resolve,
+		Keyring:   ring,
+		Table:     table,
+		Lifecycle: table.FoldRecords(records),
+		Supported: supported,
+		Records:   records,
+	}, nil
+}
+
 // Refusal is an admission refusal naming the rule that refused. It
 // unwraps to the rule's own typed error, so the envelope layer keeps the
 // established exit mapping (halted 7, chain 8, classification 9,
@@ -649,7 +705,7 @@ func Default() []Rule {
 				return nil
 			}
 			verb := rec.Event.Verb
-			if err := transition.CheckPlanEventShape(verb, rec.Event.Subject, rec.Event.Payload); err != nil {
+			if err := transition.CheckPlanEventShape(c.Active, verb, rec.Event.Subject, rec.Event.Payload); err != nil {
 				return err
 			}
 			if verb != "submission.made" {
@@ -1724,6 +1780,16 @@ func Default() []Rule {
 				// Exclusivity not granted: the subject is held. The
 				// loser learns who holds and since when (exit 2).
 				return &ContentionError{Subject: rec.Event.Subject, Holder: claim.Holder, Fence: claim.Fence}
+			}
+			if verb == "contract.specified" && current == "ready" && !version.LevelsApply(c.Active) {
+				// The ready origin is the table's seed/4 row
+				// (plans/os-6bd9ffff.md D4): re-specification is the
+				// dispatcher revising its own triage, and a validator
+				// of an earlier version judges the record by its own
+				// table, so the row refuses by version before it,
+				// naming what activates it. Every other origin the
+				// table refuses stays the table's refusal.
+				return &transition.InvalidTransitionError{Subject: rec.Event.Subject, From: current, Verb: verb, Reason: transition.RespecificationNeeds(c.Active)}
 			}
 			_, err := c.Table.Check(rec.Event.Subject, current, verb)
 			return err

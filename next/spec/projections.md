@@ -141,7 +141,17 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   "10"; [`refusals.md`](refusals.md); version "11" adds the `knowledge`
   section and its `contested` count, [`curation.md`](curation.md), so
   an unchanged tip republishes with the section; version "12" its
-  `retired` and `stale` counts, the latter at the declared instant):
+  `retired` and `stale` counts, the latter at the declared instant;
+  version "13" adds `lanes`, [`trajectories.md`](trajectories.md):
+  `dispatcher` `{specified, respecified, retriage_rate}`, subjects
+  with one or more applied specifications, those with two or more,
+  and their ratio, and `planner` `{approvals, unedited, edited,
+  unmeasured, unedited_rate}`, approvals split by whether the
+  approval's digest equals the first proposal's, the rate over the
+  measured ones; rates are three-decimal strings, null at a zero
+  denominator, and the section is null when no work subject exists,
+  the reconciliation section's posture; record-derivable from the
+  fold alone, no new projection registered):
   null unless a rebuild declares
   an attempts journal, else the affordance-gap metric — outcome
   counts over the journal's one population, refusal breakdowns, the

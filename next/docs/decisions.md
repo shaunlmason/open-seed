@@ -2652,3 +2652,83 @@ offered a ready calibration whose verdict nothing could compare. The
 gold is looked for first; without it the note is the whole of what is
 owed.
 
+## Phase 10 item 5 — the trajectory-prefix harness and the lane metrics (os-6bd9ffff, plan #227)
+
+**The frame is subject-scoped, and owed means owed on the subject.**
+The plan's D1 says the frame is the subject's folded state, the
+actor's affordances on the subject and "the obligation kinds owed to
+the actor there". Read as the rows the situation would list for the
+actor across every subject, the frame of a point on c-2 would change
+whenever an unrelated contract's obligation moved, and `frame_changed`
+would fire on chain edits that never touched the decision. The frame
+is therefore the situation's rows restricted to the point's subject
+(the lane-capability rule mirrored from the situation read and pinned
+against it at the terminal), and a point's frame moves only when the
+subject it was decided on moved.
+
+**Refused points are judged by their frame alone.** The plan's five
+point classes were written as if every class applied to every point.
+The first corpus recording showed why two of them cannot: the
+dispatcher's one refused attempt is a `claim park`, an act its
+manifest never declared and its grants never reached, which is exactly
+why it was refused, and `act_undeclared` fired on the corpus the day
+it was recorded. `act_undeclared`, `act_ungranted` and
+`act_inadmissible` hold admitted points to the configuration and the
+boundary; a refused point diverges only as `frame_changed`, the same
+frame meaning the boundary presents the same choice and the recorded
+refusal standing as what it answered. Stated in `trajectories.md`.
+
+**`ContextOver` rather than a store per prefix.** A frame at every
+prefix needs an admission context at every prefix. Replaying each
+prefix into a fresh store and calling `ContextAt` is quadratic in disk
+writes and, worse, a second derivation; `admit.ContextOver(records)`
+builds the same context from an already-verified prefix (the genesis
+resolver, the keyring, the halt state, the active version and the
+fold, computed from the records) and is pinned against `ContextAt`
+position for position on the affordance walk's chain. Verification
+stays the caller's: a prefix of a verified chain is verified.
+
+**The corpus is local and the claim goes through the library seam.**
+The recorder scenario runs against a local ledger because the journal
+is written beside one and the remote posture keeps none; `claim take`
+is the one CLI act refused offline (exclusivity is granted at
+admission, online only), so the scenario claims through the same
+`admit.Check` and append the CLI's remote path runs, and every other
+act goes through the CLI's boundary verbs. The corpus is
+byte-identical across machines because every key is derived from a
+fixed seed, the frames carry no instant, and the scenario fixes
+positions and verbs.
+
+**The report is version 13, not 12.** Phase 11 item 4 landed while
+this card was in flight and moved the report to 12 (the retired and
+stale counts); the lanes section takes 13 and the merge of main
+records why.
+
+**`seed plan lint` prints no digest.** The plan's D5 calls the digest
+"the figure `seed plan lint` prints"; lint prints `{plan, falsifiable}`
+and the retention set keeps lint and classify unchanged, so the digest
+is derived by `plan propose|approve` from the repository at the anchor
+and shown in their envelopes, and lint is left as it was.
+
+**Every shipped lane acts.** The plan expected the curator to record a
+configuration-only trajectory "until its proposal grant lands"; Phase
+11 items 1 and 2 landed it, so the scenario drives the curator too
+(a proposal over two holders' dead ends, and its duplicate refused),
+and the configuration-only path is proved on a fresh ledger where the
+observer signed nothing, rather than on a lane the tree has since
+given acts.
+
+
+**Review findings (Codex), fixed on the task PR.** Replay judged a
+point's prefix bound on `position+1` for a refused point, so a
+trajectory parsed with a refused point at the largest position the
+parser admits overflowed the sum past the guard and into the slice;
+the bound is now judged on the position itself (a refused point needs
+one record more than an admitted one, so it must sit strictly below
+the tip), and a hostile trajectory replays as `frame_changed` rather
+than a crash. And `plan approve` accepted any non-blank `--pr`, so a
+bare name could satisfy the above-trivial submission gate without the
+merge commit the approval observes; the CLI refuses a non-anchor as
+usage before the session opens, and the shape rule refuses `pr` that
+is not `<pr> @ <merged-commit>` at every version, the fixtures having
+carried the anchor form throughout.

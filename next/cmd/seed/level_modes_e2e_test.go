@@ -62,6 +62,7 @@ func (m *modeStand) upgradeTo(t *testing.T, to string) {
 	t.Helper()
 	for _, v := range []string{version.Seed2, version.Seed3, version.Seed4} {
 		m.appendRaw(ledger.UpgradeVerb, "system", `{"to": "`+v+`"}`)
+		m.active = v
 		if v == to {
 			return
 		}
@@ -85,9 +86,15 @@ func (m *modeStand) criticalContract(t *testing.T, subject, sealer string, execu
 	m.appendRaw("contract.specified", subject, spec)
 	// The receipt binds the approved plan's bytes at the merge-base,
 	// so the anchor names a file the fixture repository holds there:
-	// the submissions below range from the spec commit.
-	m.appendRaw(transition.PlanApprovedVerb, subject,
-		fmt.Sprintf(`{"plan": "accept.md @ %s", "pr": "pr/3 @ %s"}`, m.spec, m.spec))
+	// the submissions below range from the spec commit. From seed/4
+	// the approval carries the plan's content digest
+	// (plans/os-6bd9ffff.md D5); a background fact, so the zero digest
+	// is enough for the shape the boundary demands.
+	approval := fmt.Sprintf(`{"plan": "accept.md @ %s", "pr": "pr/3 @ %s"}`, m.spec, m.spec)
+	if version.LevelsApply(m.active) {
+		approval = fmt.Sprintf(`{"plan": "accept.md @ %s", "pr": "pr/3 @ %s", "digest": "%s"}`, m.spec, m.spec, strings.Repeat("0", 64))
+	}
+	m.appendRaw(transition.PlanApprovedVerb, subject, approval)
 
 	env, err := seal.NewEnvelope([]string{"true"})
 	if err != nil {

@@ -87,6 +87,17 @@
     verb, and `actor.qualified`/`actor.disqualified` for capability
     `verdict`, each refused at a `seed/3` position by version
     ([`verdicts.md`](verdicts.md), [`evals.md`](evals.md)).
+    Two later additions ride the same entry (plans/os-6bd9ffff.md D4,
+    D5, D7; [`trajectories.md`](trajectories.md)): `contract.specified`
+    gains the `ready` origin, the dispatcher's re-specification of an
+    unclaimed contract ([`lifecycle.md`](lifecycle.md)), which a
+    `seed/3` validator's table refuses as an illegal transition where
+    this one applies it; and `plan.proposed` and `plan.approved`
+    carry the plan's content `digest` ([`plans.md`](plans.md)), which
+    a `seed/3` validator's shape has no field for. Each refuses at a
+    `seed/3` position by version, naming `seed/4`, and the fold reads
+    each at `seed/4` positions only, so every existing chain verifies
+    byte for byte.
 
 ## Canonical event form
 

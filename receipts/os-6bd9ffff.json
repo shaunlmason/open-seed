@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "task": "os-6bd9ffff",
+  "merge_base": "c4b720c994447059ba0eab2d9f74290fdc68e52d",
+  "head": "9d4103bb2b434dd917d4924ba8ec73c803ee1d11",
+  "plan_path": "plans/os-6bd9ffff.md",
+  "plan_sha256": "b60f56068b0128a740d8de5f8a3bd3ab0e801a9caccbcbfc75e3441bf757edf8",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/level_modes_e2e_test.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/modes_e2e_test.go",
+    "next/cmd/seed/plan.go",
+    "next/cmd/seed/plan_fact_cli_test.go",
+    "next/cmd/seed/trajectory.go",
+    "next/cmd/seed/trajectory_e2e_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/respec_test.go",
+    "next/internal/admit/testdata/injection/residuals.json",
+    "next/internal/project/knowledge_test.go",
+    "next/internal/project/lanes_report_test.go",
+    "next/internal/project/refusals_report_test.go",
+    "next/internal/project/report.go",
+    "next/internal/trajectory/trajectory.go",
+    "next/internal/trajectory/trajectory_test.go",
+    "next/internal/transition/respec_test.go",
+    "next/internal/transition/table.json",
+    "next/internal/transition/transition.go",
+    "next/internal/version/version.go",
+    "next/spec/envelope.md",
+    "next/spec/lanes.md",
+    "next/spec/lifecycle.md",
+    "next/spec/plans.md",
+    "next/spec/projections.md",
+    "next/spec/protocol.md",
+    "next/spec/refusals.md",
+    "next/spec/trajectories.md",
+    "next/spec/transitions.json",
+    "next/trajectories/lanes/curator.json",
+    "next/trajectories/lanes/dispatcher.json",
+    "next/trajectories/lanes/implementer.json",
+    "next/trajectories/lanes/maintenance.json",
+    "next/trajectories/lanes/observer.json",
+    "next/trajectories/lanes/planner.json",
+    "next/trajectories/lanes/supervisor.json",
+    "next/trajectories/lanes/verifier.json"
+  ],
+  "diff_sha256": "838f9c35116472eaca4099943c84ef044852750e928723e76d466d9eebe0da55",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/trajectory/ ./internal/transition/ ./internal/admit/ ./internal/project/ ./internal/envelope/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
