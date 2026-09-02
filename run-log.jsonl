@@ -1077,3 +1077,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:228","to":"ready"},"task":"os-96850e5a","ts":"2026-09-02T13:06:10Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-1923cfad","kind":"receipt"},"task":"os-711b3028","ts":"2026-09-02T13:26:56Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-711b3028","ts":"2026-09-02T13:26:59Z","verb":"transition"}
+{"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:230","to":"ready"},"task":"os-0d537fbd","ts":"2026-09-02T13:28:26Z","verb":"plan-unblock"}
