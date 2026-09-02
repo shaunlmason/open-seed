@@ -323,11 +323,11 @@ func activeFence(ctx *admit.Context, subject string) (string, bool) {
 // AMBIGUITY, and the refusal names the candidates rather than
 // choosing among them: picking one silently would settle a spend
 // decision that is the lane's to make (D3).
-func soleOpenReservation(ctx *admit.Context, subject string) (int, *envelope.Envelope) {
+func soleOpenReservation(ctx *admit.Context, subject, act string) (int, *envelope.Envelope) {
 	s, ok := ctx.Lifecycle.State(subject)
 	if !ok {
 		return 0, envelope.Fail(envelope.ExitNotFound, "not_found",
-			fmt.Sprintf("no contract %s in the fold — a close cites a reservation on a contract that exists", subject))
+			fmt.Sprintf("no contract %s in the fold — %s cites a reservation on a contract that exists", subject, act))
 	}
 	open := admit.BudgetViewAt(ctx.Records, ctx.Table, subject, s).Open
 	switch len(open) {
@@ -335,7 +335,7 @@ func soleOpenReservation(ctx *admit.Context, subject string) (int, *envelope.Env
 		return open[0].Pos, nil
 	case 0:
 		return 0, envelope.Fail(envelope.ExitNotFound, "not_found",
-			fmt.Sprintf("no open valid reservation stands on %s — a close needs one, and seed budget reserve --amount <n> establishes it", subject))
+			fmt.Sprintf("no open valid reservation stands on %s — %s needs one, and seed budget reserve --amount <n> establishes it", subject, act))
 	}
 	names := make([]string, 0, len(open))
 	for _, r := range open {
@@ -343,8 +343,8 @@ func soleOpenReservation(ctx *admit.Context, subject string) (int, *envelope.Env
 	}
 	sort.Strings(names)
 	return 0, envelope.Fail(envelope.ExitUsage, "usage",
-		fmt.Sprintf("%s carries %d open reservations and a close cites exactly one — %s; name it through seed ledger append rather than have the choice made for you",
-			subject, len(open), strings.Join(names, "; ")))
+		fmt.Sprintf("%s carries %d open reservations and %s cites exactly one — %s; name it through seed ledger append rather than have the choice made for you",
+			subject, len(open), act, strings.Join(names, "; ")))
 }
 
 // loopPacket reads, completes and validates the four-part packet a
@@ -688,7 +688,7 @@ func runBudgetLoop(args []string, verb, name string, stdout, stderr io.Writer) i
 		if verb == transition.BudgetReserveVerb {
 			out["amount"] = json.RawMessage(strconv.Quote(*amount))
 		} else {
-			pos, refusal := soleOpenReservation(ctx, subject)
+			pos, refusal := soleOpenReservation(ctx, subject, "a close")
 			if refusal != nil {
 				return nil, refusal
 			}

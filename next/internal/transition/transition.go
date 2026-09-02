@@ -14,6 +14,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"math"
 	"sort"
 	"strconv"
@@ -462,6 +463,12 @@ type RunStartFact struct {
 	Signer      string
 	Fence       int
 	Reservation int
+	// Tuple is the runtime configuration the start DECLARED
+	// (plans/os-8e53ffd9.md D3): nil where the payload carried none or
+	// carried one that did not parse, which the tolerant fold records
+	// as absence. Admission requires it at seed/2; the executor checks
+	// what it resolved against it before releasing execution.
+	Tuple *tuple.Tuple
 }
 
 // RunFact is one folded run.settled: the chain position, the signer,
@@ -555,7 +562,11 @@ type OfferFact struct {
 	Signer       string
 	Capabilities []string
 	Tiers        []string
-	Expires      string
+	// Tuples scopes the offer to qualified workers holding one of
+	// these configurations (plans/os-8e53ffd9.md D6); empty means
+	// unscoped by tuple.
+	Tuples  []tuple.Tuple
+	Expires string
 }
 
 // LiveOffers derives the subject's live offers at now
@@ -728,8 +739,9 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}, milestones: map[string]milestoneFact{}}
 	for pos, rec := range records {
 		e := &rec.Event
-		if e.V != version.Seed1 {
-			// Lifecycle semantics activate at seed/1 (the
+		if !version.Activated(e.V) {
+			// Lifecycle semantics activate at seed/1 and stay on at
+			// every later registered version (version.Activated, the
 			// keyring.Applies posture): grandfathered earlier records
 			// stay inert even where their verb names later became
 			// lifecycle verbs, so an upgraded ledger's history cannot
@@ -754,7 +766,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			var m struct {
 				Count *int `json:"count"`
 			}
-			if e.V == version.Seed1 && json.Unmarshal(e.Payload, &m) == nil && m.Count != nil {
+			if version.Activated(e.V) && json.Unmarshal(e.Payload, &m) == nil && m.Count != nil {
 				fact, seen := f.milestones[e.Subject]
 				if !seen || *m.Count > fact.Count {
 					fact.Count = *m.Count
@@ -865,17 +877,25 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			if s, ok := f.states[e.Subject]; ok {
 				var o struct {
 					Eligibility *struct {
-						Capabilities []string `json:"capabilities"`
-						Tiers        []string `json:"tiers"`
+						Capabilities []string          `json:"capabilities"`
+						Tiers        []string          `json:"tiers"`
+						Tuples       []json.RawMessage `json:"tuples"`
 					} `json:"eligibility"`
 					Expires string `json:"expires"`
 				}
 				if json.Unmarshal(e.Payload, &o) == nil && o.Eligibility != nil && strings.TrimSpace(o.Expires) != "" {
+					var tuples []tuple.Tuple
+					for _, raw := range o.Eligibility.Tuples {
+						if t, err := tuple.Parse(raw); err == nil {
+							tuples = append(tuples, t)
+						}
+					}
 					s.Offers = append(s.Offers, OfferFact{
 						Pos:          pos,
 						Signer:       e.Actor,
 						Capabilities: o.Eligibility.Capabilities,
 						Tiers:        o.Eligibility.Tiers,
+						Tuples:       tuples,
 						Expires:      strings.TrimSpace(o.Expires),
 					})
 				}
@@ -948,10 +968,11 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			// disproves, so it counts an anomaly, never a fact.
 			if s, ok := f.states[e.Subject]; ok {
 				var p struct {
-					Fence       string `json:"fence"`
-					Reservation string `json:"reservation"`
-					Units       string `json:"units"`
-					Lines       string `json:"lines"`
+					Fence       string          `json:"fence"`
+					Reservation string          `json:"reservation"`
+					Units       string          `json:"units"`
+					Lines       string          `json:"lines"`
+					Tuple       json.RawMessage `json:"tuple"`
 				}
 				if json.Unmarshal(e.Payload, &p) != nil {
 					continue
@@ -989,7 +1010,13 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 							break
 						}
 					}
-					s.RunStarts = append(s.RunStarts, RunStartFact{Pos: pos, Signer: e.Actor, Fence: fence, Reservation: res})
+					var declared *tuple.Tuple
+					if len(p.Tuple) > 0 {
+						if t, err := tuple.Parse(p.Tuple); err == nil {
+							declared = &t
+						}
+					}
+					s.RunStarts = append(s.RunStarts, RunStartFact{Pos: pos, Signer: e.Actor, Fence: fence, Reservation: res, Tuple: declared})
 				} else {
 					units, uerr := strconv.Atoi(strings.TrimSpace(p.Units))
 					lines, lerr := strconv.Atoi(strings.TrimSpace(p.Lines))

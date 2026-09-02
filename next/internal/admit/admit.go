@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"regexp"
 	"strconv"
 	"strings"
@@ -165,9 +166,27 @@ type OutOfGrantError struct {
 	Actor    string
 	Verb     string
 	Accepted []string
+	// Drift is the qualification refinement of the same family
+	// (plans/os-8e53ffd9.md D4): the actor holds the capability, but
+	// the run declares a configuration none of its qualified grants
+	// cite. Same exit, same wire code, a finer message: a refinement
+	// inside a family keeps the family's exit (next/spec/envelope.md).
+	Drift *Drift
+}
+
+// Drift names which field of the runtime tuple moved, and both values.
+type Drift struct {
+	Holder string
+	Field  string
+	Have   string
+	Cited  []string
 }
 
 func (e *OutOfGrantError) Error() string {
+	if e.Drift != nil {
+		return fmt.Sprintf("actor %s is qualified for %s under %d cited tuple(s) and the run declares a materially different configuration: %s is %q, and no cited tuple carries it (the closest cites %s) — an actor invoking a different configuration than its grant cites is out of grant (SEED-NEXT.md §II.5; next/spec/qualification.md)",
+			e.Drift.Holder, e.Verb, len(e.Drift.Cited), e.Drift.Field, e.Drift.Have, strings.Join(e.Drift.Cited, " | "))
+	}
 	return fmt.Sprintf("actor %s is not granted any of [%s], which %s accepts — grants are capability data checked at admission (plans/os-3979d48b.md)", e.Actor, strings.Join(e.Accepted, ", "), e.Verb)
 }
 
@@ -667,15 +686,27 @@ func Default() []Rule {
 			}
 			var p struct {
 				Eligibility *struct {
-					Capabilities []string `json:"capabilities"`
-					Tiers        []string `json:"tiers"`
+					Capabilities []string          `json:"capabilities"`
+					Tiers        []string          `json:"tiers"`
+					Tuples       []json.RawMessage `json:"tuples,omitempty"`
 				} `json:"eligibility"`
 				Expires string `json:"expires"`
 			}
 			dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
 			dec.DisallowUnknownFields()
 			if err := dec.Decode(&p); err != nil {
-				return &OfferError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {eligibility{capabilities, tiers}, expires}: %v", err)}
+				return &OfferError{Subject: subject, Reason: fmt.Sprintf("the payload is the strict object {eligibility{capabilities, tiers, tuples}, expires}: %v", err)}
+			}
+			if p.Eligibility != nil && len(p.Eligibility.Tuples) > 0 {
+				// Tuple scoping is seed/2's (plans/os-8e53ffd9.md D6).
+				if !tuple.Applies(c.Active) {
+					return &OfferError{Subject: subject, Reason: fmt.Sprintf("the offer scopes by runtime tuple and the chain is at %s: tuple semantics activate at %s", c.Active, version.Seed2)}
+				}
+				for i, raw := range p.Eligibility.Tuples {
+					if _, err := tuple.Parse(raw); err != nil {
+						return &OfferError{Subject: subject, Reason: fmt.Sprintf("eligibility.tuples[%d]: %v", i, err)}
+					}
+				}
 			}
 			var missing []string
 			if p.Eligibility == nil {
@@ -878,13 +909,30 @@ func Default() []Rule {
 			}
 			if verb == transition.RunStartedVerb {
 				var p struct {
-					Fence       string `json:"fence"`
-					Reservation string `json:"reservation"`
+					Fence       string          `json:"fence"`
+					Reservation string          `json:"reservation"`
+					Tuple       json.RawMessage `json:"tuple,omitempty"`
 				}
 				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
 				dec.DisallowUnknownFields()
 				if err := dec.Decode(&p); err != nil {
-					return &RunError{Subject: subject, Reason: fmt.Sprintf("the start payload is the strict object {fence, reservation}: %v", err)}
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("the start payload is the strict object {fence, reservation, tuple}: %v", err)}
+				}
+				// The declared configuration (plans/os-8e53ffd9.md D3):
+				// required once seed/2 is active, refused before it, so
+				// a chain that never upgraded keeps its judgment.
+				var declared *tuple.Tuple
+				if tuple.Applies(c.Active) {
+					if len(p.Tuple) == 0 || string(p.Tuple) == "null" {
+						return &RunError{Subject: subject, Reason: "the start declares no runtime tuple: a run with no configuration is a run nothing can qualify (next/spec/qualification.md)"}
+					}
+					t, err := tuple.Parse(p.Tuple)
+					if err != nil {
+						return &RunError{Subject: subject, Reason: err.Error()}
+					}
+					declared = &t
+				} else if len(p.Tuple) > 0 {
+					return &RunError{Subject: subject, Reason: fmt.Sprintf("the start carries a runtime tuple and the chain is at %s: tuple semantics activate at %s (next/spec/protocol.md)", c.Active, version.Seed2)}
 				}
 				if s.State != "in_progress" {
 					return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: verb}
@@ -918,6 +966,37 @@ func Default() []Rule {
 				}
 				if _, closed := view.ClosedBy[cited]; closed {
 					return &RunError{Subject: subject, Reason: fmt.Sprintf("the reservation at position %d is already effectively closed — a run needs an open reservation", cited)}
+				}
+				// The qualification SET rule (plans/os-8e53ffd9.md D2, D4):
+				// the CLAIM HOLDER's grants for claim cite zero or more
+				// tuples. Zero: unqualified, the bridge, admit. Any: the
+				// declared configuration must equal one member, per
+				// field, or the holder is invoking a configuration its
+				// grant does not cite. The holder, never the signer: the
+				// supervisor signs the start, the work executes under
+				// the holder's window.
+				if declared != nil && c.Keyring != nil && s.Claim != nil {
+					cited := c.Keyring.GrantTuples(s.Claim.Holder, keyring.CapClaim)
+					if len(cited) > 0 {
+						matched := false
+						for _, t := range cited {
+							if t.Equal(*declared) {
+								matched = true
+								break
+							}
+						}
+						if !matched {
+							field, have, _, _ := declared.Diff(cited[0])
+							var shown []string
+							for _, t := range cited {
+								b, _ := json.Marshal(t)
+								shown = append(shown, string(b))
+							}
+							return &OutOfGrantError{Actor: rec.Event.Actor, Verb: verb,
+								Accepted: keyring.AcceptedCapabilities(verb),
+								Drift:    &Drift{Holder: s.Claim.Holder, Field: field, Have: have, Cited: shown}}
+						}
+					}
 				}
 				return nil
 			}
@@ -1493,8 +1572,9 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 		return false
 	}
 	var p struct {
-		Fence       string `json:"fence"`
-		Reservation string `json:"reservation"`
+		Fence       string          `json:"fence"`
+		Reservation string          `json:"reservation"`
+		Tuple       json.RawMessage `json:"tuple,omitempty"`
 	}
 	if !strictRunPayload(rec, &p) {
 		return false
