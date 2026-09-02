@@ -1043,3 +1043,4 @@
 {"actor":"shaunlmason","data":{"title":"next: Phase 10 item 5 — trajectory-prefix regression harness; dispatcher re-triage rate and planner unedited-approval rate"},"task":"os-6bd9ffff","ts":"2026-09-02T11:35:46Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-6bd9ffff","ts":"2026-09-02T11:36:07Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"title":"next: Phase 11 item 1 — staged curation stores (observations → hypotheses → validated lessons → policy) with grant-gated boundaries; workers append candidates only"},"task":"os-f30ee0d3","ts":"2026-09-02T11:38:46Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-f30ee0d3","ts":"2026-09-02T11:39:00Z","verb":"promote"}
