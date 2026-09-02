@@ -652,13 +652,41 @@ func assertLocalNoAutoGC(t *testing.T, gitDir, what string) {
 		"gc.autoDetach":  "false",
 		"receive.autoGC": "false",
 	} {
-		out, err := exec.Command("git", "-C", gitDir, "config", "--local", "--get", key).CombinedOutput()
+		// The read scrubs GIT_CONFIG too: under it --local refuses, and
+		// the drill that plants the variable must still read the
+		// repository's own file.
+		cmd := exec.Command("git", "-C", gitDir, "config", "--local", "--get", key)
+		cmd.Env = withoutGitConfigSelection(os.Environ())
+		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("%s unset in %s's own config: %v %s", key, what, err, out)
 		}
 		if got := strings.TrimSpace(string(out)); got != want {
 			t.Errorf("%s = %q in %s, want %q — a detached gc under this dir outlives the process that armed it", key, got, what, want)
 		}
+	}
+}
+
+// GIT_CONFIG selects the file `git config` reads and writes: an
+// unqualified write under it lands in the operator's file, and --local
+// under it refuses outright (review finding on #232). The client must
+// harden its own dir regardless, and the file the operator selected
+// must come out untouched.
+func TestClientHardensDespiteGitConfigSelection(t *testing.T) {
+	// The fixture remote is built before the variable is planted: its
+	// own test-side hardening (hardenGitRepo) is an unqualified write
+	// that would land in the operator's file too, and this drill is
+	// about the client, not the fixture.
+	remote := bareRemote(t)
+	external := filepath.Join(t.TempDir(), "operator-config")
+	t.Setenv("GIT_CONFIG", external)
+	state := t.TempDir()
+	if _, err := NewClient(state, remote, "refs/seed/ledger"); err != nil {
+		t.Fatalf("NewClient under GIT_CONFIG: %v", err)
+	}
+	assertLocalNoAutoGC(t, filepath.Join(state, "gitdir"), "the client's git dir under GIT_CONFIG")
+	if b, err := os.ReadFile(external); err == nil {
+		t.Fatalf("the operator's selected config file was written: %q", b)
 	}
 }
 

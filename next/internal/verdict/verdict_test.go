@@ -270,6 +270,34 @@ func TestWorkspaceCloneHasNoAutoGC(t *testing.T) {
 	}
 }
 
+// The same GIT_CONFIG case for the clone (review finding on #232): the
+// workspace hardens its own config under the variable and leaves the
+// operator's selected file alone.
+func TestWorkspaceHardensDespiteGitConfigSelection(t *testing.T) {
+	dir, _, _, head := repo(t)
+	external := filepath.Join(t.TempDir(), "operator-config")
+	t.Setenv("GIT_CONFIG", external)
+	ws, err := NewWorkspace(dir, head)
+	if err != nil {
+		t.Fatalf("NewWorkspace under GIT_CONFIG: %v", err)
+	}
+	defer ws.Cleanup()
+	for key, want := range map[string]string{"gc.auto": "0", "gc.autoDetach": "false", "receive.autoGC": "false"} {
+		cmd := exec.Command("git", "-C", ws.Repo, "config", "--local", "--get", key)
+		cmd.Env = withoutGitConfigSelection(os.Environ())
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("%s unset in the clone's own config under GIT_CONFIG: %v %s", key, err, out)
+		}
+		if got := strings.TrimSpace(string(out)); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+	if b, err := os.ReadFile(external); err == nil {
+		t.Fatalf("the operator's selected config file was written: %q", b)
+	}
+}
+
 func TestRunnerProfileScrubsEnvironment(t *testing.T) {
 	dir, base, _, head := repo(t)
 	t.Setenv("SEED_TEST_SECRET", "hunter2")

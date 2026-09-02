@@ -69,14 +69,19 @@ func NewWorkspace(repoDir, head string) (*Workspace, error) {
 		// commands that arm it, which is exactly the race a detached
 		// gc loses against a directory removal. Repository-local, so
 		// no config outside the workspace is consulted or written.
-		{"-C", ws.Repo, "config", "gc.auto", "0"},
-		{"-C", ws.Repo, "config", "gc.autoDetach", "false"},
-		{"-C", ws.Repo, "config", "receive.autoGC", "false"},
+		{"-C", ws.Repo, "config", "--local", "gc.auto", "0"},
+		{"-C", ws.Repo, "config", "--local", "gc.autoDetach", "false"},
+		{"-C", ws.Repo, "config", "--local", "receive.autoGC", "false"},
 		{"-C", ws.Repo, "checkout", "--quiet", "--detach", head},
 		{"-C", ws.Repo, "remote", "remove", "origin"},
 	}
 	for _, args := range steps {
 		cmd := exec.Command("git", args...)
+		// GIT_CONFIG would redirect the config writes to a file the
+		// operator selected, or make --local refuse; the clone's own
+		// config is the only file this workspace may touch
+		// (internal/gitref's withoutGitConfigSelection, same finding).
+		cmd.Env = withoutGitConfigSelection(os.Environ())
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
@@ -178,4 +183,21 @@ func (r Runner) Run(ws *Workspace, command string) Transcript {
 		}
 	}
 	return t
+}
+
+// withoutGitConfigSelection drops GIT_CONFIG, the variable that
+// selects the file `git config` reads and writes, so the workspace's
+// hardening lands in the clone's own config and never in a file the
+// operator named (review finding on #232). The same filter lives in
+// internal/gitref for the client's dir; two lines are cheaper than an
+// import between a transport client and the verifier's workspace.
+func withoutGitConfigSelection(env []string) []string {
+	out := make([]string, 0, len(env))
+	for _, kv := range env {
+		if strings.HasPrefix(kv, "GIT_CONFIG=") {
+			continue
+		}
+		out = append(out, kv)
+	}
+	return out
 }

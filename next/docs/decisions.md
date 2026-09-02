@@ -2157,3 +2157,16 @@ here. Newest last.
 - **No production failure was observed**, only the test-side one; the
   two spec sentences say what the engine promises (nothing it made
   mutates after it exits), not that a failure happened.
+- **`GIT_CONFIG` is scrubbed and the target is named (review finding
+  on #232).** The variable selects the file `git config` reads and
+  writes: an unqualified write under it lands in the operator's
+  selected file, and `--local` under it refuses with "only one config
+  file at a time" rather than overriding it (probed, not assumed). Both
+  sites therefore write with `--local` AND run without the variable,
+  and a drill at each plants `GIT_CONFIG`, asserts the repository's own
+  config carries the keys, and asserts the selected file was never
+  written. The scrub is the load-bearing half: dropping it makes
+  `NewClient` and `NewWorkspace` fail under the variable; `--local` is
+  the explicit target whose removal the drill cannot see once the
+  environment is clean, kept because a write that names its file reads
+  as what it is.
