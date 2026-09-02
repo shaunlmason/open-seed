@@ -82,6 +82,12 @@ func runPlanFact(args []string, verb, name string, stdout, stderr io.Writer) int
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
 			fmt.Sprintf("--plan %q is not an anchor: \"<path> @ <commit>\" (next/spec/plans.md)", *anchor)), stdout, stderr)
 	}
+	if verb == transition.PlanApprovedVerb {
+		if _, _, ok := curation.AnchorParts(*pr); !ok {
+			return render(envelope.Fail(envelope.ExitUsage, "usage",
+				fmt.Sprintf("--pr %q is not an anchor: \"<pr> @ <merged-commit>\", the merged plan PR at its merge commit (next/spec/plans.md)", *pr)), stdout, stderr)
+		}
+	}
 	body, err := exec.Command("git", "-C", *repo, "show", commit+":"+path).Output()
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitNotFound, "not_found",

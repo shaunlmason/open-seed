@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -589,6 +590,28 @@ func TestReplayClassifiesEveryDivergence(t *testing.T) {
 	}
 	if v := res.Points[len(res.Points)-1]; v.Class != trajectory.FrameChanged || !strings.Contains(v.Detail, "the chain ends") {
 		t.Fatalf("a point beyond the chain's end cannot be framed: %+v", v)
+	}
+	// A refused point at the largest position a parse admits: the
+	// bound is judged on the position, never on position+1, so the
+	// sum cannot overflow past the guard into the slice (review
+	// finding on the task PR).
+	hostile := *traj
+	hostile.Points = append(append([]trajectory.Point{}, traj.Points...),
+		trajectory.Point{Position: math.MaxInt, Verb: "claim.taken", Subject: "c-1", Outcome: trajectory.OutcomeRefused})
+	res, err = trajectory.Replay(&hostile, records, worker, shippedLanes(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := res.Points[len(res.Points)-1]; v.Class != trajectory.FrameChanged || !strings.Contains(v.Detail, "the chain ends") {
+		t.Fatalf("a refused point past the chain's end is a changed frame, never a panic: %+v", v)
+	}
+	// And a refused point exactly at the tip needs one record more
+	// than the chain holds.
+	atTip := *traj
+	atTip.Points = append(append([]trajectory.Point{}, traj.Points...),
+		trajectory.Point{Position: len(records), Verb: "claim.taken", Subject: "c-1", Outcome: trajectory.OutcomeRefused})
+	if res, err := trajectory.Replay(&atTip, records, worker, shippedLanes(t)); err != nil || res.Points[len(res.Points)-1].Class != trajectory.FrameChanged {
+		t.Fatalf("a refused point at the tip has no stamp record to frame from: %v %+v", err, res)
 	}
 
 	// act_inadmissible: a record the boundary would not have afforded

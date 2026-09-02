@@ -175,6 +175,19 @@ func TestPlanShapeCarriesTheDigestAtSeed4(t *testing.T) {
 			}
 		}
 	}
+	// The approval's pr is an anchor, "<pr> @ <merged-commit>": a bare
+	// name carries no revision to hold the approval to (review finding
+	// on the task PR), at seed/4 and before it alike.
+	for _, tc := range []struct{ v, payload string }{
+		{version.Seed4, `{"plan": "plans/c-1.md @ abc1234", "pr": "x", "digest": "` + digestA + `"}`},
+		{version.Seed4, `{"plan": "plans/c-1.md @ abc1234", "pr": "pr/1 @ ", "digest": "` + digestA + `"}`},
+		{version.Seed3, `{"plan": "plans/c-1.md @ abc1234", "pr": "pr/1"}`},
+	} {
+		err := transition.CheckPlanEventShape(tc.v, transition.PlanApprovedVerb, "c-1", []byte(tc.payload))
+		if !errors.As(err, &chain) || !strings.Contains(chain.Reason, "<pr> @ <merged-commit>") {
+			t.Fatalf("%s %s: a bare pr refuses naming the anchor form, got %v", tc.v, tc.payload, err)
+		}
+	}
 }
 
 func contains(list []string, s string) bool {

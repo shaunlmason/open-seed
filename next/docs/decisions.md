@@ -2630,3 +2630,17 @@ and the configuration-only path is proved on a fresh ledger where the
 observer signed nothing, rather than on a lane the tree has since
 given acts.
 
+
+**Review findings (Codex), fixed on the task PR.** Replay judged a
+point's prefix bound on `position+1` for a refused point, so a
+trajectory parsed with a refused point at the largest position the
+parser admits overflowed the sum past the guard and into the slice;
+the bound is now judged on the position itself (a refused point needs
+one record more than an admitted one, so it must sit strictly below
+the tip), and a hostile trajectory replays as `frame_changed` rather
+than a crash. And `plan approve` accepted any non-blank `--pr`, so a
+bare name could satisfy the above-trivial submission gate without the
+merge commit the approval observes; the CLI refuses a non-anchor as
+usage before the session opens, and the shape rule refuses `pr` that
+is not `<pr> @ <merged-commit>` at every version, the fixtures having
+carried the anchor form throughout.

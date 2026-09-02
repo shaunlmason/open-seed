@@ -1974,5 +1974,19 @@ func CheckPlanEventShape(v, verb, subject string, payload []byte) error {
 	if len(missing) > 0 {
 		return &IncompleteError{Verb: verb, Subject: subject, Missing: missing}
 	}
+	// The approval's pr is the merged plan PR AT its merge commit, the
+	// external-fact observation posture: a bare name carries no
+	// revision to hold the approval to (review finding on the
+	// os-6bd9ffff task PR).
+	if verb == PlanApprovedVerb && !isAnchor(m.PR) {
+		return &ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("pr %q is not \"<pr> @ <merged-commit>\": an approval observes the plan PR's merge at a revision", m.PR)}
+	}
 	return nil
+}
+
+// isAnchor reports the combined anchor form "<name> @ <commit>" with
+// both halves present.
+func isAnchor(s string) bool {
+	name, commit, ok := strings.Cut(s, " @ ")
+	return ok && strings.TrimSpace(name) != "" && strings.TrimSpace(commit) != ""
 }

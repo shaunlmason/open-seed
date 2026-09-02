@@ -1289,3 +1289,10 @@ the assertions read, and there is no copy to go stale.
   merge commit; two "12"s with different meanings is a silent
   republish under a wrong id.
 
+- Judge a slice bound on the value the input supplies, never on a sum
+  derived from it: `position+1 > len` overflows at the largest value
+  the parser admits and slips past the guard. Compare the position
+  and add afterwards.
+- A field documented as an anchor is validated as one at the shape
+  rule, not only where a flag's help text says so: the CLI is one
+  path to the boundary, and the raw seam is another.

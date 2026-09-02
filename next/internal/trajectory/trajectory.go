@@ -447,14 +447,19 @@ func Replay(t *Trajectory, records []*event.Record, key ed25519.PrivateKey, lane
 		ManifestChanged: cfg.ManifestDigest != t.Manifest, PostureChanged: cfg.PostureDigest != t.Posture}
 	for _, p := range t.Points {
 		v := Verdict{Position: p.Position, Verb: p.Verb, Subject: p.Subject, Outcome: p.Outcome, Class: Same}
+		// The prefix bound is checked on the position itself, never
+		// on position+1: a refused point at the largest position a
+		// parse admits would overflow the sum and slip past the guard
+		// into the slice (review finding on the task PR).
+		beyond := p.Position > len(records) || (p.Outcome == OutcomeRefused && p.Position >= len(records))
+		if beyond {
+			v.Class, v.Detail = FrameChanged, fmt.Sprintf("the chain ends at %d records, before the point's prefix at position %d", len(records), p.Position)
+			r.Points = append(r.Points, v)
+			continue
+		}
 		end := p.Position
 		if p.Outcome == OutcomeRefused {
 			end = p.Position + 1
-		}
-		if end > len(records) {
-			v.Class, v.Detail = FrameChanged, fmt.Sprintf("the chain ends at %d records, before the point's prefix of %d", len(records), end)
-			r.Points = append(r.Points, v)
-			continue
 		}
 		frame, err := frameAt(records[:end], key, fp, p.Subject)
 		if err != nil {

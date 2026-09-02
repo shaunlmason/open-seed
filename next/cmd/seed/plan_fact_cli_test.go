@@ -116,6 +116,10 @@ func TestPlanProposeAndApproveDeriveTheDigest(t *testing.T) {
 		"--plan", anchor1, "--repo", repo); code != 64 {
 		t.Fatalf("an approval names the merged PR: %d %+v", code, e)
 	}
+	if e, code := runEnv(t, "plan", "approve", "--ledger", ld, "--key", priv, "--subject", "c-1",
+		"--plan", anchor1, "--repo", repo, "--pr", "x"); code != 64 || e.Error == nil || !strings.Contains(e.Error.Message, "<pr> @ <merged-commit>") {
+		t.Fatalf("an approval's PR is an anchor, refused as usage before the session opens: %d %+v", code, e)
+	}
 
 	// The holder proposes: the digest is the plan bytes' at the anchor
 	// and the fence is derived from the window.
