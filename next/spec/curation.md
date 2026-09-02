@@ -415,7 +415,7 @@ registered gate, on a declared poison with no script, on a script with
 no declaration, on an empty corpus and on an empty residual table. A
 gate added to the rules without a corpus entry is therefore a red test,
 which is what makes "full coverage" a claim the drill derives rather
-than one it is told. At landing the corpus holds forty-six poisons over
+than one it is told. At landing the corpus holds forty-seven poisons over
 the thirty-two gates: among them `single-success`, `self-replay`,
 `forged-support`, `grantless-window`, `failed-support`,
 `worker-proposes`, `worker-granted-curate`, `root-proposes`,
@@ -426,7 +426,7 @@ the thirty-two gates: among them `single-success`, `self-replay`,
 `pass-at-another-position`, `fail-as-survival`, `support-failed-later`,
 `contested-surfacing`, `raw-pushed-promotion`, `raw-pushed-contest`,
 `ungated-eval`, `fabricated-provenance`, `frontmatter-drift`,
-`unmerged-anchor`. The two raw-pushed poisons push the refused fact
+`unmerged-anchor`, `stamps-unreviewed`. The two raw-pushed poisons push the refused fact
 past the boundary anyway and assert the fold re-judged it: the
 promotion binds nothing and the contest moves nothing, because the
 fold runs `PromotionValid` and `ContestValid` at each fact's own

@@ -949,7 +949,7 @@ PR (an administrative card, not a Phase 9 item).
   `surfaces`).
 - 11.3 poisoning drill — os-e2f1ad23 — **in review** (task PR against
   plan #229, stacked on item 2's: `internal/admit/testdata/poisoning/`
-  declares forty-six poisons over the thirty-two registered gates and
+  declares forty-seven poisons over the thirty-two registered gates and
   five residuals; `poisoning_test.go` derives coverage from
   `curation.Gates()` pinned to the spec table both ways, scripts every
   poison to an attempt to promote and asserts it fails at both ends

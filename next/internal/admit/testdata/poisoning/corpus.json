@@ -368,6 +368,14 @@
         "verb": "curation.lesson.promoted",
         "gate": "promotion.contested"
       }
+    },
+    {"name": "stamps-unreviewed",
+      "gate": "lint.stamps",
+      "attack": "a promotion recording lifecycle dates the lesson PR never reviewed: the fact's expires is later than the frontmatter's, so the lesson would outlive its review",
+      "expect": {
+        "verb": "lint",
+        "gate": "lint.stamps"
+      }
     }
   ]
 }

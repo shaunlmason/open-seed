@@ -432,7 +432,8 @@ func newLintStand(t *testing.T) *lintStand {
 	anchor := git("rev-parse", "HEAD")
 	ls := &lintStand{repo: repo, path: path, body: body, anchor: anchor, planCommit: planCommit, h: h, git: git,
 		now: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)}
-	ls.fact = curation.LessonFact{Lesson: path + " @ " + anchor, Hypothesis: id + "@4", Carrier: "knowledge", Digest: curation.Digest([]byte(body))}
+	ls.fact = curation.LessonFact{Lesson: path + " @ " + anchor, Hypothesis: id + "@4", Carrier: "knowledge", Digest: curation.Digest([]byte(body)),
+		LastValidated: "2026-09-01T00:00:00Z", Expires: "2026-12-01T00:00:00Z"}
 	if err := curation.LintFile(repo, []byte(body), ls.fact, h, ls.now); err != nil {
 		t.Fatalf("the agreeing lesson lints: %v", err)
 	}

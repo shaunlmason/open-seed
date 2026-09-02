@@ -372,4 +372,11 @@ var poisonScripts = map[string]func(t *testing.T) *poisonRun{
 		}
 		return r
 	},
+	"stamps-unreviewed": func(t *testing.T) *poisonRun {
+		return lintPoison(t, func(ls *lintStand) ([]byte, curation.LessonFact, *curation.HypothesisFact, time.Time) {
+			fact := ls.fact
+			fact.Expires = "2027-06-01T00:00:00Z"
+			return []byte(ls.body), fact, ls.h, ls.now
+		})
+	},
 }
