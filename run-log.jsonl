@@ -946,3 +946,4 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-d03bde01","ts":"2026-09-02T04:26:10Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 9 item 5(b) — seed situation carries the caller's unread messages"},"task":"os-8451d939","ts":"2026-09-02T04:27:26Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-8451d939","ts":"2026-09-02T04:27:33Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-02T05:27:36Z"},"task":"os-8451d939","ts":"2026-09-02T04:27:36Z","verb":"claim"}
