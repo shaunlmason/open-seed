@@ -1,16 +1,13 @@
 ---
 id: os-be12ac16
 title: 'next: validate the filed tier against a vocabulary (Phase 10 tier system)'
-state: in_progress
+state: blocked
 priority: P2
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-f17914a1ac534f39
-    claimed_at: "2026-09-02T09:26:52Z"
-    lease_expires: "2026-09-02T11:26:52Z"
+blocked_on:
+    - plan:219
 created_at: "2026-09-01T14:55:14Z"
-updated_at: "2026-09-02T09:26:52Z"
+updated_at: "2026-09-02T09:29:37Z"
 ---
 
 Found while building the injection conformance suite (os-b779b4c7),
