@@ -70,13 +70,19 @@ Measured against `main` with #226 and #228 laid over it:
   `lesson.retired` (the catalog's own name) carries `{"lesson":
   "<path @ promoted-commit>", "hypothesis": "<h@position>",
   "reason": "regression" | "superseded" | "expired", "pr"?: "<pr @
-  merged-commit>"}`, accepted by `observer` and `operator` (the
-  promotion's own row): for `regression` the `pr` is REQUIRED and is
-  the revert's merge, which is the charter's one command observed;
-  `superseded` cites the superseding promotion's position in
-  `reason_ref`; `expired` needs nothing but the stamp the fold already
-  holds. The boundary requires the cited promotion to be admitted and
-  the latest for its path. The fold moves the lesson to `retired`; a
+  merged-commit>", "superseded_by"?: "<position>"}`, strictly
+  decoded (an unknown key refuses), accepted by `observer` and
+  `operator` (the promotion's own row). The two optional fields are
+  each REQUIRED by exactly one reason and FORBIDDEN by the others:
+  `regression` requires `pr`, the revert's merge, which is the
+  charter's one command observed; `superseded` requires
+  `superseded_by`, the position of an admitted `lesson.promoted`
+  later than the retired promotion and not the retired promotion
+  itself (the reviewer of that promotion judged the supersession;
+  the record checks the citation is a real, later promotion);
+  `expired` requires neither, the stamp the fold already holds being
+  the evidence. The boundary requires the cited promotion to be
+  admitted and the latest for its path. The fold moves the lesson to `retired`; a
   retired lesson never surfaces; its file at the promoted anchor,
   its hypothesis, its support and every observation remain, which is
   "revokes conclusions and keeps evidence". A retired lesson comes
@@ -87,8 +93,15 @@ Measured against `main` with #226 and #228 laid over it:
   `deadend.unretired` (`curation.*`, `curate` alone) on the contract
   subject carry `{"deadend": "<contract>@<position>", "environment":
   "<the environment now>", "reason"}`; the boundary requires the
-  cited position to be an admitted dead end on that subject and, for
-  un-retire, a standing retirement. Applicability is the one
+  cited position to be an admitted dead end on that subject, and an
+  environment that CHANGED: a retirement's `environment` must differ
+  from the dead end's recorded one (it no longer applies because the
+  environment moved), and an un-retirement's must differ from the
+  standing retirement's declared one (the environment moved again),
+  so neither act admits in the environment the previous act named,
+  and un-retirement also requires the standing retirement. Both
+  comparisons are exact string equality, the same comparison
+  applicability uses. Applicability is the one
   comparison the record supports: a dead end applies to a run whose
   declared tuple environment equals the dead end's `environment`.
   `seed knowledge validate` gains dead-end applicability: for each
@@ -114,7 +127,12 @@ Measured against `main` with #226 and #228 laid over it:
   by more than `--stale-after` with no later promotion or retirement
   files a defect contract naming the lesson and asking for
   revalidation or retirement, idempotently through the ledger
-  (`maintenance.md`'s closed set grows by one row). The loop never
+  (`maintenance.md`'s closed set grows by one row). The finding's
+  subject is `<lesson path>@<promotion position>`, so `DefectID`'s
+  existing identity (class and subject) stays as it is while the
+  cycle is in the subject: reruns within one stale cycle re-file the
+  same id and are refused as duplicates, and a re-promoted lesson
+  whose new promotion expires later files new work. The loop never
   retires: it asks.
 
 - **D6 — delivery reads the instant.** The surfacing set becomes
@@ -123,12 +141,22 @@ Measured against `main` with #226 and #228 laid over it:
   situation` take `--now` in the drills and the wall clock otherwise,
   the offer-liveness posture, and admission still reads no clock.
 
-- **D7 — versioning and the build plan.** Three verbs (one already in
-  the catalog) and one payload field are catalog growth under
-  `curation.*`: no version bump, every existing chain verifies byte
-  for byte. The task PR adds one sentence to `docs/next-build-plan.md`
-  Phase 11 item 4 naming III.K row 9, the exit records' move, so the
-  routing is in the plan's own text.
+- **D7 — versioning and the build plan.** Three verbs (one already
+  named in the catalog) and their payload shapes are catalog growth
+  under `curation.*`, admission policy in item 1's D5 posture, and
+  no version bump: the bump discipline (`protocol.md`) looks at what
+  a conformant older VALIDATOR judges differently, and verification
+  takes a verb it has no rule for on active standing (the
+  standing-only class `message.sent` belongs to; `lesson.retired`'s
+  name in the catalog gives it no rule at verification today), while
+  the curation fold counts a malformed raw fact as an anomaly rather
+  than refusing the chain. A chain carrying the three verbs therefore
+  verifies identically under the build before this card and under
+  it, and only admission's answer changes, which is the tier card's
+  and item 1's no-bump reasoning applied again; the retention set
+  drills it rather than asserting it. The task PR adds one sentence
+  to `docs/next-build-plan.md` Phase 11 item 4 naming III.K row 9,
+  the exit records' move, so the routing is in the plan's own text.
 
 - **D8 — scope guard.** No automatic retirement or un-retirement; no
   environment predicate beyond string equality with the run's
@@ -202,17 +230,26 @@ build-plan sentence. NOT `next/spec/transitions.json`, NOT
    becomes the latest and surfaces again; one with `last_validated`
    not after the previous refuses naming both.
 2. **Retirement.** `lesson.retired` admits from an `observer` for
-   `regression` with the revert's `pr`, for `superseded` citing the
-   superseding position, for `expired` on an expired lesson; it
-   refuses `regression` without `pr`, a non-latest promotion, an
-   unknown reason, and from a `curate` key; a retired lesson never
+   `regression` with the revert's `pr`, for `superseded` with
+   `superseded_by` naming a later admitted promotion, for `expired`
+   on an expired lesson with neither field; it refuses `regression`
+   without `pr`, `pr` on any other reason, `superseded` without
+   `superseded_by`, `superseded_by` on any other reason,
+   `superseded_by` naming a position that is no promotion, an earlier
+   promotion, or the retired promotion itself, an unknown key, a
+   non-latest promotion, an unknown reason, and from a `curate` key;
+   a retired lesson never
    surfaces while its file, hypothesis and observations remain in the
    fold and the projection; a new promotion of the same path brings it
    back.
 3. **Dead ends.** `deadend.retired` admits from `curate` citing an
-   admitted dead end and refuses citing anything else, a second time
-   without an un-retire, and from a `claim` key; `deadend.unretired`
-   admits over a standing retirement and refuses without one; `seed
+   admitted dead end with an environment different from the recorded
+   one, and refuses citing anything else, the recorded environment
+   unchanged, a second time without an un-retire, and from a `claim`
+   key; `deadend.unretired` admits over a standing retirement with an
+   environment different from the retirement's, and refuses without a
+   standing retirement or with the retirement's own environment;
+   `seed
    knowledge validate --environment e` marks each dead end applicable
    or not by string equality with `e`, shows the retired flag, and
    excludes retired ones from the held-out listing.
@@ -222,8 +259,10 @@ build-plan sentence. NOT `next/spec/transitions.json`, NOT
    store passes.
 5. **Maintenance.** `seed maintain run --stale-after d` files one
    defect contract for a lesson expired longer than `d` with no later
-   promotion or retirement, files nothing on a second run, and files
-   nothing for a retired or re-promoted lesson.
+   promotion or retirement, files nothing on a second run, files
+   nothing for a retired or re-promoted lesson, and files a NEW defect
+   when the re-promoted lesson's later promotion expires in its turn,
+   because the finding's subject carries the promotion position.
 6. **End to end.** In the modes fixture: a promotion surfaces at the
    next claim; the revert is observed and the claim after carries
    nothing; a revalidation moves the stamps and surfaces again; a dead
@@ -234,9 +273,12 @@ build-plan sentence. NOT `next/spec/transitions.json`, NOT
    keeping the first promotion per path; the re-promotion ordering
    dropped; `pr` optional for `regression`; retirement accepted on a
    non-latest promotion; a retired lesson surfacing; un-retire
-   admitted without a retirement; applicability compared
+   admitted without a retirement; the environment comparison dropped
+   at retirement or at un-retirement; `superseded_by` unchecked or
+   accepted on the wrong reason; applicability compared
    case-insensitively; the lint skipping dedup; `stale` flagged with no
-   instant; the maintenance filing not idempotent.
+   instant; the maintenance filing not idempotent; the stale finding's
+   subject omitting the promotion position.
 8. `make check` green with coverage measured **cold**, at least three
    readings above the gate, and the suites pass **unprivileged** under
    `setpriv --reuid=65534 --regid=65534 --clear-groups`.
@@ -250,8 +292,12 @@ build-plan sentence. NOT `next/spec/transitions.json`, NOT
   `seed maintain run`'s existing lints and their idempotence are
   unchanged.
 - No version bump; no transition row moves; every pre-existing fixture
-  chain verifies byte for byte; the existing projections' builds are
-  byte-identical on chains that carry no curation fact.
+  chain verifies byte for byte; a chain carrying the three new verbs,
+  raw-pushed under active standing, verifies under the build before
+  this card exactly as under it (the no-bump argument of D7 as a
+  drill: the fixture chain is committed and verified by both); the
+  existing projections' builds are byte-identical on chains that carry
+  no curation fact.
 
 ## Validation Commands
 
