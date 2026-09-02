@@ -259,8 +259,8 @@ reading the fold, NOT `next/internal/version/**`, NOT `.seed/**`.
 ## Validation Commands
 
 - Boundary: `cd next && go test ./internal/curation/ ./internal/keyring/ ./internal/admit/ ./internal/project/ ./internal/lane/ ./cmd/seed/ -count=1`
-- Retention: `cd next && gofmt -l . && go vet ./... && go build ./... && go test ./... -count=1` and `make check`
-  (exit checked separately from any pipe; three cold readings).
+- Retention: `cd next && gofmt -l . && go vet ./... && go build ./... && go test ./... -count=1`
+- Retention: `make check` (exit checked separately from any pipe; three cold readings)
 
 ## Expected diff shape
 
