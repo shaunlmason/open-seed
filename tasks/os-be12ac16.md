@@ -1,10 +1,11 @@
 ---
 id: os-be12ac16
 title: 'next: validate the filed tier against a vocabulary (Phase 10 tier system)'
-state: backlog
+state: ready
 priority: P2
 squad: core
 created_at: "2026-09-01T14:55:14Z"
+updated_at: "2026-09-02T09:26:49Z"
 ---
 
 Found while building the injection conformance suite (os-b779b4c7),
