@@ -935,3 +935,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-d6e72f53","kind":"pr"},"task":"os-6a08b166","ts":"2026-09-02T02:23:30Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-6a08b166","ts":"2026-09-02T02:23:33Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-8a5f14bb","ts":"2026-09-02T03:42:54Z","verb":"close"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:206","to":"ready"},"task":"os-d03bde01","ts":"2026-09-02T03:43:03Z","verb":"plan-unblock"}
