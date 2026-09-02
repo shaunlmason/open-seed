@@ -6,7 +6,7 @@ priority: P2
 squad: core
 author: seed-next-implementer
 created_at: "2026-09-01T14:19:51Z"
-updated_at: "2026-09-02T04:26:10Z"
+updated_at: "2026-09-02T04:39:30Z"
 ---
 
 Found while implementing the worker loop (os-abb206c8): budget
@@ -62,3 +62,7 @@ make check green, coverage 91.4% (gate 90%) on three cold readings; full suite u
 ## Evidence ev-c035db78 (mutation, seed-next-implementer, 2026-09-02T04:26:02Z)
 
 AC4: parity drill against main's pre-fix table fails naming five drifted constants. Eight mutations each caught: whole-rule mapping; flag unset at the capacity site; a spec row removed; a row for a code nothing defines; the old chain_invalid restored; a matrix row dropped; a fifteenth refusal site planted; the packet writer dropping the code prefix
+
+## Evidence ev-147c5955 (review, seed-next-implementer, 2026-09-02T04:39:30Z)
+
+Review finding on #208 (exit 22 shared by seal_broken and seal_unauthorized) addressed in 74da05e: four exits carry a refining code by design; envelope.md's allocation rule now states the exit/code relation with a refinements table, and TestEmittedCodesAppearInTheTable scans emitted envelope.Fail pairs against it. Three mutations caught. Thread resolved.
