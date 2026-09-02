@@ -524,7 +524,7 @@ func TestClaimRaceStorm(t *testing.T) {
 	}
 	for _, s := range []struct{ v, verb, subject, payload string }{
 		{"seed/0", "system.protocol.upgraded", "system", `{"to": "seed/1"}`},
-		{"seed/1", "intent.filed", "c-race", `{"intent": "storm", "tier": "standard", "budget": "s", "routing": "core"}`},
+		{"seed/1", "intent.filed", "c-race", `{"intent": "storm", "tier": "standard", "budget": "small", "routing": "core"}`},
 		{"seed/1", "contract.specified", "c-race", `{"acceptance": {"ref": "specs/race.md @ abc1234", "executable": false}}`},
 	} {
 		if _, err := setup.AppendLoop(Draft{
