@@ -138,7 +138,9 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   the declared inputs echoed (`as_of`, digest, thresholds) plus one
   expiry-vs-wedge classification per active claim, read only from the
   claim's own fence-keyed stream, and `refusals` (report version
-  "10"; [`refusals.md`](refusals.md)): null unless a rebuild declares
+  "10"; [`refusals.md`](refusals.md); version "11" adds the `knowledge`
+  section and its `contested` count, [`curation.md`](curation.md), so
+  an unchanged tip republishes with the section): null unless a rebuild declares
   an attempts journal, else the affordance-gap metric — outcome
   counts over the journal's one population, refusal breakdowns, the
   stamped-position span as context, and the four-decimal rate. The

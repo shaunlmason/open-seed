@@ -123,8 +123,10 @@ func TestReportRefusalsSection(t *testing.T) {
 	if rep.Refusals != nil {
 		t.Fatalf("an input-free report must state refusals: null, got %+v", rep.Refusals)
 	}
-	if v := project.Report().Version; v != "10" {
-		t.Fatalf("the refusals section is report version 10, got %s", v)
+	// The refusals section arrived at version 10; the knowledge section
+	// moved the report to 11 and republishes every prefix in its turn.
+	if v := project.Report().Version; v != "11" {
+		t.Fatalf("the report's version is 11 (10 added the refusals section, 11 the knowledge section), got %s", v)
 	}
 }
 

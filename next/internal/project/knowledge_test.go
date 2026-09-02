@@ -94,6 +94,12 @@ func TestKnowledgeProjectionPublishesTheStages(t *testing.T) {
 			t.Errorf("the knowledge view carries %s: %s", want, view)
 		}
 	}
+	// The report's derivation version moved with the section, so an
+	// already-published prefix republishes with it rather than keeping
+	// a same-id tree without it (review finding on the item 3 PR).
+	if project.Report().Version != "11" {
+		t.Fatalf("the report's version names the knowledge section: %s", project.Report().Version)
+	}
 	report := currentView(t, out2, "report")
 	if !strings.Contains(report, `"knowledge"`) || !strings.Contains(report, `"hypotheses": 2`) || !strings.Contains(report, `"contested": 1`) {
 		t.Fatalf("the report counts the stages once a curation fact stands: %s", report)

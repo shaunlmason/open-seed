@@ -390,7 +390,8 @@ func TestLintFileIsTheGatesFileHalf(t *testing.T) {
 	git("add", ".")
 	git("commit", "--quiet", "-m", "lesson")
 	anchor := git("rev-parse", "HEAD")
-	fact := LessonFact{Lesson: path + " @ " + anchor, Hypothesis: id + "@4", Carrier: "knowledge", Digest: Digest([]byte(body))}
+	fact := LessonFact{Lesson: path + " @ " + anchor, Hypothesis: id + "@4", Carrier: "knowledge", Digest: Digest([]byte(body)),
+		LastValidated: "2026-09-01T00:00:00Z", Expires: "2026-12-01T00:00:00Z"}
 	now := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	if err := LintFile(repo, []byte(body), fact, h, now); err != nil {
 		t.Fatalf("a lesson that agrees with the fact, the hypothesis and the repository lints: %v", err)
@@ -412,6 +413,14 @@ func TestLintFileIsTheGatesFileHalf(t *testing.T) {
 	altered.Digest = Digest([]byte(body + "\nedited\n"))
 	if err := LintFile(repo, []byte(body), altered, h, now); err == nil || gateOf(t, err) != GateLintDigest {
 		t.Fatalf("a fact whose digest is not the anchor's bytes refuses at the digest gate: %v", err)
+	}
+	// The fact's stamps are the reviewed file's: a promotion that
+	// recorded other dates carries dates nobody reviewed (review
+	// finding on the item 3 PR).
+	drifted := fact
+	drifted.Expires = "2027-06-01T00:00:00Z"
+	if err := LintFile(repo, []byte(body), drifted, h, now); err == nil || gateOf(t, err) != GateLintStamps || !strings.Contains(err.Error(), "differ from the fact") {
+		t.Fatalf("a fact whose stamps differ from the frontmatter refuses at the stamps gate: %v", err)
 	}
 	unmerged := fact
 	unmerged.Lesson = path + " @ " + strings.Repeat("f", 40)
@@ -456,7 +465,8 @@ func TestLintFileIsTheGatesFileHalf(t *testing.T) {
 			t.Fatal(err)
 		}
 		git("commit", "--quiet", "-am", "bent")
-		return LessonFact{Lesson: path + " @ " + git("rev-parse", "HEAD"), Hypothesis: id + "@4", Carrier: "knowledge", Digest: Digest([]byte(bent))}
+		return LessonFact{Lesson: path + " @ " + git("rev-parse", "HEAD"), Hypothesis: id + "@4", Carrier: "knowledge", Digest: Digest([]byte(bent)),
+			LastValidated: "2026-09-01T00:00:00Z", Expires: "2026-12-01T00:00:00Z"}
 	}
 	for _, c := range []struct {
 		name string

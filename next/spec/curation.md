@@ -225,7 +225,7 @@ there is a red test rather than a silent gap.
 | `lint.frontmatter` | the lesson file opens with the frontmatter block and its keys |
 | `lint.hypothesis` | the frontmatter cites the fact's hypothesis |
 | `lint.provenance` | every provenance anchor resolves in the repository at its commit |
-| `lint.stamps` | last-validated is not after the declared instant and expires is after it |
+| `lint.stamps` | last-validated is not after the declared instant, expires is after it, and both equal the fact's |
 | `lint.support` | the frontmatter's support equals the hypothesis's |
 | `promotion.adversarial` | the adversarial evaluation is an authenticated pass bound to this hypothesis and this lesson anchor, filed after the hypothesis |
 | `promotion.carrier` | the carrier is a member |
