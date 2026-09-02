@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-8e53ffd9",
   "merge_base": "92cfcf2a0ffe61a7c6707d8d36da4a0414d515c7",
-  "head": "abba6fad7760cb7ebabc0377510a92f072fdf1ba",
+  "head": "641fb3301c15026e3774e56291eea6a1281dfd87",
   "plan_path": "plans/os-8e53ffd9.md",
   "plan_sha256": "0aab6c286a3778c812c05ae1c7682a88c71160e51d1987b8e0b217e5f610c83f",
   "diff_files": [
@@ -20,6 +20,7 @@
     "next/executor/executor_test.go",
     "next/internal/admit/admit.go",
     "next/internal/admit/affordances.go",
+    "next/internal/admit/offer_test.go",
     "next/internal/admit/qualification_test.go",
     "next/internal/keyring/keyring.go",
     "next/internal/keyring/keyring_test.go",
@@ -34,7 +35,7 @@
     "next/spec/protocol.md",
     "next/spec/qualification.md"
   ],
-  "diff_sha256": "324ee7dae23a6764e874b33148d2ffdc15909869125d71a282c54acc134c4581",
+  "diff_sha256": "1500a07576644ada3c10ad675a46b1b058bc16656cd1f2d3827bd212ef807a4a",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
