@@ -1775,6 +1775,27 @@ here. Newest last.
   rather than from the driver's own report: what the driver saw is not
   what a successor reads.
 
+- **An exit is a family; the machine code can be finer, and the table
+  governs both.** Review found that exit 22's new row claimed the exit
+  was `seal_broken` while `cmd/seed/seal.go` also emits
+  `seal_unauthorized` on it. The fact generalizes: four exits ship a
+  second code today (`ledger_not_empty` on 3, `posture_undeclared` on
+  4, `seal_unauthorized` on 22, `posture_unreadable` on 66), and every
+  one is a narrower case of its exit rather than a different meaning.
+  That is the shipped design rather than drift, so the table says it
+  now, with the line drawn where it belongs: a condition a caller must
+  act on **differently** takes its own exit, which is exactly why
+  budget exhaustion did not stay a refinement of `chain_invalid`.
+
+  The drill missed it for a reason worth keeping: it derived a wire
+  name by transforming a **constant identifier**, so it proved nothing
+  whatever about the string a caller receives, and a call site passing
+  any code at all on a documented exit was invisible to it. The
+  companion drill scans the tree for `envelope.Fail(envelope.ExitX,
+  "code")` and requires every emitted pair to be in the spec. Two
+  parities, because there were two things drifting: which numbers
+  exist, and which strings ship on them.
+
 - **A residual that names its own retirement condition is a promise.**
   `next/spec/loop-verbs.md`'s "A residual, recorded" passage said that
   closing the residual "forces this passage to be updated with it". The
