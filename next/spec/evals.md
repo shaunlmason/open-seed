@@ -130,10 +130,13 @@ and the runtime tuple") and its inverse, both defined at `seed/3`
 | `actor.qualified` | an enrolled fingerprint | `{"capability", "tuple", "contract", "verdict"}` |
 | `actor.disqualified` | an enrolled fingerprint | `{"capability", "tuple", "contract", "verdict", "reason"}` |
 
-`tuple` is the strict five-field runtime tuple; `contract` is the eval
-subject; `verdict` is the cited verdict's chain position as a string;
-`reason` is required on a disqualification and refused on a
-qualification (the cited verdict is the reason). Both accept
+`capability` is **`claim` and nothing else**: an eval proves a
+configuration for work, never another authority, so a supervise key
+cannot mint operator or verdict standing through a green eval. `tuple`
+is the strict five-field runtime tuple; `contract` is the eval subject;
+`verdict` is the cited verdict's chain position as a string; `reason`
+is required on a disqualification and refused on a qualification (the
+cited verdict is the reason). Both accept
 `supervise` or `operator`: the capability table's first actor rows the
 supervisor holds, because §5 makes suspension the supervisor's
 attributable act with no operator ceremony, and operator stays the
@@ -153,12 +156,21 @@ fails verification as `bad_actor_event` at its position, exactly as a
 **At the boundary** the qualification rule reads the lifecycle, and
 every refusal is its own row with nothing appended:
 
-- the cited contract is an eval;
+- the cited contract is an eval, and it is **bound** to the definition
+  it names: its acceptance spec is that definition's own fixture
+  (`next/evals/<name>/fixture/…`), executable and gated. The boundary
+  binds by path, since it reads no repository; the derivation below
+  binds to the reviewed anchor. A contract that carries the marker with
+  any other spec is an eval in name only, and its verdict, however
+  green, qualifies nobody;
 - `actor.qualified` cites the eval's **authenticated pass**: the latest
-  verdict is a pass whose signer, replayed to the verdict's own
-  position, held a verdict grant and was no implementing key (the
-  verifier boundary re-checked, so a raw-pushed pass qualifies nobody);
-  `actor.disqualified` cites an authenticated **fail** on the eval;
+  verdict is a pass whose signer held a verdict grant **at the
+  verdict's own position** (the keyring replayed there, so a raw-pushed
+  pass from an ungranted key does not become authentic when the key is
+  granted later, and a legitimate pass does not stop being one when its
+  signer is suspended afterwards) and was no implementing key;
+  `actor.disqualified` cites a **fail** on the eval authenticated the
+  same way;
 - the claim window the verdict's submission cites carries an admitted
   `run.started` declaring exactly the cited tuple, all five fields: a
   qualification is for the configuration that ran, never another;
@@ -196,7 +208,12 @@ failed must pass an eval again, which the exemption above lets it do.
 ## What the chain owes: `seed eval status` and `seed eval act`
 
 `eval.Due(now, after)` derives, at a DECLARED instant, the acts the
-chain owes and the lane each is owed by:
+chain owes and the lane each is owed by. It first binds every marked
+contract to its definition **at the reviewed anchor**: the acceptance
+ref must equal the shipped definition's `Anchor.Ref`, executable and
+gated; a contract that names an eval and cites anything else, or names
+a definition the repository does not ship, is noted `unbound` and
+neither offered, minted from nor disqualified from. Then:
 
 | act | when | lane |
 |---|---|---|

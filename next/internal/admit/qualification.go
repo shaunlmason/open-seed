@@ -13,17 +13,19 @@ import (
 )
 
 // AuthenticPass is the subject's latest admitted verdict when it is a
-// pass rendered by a verdict-granted key disjoint from the implementer;
-// nil otherwise. The admission-side half of D2: the mint decision also
-// recomputes the receipt.
+// pass rendered by a key that held a verdict grant at the verdict's own
+// position and is disjoint from the implementer; nil otherwise. The
+// admission-side half of D2: the mint decision also recomputes the
+// receipt.
 func AuthenticPass(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {
 	return authenticPass(c, subject, s)
 }
 
-// AuthenticFail is a boundary-validated fail verdict on the subject's
-// current submission window, nil when none stands.
+// AuthenticFail is a fail verdict on the subject's current submission
+// window whose signer passed the verifier boundary at the verdict's
+// own position, nil when none stands.
 func AuthenticFail(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {
-	return authenticFail(c, subject, s)
+	return qualifiedFail(c, subject, s)
 }
 
 // SubmissionWindow is the claim window the submission at that position

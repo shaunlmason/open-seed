@@ -65,10 +65,12 @@ attributed to it.
   enrolled fingerprint; defined at `seed/3` positions only
   ([`evals.md`](evals.md)), and at `seed/1` or `seed/2` positions
   unknown-and-refused at the position as `bad_actor_event`. Payload
-  `{"capability": "<non-empty>", "tuple": {…}, "contract": "<eval
+  `{"capability": "claim", "tuple": {…}, "contract": "<eval
   subject>", "verdict": "<chain position>"}`, plus `"reason":
   "<non-empty>"` required on a disqualification and refused on a
-  qualification (the cited verdict is the reason). A qualification is a
+  qualification (the cited verdict is the reason); `capability` is
+  `claim` and nothing else, since an eval proves a configuration for
+  work, never another authority. A qualification is a
   grant with evidence: it grants the capability if absent, adds the
   tuple to the admissible set the qualification rule reads, and marks
   the capability as ever cited; a disqualification removes the tuple

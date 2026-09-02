@@ -154,6 +154,9 @@ func TestQualificationShapesAreStrict(t *testing.T) {
 		"unknown field":              {keyring.VerbQualified, `{"capability": "claim", "tuple": ` + qualifiedTuple + `, "contract": "eval-1", "verdict": "7", "extra": 1}`},
 		"qualified with a reason":    {keyring.VerbQualified, `{"capability": "claim", "tuple": ` + qualifiedTuple + `, "contract": "eval-1", "verdict": "7", "reason": "because"}`},
 		"disqualified without one":   {keyring.VerbDisqualified, `{"capability": "claim", "tuple": ` + qualifiedTuple + `, "contract": "eval-2", "verdict": "9"}`},
+		"qualified for operator":     {keyring.VerbQualified, `{"capability": "operator", "tuple": ` + qualifiedTuple + `, "contract": "eval-1", "verdict": "7"}`},
+		"qualified for verdict":      {keyring.VerbQualified, `{"capability": "verdict", "tuple": ` + qualifiedTuple + `, "contract": "eval-1", "verdict": "7"}`},
+		"disqualified from dispatch": {keyring.VerbDisqualified, `{"capability": "dispatch", "tuple": ` + qualifiedTuple + `, "contract": "eval-2", "verdict": "9", "reason": "r"}`},
 		"sealer qualified for claim": {keyring.VerbQualified, mintBody},
 	} {
 		chain := append([]*event.Record{}, base...)

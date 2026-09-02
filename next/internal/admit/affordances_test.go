@@ -173,7 +173,7 @@ func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
 		walkStep{"root", version.Seed1, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed2 + `"}`), ""},
 		walkStep{"root", version.Seed2, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed3 + `"}`), ""},
 		walkStep{"root", version.Seed3, "intent.filed", "c-4", static(evalFiledBody), ""},
-		walkStep{"root", version.Seed3, "contract.specified", "c-4", static(specBody), ""},
+		walkStep{"root", version.Seed3, "contract.specified", "c-4", static(evalSpecFor("walk")), ""},
 		walkStep{"holder", version.Seed3, "claim.taken", "c-4", static(`{}`), ""},
 		walkStep{"holder", version.Seed3, "budget.reserve", "c-4", func(t *testing.T, ctx *Context) string {
 			return reserveBody("2", fenceOf(t, ctx, "c-4"))
@@ -191,7 +191,7 @@ func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
 			return `{"capability": "claim", "tuple": ` + tupleJSON(t, nil) + `, "contract": "c-4", "verdict": "` + verdictOf(t, ctx, "c-4") + `"}`
 		}, "qualified"},
 		walkStep{"root", version.Seed3, "intent.filed", "c-5", static(evalFiledBody), ""},
-		walkStep{"root", version.Seed3, "contract.specified", "c-5", static(specBody), ""},
+		walkStep{"root", version.Seed3, "contract.specified", "c-5", static(evalSpecFor("walk")), ""},
 		walkStep{"holder", version.Seed3, "claim.taken", "c-5", static(`{}`), ""},
 		walkStep{"holder", version.Seed3, "budget.reserve", "c-5", func(t *testing.T, ctx *Context) string {
 			return reserveBody("2", fenceOf(t, ctx, "c-5"))

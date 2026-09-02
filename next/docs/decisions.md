@@ -2112,3 +2112,40 @@ here. Newest last.
   return values from, and the first draft read a stale context two
   subjects behind. The fixture now returns a struct whose `ctx` every
   step rewrites and every assertion reads through.
+
+- **A qualification grants `claim` and nothing else** (os-03e47abb,
+  review finding on #221). The keyring decoded any non-empty capability
+  and added it to the string view of grants, so a `supervise` key could
+  have minted `operator` or `verdict` standing for a holder through a
+  green eval, escaping the supervisor's own boundary. The plan fixed the
+  field to `claim`; the keyring now refuses anything else as chain
+  validity, and the drill rows name `operator`, `verdict` and `dispatch`.
+
+- **The verifier boundary is replayed to the verdict's own position**
+  (os-03e47abb, review finding on #221, D2 made literal). `authenticPass`
+  and the fail path read the TIP keyring, so a raw-pushed verdict from
+  an ungranted key became authentic once the key was granted `verdict`
+  later, and a legitimate verdict stopped qualifying anything once its
+  signer was suspended. Both are now judged at `fact.Pos`
+  (`verdictBoundaryAt`, the `VerifyVerdicts` replay), with a drill for
+  each direction: a later grant does not reach back, and a later
+  suspension does not unmake a pass. The red-verdict lockout keeps its
+  tip-keyring reading, which is a different question (whether a fail
+  stands NOW), untouched by this card.
+
+- **The marker is bound to the named definition: by path at the
+  boundary, by anchor in the derivation** (os-03e47abb, review finding
+  on #221). The qualification rule required only that the contract
+  carry a marker, so a dispatch key could file an "eval" with a
+  trivially green gated acceptance of its own, let a real verifier
+  produce a real receipt, and have the supervisor's `eval act` mint.
+  The boundary reads no repository, so it binds what it can: the
+  acceptance spec must be the named definition's fixture
+  (`next/evals/<name>/fixture/…`, executable and gated). `Due` binds
+  the rest: the ref must equal the shipped definition's `Anchor.Ref`
+  at its reviewed commit, or the contract is noted `unbound` and
+  neither offered, minted from nor disqualified from (a fake eval that
+  fails must not disqualify everyone either). Spot-check filings are
+  bound by construction, since `File` writes the anchor. `EvalRoot`
+  moved to `internal/transition` so the boundary and the eval package
+  read one layout.

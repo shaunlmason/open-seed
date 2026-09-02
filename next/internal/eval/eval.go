@@ -36,8 +36,9 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
-// Root is where definitions live, relative to the repository root.
-const Root = "next/evals"
+// Root is where definitions live, relative to the repository root:
+// transition.EvalRoot, which the boundary reads the layout from.
+const Root = transition.EvalRoot
 
 // Applies reports whether the qualification verbs and the eval marker
 // are defined at a record carrying version v: seed/3 exactly (D8).
@@ -383,6 +384,15 @@ func Due(in Inputs) Report {
 		if !ok || s.Eval == nil {
 			continue
 		}
+		// The marker binds to the named definition at its reviewed
+		// anchor (review finding on the task PR): a contract that
+		// carries an eval name but not the definition's own acceptance
+		// spec at the anchor is not an eval, and its verdict qualifies
+		// or disqualifies nobody, however green or red.
+		if note := bound(in, subject, s); note != nil {
+			rep.Notes = append(rep.Notes, *note)
+			continue
+		}
 		// Offers: a waiting eval with no live offer.
 		if s.State == "ready" && len(s.LiveOffers(in.Now)) == 0 {
 			payload, _ := json.Marshal(map[string]any{
@@ -448,6 +458,31 @@ func Due(in Inputs) Report {
 		rep = spotChecks(in, rep)
 	}
 	return rep
+}
+
+// bound checks that the eval's acceptance spec is the named
+// definition's, at the definition's reviewed anchor: the acceptance ref
+// the fold carries must equal Anchor.Ref for the shipped definition,
+// executable and gated. Nil when bound; a note by name otherwise.
+func bound(in Inputs, subject string, s transition.SubjectState) *Note {
+	def, ok := Find(in.Evals, s.Eval.Name)
+	if !ok {
+		return &Note{Kind: "unbound", Subject: subject, Detail: fmt.Sprintf("the marker names eval %q, which is not among the shipped definitions", s.Eval.Name)}
+	}
+	if s.Acceptance == nil || !s.Acceptance.Executable || !s.Acceptance.Gated {
+		return &Note{Kind: "unbound", Subject: subject, Detail: "the contract carries no executable, gated acceptance spec, so it is not the definition's eval"}
+	}
+	if in.Repo == "" {
+		return &Note{Kind: "unbound", Subject: subject, Detail: "no repository to read the definition's reviewed anchor from; nothing is owed on an eval the derivation cannot bind"}
+	}
+	anchor, err := AnchorOf(in.Repo, def)
+	if err != nil {
+		return &Note{Kind: "unbound", Subject: subject, Detail: fmt.Sprintf("the definition's anchor cannot be read: %v", err)}
+	}
+	if s.Acceptance.Ref != anchor.Ref(def) {
+		return &Note{Kind: "unbound", Subject: subject, Detail: fmt.Sprintf("the acceptance ref %q is not the definition's fixture at its reviewed anchor (%s): a contract may name an eval, but only the shipped definition's own spec at the reviewed commit is one", s.Acceptance.Ref, anchor.Ref(def))}
+	}
+	return nil
 }
 
 // recompute retrieves the cited receipt and recomputes it against the

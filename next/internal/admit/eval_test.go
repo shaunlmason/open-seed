@@ -24,6 +24,16 @@ import (
 
 const evalFiled = `{"intent": "eval fix-the-check: the check is green", "tier": "trivial", "budget": "small", "routing": "core", "eval": {"name": "fix-the-check"}}`
 
+// evalSpec is the named definition's own fixture at a gated revision:
+// what binds the marker to a definition at the boundary (by path; the
+// derivation binds it to the reviewed anchor).
+const evalSpec = `{"acceptance": {"ref": "next/evals/fix-the-check/fixture/accept.md @ abc1234", "executable": true, "gate": "pr/1 @ abc1234"}}`
+
+// evalSpecFor is evalSpec for a definition of another name.
+func evalSpecFor(name string) string {
+	return `{"acceptance": {"ref": "next/evals/` + name + `/fixture/accept.md @ abc1234", "executable": true, "gate": "pr/1 @ abc1234"}}`
+}
+
 // The fixture's records all carry draftV's ts; a mint dated there is
 // not before the verdict it cites, and one a second earlier is.
 const fixtureTS = "2026-09-01T01:00:00Z"
@@ -110,7 +120,7 @@ func evalFixture(t *testing.T) *evalStand {
 	drive := func(subject string) int {
 		t.Helper()
 		step(signer, version.Seed3, "intent.filed", subject, evalFiled)
-		step(signer, version.Seed3, "contract.specified", subject, specBody)
+		step(signer, version.Seed3, "contract.specified", subject, evalSpec)
 		step(k.holder, version.Seed3, "claim.taken", subject, `{}`)
 		fence := fenceOf(t, st.ctx, subject)
 		step(k.holder, version.Seed3, "budget.reserve", subject, reserveBody("10", fence))
@@ -185,6 +195,20 @@ func TestQualifiedRefusesEachRowAtTheBoundary(t *testing.T) {
 		t.Fatal("a refused proposal appends nothing")
 	}
 
+	// An eval in name only: the marker with any other acceptance spec
+	// (an ordinary gateless spec here) is no eval, and its authentic
+	// pass qualifies nobody (review finding on the task PR).
+	st.step(k.signer, version.Seed3, "intent.filed", "e-fake", evalFiled)
+	st.step(k.signer, version.Seed3, "contract.specified", "e-fake", specBody)
+	st.step(k.holder, version.Seed3, "claim.taken", "e-fake", `{}`)
+	fakeFence := fenceOf(t, st.ctx, "e-fake")
+	st.step(k.holder, version.Seed3, "budget.reserve", "e-fake", reserveBody("10", fakeFence))
+	st.step(k.supervisor, version.Seed3, "run.started", "e-fake", startBodyAt(fakeFence, fmt.Sprintf("%d", st.ctx.Count-1), base))
+	fakeSub := st.ctx.Count
+	st.step(k.holder, version.Seed3, "submission.made", "e-fake", submissionBody(fakeFence))
+	st.step(k.verifier, version.Seed3, "verdict.rendered", "e-fake", verdictBody("pass", fakeSub))
+	chainRefusal(t, "an eval in name only", propose(k.supervisor, fixtureTS, holder, mintBody("e-fake", base, st.ctx.Count-1)), "not that definition's fixture")
+
 	// Not boundary-authenticated: e-3 judged by raw pushes. First by a
 	// key holding no verdict grant, then by the implementer itself; the
 	// fold carries each as the latest verdict and neither qualifies.
@@ -194,8 +218,18 @@ func TestQualifiedRefusesEachRowAtTheBoundary(t *testing.T) {
 	st.step(k.holder, version.Seed3, "verdict.rendered", "e-3", verdictBody("pass", sub3))
 	chainRefusal(t, "raw pass by the implementer", propose(k.supervisor, fixtureTS, holder, mintBody("e-3", base, st.ctx.Count-1)), "not the eval's authenticated pass")
 
+	// Authority is replayed to the verdict's own position (D2): the
+	// unverdicted key's raw pass on e-3 does not become authentic when
+	// the key is granted verdict afterwards.
+	st.step(k.signer, version.Seed3, keyring.VerbGranted, fpOf(t, k.other), `{"capability": "verdict"}`)
+	st.step(k.other, version.Seed3, "verdict.rendered", "e-3", verdictBody("pass", sub3))
+	chainRefusal(t, "a raw pass authenticated only at the tip", propose(k.supervisor, fixtureTS, holder, mintBody("e-3", base, st.ctx.Count-2)), "not the eval's authenticated pass")
+
 	// The clean mint lands; a second citing the same verdict refuses,
 	// and the admissible set holds the configuration.
+	// And the converse: the verifier suspended after rendering does not
+	// unmake the pass it rendered while granted.
+	st.step(k.signer, version.Seed3, keyring.VerbSuspended, fpOf(t, k.verifier), `{"reason": "rotation"}`)
 	st.step(k.supervisor, version.Seed3, keyring.VerbQualified, holder, clean)
 	chainRefusal(t, "a second mint citing the same verdict", propose(k.supervisor, fixtureTS, holder, clean), "already cited")
 	if cited := st.ctx.Keyring.GrantTuples(holder, keyring.CapClaim); len(cited) != 1 || cited[0].Model != baseTuple["model"] {
@@ -239,7 +273,7 @@ func TestDisqualifiedRowsExemptionAndTheClosedBridge(t *testing.T) {
 	// AC6: on an eval subject any declared configuration admits: the
 	// eval is what proves a configuration, so the set cannot gate it.
 	st.step(k.signer, version.Seed3, "intent.filed", "e-3", evalFiled)
-	st.step(k.signer, version.Seed3, "contract.specified", "e-3", specBody)
+	st.step(k.signer, version.Seed3, "contract.specified", "e-3", evalSpec)
 	st.step(k.holder, version.Seed3, "claim.taken", "e-3", `{}`)
 	eFence := fenceOf(t, st.ctx, "e-3")
 	st.step(k.holder, version.Seed3, "budget.reserve", "e-3", reserveBody("10", eFence))

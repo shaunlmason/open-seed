@@ -484,16 +484,16 @@ func TestDueOffersMintsAndDisqualifies(t *testing.T) {
 		t.Fatalf("an expired offer is owed again at a later instant: %s", kinds(rep.Acts))
 	}
 
-	// A pass whose receipt nothing can recompute (no store, no
-	// repository) mints nothing, and says so.
+	// A pass whose receipt nothing can recompute (no store) mints
+	// nothing, and says so.
 	passPos := s.judge(e1, "holderA", "pass")
-	rep = s.due(now, 0, defs, "")
+	rep = s.due(now, 0, defs, repo)
 	if len(rep.Acts) != 0 || noteKinds(rep.Notes) != "receipt_unchecked" {
 		t.Fatalf("nothing is minted on an unchecked receipt: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
 	}
 	// Once the mint stands, nothing is owed and nothing noted.
 	s.add("root", keyring.VerbQualified, s.fps["holderA"], fmt.Sprintf(`{"capability": "claim", "tuple": %s, "contract": %q, "verdict": "%d"}`, baseTupleJSON, e1, passPos))
-	if rep := s.due(now, 0, defs, ""); len(rep.Acts) != 0 || len(rep.Notes) != 0 {
+	if rep := s.due(now, 0, defs, repo); len(rep.Acts) != 0 || len(rep.Notes) != 0 {
 		t.Fatalf("one verdict, one consequence: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
 	}
 
@@ -502,7 +502,7 @@ func TestDueOffersMintsAndDisqualifies(t *testing.T) {
 	s.add("root", keyring.VerbGranted, s.fps["holderB"], `{"capability": "claim", "tuple": `+baseTupleJSON+`}`)
 	e2 := s.file(defs[0], anchor, nil, 1)
 	failPos := s.judge(e2, "holderA", "fail")
-	rep = s.due(now, 0, defs, "")
+	rep = s.due(now, 0, defs, repo)
 	got := kinds(rep.Acts)
 	if got != "disqualify:"+s.fps["holderA"]+" disqualify:"+s.fps["holderB"] && got != "disqualify:"+s.fps["holderB"]+" disqualify:"+s.fps["holderA"] {
 		t.Fatalf("a fail disqualifies every holder of the configuration: %s", got)
@@ -515,9 +515,28 @@ func TestDueOffersMintsAndDisqualifies(t *testing.T) {
 		t.Fatalf("each disqualification cites the eval and the fail with a reason: %+v", drop)
 	}
 	s.add("root", keyring.VerbDisqualified, s.fps["holderA"], rep.Acts[0].Payload)
-	if rep := s.due(now, 0, defs, ""); kinds(rep.Acts) != "disqualify:"+s.fps["holderB"] {
+	if rep := s.due(now, 0, defs, repo); kinds(rep.Acts) != "disqualify:"+s.fps["holderB"] {
 		t.Fatalf("a performed disqualification is not owed again: %s", kinds(rep.Acts))
 	}
+
+	// An eval in name only owes nothing: the marker with a foreign
+	// acceptance spec, or naming a definition the repository does not
+	// ship, is noted unbound and neither offered, minted nor
+	// disqualified from (review finding on the task PR).
+	s.add("root", "intent.filed", "e-fake", `{"intent": "eval", "tier": "trivial", "budget": "small", "routing": "core", "eval": {"name": "fix-the-check"}}`)
+	s.add("root", "contract.specified", "e-fake", `{"acceptance": {"ref": "accept.md @ `+commit+`", "executable": true, "gate": "pr/1 @ `+commit+`"}}`)
+	s.add("root", "intent.filed", "e-unknown", `{"intent": "eval", "tier": "trivial", "budget": "small", "routing": "core", "eval": {"name": "nope"}}`)
+	s.add("root", "contract.specified", "e-unknown", `{"acceptance": {"ref": "next/evals/nope/fixture/accept.md @ `+commit+`", "executable": true, "gate": "pr/1 @ `+commit+`"}}`)
+	s.add("root", keyring.VerbDisqualified, s.fps["holderB"], rep.Acts[0].Payload)
+	rep = s.due(now, 0, defs, repo)
+	if kinds(rep.Acts) != "" || noteKinds(rep.Notes) != "unbound unbound" {
+		t.Fatalf("an eval in name only is noted unbound and owes nothing: %s / %+v", kinds(rep.Acts), rep.Notes)
+	}
+	s.judge("e-fake", "holderB", "pass")
+	if rep := s.due(now, 0, defs, repo); kinds(rep.Acts) != "" || !strings.Contains(fmt.Sprint(rep.Notes), "not the definition's fixture at its reviewed anchor") {
+		t.Fatalf("a pass on an eval in name only mints nothing: %s / %+v", kinds(rep.Acts), rep.Notes)
+	}
+
 }
 
 // conformance: D5 — spot-checks age from the qualification record's
@@ -599,7 +618,7 @@ func TestDueSpotChecksAgeFromTheDeclaredInstant(t *testing.T) {
 		t.Fatalf("past the new window a fresh spot-check (prior 1) is owed: %+v", rep.Acts)
 	}
 	// A definition the repository no longer ships is noted, not filed.
-	if rep := s.due(later.Add(25*time.Hour), day, nil, repo); len(rep.Acts) != 0 || noteKinds(rep.Notes) != "no_definition" {
-		t.Fatalf("a missing definition is a note: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
+	if rep := s.due(later.Add(25*time.Hour), day, nil, repo); len(rep.Acts) != 0 || !strings.Contains(noteKinds(rep.Notes), "no_definition") {
+		t.Fatalf("a missing definition is a note, and every eval naming it is unbound: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
 	}
 }

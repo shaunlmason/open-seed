@@ -327,6 +327,18 @@ type AcceptanceInfo struct {
 	Gated      bool
 }
 
+// EvalRoot is where eval definitions live, relative to the repository
+// root (next/spec/evals.md); internal/eval mirrors it. The boundary
+// reads the layout, never the repository: an eval's acceptance spec
+// MUST be the named definition's fixture, which binds the marker to a
+// definition by path at admission and lets the derivation bind it to
+// the reviewed anchor.
+const EvalRoot = "next/evals"
+
+// EvalFixturePrefix is the repository-relative prefix every acceptance
+// ref of the named eval must carry.
+func EvalFixturePrefix(name string) string { return EvalRoot + "/" + name + "/fixture/" }
+
 // EvalInfo is intent.filed's optional eval object: Name is the shipped
 // definition under next/evals/, and Tuple, present on a spot-check, is
 // the configuration under re-test, advisory (the mint reads what the

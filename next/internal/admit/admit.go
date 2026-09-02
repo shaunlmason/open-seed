@@ -1091,6 +1091,9 @@ func Default() []Rule {
 			if s.Eval == nil {
 				return refuse("the cited contract is not an eval: only synthetic work with a known verdict qualifies or disqualifies a configuration")
 			}
+			if !evalBound(s) {
+				return refuse(fmt.Sprintf("the cited contract names eval %q but its acceptance spec is not that definition's fixture at a gated revision: a contract may carry the marker, but only the shipped definition's own spec is an eval, and its verdict qualifies nobody", s.Eval.Name))
+			}
 			if pos < 0 || pos >= len(c.Records) {
 				return refuse(fmt.Sprintf("the cited verdict position %d is not on the chain", pos))
 			}
@@ -1100,7 +1103,7 @@ func Default() []Rule {
 					return refuse(fmt.Sprintf("position %d is not the eval's authenticated pass verdict: a qualification cites the pass that proved the configuration, rendered by a verdict-granted key disjoint from the implementer", pos))
 				}
 			} else {
-				if fact = windowFail(s, pos); fact == nil || verdictBoundary(c, p.Contract, "", s, *fact) != nil {
+				if fact = windowFail(s, pos); fact == nil || verdictBoundaryAt(c, p.Contract, "", s, *fact) != nil {
 					return refuse(fmt.Sprintf("position %d is not an authenticated fail verdict on the eval: a disqualification cites the fail that ended the configuration", pos))
 				}
 			}
@@ -1554,10 +1557,61 @@ func authenticPass(c *Context, subject string, s transition.SubjectState) *trans
 	if s.Verdict == nil || s.Verdict.Verdict != "pass" {
 		return nil
 	}
-	if verdictBoundary(c, subject, "", s, *s.Verdict) != nil {
+	if verdictBoundaryAt(c, subject, "", s, *s.Verdict) != nil {
 		return nil
 	}
 	return s.Verdict
+}
+
+// verdictBoundaryAt is verdictBoundary replayed to the verdict's own
+// position (plans/os-03e47abb.md D2; review finding on the task PR):
+// the signer held a verdict grant THERE, so a raw-pushed verdict from an
+// ungranted key does not become authentic when the key is granted
+// later, and a legitimate verdict does not stop being one when its
+// signer is suspended afterwards. The independence half reads the
+// fold's claimant set as VerifyVerdicts does.
+func verdictBoundaryAt(c *Context, subject, verb string, s transition.SubjectState, fact transition.VerdictFact) *transition.ChainError {
+	if c.Keyring == nil {
+		return nil
+	}
+	if fact.Pos < 0 || fact.Pos > len(c.Records) {
+		return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the cited verdict position %d is not on the chain", fact.Pos)}
+	}
+	ring, _, err := keyring.StateAt(c.Records[:fact.Pos])
+	if err != nil {
+		return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the keyring cannot be replayed to the verdict's position %d: %v", fact.Pos, err)}
+	}
+	signer := fact.Signer
+	if !ring.HasAnyCapability(signer, keyring.AcceptedCapabilities(transition.VerdictRenderedVerb)) {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the cited verdict at position %d was signed by %s, which held no verdict grant there — a raw-pushed verdict never passed the verifier boundary, and a later grant does not reach back", fact.Pos, signer)}
+	}
+	if s.PriorClaimants[signer] || (s.Submission != nil && signer == s.Submission.Signer) {
+		return &transition.ChainError{Subject: subject, Verb: verb,
+			Reason: fmt.Sprintf("the cited verdict at position %d was signed by implementing key %s — L1 independence never held", fact.Pos, signer)}
+	}
+	return nil
+}
+
+// qualifiedFail is authenticFail with the boundary replayed to each
+// fail's own position: what a disqualification may cite.
+func qualifiedFail(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {
+	for i := range s.SubmissionFails {
+		if verdictBoundaryAt(c, subject, "", s, s.SubmissionFails[i]) == nil {
+			return &s.SubmissionFails[i]
+		}
+	}
+	return nil
+}
+
+// evalBound reports whether an eval subject's acceptance spec is the
+// named definition's fixture at a gated revision: the boundary binds
+// the marker by PATH (it reads no repository), and the derivation binds
+// it to the reviewed anchor (internal/eval). A contract that names an
+// eval and cites any other spec is not an eval, whatever its verdict.
+func evalBound(s transition.SubjectState) bool {
+	return s.Eval != nil && s.Acceptance != nil && s.Acceptance.Executable && s.Acceptance.Gated &&
+		strings.HasPrefix(s.Acceptance.Ref, transition.EvalFixturePrefix(s.Eval.Name))
 }
 
 func authenticFail(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {

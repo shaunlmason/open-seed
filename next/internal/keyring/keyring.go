@@ -706,6 +706,13 @@ func (s *State) Advance(rec *event.Record) error {
 		if p.Capability == "" {
 			return fmt.Errorf("%s must name a capability", e.Verb)
 		}
+		if p.Capability != CapClaim {
+			// An eval proves a configuration for WORK (plans/os-03e47abb.md
+			// D1; review finding on the task PR): a qualification
+			// grants claim and nothing else, or a supervise key could
+			// mint operator standing through a green eval.
+			return fmt.Errorf("%s qualifies the %s capability only, got %q: an eval proves a configuration for work, never another authority", e.Verb, CapClaim, p.Capability)
+		}
 		if len(p.Tuple) == 0 {
 			return fmt.Errorf("%s must cite the runtime tuple it qualifies", e.Verb)
 		}
