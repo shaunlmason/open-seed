@@ -23,6 +23,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/refusals"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 )
 
 // ReportFile is the report projection's one view file.
@@ -204,6 +205,12 @@ type ReportPlanner struct {
 	Edited       int     `json:"edited"`
 	Unmeasured   int     `json:"unmeasured"`
 	UneditedRate *string `json:"unedited_rate"`
+	// Strongest is the tuples scope of the latest applied
+	// offer.published that carries one (plans/os-c7554f18.md D3;
+	// next/spec/ranking.md): the input the planner lane last received
+	// by policy. Absent when no offer has carried a scope, and never
+	// split by kind.
+	Strongest []tuple.Tuple `json:"strongest,omitempty"`
 }
 
 // ReportReconciliation is the record-derivable half of divergence
@@ -253,7 +260,7 @@ type ReportReconciliation struct {
 // other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "15", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "16", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -411,7 +418,30 @@ func lanesSection(fold *transition.Fold) *ReportLanes {
 	}
 	sec.Dispatcher.RetriageRate = reportRate(sec.Dispatcher.Respecified, sec.Dispatcher.Specified)
 	sec.Planner.UneditedRate = reportRate(sec.Planner.Unedited, sec.Planner.Unedited+sec.Planner.Edited)
+	sec.Planner.Strongest = strongestOffered(fold)
 	return sec
+}
+
+// strongestOffered is the tuples scope of the latest applied offer
+// that carries one, across every subject: the configurations the
+// planner lane last received by policy (next/spec/ranking.md). Nil
+// when no offer has carried a scope.
+func strongestOffered(fold *transition.Fold) []tuple.Tuple {
+	latest := -1
+	var out []tuple.Tuple
+	for _, subject := range fold.Subjects() {
+		s, ok := fold.State(subject)
+		if !ok {
+			continue
+		}
+		for _, o := range s.Offers {
+			if len(o.Tuples) > 0 && o.Pos > latest {
+				latest = o.Pos
+				out = append([]tuple.Tuple(nil), o.Tuples...)
+			}
+		}
+	}
+	return out
 }
 
 // reportRate is a ratio as a fixed three-decimal string, null at a

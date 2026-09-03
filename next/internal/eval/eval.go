@@ -32,6 +32,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/plan"
+	"github.com/shaunlmason/open-seed/next/internal/ranking"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -586,6 +587,13 @@ func Due(in Inputs) Report {
 		ttl = 24 * time.Hour
 	}
 	fold := in.Ctx.Lifecycle
+	// The ranking the offers carry (plans/os-c7554f18.md D2), derived
+	// once at the declared instant from the same prefix, the gold
+	// refining it when supplied.
+	ranked, err := ranking.Derive(ranking.Inputs{Records: in.Ctx.Records, Ring: in.Ring, AsOf: in.Now.UTC().Format(time.RFC3339), Agreement: agreementFor(in)})
+	if err != nil {
+		rep.Notes = append(rep.Notes, Note{Kind: "ranking_unreadable", Subject: "system", Detail: err.Error()})
+	}
 	for _, subject := range fold.Subjects() {
 		s, ok := fold.State(subject)
 		if !ok || s.Eval == nil {
@@ -613,14 +621,31 @@ func Due(in Inputs) Report {
 				continue
 			}
 		}
-		// Offers: a waiting eval with no live offer.
+		// Offers: a waiting eval with no live offer, scoped by policy
+		// (plans/os-c7554f18.md D2; next/spec/ranking.md): a re-test
+		// names the configuration under test, a first eval the top of
+		// the claim ranking, and an empty ranking leaves the offer
+		// unscoped, the bootstrap, and says so.
 		if s.State == "ready" && len(s.LiveOffers(in.Now)) == 0 {
+			eligibility := map[string]any{"capabilities": []string{keyring.CapClaim}, "tiers": []string{s.Tier}}
+			because := "the eval is ready and no offer is live"
+			switch {
+			case s.Eval.Tuple != nil:
+				eligibility["tuples"] = []tuple.Tuple{*s.Eval.Tuple}
+				because += "; the offer names the configuration under re-test"
+			case len(ranked.Capabilities[keyring.CapClaim]) > 0:
+				eligibility["tuples"] = ranking.Top(ranked, keyring.CapClaim, 1)
+				because += "; the offer carries the strongest claim tuple by policy"
+			default:
+				rep.Notes = append(rep.Notes, Note{Kind: "ranking_empty", Subject: subject,
+					Detail: "no qualified claim tuple ranks at this instant, so the offer is unscoped: the first eval is how a configuration qualifies"})
+			}
 			payload, _ := json.Marshal(map[string]any{
-				"eligibility": map[string]any{"capabilities": []string{keyring.CapClaim}, "tiers": []string{s.Tier}},
+				"eligibility": eligibility,
 				"expires":     in.Now.Add(ttl).UTC().Format(time.RFC3339),
 			})
 			rep.Acts = append(rep.Acts, Act{Kind: KindOffer, Verb: transition.OfferPublishedVerb, Subject: subject,
-				Payload: string(payload), Lane: LaneSupervise, Because: "the eval is ready and no offer is live"})
+				Payload: string(payload), Lane: LaneSupervise, Because: because})
 		}
 		// Calibration (plans/os-2e34f66a.md D5): the verifier's
 		// scorecard against the gold, never the pass or fail.
@@ -684,6 +709,37 @@ func Due(in Inputs) Report {
 		rep = spotChecks(in, rep)
 	}
 	return rep
+}
+
+// agreementFor answers the calibration agreement of a verdict by
+// contract and position when the gold is supplied (plans/os-c7554f18.md
+// D1): the same figure calibrate scores, so the ranking's refinement
+// and the derivation's own judgment cannot disagree. Nil without gold,
+// which is what leaves the ranking unrefined.
+func agreementFor(in Inputs) func(contract string, verdict int) (float64, bool) {
+	if len(in.Gold) == 0 {
+		return nil
+	}
+	return func(contract string, verdict int) (float64, bool) {
+		s, ok := in.Ctx.Lifecycle.State(contract)
+		if !ok || s.Eval == nil {
+			return 0, false
+		}
+		def, found := Find(in.Evals, s.Eval.Name)
+		if !found || !def.IsCalibration() {
+			return 0, false
+		}
+		gold, note := goldFor(in, def, contract)
+		if note != nil {
+			return 0, false
+		}
+		fact := admit.AuthenticVerdict(in.Ctx, contract, s)
+		if fact == nil || fact.Pos != verdict || fact.Scorecard == nil {
+			return 0, false
+		}
+		a, _ := Agreement(fact.Scorecard.Items, gold.Items)
+		return a, true
+	}
 }
 
 // bound checks that the eval's acceptance spec is the named

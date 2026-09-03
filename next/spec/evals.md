@@ -314,7 +314,7 @@ neither offered, minted from nor disqualified from. Then:
 
 | act | when | lane |
 |---|---|---|
-| `offer.published` | an eval is `ready` with no live offer (expires a day past `now`, unscoped) | `supervise` |
+| `offer.published` | an eval is `ready` with no live offer (expires a day past `now`; scoped by policy, [`ranking.md`](ranking.md): the configuration under re-test when the filing names one, else the strongest `claim` tuple, else unscoped with a `ranking_empty` note) | `supervise` |
 | `actor.qualified` | an authenticated pass whose window declared a tuple, not yet cited, whose receipt recomputes green | `supervise` |
 | `actor.disqualified` | an authenticated fail, for every holder of the declared tuple not yet cited | `supervise` |
 | `intent.filed` + `contract.specified` | a spot-check is due (below) | `dispatch` |
@@ -357,10 +357,12 @@ revision; `spec_unrunnable` (19) with the `eval_vacuous` refinement;
 
 ## Deferred, by name
 
-Ranking of tuples (the offer's `tuples` scope stays the policy input;
-D9), verifier calibration and authority suspension for verifiers (item
+Verifier calibration and authority suspension for verifiers (item
 4), independence levels per tier (item 3), re-triage and unedited-
-approval rates (item 5), and container or cloud adapters. A receipt
+approval rates (item 5), and container or cloud adapters. Ranking of
+tuples, deferred here as D9, landed with Phase 13 item 7
+([`ranking.md`](ranking.md)): the offers `Due` owes carry the
+strongest by policy. A receipt
 carrying sealed checks is not unsealed by the derivation, so an eval
 above the trivial tier mints nothing until that seam exists.
 

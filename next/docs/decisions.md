@@ -3230,3 +3230,42 @@ session opener, which would have applied this deployment's
 declaration (its ledger ref under the forge-hosted posture, its
 proposer) to a foreign ledger. No key crosses, and the command has no
 key flag to cross with.
+
+## Phase 13 item 7 — tuple ranking as supervisor policy (os-c7554f18, plan #276)
+
+**The bootstrap is the one place policy yields.** D2 says an unscoped
+offer is the supervisor's explicit choice and never a fallback, and
+`--strongest` refuses on an empty ranking. `eval.Due`'s offers cannot
+refuse: a first eval on a fresh chain is how any configuration
+qualifies, and a derivation that owed no offer would leave the ranking
+empty forever. So `Due` leaves that one offer unscoped and notes
+`ranking_empty` on it, the report saying in so many words that policy
+had nothing to say. The verb's refusal and the derivation's note are
+the same fact told to the two callers who can act on it.
+
+**A re-test names its own configuration.** D2's "the top of the claim
+ranking" would send a spot check of tuple T to whoever holds the
+strongest tuple, whose run would declare its own configuration and
+qualify that rather than re-testing T. The filing already names the
+tuple under test, so its offer carries exactly that tuple; the ranking
+scopes first evals only. The spec's table row says so.
+
+**The ranking reads records, not the keyring's list.** The keyring's
+`Qualifications` carry no chain position, and "latest fact" is a
+position question (two facts in one hour's `ts` still have an order),
+so the derivation reads the qualification verbs off the verified
+prefix by position and uses the keyring for standing and the
+admissible set alone. No accessor was added to the keyring.
+
+**`strongest` sits on the planner section, absent rather than null.**
+The by-kind split repeats the planner figures per roster kind; a
+`strongest` on every copy would say the same thing several times or
+nothing several times. The field is on `lanes.planner` with
+`omitempty`, so a chain that never carried a scoped offer builds a
+report without it, and the version bump (16) is what republishes.
+
+**The doctor takes `--ledger` for this one section.** The doctor read
+the declaration alone; naming the top tuple needs a chain. The flag
+is optional and the section absent without it, so every existing
+invocation and its output are unchanged.
+

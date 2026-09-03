@@ -622,3 +622,64 @@ func TestDueSpotChecksAgeFromTheDeclaredInstant(t *testing.T) {
 		t.Fatalf("a missing definition is a note, and every eval naming it is unbound: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
 	}
 }
+
+// conformance: plans/os-c7554f18.md D2 — the offers Due owes carry a
+// tuples scope by policy: a first eval on an empty ranking goes out
+// unscoped and the report says so; once a configuration is qualified
+// the first eval's offer carries the strongest claim tuple; a re-test
+// names the configuration under test and no other.
+func TestDueOffersCarryTheStrongestByPolicy(t *testing.T) {
+	repo, commit := evalRepo(t)
+	defs, _ := eval.Load(repo)
+	anchor := eval.Anchor{Commit: commit, PR: "pr/1"}
+	s := newStand(t)
+	now := time.Date(2026, 9, 2, 0, 0, 0, 0, time.UTC)
+	type offer struct {
+		Eligibility struct {
+			Tuples []tuple.Tuple `json:"tuples"`
+		} `json:"eligibility"`
+	}
+	decode := func(act eval.Act) offer {
+		t.Helper()
+		var o offer
+		if err := json.Unmarshal([]byte(act.Payload), &o); err != nil {
+			t.Fatal(err)
+		}
+		return o
+	}
+
+	e1 := s.file(defs[0], anchor, nil, 0)
+	rep := s.due(now, 0, defs, repo)
+	if kinds(rep.Acts) != "offer:"+e1 || len(decode(rep.Acts[0]).Eligibility.Tuples) != 0 || noteKinds(rep.Notes) != "ranking_empty" {
+		t.Fatalf("an empty ranking leaves the first eval's offer unscoped and notes it: %s / %s", kinds(rep.Acts), noteKinds(rep.Notes))
+	}
+
+	// holderA's configuration qualified by hand-appended fact: the
+	// ranking has a top, and the next first eval's offer carries it.
+	s.add("root", keyring.VerbQualified, s.fps["holderA"], fmt.Sprintf(`{"capability": "claim", "tuple": %s, "contract": %q, "verdict": "3"}`, baseTupleJSON, e1))
+	s.add("root", keyring.VerbGranted, s.fps["holderA"], `{"capability": "claim", "tuple": `+baseTupleJSON+`}`)
+	rep = s.due(now, 0, defs, repo)
+	o := decode(rep.Acts[0])
+	if kinds(rep.Acts) != "offer:"+e1 || len(o.Eligibility.Tuples) != 1 || !o.Eligibility.Tuples[0].Equal(baseTuple(t)) || len(rep.Notes) != 0 || !strings.Contains(rep.Acts[0].Because, "strongest") {
+		t.Fatalf("the offer carries the top of the claim ranking by policy: %+v / %+v", rep.Acts, rep.Notes)
+	}
+
+	// A re-test names the configuration it was filed for, whatever
+	// the ranking says.
+	other := baseTuple(t)
+	other.Environment = "other-environment"
+	e2 := s.file(defs[0], anchor, &other, 1)
+	rep = s.due(now, 0, defs, repo)
+	var named []tuple.Tuple
+	for _, act := range rep.Acts {
+		if act.Subject == e2 {
+			named = decode(act).Eligibility.Tuples
+			if !strings.Contains(act.Because, "under re-test") {
+				t.Fatalf("a re-test's offer says it names the configuration under test: %s", act.Because)
+			}
+		}
+	}
+	if len(named) != 1 || !named[0].Equal(other) {
+		t.Fatalf("a re-test's offer names its own configuration: %+v", named)
+	}
+}
