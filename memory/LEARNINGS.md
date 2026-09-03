@@ -1591,6 +1591,15 @@ the assertions read, and there is no copy to go stale.
 - **A forge field defaulting keeps old declarations valid.**
   `admission.forge` absent = github; the CLI `--forge` default must stay
   the credential-free `snapshot` arm the existing drills rely on.
+- **A refinement code emitted as a string literal needs a row in
+  `next/spec/envelope.md`.** `merge observe`'s `not_merged` on exit 3
+  (invalid_transition) is a refinement; `TestEmittedCodesAppearInTheTable`
+  parses the refinements table and rejects any emitted code that is
+  neither the exit's canonical code nor a listed refinement. Only codes
+  promoted to `Code*` constants render into generated `exit-codes.md`;
+  literals live solely in the table. The strict test arrived via the
+  item-6 merge, so a pre-merge draft receipt passed and the
+  merge-forward surfaced it — regenerate after merging main.
 - A published statement across a trust boundary should be a strict
   object with a pinned field list on both sides: the writer refuses
   to add a field without moving the pin, and the reader refuses a
