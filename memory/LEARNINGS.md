@@ -1404,3 +1404,37 @@ the assertions read, and there is no copy to go stale.
   TLA+ model of admission over concurrent proposers is a backlog item
   (build plan §3, non-conformance-blocking, filed after Phase 13), not
   a charter change.
+- 2026-09-03 (no card; from github.com/exoharness/exo, read at its
+  2026-09 head): the strongest external example of the failure mode
+  the admission boundary exists for. Exo's docs call its event log
+  immutable and "the only part the agent cannot modify"; the tree has
+  one JSON file per event under `.exo/`, no hash chain, no signatures,
+  no append-only enforcement, and the startup script mounts `.exo/`
+  read-write into the agent's own sandbox. Cost is self-reported with
+  no caps, the self-rebuild gate is a compile with no tests, the
+  scheduler's claim is documented as racy behind a PID lockfile, and
+  the README's cross-clone lineage does not exist in code. Its
+  substrate-versus-executor split is Seed's ledger-versus-executor
+  split one layer down, so the divergence is exactly principle 3: a
+  ledger the writer can reach makes the filesystem the authority.
+  Cite it when a design review asks why admission is not a convention.
+- 2026-09-03 (no card; same source): three mechanisms for the Phase 13
+  item 2 adapters (container, cloud session, remote worker). (1)
+  Snapshots as opaque payloads tagged with an open format string, with
+  each backend declaring the formats it can consume and the harness
+  refusing a restore before dispatch when the target does not; restore
+  on a different provider falls out of that for free, and it fits the
+  artifact store. (2) One backend-agnostic contract test suite that
+  every substrate implementation runs, behind a feature, rather than
+  per-adapter tests. (3) The kill boundary as Exo's firecracker guest
+  implements it: every command runs as a process-group leader and is
+  killed as a group on timeout, the in-VM supervisor refuses any vsock
+  peer that is not the host, and wire frames are size-capped and
+  fuzzed. Exo's own agent-facing
+  shell tool has no timeout and no output cap, so the checklist is
+  easy to skip. Two smaller notes for later specs: recurring schedules
+  should carry a missed-fire policy (skip, once, all with a cap) and
+  fire on the grid rather than drift, and any adapter settling actuals
+  into `budget.settle` needs the additive-versus-inclusive cached-token
+  distinction and token-boundary model lookup, or cache-heavy runs
+  misprice by up to ten times.
