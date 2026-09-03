@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task": "os-9e9ae30c",
+  "merge_base": "d6c6133753b29060a9cc5580a5b6b32bd8c3d3a8",
+  "head": "4a5221e6ea8d6b4d03e4398c4167a22364628808",
+  "plan_path": "plans/os-9e9ae30c.md",
+  "plan_sha256": "7591ec3c6e2ffc5732010eb4ffe7ce2e7a726efd892595dd14e6f463aa648811",
+  "diff_files": [
+    "docs/next-build-plan.md",
+    "next/docs/progress.md"
+  ],
+  "diff_sha256": "e1529a212ebec1647565ee34b59001c5334c1a2559b9184f7001773f5404f478",
+  "validation": [
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/loopverb/ -count=1",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
