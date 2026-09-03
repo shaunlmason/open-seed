@@ -3430,3 +3430,41 @@ refusal needed a code; `ranking_empty` refines exit 4 `not_found`
 `envelope.md` is where every such code is recorded, so the row went
 there beside `trust_undeclared`. No new exit number.
 
+
+## The promotion evidence packet (os-98ce6f8a)
+
+**The packet is a document with a parser, not a projection.** The
+promotion gate reads prose the operator can amend; what it needs from
+the machinery is the assurance that the prose cites what the tree
+holds. `internal/promotion` parses the packet strictly (the seven
+criteria in order, one status each from a closed vocabulary, evidence
+rows in one shape, a question on every reserved decision, a missing
+sentence on every criterion that is not met, seven ledger rows) and
+`Check` holds every cited drill to its cited file under `make check`.
+No projection, no verb, no admission change.
+
+**Criterion 5 is met by the packet itself.** The build plan asks for
+the cutover and its rollback written down in three clauses; the packet
+writes them, and its own drill holds the section to that shape, so the
+evidence row for the criterion cites the packet's drill rather than a
+claim about a document elsewhere.
+
+**Criterion 6 stays partial on a PR in review.** The doctor's
+conformance section is os-83bc3d84's, in review when the packet
+landed; the packet says so and cites the exit records for the phases,
+never a PR that has not merged.
+
+**The shadow run's posture is a question, with three costed
+options.** The criteria name the enforced self-hosted posture and this
+repository lives on github.com, where no server executes the hook.
+The packet lists the ledger on an operator-run POSIX remote (the
+posture the criteria name, at the cost of a server), the forge-hosted
+service (a deployment and a credential, both reserved to a human) and
+cooperative (free, and forfeiting the invariant the run should
+demonstrate), and selects none: a packet that chose would be the
+decision the build plan reserves.
+
+**The III.R ledger records measures, not readings.** Every row is
+`not measured`: no measurement exists before the shadow run, and a
+packet that reported one would be inventing it. Follow-up cards revise
+the rows and flip the conformance table with the packet as evidence.

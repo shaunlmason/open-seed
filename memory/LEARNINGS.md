@@ -1633,3 +1633,14 @@ the assertions read, and there is no copy to go stale.
   offer's scope) survives a policy that sends work to the strongest,
   and a first eval's offer stays the one unscoped door.
 
+## The promotion evidence packet (os-98ce6f8a)
+
+- Evidence at a gate rots quietly: a document that names drills is
+  only as good as the tree it names, so cite in one machine-readable
+  shape and hold every citation to the tree under the gate that
+  already runs. The parser that reads the shape is the same one that
+  refuses a stale claim.
+- A packet presents; the sentence that selects an option, starts a
+  run or flips an entry point is the decision the build plan reserves,
+  and the drill checks the reserved criteria carry a question rather
+  than a choice.
