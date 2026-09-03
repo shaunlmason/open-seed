@@ -1155,3 +1155,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 12 item 5 — migration: seed import --from-open-seed, lossless export → anchors verified → transform → genesis import, drilled against a real v1 export"},"task":"os-cf13fb51","ts":"2026-09-03T00:10:20Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 12 item 6 — docs generation (lifecycle prose, operator handbook) and simulation mode, the trajectory harness's decider seam"},"task":"os-16e55c11","ts":"2026-09-03T00:10:22Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-5c8a312c","ts":"2026-09-03T00:10:46Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T01:10:50Z"},"task":"os-5c8a312c","ts":"2026-09-03T00:10:50Z","verb":"claim"}
