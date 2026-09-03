@@ -27,7 +27,7 @@ import (
 // catalog, and the spec table is a test failure.
 var specCatalogVerbs = []string{
 	"system.halt.declared", "system.halt.lifted", "system.protocol.upgraded",
-	"system.checkpoint",
+	"system.checkpoint", "system.imported",
 	"actor.enrolled", "actor.granted", "actor.suspended", "actor.revoked",
 	"actor.qualified", "actor.disqualified",
 	"intent.filed", "contract.specified", "contract.blocked",

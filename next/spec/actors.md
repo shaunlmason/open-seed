@@ -131,6 +131,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `system.halt.lifted` | `operator` (the charter: only an operator's lift may append) |
 | `system.protocol.upgraded` | `operator` |
 | `system.checkpoint` | `maintenance`, `operator` (the charter names checkpoints as signed by the maintenance actor or an operator) |
+| `system.imported` | `operator` (the predecessor import's provenance record, from seed/5, once per ledger; [import.md](import.md)) |
 | `actor.*` (enrolled, granted, suspended, revoked) | `operator` |
 | `actor.qualified`, `actor.disqualified` | `supervise`, `operator` (the first non-operator actor rows: SEED-NEXT.md §5 makes suspension of a failing configuration the supervisor's attributable act with no operator ceremony, and a mint is the same act with the opposite sign; operator stays the standing override, evals.md) |
 | `intent.filed` | `dispatch`, `operator` |
