@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -40,6 +41,9 @@ func TestMain(m *testing.M) {
 
 func newFixture(t *testing.T) *Fixture {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the pre-receive hook needs a POSIX git server; a bare Windows checkout runs the cooperative or forge-hosted posture (next/spec/platform.md)")
+	}
 	fx, err := New(t.TempDir(), hookBin, posture.EnforcedSelfHosted)
 	if err != nil {
 		t.Fatalf("building the enforced fixture: %v", err)

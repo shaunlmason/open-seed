@@ -58,6 +58,13 @@ func (s *Store) Put(b []byte) (string, error) {
 	}
 	if err := os.Rename(tmp.Name(), dst); err != nil {
 		os.Remove(tmp.Name())
+		// A platform that refuses to replace a file another writer
+		// holds (Windows) reports the rival's win as an error; the
+		// content is addressed by its digest, so a rival that landed
+		// the same bytes is this put done.
+		if have, rerr := os.ReadFile(dst); rerr == nil && Digest(have) == digest {
+			return digest, nil
+		}
 		return "", fmt.Errorf("artifact store: %w", err)
 	}
 	return digest, nil

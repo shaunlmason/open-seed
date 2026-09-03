@@ -150,9 +150,13 @@ func withoutGitConfigSelection(env []string) []string {
 }
 
 func runGit(gitDir string, args ...string) (string, error) {
-	full := args
+	// The ledger is LF-only (next/spec/platform.md): git is told so on
+	// every call, so a checkout or archive on a platform whose
+	// default converts line endings never hands the verifier bytes
+	// the signatures do not cover.
+	full := append([]string{"-c", "core.autocrlf=false", "-c", "core.eol=lf"}, args...)
 	if gitDir != "" {
-		full = append([]string{"--git-dir", gitDir}, args...)
+		full = append([]string{"--git-dir", gitDir, "-c", "core.autocrlf=false", "-c", "core.eol=lf"}, args...)
 	}
 	cmd := exec.Command("git", full...)
 	out, err := cmd.CombinedOutput()

@@ -384,7 +384,7 @@ func (s *Store) writeHead(h Head) error {
 		os.Remove(tmp)
 		return err
 	}
-	if err := os.Rename(tmp, filepath.Join(s.dir, headFile)); err != nil {
+	if err := renameRetrying(tmp, filepath.Join(s.dir, headFile)); err != nil {
 		os.Remove(tmp)
 		return err
 	}
@@ -435,4 +435,19 @@ func scanLinesKeepCR(data []byte, atEOF bool) (advance int, token []byte, err er
 		return len(data), data, nil
 	}
 	return 0, nil, nil
+}
+
+// renameRetrying replaces dst with src, retrying briefly when the
+// platform refuses to replace a file a concurrent reader holds open
+// (Windows reports a sharing violation where POSIX renames over the
+// open file); the last error stands after the retries.
+func renameRetrying(src, dst string) error {
+	var err error
+	for attempt := 0; attempt < 20; attempt++ {
+		if err = os.Rename(src, dst); err == nil {
+			return nil
+		}
+		time.Sleep(time.Duration(attempt+1) * 5 * time.Millisecond)
+	}
+	return err
 }

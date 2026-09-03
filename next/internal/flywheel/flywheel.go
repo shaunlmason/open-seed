@@ -438,7 +438,7 @@ func EngineAvailable(repo string) (reason string, ok bool) {
 // a scrubbed environment vendors this path into its own lock.
 func EnginePath(repo string) (path, reason string, ok bool) {
 	if p := os.Getenv("SEED_ENGINE"); p != "" {
-		if info, err := os.Stat(p); err == nil && info.Mode()&0o111 != 0 {
+		if info, err := os.Stat(p); err == nil && executable(info) {
 			return p, "", true
 		}
 		return "", "SEED_ENGINE=" + p + " is not executable", false
@@ -468,7 +468,7 @@ func EnginePath(repo string) (path, reason string, ok bool) {
 		cache = filepath.Join(home, ".cache")
 	}
 	bin := filepath.Join(cache, "open-seed", "engine", version, runtime.GOOS+"_"+runtime.GOARCH, "seed")
-	if info, err := os.Stat(bin); err != nil || info.Mode()&0o111 == 0 {
+	if info, err := os.Stat(bin); err != nil || !executable(info) {
 		return "", "the pinned engine " + version + " is not in the bootstrap cache (" + bin + ") and SEED_ENGINE is unset", false
 	}
 	return bin, "", true
@@ -1170,4 +1170,14 @@ func Derive(records []*event.Record, fold *transition.Fold) Metrics {
 		m.ConversionRate = &rate
 	}
 	return m
+}
+
+// executable reports whether a file is runnable on this platform:
+// the mode bits where the platform has them, existence as a regular
+// file where it has not (next/spec/platform.md).
+func executable(info os.FileInfo) bool {
+	if runtime.GOOS == "windows" {
+		return info.Mode().IsRegular()
+	}
+	return info.Mode()&0o111 != 0
 }
