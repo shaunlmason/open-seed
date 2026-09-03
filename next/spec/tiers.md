@@ -123,3 +123,17 @@ spec declares the requirement, and the verdict rule enforces it.
 [`acceptance.md`](acceptance.md)'s provenance-gated relaxation for
 trusted trivial-tier specs waits on origin provenance, which is not a
 tier question.
+
+## The vocabulary's order, and the guardrails that read it
+
+The three tiers are ordered from least to most consequential —
+`trivial`, `standard`, `critical` — and `transition.TierOrder` states
+that order beside the table. Two readers consume it as a deployment's
+declaration says ([`postures.md`](postures.md), "The preseed"): the
+agent claim ceiling at admission (`max_agent` per squad; a claim above
+it refuses `tier_above_ceiling`) and the path floor at the plan lint and
+the render (`min` per prefix; a contract below it refuses
+`under_tiered`). The `routing` residual named above is closed by the
+same declaration's `teams`: with one, an unknown squad refuses
+`routing_unknown`; without one, routing stays unvalidated, which is
+what a deployment that never declared its squads asked for.

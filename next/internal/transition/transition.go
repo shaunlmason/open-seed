@@ -2114,3 +2114,30 @@ func isAnchor(s string) bool {
 	name, commit, ok := strings.Cut(s, " @ ")
 	return ok && strings.TrimSpace(name) != "" && strings.TrimSpace(commit) != ""
 }
+
+// tierOrder is the vocabulary from least to most consequential, the
+// order tiers.md lists it in: what a ceiling (plans/os-0d4f2af3.md D3)
+// compares by. Pinned against the table's keys by drill.
+var tierOrder = []string{"trivial", "standard", "critical"}
+
+// TierOrder is the vocabulary from least to most consequential.
+func TierOrder() []string { return append([]string{}, tierOrder...) }
+
+// TierRank is a tier's position in that order; ok is false for a tier
+// the vocabulary does not know, which callers treat as the strictest.
+func TierRank(name string) (int, bool) {
+	for i, t := range tierOrder {
+		if t == name {
+			return i, true
+		}
+	}
+	return len(tierOrder), false
+}
+
+// TierAbove reports whether tier a is more consequential than tier b;
+// an unknown tier is above every known one, the strictest reading.
+func TierAbove(a, b string) bool {
+	ra, _ := TierRank(a)
+	rb, _ := TierRank(b)
+	return ra > rb
+}

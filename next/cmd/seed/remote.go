@@ -94,6 +94,37 @@ func deploymentDeclaration(path string) (*posture.Config, *envelope.Envelope) {
 	return cfg, nil
 }
 
+// admitOptions is the admission-context option set a verb builds
+// under the deployment it runs in (plans/os-0d4f2af3.md D3): the
+// declaration found by the fixed lookup (--config, $SEED_CONFIG,
+// ./seed.json) when one exists, beside whatever the caller adds. A
+// declaration that exists and does not parse refuses at the verb that
+// would have read it, never silently.
+func admitOptions(config string, extra ...admit.Option) ([]admit.Option, *envelope.Envelope) {
+	cfg, failEnv := deploymentDeclaration(config)
+	if failEnv != nil {
+		return nil, failEnv
+	}
+	opts := append([]admit.Option{}, extra...)
+	if cfg != nil {
+		opts = append(opts, admit.WithDeclaration(cfg))
+	}
+	return opts, nil
+}
+
+// declaredAdmitOptions is admitOptions for verbs with no --config of
+// their own: the declaration by its defaults, and none when none
+// exists or it does not parse — a read surface reports what it can,
+// and the verbs that must refuse an invalid declaration are the ones
+// that take --config.
+func declaredAdmitOptions() []admit.Option {
+	opts, failEnv := admitOptions("")
+	if failEnv != nil {
+		return nil
+	}
+	return opts
+}
+
 // openRemoteSessionUnder is openRemoteSession under a declaration:
 // when it names the forge-hosted posture the session's last step
 // proposes to the admission service instead of pushing, and the ledger
@@ -109,6 +140,10 @@ func openRemoteSessionUnder(remote, refName, stateDir, supported, config string)
 			refName = cfg.LedgerRef()
 		}
 		proposer = propose.New(cfg.Admission.Endpoint)
+	}
+	var declared []admit.Option
+	if cfg != nil {
+		declared = append(declared, admit.WithDeclaration(cfg))
 	}
 	if stateDir == "" {
 		cache, err := os.UserCacheDir()
@@ -163,7 +198,7 @@ func openRemoteSessionUnder(remote, refName, stateDir, supported, config string)
 		supportedSet[v] = true
 	}
 	var vopts []ledger.VerifyOption
-	var aopts []admit.Option
+	aopts := append([]admit.Option{}, declared...)
 	if supported != "" {
 		vs := strings.Split(supported, ",")
 		vopts = append(vopts, ledger.WithSupportedVersions(vs...))
@@ -376,9 +411,13 @@ func (r *readPosture) resolved() bool { return (*r.dir == "") != (*r.remote == "
 // no-op, so callers defer it unconditionally.
 func (r *readPosture) open() (*verdictState, *admit.Context, func(), *envelope.Envelope) {
 	noop := func() {}
-	var aopts []admit.Option
+	var extra []admit.Option
 	if *r.supported != "" {
-		aopts = append(aopts, admit.WithSupportedVersions(strings.Split(*r.supported, ",")...))
+		extra = append(extra, admit.WithSupportedVersions(strings.Split(*r.supported, ",")...))
+	}
+	aopts, failEnv := admitOptions(*r.config, extra...)
+	if failEnv != nil {
+		return nil, nil, noop, failEnv
 	}
 	if *r.remote == "" {
 		store, failEnv := openStoreReadOnly(*r.dir)

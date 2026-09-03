@@ -44,6 +44,14 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		"posture":  string(cfg.Posture),
 		"enforced": cfg.Posture.Enforced(),
 	}
+	// The preseed's blocks, each declared or not (plans/os-0d4f2af3.md).
+	result["preseed"] = map[string]any{
+		"protocol":   cfg.Protocol,
+		"governance": cfg.Governance != nil,
+		"guardrails": cfg.Guardrails != nil,
+		"teams":      cfg.Teams != nil,
+		"protected":  len(cfg.Protected),
+	}
 	// The checkpoint-trust choice is reported as declared or as
 	// undeclared, never filled in (next/spec/checkpoints.md).
 	if trust := cfg.CheckpointTrust(); trust != "" {

@@ -29,7 +29,7 @@ func stampAffordances(env *envelope.Envelope, dir string, key ed25519.PrivateKey
 	if err != nil {
 		return env
 	}
-	ctx, err := admit.ContextAt(store)
+	ctx, err := admit.ContextAt(store, declaredAdmitOptions()...)
 	if err != nil {
 		return env
 	}

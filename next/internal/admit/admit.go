@@ -32,6 +32,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -52,12 +53,27 @@ type Context struct {
 	// the budget rule's position-accurate validity replays need it
 	// (plans/os-cecac5de.md D4).
 	Records []*event.Record
+	// Declaration is the deployment declaration the policy rules read
+	// (plans/os-0d4f2af3.md D3, D4): the agent claim ceiling and the
+	// declared squads. Nil means no declaration, and the rules are
+	// no-ops — admission policy, never chain validity, so a chain never
+	// changes meaning because of a file beside it.
+	Declaration *posture.Config
 }
 
 // Option configures context construction.
 type Option func(*options)
 
-type options struct{ supported []string }
+type options struct {
+	supported   []string
+	declaration *posture.Config
+}
+
+// WithDeclaration supplies the deployment declaration the policy rules
+// read. Absent, the rules do nothing: today's behavior byte for byte.
+func WithDeclaration(cfg *posture.Config) Option {
+	return func(o *options) { o.declaration = cfg }
+}
 
 // WithSupportedVersions declares the protocol versions this admission
 // point accepts, mirroring ledger.WithSupportedVersions. The default is
@@ -118,16 +134,17 @@ func ContextAt(store *ledger.Store, opts ...Option) (*Context, error) {
 		return nil, fmt.Errorf("admission context: %w", err)
 	}
 	return &Context{
-		Count:     rep.Count,
-		Tip:       rep.Tip,
-		Active:    rep.ActiveVersion,
-		Halt:      halt.StateAt(records),
-		Resolve:   resolve,
-		Keyring:   ring,
-		Table:     table,
-		Lifecycle: table.FoldRecords(records),
-		Supported: supported,
-		Records:   records,
+		Count:       rep.Count,
+		Tip:         rep.Tip,
+		Active:      rep.ActiveVersion,
+		Halt:        halt.StateAt(records),
+		Resolve:     resolve,
+		Keyring:     ring,
+		Table:       table,
+		Lifecycle:   table.FoldRecords(records),
+		Supported:   supported,
+		Records:     records,
+		Declaration: o.declaration,
 	}, nil
 }
 
@@ -142,10 +159,15 @@ func ContextAt(store *ledger.Store, opts ...Option) (*Context, error) {
 // derives, computed from the records rather than replayed from disk,
 // so the two agree position for position (pinned by drill). An empty
 // prefix has no genesis and no context.
-func ContextOver(records []*event.Record) (*Context, error) {
+func ContextOver(records []*event.Record, opts ...Option) (*Context, error) {
+	var o options
+	for _, f := range opts {
+		f(&o)
+	}
 	if len(records) == 0 {
 		return nil, genesis.ErrNoGenesis
 	}
+
 	payload, err := genesis.Parse(records[0])
 	if err != nil {
 		return nil, fmt.Errorf("admission context: %w: %v", genesis.ErrNoGenesis, err)
@@ -174,16 +196,17 @@ func ContextOver(records []*event.Record) (*Context, error) {
 		supported[v] = true
 	}
 	return &Context{
-		Count:     len(records),
-		Tip:       tip,
-		Active:    active,
-		Halt:      halt.StateAt(records),
-		Resolve:   resolve,
-		Keyring:   ring,
-		Table:     table,
-		Lifecycle: table.FoldRecords(records),
-		Supported: supported,
-		Records:   records,
+		Count:       len(records),
+		Tip:         tip,
+		Active:      active,
+		Halt:        halt.StateAt(records),
+		Resolve:     resolve,
+		Keyring:     ring,
+		Table:       table,
+		Lifecycle:   table.FoldRecords(records),
+		Supported:   supported,
+		Records:     records,
+		Declaration: o.declaration,
 	}, nil
 }
 
@@ -506,6 +529,86 @@ type Rule struct {
 // the reviewed halt.Check ordering); later phases append rules to this
 // set rather than editing it.
 func Default() []Rule {
+	return append(coreRules(), policyRules()...)
+}
+
+// CeilingError is a claim by an agent-kind key above its squad's
+// declared ceiling (plans/os-0d4f2af3.md D3): an agent-only guardrail
+// reading the roster's kind, refused at admission as policy.
+type CeilingError struct {
+	Actor, Kind, Squad, Tier, Ceiling string
+}
+
+func (e *CeilingError) Error() string {
+	return fmt.Sprintf("claim on a %s contract refused: %s is enrolled as %s and the %s squad's agent ceiling is %s (a human key is not ceilinged; seed.json guardrails)", e.Tier, e.Actor, e.Kind, e.Squad, e.Ceiling)
+}
+
+// RoutingError is an intent routed to a squad the declaration does not
+// name (plans/os-0d4f2af3.md D4): the residual tiers.md named, closed.
+type RoutingError struct {
+	Routing string
+	Squads  []string
+}
+
+func (e *RoutingError) Error() string {
+	return fmt.Sprintf("routing %q names no declared squad (seed.json teams: %s)", e.Routing, strings.Join(e.Squads, ", "))
+}
+
+// policyRules are the declaration-driven rules: no-ops without a
+// declaration, and admission policy rather than chain validity with
+// one — the tiers precedent (next/spec/tiers.md): a raw-pushed record
+// that would have refused folds as filed, every chain verifies byte
+// for byte, and no protocol version bumps.
+func policyRules() []Rule {
+	return []Rule{
+		{Name: "ceiling", Check: func(c *Context, rec *event.Record) error {
+			if c.Declaration == nil || rec.Event.Verb != "claim.taken" || c.Keyring == nil {
+				return nil
+			}
+			entry, ok := c.Keyring.Get(rec.Event.Actor)
+			if !ok || entry.Kind == "human" {
+				return nil
+			}
+			s, ok := c.Lifecycle.State(rec.Event.Subject)
+			if !ok {
+				return nil
+			}
+			ceiling, declared := c.Declaration.AgentCeiling(s.Routing)
+			if !declared {
+				return nil
+			}
+			if transition.TierAbove(s.Tier, ceiling) {
+				return &CeilingError{Actor: rec.Event.Actor, Kind: entry.Kind, Squad: s.Routing, Tier: s.Tier, Ceiling: ceiling}
+			}
+			return nil
+		}},
+		{Name: "routing", Check: func(c *Context, rec *event.Record) error {
+			if c.Declaration == nil || rec.Event.Verb != "intent.filed" {
+				return nil
+			}
+			squads := c.Declaration.SquadNames()
+			if squads == nil {
+				return nil
+			}
+			var p struct {
+				Routing string `json:"routing"`
+			}
+			if err := json.Unmarshal(rec.Event.Payload, &p); err != nil {
+				return nil // the shape rule owns malformed payloads
+			}
+			for _, sq := range squads {
+				if sq == p.Routing {
+					return nil
+				}
+			}
+			return &RoutingError{Routing: p.Routing, Squads: squads}
+		}},
+	}
+}
+
+// coreRules is the ordered rule set every phase since Phase 2 has
+// appended to: what admission enforces with or without a declaration.
+func coreRules() []Rule {
 	return []Rule{
 		{Name: "halted", Check: func(c *Context, rec *event.Record) error {
 			if c.Halt.Halted && rec.Event.Verb != halt.LiftVerb {

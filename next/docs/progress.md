@@ -1393,7 +1393,33 @@ Phase 10 item).
   perf run`; the doctor's trust report; `next/spec/checkpoints.md` new,
   `maintenance.md`, `projections.md` and `envelope.md` following)
 
+- 12.4 preseed (config, guardrails, teams, protections, posture)
+  idempotent and CI-verified; agent-only guardrails and human/agent
+  metrics reading `kind` (III.E row 9); the protected surface and the
+  root's change process in config (III.G row 9, III.L row 2); tiers per
+  squad and per path (III.L row 1) — os-0d4f2af3 — **in review** (task
+  PR against plan #247, stacked on items 2 and 3: `seed.json` completed
+  with `protocol`, `governance`, `guardrails` and `teams`, strict, each
+  block undeclared when absent; `seed init --preseed` writing genesis
+  and the declared activations idempotently and refusing
+  `preseed_drift` on a root or protocol the chain contradicts, the
+  chain untouched; `seed preseed check` linting the file alone
+  (`preseed_incomplete` for a tier outside the vocabulary, a lane that
+  is no manifest, an undeclared squad, a protected surface missing a
+  required member) and comparing against a ledger; the agent claim
+  ceiling and the routing rule as declaration-driven admission policy
+  (`tier_above_ceiling`, `routing_unknown`; a human key not ceilinged;
+  no declaration, no change), the declaration wired into every
+  admission context the CLI builds; the path floor at the plan lint
+  and the render (`under_tiered`, one derivation); `by_kind` lane rates
+  (report 15, cache generation 13); the capability audit deriving the
+  operator-holding manifests from the shipped set; the fixture
+  deployment's declaration under `make check-next`; `postures.md`
+  "The preseed", `tiers.md`, `lanes.md`, `plans.md`, `projections.md`
+  and `envelope.md` following)
+
 ## Frontier
+
 
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,

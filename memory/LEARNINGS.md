@@ -1364,3 +1364,13 @@ the assertions read, and there is no copy to go stale.
 - Under one optimistic ref, `n` racing writers cost about `n/2`
   attempts each. Budget the ratio to that shape and say why; a flat
   ceiling would fail on the day someone raises the writer count.
+- Before asserting "no manifest grants X" in an audit, derive the set
+  and print it: the shipped maintenance lane holds operator by design,
+  and an audit written from the charter's sentence rather than the
+  tree fails on its first run. Hold the derived set to a named list.
+- Go's flag package stops at the first positional: a verb taking a
+  file then flags must parse twice, or every flag after the file lands
+  in NArg as a usage error the drill reads as "refused".
+- A test helper's third return is not always what its name suggests:
+  `writeKeys`'s `pub` is a second operator's key, not the signer's.
+  Derive a fingerprint from the key you signed with.

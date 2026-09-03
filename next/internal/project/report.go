@@ -9,6 +9,7 @@ package project
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"strconv"
 	"time"
 
@@ -148,6 +149,18 @@ type ReportView struct {
 type ReportLanes struct {
 	Dispatcher ReportDispatcher `json:"dispatcher"`
 	Planner    ReportPlanner    `json:"planner"`
+	// ByKind splits both figures by the acting key's roster kind
+	// (plans/os-0d4f2af3.md D6; III.E row 9): a specification counts
+	// under the kind of the key that appended it, an approval under
+	// its approver's, so an operator can see whether the agents or the
+	// humans are the ones re-triaging. Keys are the kinds seen.
+	ByKind map[string]*ReportLanesKind `json:"by_kind"`
+}
+
+// ReportLanesKind is one kind's share of the two figures.
+type ReportLanesKind struct {
+	Dispatcher ReportDispatcher `json:"dispatcher"`
+	Planner    ReportPlanner    `json:"planner"`
 }
 
 // ReportDispatcher is the re-triage figure: subjects with one or more
@@ -221,7 +234,7 @@ type ReportReconciliation struct {
 // other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "14", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "15", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -295,6 +308,7 @@ func reportView(records []*event.Record) (*ReportView, error) {
 		metrics := flywheel.Derive(records, fold)
 		view.Flywheel = &metrics
 		view.Lanes = lanesSection(fold)
+		view.Lanes.ByKind = lanesByKind(records, fold)
 	}
 	if curation.Fold(records).Any() {
 		stages := DeriveKnowledge(records).Stages
@@ -462,4 +476,94 @@ func observationSection(records []*event.Record, in Inputs) (*ReportObservation,
 		section.Claims[subject] = obs.Classify(stream, in.AsOf, in.Thresholds)
 	}
 	return section, nil
+}
+
+// lanesByKind attributes the lane-quality figures to the roster kind
+// of the key that acted (plans/os-0d4f2af3.md D6): specifications to
+// the kind of their appender, approvals to their approver's. The kind
+// is read from the keyring as it stood at the record's own position,
+// folded once over the chain, so a re-enrollment later never rewrites
+// an earlier act. Per subject, the dispatcher figure follows the FIRST
+// specifier's kind (a subject is counted once) while re-specification
+// counts under the kind that re-specified.
+func lanesByKind(records []*event.Record, fold *transition.Fold) map[string]*ReportLanesKind {
+	out := map[string]*ReportLanesKind{}
+	get := func(kind string) *ReportLanesKind {
+		if kind == "" {
+			kind = "unknown"
+		}
+		k, ok := out[kind]
+		if !ok {
+			k = &ReportLanesKind{}
+			out[kind] = k
+		}
+		return k
+	}
+	ring := keyring.New()
+	active := ""
+	specifiedBy := map[string]string{}
+	respecCounted := map[string]bool{}
+	for i, rec := range records {
+		if active == "" {
+			active = rec.Event.V
+			if i == 0 && rec.Event.Verb == "system.genesis" && rec.Event.Subject == "system" {
+				var g struct {
+					Protocol string `json:"protocol"`
+				}
+				if json.Unmarshal(rec.Event.Payload, &g) == nil && g.Protocol != "" {
+					active = g.Protocol
+				}
+				ring.SeedGenesis(rec)
+			}
+		}
+		kind := ""
+		if e, ok := ring.Get(rec.Event.Actor); ok {
+			kind = e.Kind
+		} else if ring.IsActiveRoot(rec.Event.Actor) {
+			kind = "root"
+		}
+		switch rec.Event.Verb {
+		case "contract.specified":
+			s, ok := fold.State(rec.Event.Subject)
+			if ok && s.Specifications >= 1 {
+				if _, seen := specifiedBy[rec.Event.Subject]; !seen {
+					specifiedBy[rec.Event.Subject] = kind
+					get(kind).Dispatcher.Specified++
+				} else if !respecCounted[rec.Event.Subject] {
+					respecCounted[rec.Event.Subject] = true
+					get(kind).Dispatcher.Respecified++
+				}
+			}
+		case "plan.approved":
+			if _, approved := fold.PlanApproved(rec.Event.Subject); approved {
+				k := get(kind)
+				k.Planner.Approvals++
+				unedited, measured := fold.PlanDigests(rec.Event.Subject).Unedited()
+				switch {
+				case !measured:
+					k.Planner.Unmeasured++
+				case unedited:
+					k.Planner.Unedited++
+				default:
+					k.Planner.Edited++
+				}
+			}
+		}
+		if keyring.Applies(active) {
+			_ = ring.Advance(rec)
+		}
+		if rec.Event.Verb == ledger.UpgradeVerb && rec.Event.Subject == "system" {
+			var up struct {
+				To string `json:"to"`
+			}
+			if json.Unmarshal(rec.Event.Payload, &up) == nil {
+				active = up.To
+			}
+		}
+	}
+	for _, k := range out {
+		k.Dispatcher.RetriageRate = reportRate(k.Dispatcher.Respecified, k.Dispatcher.Specified)
+		k.Planner.UneditedRate = reportRate(k.Planner.Unedited, k.Planner.Unedited+k.Planner.Edited)
+	}
+	return out
 }
