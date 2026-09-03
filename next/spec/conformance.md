@@ -106,5 +106,5 @@ section; a tree without the table has no section.
   gated by the same drift check as the lifecycle, capability, exit-code
   and lane documents.
 - Build plan Phase 13, exit line and preamble: `seed doctor`'s
-  `complete` and `open_rows` at the declared posture, and the Phase 13
+  `complete` and `outstanding_rows` at the declared posture, and the Phase 13
   exit record flipping the rows it meets with itself as the evidence.

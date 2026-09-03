@@ -30,12 +30,19 @@ const (
 // Statuses is the vocabulary in the order the report counts it.
 var Statuses = []string{StatusMet, StatusPartial, StatusRouted, StatusOpen}
 
-// The postures a row is judged at: any deployment, or the enforced
-// postures alone (the charter's (*enforced-only*) marker).
+// The postures a row is judged at: any deployment; the enforced
+// postures alone (the charter's (*enforced-only*) marker opening the
+// row); or mixed, a row whose marker qualifies one clause, judged at
+// every posture with the enforced clause named as not exercised at
+// the cooperative one (review finding on the plan PR).
 const (
 	PostureAny          = "any"
 	PostureEnforcedOnly = "enforced-only"
+	PostureMixed        = "mixed"
 )
+
+// Marker is the charter's enforced-only marker.
+const Marker = "(*enforced-only*)"
 
 // TablePath is the table's location under the repository root, and
 // CharterPath the charter's.
@@ -144,9 +151,13 @@ func ParseCharter(b []byte) ([]CharterPillar, error) {
 		for j := range pillars[i].Rows {
 			r := &pillars[i].Rows[j]
 			r.Text = strings.TrimSpace(spaces.ReplaceAllString(r.Text, " "))
-			r.Posture = PostureAny
-			if strings.Contains(r.Text, "(*enforced-only*)") {
+			switch {
+			case strings.HasPrefix(r.Text, Marker):
 				r.Posture = PostureEnforcedOnly
+			case strings.Contains(r.Text, Marker):
+				r.Posture = PostureMixed
+			default:
+				r.Posture = PostureAny
 			}
 		}
 	}
@@ -271,30 +282,40 @@ func Count(rows []Row) Counts {
 	return c
 }
 
-// OpenRow names one row still open: its id, phase and posture.
-type OpenRow struct {
+// OutstandingRow names one row not yet met: its id, status, phase,
+// posture and the note saying where the rest lives.
+type OutstandingRow struct {
 	ID      string `json:"id"`
+	Status  string `json:"status"`
 	Phase   string `json:"phase,omitempty"`
 	Posture string `json:"posture"`
 	Note    string `json:"note,omitempty"`
 }
 
 // Report is what the doctor says about the table at a posture (D4):
-// the counts over the rows judged there, the rows that remain open,
-// the enforced-only rows a cooperative deployment cannot judge, and
-// whether Part III is complete here: no open row, every enforced-only
-// row judged.
+// the counts over the rows judged there, every row not yet met (open,
+// partial and routed alike: a criterion is met or it is not), the
+// enforced-only rows a cooperative deployment cannot judge (the
+// charter asks such a deployment to document exactly these), the
+// mixed rows whose enforced clause that posture does not exercise,
+// and whether Part III is complete here: every row judged at an
+// enforced posture met.
 type Report struct {
-	Counts        Counts    `json:"counts"`
-	OpenRows      []OpenRow `json:"open_rows"`
-	NotApplicable []string  `json:"not_applicable_here,omitempty"`
-	Complete      bool      `json:"complete"`
-	Because       string    `json:"because"`
+	Counts        Counts           `json:"counts"`
+	Outstanding   []OutstandingRow `json:"outstanding_rows"`
+	NotApplicable []string         `json:"not_applicable_here,omitempty"`
+	MixedHere     []string         `json:"mixed_here,omitempty"`
+	Complete      bool             `json:"complete"`
+	Because       string           `json:"because"`
 }
 
 // Assess judges the table at a posture: enforced reads every row;
 // cooperative sets the enforced-only rows aside as not applicable,
-// which by itself keeps Part III from being complete there.
+// which by itself keeps Part III from being complete there, and
+// judges the mixed rows while naming them. Complete means every
+// judged row is met: partial and routed rows are outstanding, since
+// the charter admits a conformance claim only when every criterion
+// holds (review finding on the plan PR).
 func Assess(t Table, enforced bool) Report {
 	var rep Report
 	var judged []Row
@@ -305,27 +326,31 @@ func Assess(t Table, enforced bool) Report {
 				rep.NotApplicable = append(rep.NotApplicable, id)
 				continue
 			}
+			if !enforced && r.Posture == PostureMixed {
+				rep.MixedHere = append(rep.MixedHere, id)
+			}
 			judged = append(judged, r)
-			if r.Status == StatusOpen {
-				rep.OpenRows = append(rep.OpenRows, OpenRow{ID: id, Phase: r.Phase, Posture: r.Posture, Note: r.Note})
+			if r.Status != StatusMet {
+				rep.Outstanding = append(rep.Outstanding, OutstandingRow{ID: id, Status: r.Status, Phase: r.Phase, Posture: r.Posture, Note: r.Note})
 			}
 		}
 	}
 	rep.Counts = Count(judged)
 	sort.Strings(rep.NotApplicable)
+	sort.Strings(rep.MixedHere)
 	switch {
-	case len(rep.NotApplicable) > 0:
+	case !enforced:
 		rep.Complete = false
-		rep.Because = fmt.Sprintf("%d enforced-only rows cannot be judged at the cooperative posture; Part III is complete only at an enforced posture", len(rep.NotApplicable))
-	case len(rep.OpenRows) > 0:
+		rep.Because = fmt.Sprintf("%d enforced-only rows cannot be judged at the cooperative posture and %d judged rows are not met; Part III is complete only at an enforced posture with every row met", len(rep.NotApplicable), len(rep.Outstanding))
+	case len(rep.Outstanding) > 0:
 		rep.Complete = false
-		rep.Because = fmt.Sprintf("%d rows are open", len(rep.OpenRows))
+		rep.Because = fmt.Sprintf("%d rows are not met (%d open, %d partial, %d routed)", len(rep.Outstanding), rep.Counts.Open, rep.Counts.Partial, rep.Counts.Routed)
 	default:
 		rep.Complete = true
-		rep.Because = "no row is open at the enforced posture; partial and routed rows carry their notes"
+		rep.Because = "every row is met at the enforced posture"
 	}
-	if rep.OpenRows == nil {
-		rep.OpenRows = []OpenRow{}
+	if rep.Outstanding == nil {
+		rep.Outstanding = []OutstandingRow{}
 	}
 	return rep
 }
