@@ -84,3 +84,22 @@ func mustManifests(t *testing.T) map[string]lane.Manifest {
 	}
 	return m
 }
+
+func TestRunSurfacesBuildFailure(t *testing.T) {
+	// Run reports the build failure rather than a partial report.
+	if _, err := Run(Config{LanesDir: lanesRel, Verbs: refuse{}, Intents: 1, WorkDir: t.TempDir()}); err == nil {
+		t.Error("Run must fail when the deployment cannot be built")
+	}
+}
+
+func TestCurateAndMaintainToleranteRefusal(t *testing.T) {
+	// curate and maintain ignore a refusal (there may be nothing to
+	// propose or reap): they run without returning it.
+	d := &deployment{
+		remote: "r", state: "s", verbs: refuse{},
+		keys: map[string]string{"curator": "c", "maintenance": "m"},
+		now:  time.Now(),
+	}
+	d.curate()
+	d.maintain(time.Now())
+}
