@@ -1456,8 +1456,8 @@ os-a026f5ea's task PR) are merged with every card closed.
 
 Phase 11's five items are merged (#234, #235, #236, #237, #240 against
 plans #226, #228, #229, #230, #231), so its exit criteria are met by
-their items; the Phase 11 exit record above is card os-efb2a099's task PR (this
-card), which closes the phase.
+their items; the Phase 11 exit record above is card os-efb2a099's task
+PR (this card), which closes the phase.
 
 Phase 12 declares `deps: all`, so its gate opens when the Phase 11
 exit record merges; until then its cards are filed and planned, and
