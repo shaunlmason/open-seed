@@ -1292,3 +1292,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-108d70eb","kind":"receipt"},"task":"os-74ce2261","ts":"2026-09-03T05:10:55Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-84c28cc2","kind":"pr"},"task":"os-32d06c65","ts":"2026-09-03T05:22:34Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-d95275bf","kind":"receipt"},"task":"os-32d06c65","ts":"2026-09-03T05:22:37Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-32d06c65","ts":"2026-09-03T05:22:39Z","verb":"transition"}
