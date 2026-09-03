@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -204,7 +205,49 @@ type Config struct {
 	Governance *Governance `json:"governance,omitempty"`
 	Guardrails *Guardrails `json:"guardrails,omitempty"`
 	Teams      *Teams      `json:"teams,omitempty"`
+	// The executor substrates a deployment provisions through
+	// (plans/os-083112ac.md D3): the container runtime and image, the
+	// cloud endpoint and credential env-var name, and the enrolled
+	// remote workers. A credential is the NAME of an environment
+	// variable, never a secret; the lint refuses a token-shaped value.
+	Executors *Executors `json:"executors,omitempty"`
 }
+
+// Executors declares the non-local substrate configuration.
+type Executors struct {
+	Container *ContainerConfig `json:"container,omitempty"`
+	Cloud     *CloudConfig     `json:"cloud,omitempty"`
+	Remote    *RemoteConfig    `json:"remote,omitempty"`
+}
+
+// ContainerConfig names the OCI runtime and image.
+type ContainerConfig struct {
+	Runtime string `json:"runtime"` // docker | podman | fake
+	Image   string `json:"image"`
+}
+
+// CloudConfig names the session endpoint and the env var holding the
+// bearer credential.
+type CloudConfig struct {
+	Endpoint   string `json:"endpoint"`
+	Credential string `json:"credential"` // an environment-variable NAME
+}
+
+// RemoteConfig names the enrolled workers.
+type RemoteConfig struct {
+	Workers []WorkerConfig `json:"workers"`
+}
+
+// WorkerConfig is one enrolled remote worker.
+type WorkerConfig struct {
+	Name        string `json:"name"`
+	Environment string `json:"environment"`
+}
+
+// envVarName is the shape a credential (an env-var name) must have: an
+// identifier, never a token. A token-shaped value fails it, so a secret
+// pasted where a name belongs is refused rather than stored.
+var envVarName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 // SquadNames lists the declared squads, sorted; nil when teams are
 // undeclared.
@@ -371,6 +414,9 @@ func (c *Config) validatePreseed() error {
 	if err := c.validateFederation(); err != nil {
 		return err
 	}
+	if err := c.validateExecutors(); err != nil {
+		return err
+	}
 	if c.Governance != nil {
 		if strings.TrimSpace(c.Governance.Root) == "" {
 			return errors.New("governance.root names the governance root's key fingerprint")
@@ -444,6 +490,42 @@ func validProtectedEntry(p string) error {
 		return errors.New("entries use forward slashes")
 	case path.Clean(trimmed) != trimmed || trimmed == "." || trimmed == ".." || strings.HasPrefix(trimmed, "../"):
 		return errors.New("entries are clean relative paths (no '.', '..' or doubled separators)")
+	}
+	return nil
+}
+
+// validateExecutors holds the executors block to its shapes and refuses
+// a secret where a name belongs (plans/os-083112ac.md D3).
+func (c *Config) validateExecutors() error {
+	e := c.Executors
+	if e == nil {
+		return nil
+	}
+	if e.Container != nil {
+		switch e.Container.Runtime {
+		case "docker", "podman", "fake":
+		default:
+			return fmt.Errorf("executors.container.runtime must be docker, podman or fake, got %q", e.Container.Runtime)
+		}
+		if strings.TrimSpace(e.Container.Image) == "" {
+			return errors.New("executors.container.image must name an image reference")
+		}
+	}
+	if e.Cloud != nil {
+		u, err := url.Parse(e.Cloud.Endpoint)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return fmt.Errorf("executors.cloud.endpoint must be an http(s) URL, got %q", e.Cloud.Endpoint)
+		}
+		if !envVarName.MatchString(e.Cloud.Credential) {
+			return fmt.Errorf("executors.cloud.credential must be an environment-variable NAME, never a secret, got %q — the token lives in the environment, not the tree", e.Cloud.Credential)
+		}
+	}
+	if e.Remote != nil {
+		for _, w := range e.Remote.Workers {
+			if strings.TrimSpace(w.Name) == "" || strings.TrimSpace(w.Environment) == "" {
+				return errors.New("executors.remote.workers each need a name and an environment")
+			}
+		}
 	}
 	return nil
 }
