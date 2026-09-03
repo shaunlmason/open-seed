@@ -1449,6 +1449,12 @@ record's own position through one derivation, `curation.AuthenticPass`
   `next/spec/lifecycle.md` "Racing" new, `postures.md`, `envelope.md`,
   `maintenance.md`, `budgets.md`, `projections.md` and `protocol.md`
   (`seed/6`) following)
+- routed gap: `ledger show`'s `chain_invalid` stamps the position it
+  was computed at — os-37fcf7c6 — **in review** (task PR against plan
+  #259: the scan's failing position stamped, the same stamp verify
+  gives one corrupted chain, the D3 tripwire inverted on purpose, the
+  envelope spec's null sentence sharpened to "before any position was
+  read")
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
