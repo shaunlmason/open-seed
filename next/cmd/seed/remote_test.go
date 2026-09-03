@@ -1,13 +1,13 @@
 package main
 
 import (
-	"runtime"
 	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -346,10 +346,7 @@ func TestRemoteAppendHookRejectionAt11(t *testing.T) {
 	dir, priv, _ := writeKeys(t)
 	remote := bareRemote(t)
 	seedRemoteGenesis(t, remote)
-	hook := "#!/bin/sh\	if runtime.GOOS == "windows" {
-		t.Skip("the pre-receive hook needs a POSIX git server; a bare Windows checkout runs the cooperative or forge-hosted posture (next/spec/platform.md)")
-	}
-necho 'seed policy says no' >&2\nexit 1\n"
+	hook := "#!/bin/sh\necho 'seed policy says no' >&2\nexit 1\n"
 	if err := os.WriteFile(filepath.Join(remote, "hooks", "pre-receive"), []byte(hook), 0o755); err != nil {
 		t.Fatal(err)
 	}
