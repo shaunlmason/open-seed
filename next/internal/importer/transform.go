@@ -368,11 +368,15 @@ func path(from, to string) []string {
 		if n.state == to {
 			return n.verbs
 		}
-		next := make([]string, 0, len(adjacency[n.state]))
-		for s := range adjacency[n.state] {
-			next = append(next, s)
+		// Ties break toward the honest exit: a release before a park,
+		// review before blocked, so a cancel out of in_progress
+		// releases the claim rather than parking it.
+		var next []string
+		for _, s := range []string{"ready", "review", "in_progress", "blocked", "done", "cancelled"} {
+			if _, ok := adjacency[n.state][s]; ok {
+				next = append(next, s)
+			}
 		}
-		sort.Strings(next)
 		for _, s := range next {
 			if !seen[s] {
 				seen[s] = true
