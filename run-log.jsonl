@@ -1396,3 +1396,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T15:11:45Z"},"task":"os-083112ac","ts":"2026-09-03T14:11:45Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T15:11:48Z"},"task":"os-ad610334","ts":"2026-09-03T14:11:48Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"title":"next: boundary check surfaces a canonicalization failure instead of comparing nothing to nothing (follow-up to #279)"},"task":"os-1c284ba8","ts":"2026-09-03T14:20:06Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-1c284ba8","ts":"2026-09-03T14:20:43Z","verb":"promote"}
