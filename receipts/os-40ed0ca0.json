@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "task": "os-40ed0ca0",
+  "merge_base": "42df80f246af3b367c084bc0f69e118925f0ed64",
+  "head": "77b5bd03546e0a5662f4ff1481a1d454f1ed4751",
+  "plan_path": "plans/os-40ed0ca0.md",
+  "plan_sha256": "5e46be9387d007307ef79be02b99d164c551166fcc7f8bd81516abf7a4a5ff1e",
+  "diff_files": [
+    "Makefile",
+    "flavors/core-Makefile",
+    "memory/LEARNINGS.md",
+    "next/boundary/card.json",
+    "next/cmd/seed/boundary.go",
+    "next/cmd/seed/boundary_cli_test.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/project_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/fixtures/deployment/seed.json",
+    "next/internal/admit/admit.go",
+    "next/internal/artifact/artifact.go",
+    "next/internal/boundary/boundary.go",
+    "next/internal/boundary/boundary_test.go",
+    "next/internal/posture/posture.go",
+    "next/internal/project/boundary.go",
+    "next/internal/project/project.go",
+    "next/internal/project/project_test.go",
+    "next/spec/boundary.md",
+    "next/spec/envelope.md",
+    "next/spec/postures.md",
+    "next/spec/projections.md",
+    "next/spec/protocol.md"
+  ],
+  "diff_sha256": "c2abd8e2fb3ab8cc68fed4fd6499167fbb16e867a655d7186e63a870d92eba3c",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/boundary/ ./internal/project/ ./internal/artifact/ ./cmd/seed/ -run 'Boundary|Card|CrossOrg|Opacity|Federation' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
