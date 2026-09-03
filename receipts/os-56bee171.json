@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "task": "os-56bee171",
+  "merge_base": "4c4bbe7123c9b112083952a452e6b92f1f05c65a",
+  "head": "41eba412246d31670543b6168cd4999fb700bfe1",
+  "plan_path": "plans/os-56bee171.md",
+  "plan_sha256": "221c75c93373afb45db7da43d98daa77e45aaa28802ae0920d95489e3b588c4c",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/loop.go",
+    "next/cmd/seed/racing_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/racing_test.go",
+    "next/internal/maintain/maintain.go",
+    "next/internal/maintain/racing_test.go",
+    "next/internal/posture/posture.go",
+    "next/internal/posture/posture_test.go",
+    "next/internal/project/contracts.go",
+    "next/internal/project/lifecycle_views_test.go",
+    "next/internal/project/racing_view_test.go",
+    "next/internal/refusal/refusal.go",
+    "next/internal/transition/transition.go",
+    "next/internal/version/version.go",
+    "next/internal/version/version_test.go",
+    "next/spec/budgets.md",
+    "next/spec/envelope.md",
+    "next/spec/lifecycle.md",
+    "next/spec/maintenance.md",
+    "next/spec/postures.md",
+    "next/spec/projections.md",
+    "next/spec/protocol.md"
+  ],
+  "diff_sha256": "92855346fd3999a8a3e642a017ebcd2f66dc9e80700b3d3ada2f959eacdaa16f",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/posture/ ./internal/transition/ ./internal/admit/ ./internal/maintain/ ./cmd/seed/ -run 'Racing|Race|Fence|Contention|Preseed' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}

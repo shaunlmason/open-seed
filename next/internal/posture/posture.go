@@ -126,10 +126,21 @@ type Governance struct {
 const ChangeProcessPROwnerReview = "pr+owner-review"
 
 // SquadGuardrail is a squad's tier posture: the tier work files at by
-// default and the highest tier an agent-kind key may claim.
+// default and the highest tier an agent-kind key may claim; and, when
+// the squad opts in, its racing block (plans/os-56bee171.md D1).
 type SquadGuardrail struct {
-	Default  string `json:"default"`
-	MaxAgent string `json:"max_agent"`
+	Default  string  `json:"default"`
+	MaxAgent string  `json:"max_agent"`
+	Racing   *Racing `json:"racing,omitempty"`
+}
+
+// Racing is a squad's explicit opt-in to racing mode (charter §II.6,
+// III.F row 7): the most claims the squad tolerates on one contract at
+// once, and the compute-for-latency trade stated in the operator's own
+// words. An absent block is no racing; a block says both or refuses.
+type Racing struct {
+	Racers int    `json:"racers"`
+	Cost   string `json:"cost"`
 }
 
 // PathFloor is the minimum tier a contract touching a prefix files at.
@@ -203,6 +214,20 @@ func (c *Config) AgentCeiling(squad string) (string, bool) {
 		return "", false
 	}
 	return g.MaxAgent, true
+}
+
+// RacingFor reads a squad's racing opt-in (plans/os-56bee171.md D1):
+// the declared cap and the cost in the operator's words; ok is false
+// when the guardrails, the squad or the block are undeclared.
+func (c *Config) RacingFor(squad string) (racers int, cost string, ok bool) {
+	if c == nil || c.Guardrails == nil {
+		return 0, "", false
+	}
+	g, found := c.Guardrails.Squads[squad]
+	if !found || g.Racing == nil {
+		return 0, "", false
+	}
+	return g.Racing.Racers, g.Racing.Cost, true
 }
 
 // Floor is the minimum tier a contract touching path files at: the
@@ -320,6 +345,14 @@ func (c *Config) validatePreseed() error {
 			}
 			if strings.TrimSpace(g.Default) == "" || strings.TrimSpace(g.MaxAgent) == "" {
 				return fmt.Errorf("guardrails.squads.%s declares both default and max_agent tiers", name)
+			}
+			if g.Racing != nil {
+				if g.Racing.Racers < 2 {
+					return fmt.Errorf("guardrails.squads.%s.racing.racers is %d: a race is two or more claims at once, and one is exclusivity (next/spec/lifecycle.md, Racing)", name, g.Racing.Racers)
+				}
+				if strings.TrimSpace(g.Racing.Cost) == "" {
+					return fmt.Errorf("guardrails.squads.%s.racing.cost is empty: the compute-for-latency trade is stated where the opt-in is, in the operator's words", name)
+				}
 			}
 		}
 		for _, f := range c.Guardrails.Paths {

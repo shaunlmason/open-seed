@@ -109,6 +109,17 @@
     corruption. At `seed/4` positions the verb stays unknown-and-refused
     under a `seed/5` validator too, and nothing else changes, so every
     existing chain verifies byte for byte.
+  - `seed/6` — activates racing mode ([`lifecycle.md`](lifecycle.md),
+    "Racing"): on a racing squad's contract `claim.taken` admits while
+    `in_progress` below the declared cap, each racer with its own
+    fence, and a racer's exit is claim-scoped. A `seed/5` validator's
+    lifecycle rule refuses the second claim as contention and its fold
+    applies nothing, so the two judge a `seed/6` racing record
+    differently, hence the bump, which makes a `seed/5`-only validator
+    refuse an upgraded chain at the first racing record by version
+    rather than by misjudging a race. At `seed/5` positions a second
+    claim stays contention under a `seed/6` validator too, no table row
+    changes, and every existing chain verifies byte for byte.
 
 ## Canonical event form
 
