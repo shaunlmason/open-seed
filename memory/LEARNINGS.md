@@ -1484,16 +1484,6 @@ the assertions read, and there is no copy to go stale.
   distinction and token-boundary model lookup, or cache-heavy runs
   misprice by up to ten times.
 
-- Before asserting "no manifest grants X" in an audit, derive the set
-  and print it: the shipped maintenance lane holds operator by design,
-  and an audit written from the charter's sentence rather than the
-  tree fails on its first run. Hold the derived set to a named list.
-- Go's flag package stops at the first positional: a verb taking a
-  file then flags must parse twice, or every flag after the file lands
-  in NArg as a usage error the drill reads as "refused".
-- A test helper's third return is not always what its name suggests:
-  `writeKeys`'s `pub` is a second operator's key, not the signer's.
-  Derive a fingerprint from the key you signed with.
 - claim.reaped admission never gated on reap corroboration — that
   discipline (InterruptValid/WedgeDeclared) is the maintenance loop's
   (the Corroborate closure + Reapable), not an admission rule. A card
@@ -1507,23 +1497,6 @@ the assertions read, and there is no copy to go stale.
   lossy observation channel, corroborates it. Judge the revocation at
   its own position (the InterruptValid posture) so a raw or unprivileged
   one, or a suspension whose standing can return, corroborates nothing.
-- Replaying a thousand records through a from-scratch admission
-  context is quadratic in JSON decoding, not in signatures: profile
-  before optimizing, and cut passes (derive grants from the source
-  before replay) rather than the boundary. A store whose append
-  rescans every segment is quadratic too; a one-pass batch append that
-  checks exactly what the single append checks is the fix, not a raw
-  segment write.
-- A verb that overrules a standing fail verdict (`merge.overridden`)
-  cannot stand in for a missing pass: when the predecessor recorded no
-  verdict, the honest record is a pass over an artifact that says no
-  receipt was recorded, with the disposition noted, never an override
-  of a failure nobody rendered.
-- Card evidence blocks and run-log entries share one clock in v1, so
-  matching by kind and instant within seconds works; blocks the
-  predecessor later pruned simply have no match, and the entry itself
-  is then the artifact. Do not loosen the match to make the count look
-  better.
 - When two surfaces must expose the same verbs, draw both from one
   table and hold the table to the dispatchers' own usage text in a
   drill; a hand-kept second list drifts the day someone adds a verb.
@@ -1542,9 +1515,3 @@ the assertions read, and there is no copy to go stale.
   the opener applies the local declaration (ledger ref, proposer) to
   whatever remote it opens, which is wrong for a foreign ledger. Open
   with the gitref client and the remote's own genesis instead.
-- When two surfaces must expose the same verbs, draw both from one
-  table and hold the table to the dispatchers' own usage text in a
-  drill; a hand-kept second list drifts the day someone adds a verb.
-- bufio.ScanLines strips a trailing carriage return and TrimSpace
-  strips another: a "refuse CRLF" rule needs a split function and a
-  trim that keep the CR, or the parser never sees what it must refuse.
