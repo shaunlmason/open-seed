@@ -19,7 +19,6 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
-	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 func main() {
@@ -33,88 +32,13 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "missing verb — try 'seed version'"), stdout, stderr)
 	}
-	switch args[0] {
-	case "version":
-		if len(args) != 1 {
-			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("version takes no arguments, got %q", args[1:])), stdout, stderr)
-		}
-		return render(envelope.OK(map[string]any{
-			"name":     version.Name,
-			"version":  version.Version,
-			"protocol": version.Protocol,
-		}), stdout, stderr)
-	case "init":
-		return runInit(args[1:], stdout, stderr)
-	case "ledger":
-		return runLedger(args[1:], stdout, stderr)
-	case "project":
-		return runProject(args[1:], stdout, stderr)
-	case "situation":
-		return runSituation(args[1:], stdout, stderr)
-	case "obs":
-		return runObs(args[1:], stdout, stderr)
-	case "plan":
-		return runPlan(args[1:], os.Stdin, stdout, stderr)
-	case "verdict":
-		return runVerdict(args[1:], stdout, stderr)
-	case "seal":
-		return runSeal(args[1:], stdout, stderr)
-	case "offer":
-		return runOffer(args[1:], stdout, stderr)
-	case "budget":
-		return runBudget(args[1:], stdout, stderr)
-	case "claim":
-		return runClaim(args[1:], stdout, stderr)
-	case "escalation":
-		return runEscalation(args[1:], stdout, stderr)
-	case "decision":
-		return runDecision(args[1:], stdout, stderr)
-	case "submission":
-		return runSubmission(args[1:], stdout, stderr)
-	case "merge":
-		return runMerge(args[1:], stdout, stderr)
-	case "reconcile":
-		return runReconcile(args[1:], stdout, stderr)
-	case "maintain":
-		return runMaintain(args[1:], stdout, stderr)
-	case "lane":
-		return runLane(args[1:], stdout, stderr)
-	case "message":
-		return runMessage(args[1:], stdout, stderr)
-	case "request":
-		return runRequest(args[1:], stdout, stderr)
-	case "federation":
-		return runFederation(args[1:], stdout, stderr)
-	case "boundary":
-		return runBoundary(args[1:], stdout, stderr)
-	case "doctor":
-		return runDoctor(args[1:], stdout, stderr)
-	case "protections":
-		return runProtections(args[1:], stdout, stderr)
-	case "perf":
-		return runPerf(args[1:], stdout, stderr)
-	case "import":
-		return runImport(args[1:], stdout, stderr)
-	case "preseed":
-		return runPreseed(args[1:], stdout, stderr)
-
-	case "run":
-		return runRun(args[1:], stdout, stderr)
-	case "eval":
-		return runEval(args[1:], stdout, stderr)
-	case "knowledge":
-		return runKnowledge(args[1:], stdout, stderr)
-	case "flywheel":
-		return runFlywheel(args[1:], stdout, stderr)
-	case "trajectory":
-		return runTrajectory(args[1:], stdout, stderr)
-	case "docs":
-		return runDocs(args[1:], stdout, stderr)
-	case "simulate":
-		return runSimulate(args[1:], stdout, stderr)
-	default:
-		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown verb %q — try 'seed version'", args[0])), stdout, stderr)
+	// Dispatch is the registry (plans/os-b55e5647.md D2): the same
+	// table the machine protocol serves, so the two surfaces cannot
+	// disagree about which verbs exist.
+	if g, ok := catalog(os.Stdin).Group(args[0]); ok {
+		return g.Run(args[1:], stdout, stderr)
 	}
+	return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown verb %q — try 'seed version'", args[0])), stdout, stderr)
 }
 
 type repeatedFlag []string
