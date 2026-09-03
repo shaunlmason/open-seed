@@ -1,14 +1,14 @@
 {
   "schema_version": "1.0",
   "task": "os-1c284ba8",
-  "merge_base": "c14df44e60cc803759555beee553b396ce07a3bc",
-  "head": "9075cc733a4e4c90db3adefa7587a9a30e17f250",
+  "merge_base": "ff843470ac44a694ed6df082ff4f167858af523e",
+  "head": "d12e0dc3add68396e4c2776c5dac5fcdccdc7539",
   "plan_path": "plans/os-1c284ba8.md",
   "plan_sha256": "5b00e736a5c60c2e765bb23a23d891905550227c1c9b9c376658043111d1ca46",
   "diff_files": [
     "next/cmd/seed/boundary.go"
   ],
-  "diff_sha256": "7ad4eb3d2c253d61624b81197d32bde4c9d8a2d849b2ec94509d0f9f6671e47b",
+  "diff_sha256": "e032b5ce32041d03490120732e5565fc2e01ed534a362388496fdcaf65ef6a34",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -run Boundary -count=1",
