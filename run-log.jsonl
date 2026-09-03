@@ -1148,3 +1148,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: revocation reaps the revoked holder's open claims on the revocation alone (III.E row 8's reap arm; Phase 12 item 1 follow-up)"},"task":"os-32d06c65","ts":"2026-09-02T23:55:48Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 11 exit record — III.K walked row by row, the flywheel's chore conversion and the poisoning drill named (progress.md)"},"task":"os-efb2a099","ts":"2026-09-02T23:56:52Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-a026f5ea","ts":"2026-09-02T23:57:30Z","verb":"transition"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-22b85190","kind":"receipt"},"task":"os-9075c308","ts":"2026-09-03T00:00:20Z","verb":"attach-evidence"}
