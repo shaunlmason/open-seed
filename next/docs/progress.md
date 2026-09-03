@@ -1449,6 +1449,13 @@ record's own position through one derivation, `curation.AuthenticPass`
   `next/spec/lifecycle.md` "Racing" new, `postures.md`, `envelope.md`,
   `maintenance.md`, `budgets.md`, `projections.md` and `protocol.md`
   (`seed/6`) following)
+- routed gap: the cache carries the event's `ts`, so evidence is
+  queryable by time (charter III.G row 10, recorded UNMET at the Phase
+  10 exit) — os-74ce2261 — **in review** (task PR against plan #260:
+  `ts` verbatim and `ts_unix` parsed on every per-event table at cache
+  generation 14, ranges over the integer since RFC 3339 mixes
+  fractional precision, an unparseable `ts` NULL and counted, the
+  time-range drill with the four names of the row in one query)
 - routed gap: `ledger show`'s `chain_invalid` stamps the position it
   was computed at — os-37fcf7c6 — **in review** (task PR against plan
   #259: the scan's failing position stamped, the same stamp verify
