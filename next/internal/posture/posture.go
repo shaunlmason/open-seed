@@ -93,6 +93,27 @@ type Admission struct {
 	Checks    []string `json:"checks"`
 	Reviews   int      `json:"reviews"`
 	Owners    []string `json:"owners"`
+	// Forge names which forge hosts the repository — "github" (the
+	// default when absent, so every existing declaration keeps its
+	// meaning) or "forgejo". Api is the forge's API base URL; GitHub's
+	// public API is the default when absent, and Forgejo has no public
+	// API, so a Forgejo declaration must name its instance.
+	Forge string `json:"forge"`
+	Api   string `json:"api"`
+}
+
+// Forge kinds a declaration may name.
+const (
+	ForgeGitHub  = "github"
+	ForgeForgejo = "forgejo"
+)
+
+// ForgeKind returns the declared forge, defaulting to GitHub when absent.
+func (a *Admission) ForgeKind() string {
+	if a == nil || a.Forge == "" {
+		return ForgeGitHub
+	}
+	return a.Forge
 }
 
 // Trust choices a fresh reader may declare for checkpoints
@@ -483,6 +504,20 @@ func (c *Config) validateAdmission() error {
 		if strings.TrimSpace(o) == "" {
 			return errors.New("admission.owners must not carry an empty identity")
 		}
+	}
+	switch a.Forge {
+	case "", ForgeGitHub, ForgeForgejo:
+	default:
+		return fmt.Errorf("admission.forge must be %q or %q (absent means %q), got %q", ForgeGitHub, ForgeForgejo, ForgeGitHub, a.Forge)
+	}
+	if a.Api != "" {
+		u, err := url.Parse(a.Api)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return fmt.Errorf("admission.api must be an http(s) URL naming the forge's API, got %q", a.Api)
+		}
+	}
+	if a.Forge == ForgeForgejo && a.Api == "" {
+		return errors.New("admission.api is required under forgejo: Forgejo has no public API, so the declaration must name its instance")
 	}
 	return nil
 }
