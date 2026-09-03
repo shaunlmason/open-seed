@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "task": "os-083112ac",
+  "merge_base": "d6c6133753b29060a9cc5580a5b6b32bd8c3d3a8",
+  "head": "ae0359cc33d6c122de1fc1db27a9e523a6895bca",
+  "plan_path": "plans/os-083112ac.md",
+  "plan_sha256": "7424c3f1b7a72eb318f6bf2522ccc4b056fdfea8920cabdb4ca0629649054c79",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/adapters_e2e_test.go",
+    "next/cmd/seed/doctor.go",
+    "next/cmd/seed/run.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/executor/adapters_test.go",
+    "next/executor/cloud.go",
+    "next/executor/container.go",
+    "next/executor/container_test.go",
+    "next/executor/described.go",
+    "next/executor/fakeoci/fakeoci.go",
+    "next/executor/ocicommand.go",
+    "next/executor/remote.go",
+    "next/internal/posture/executors_test.go",
+    "next/internal/posture/posture.go",
+    "next/internal/project/adapters_test.go",
+    "next/internal/project/flywheel_test.go",
+    "next/internal/project/knowledge_test.go",
+    "next/internal/project/lanes_report_test.go",
+    "next/internal/project/refusals_report_test.go",
+    "next/internal/project/report.go",
+    "next/spec/executors.md",
+    "next/spec/projections.md"
+  ],
+  "diff_sha256": "03cb2ee97c4360de307f9b70abe43deaf627e7d3953373e3ebf01b3c9ff45256",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./executor/... ./internal/posture/ ./internal/project/ ./cmd/seed/ -run 'Adapter|Container|Cloud|Remote|Disposab|Preempt|RunStart|Executors' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
