@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"sort"
@@ -106,7 +107,7 @@ func Parse(b []byte) (*Config, error) {
 	if err := dec.Decode(&c); err != nil {
 		return nil, fmt.Errorf("posture declaration does not parse: %v (valid postures: %s)", err, validList())
 	}
-	if dec.More() {
+	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("posture declaration carries trailing data (valid postures: %s)", validList())
 	}
 	if !c.Posture.Valid() {
