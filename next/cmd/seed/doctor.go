@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/shaunlmason/open-seed/next/executor"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/propose"
@@ -49,6 +50,10 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		// exactly what the remote will refuse.
 		"protected": cfg.ProtectedSurface(),
 	}
+	// The executor substrates this build provisions through, each with
+	// its budget posture (plans/os-083112ac.md D2): local worktree
+	// always; the container, cloud and remote adapters when declared.
+	result["adapters"] = doctorAdapters(cfg)
 	// The preseed's blocks, each declared or not (plans/os-0d4f2af3.md).
 	result["preseed"] = map[string]any{
 		"protocol":   cfg.Protocol,
@@ -116,4 +121,28 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	return render(envelope.OK(result), stdout, stderr)
+}
+
+// doctorAdapters lists the executor substrates this build provisions
+// through with their budget postures, from the declaration's executors
+// block.
+func doctorAdapters(cfg *posture.Config) []map[string]any {
+	list := []executor.Adapter{executor.LocalWorktree{}}
+	if ex := cfg.Executors; ex != nil {
+		if ex.Container != nil {
+			list = append(list, executor.Container{})
+		}
+		if ex.Cloud != nil {
+			list = append(list, executor.CloudSession{})
+		}
+		if ex.Remote != nil {
+			list = append(list, executor.RemoteWorker{})
+		}
+	}
+	out := make([]map[string]any, 0, len(list))
+	for _, a := range list {
+		d := executor.DescribeOf(a.Tuple().Harness, a)
+		out = append(out, map[string]any{"name": d.Name, "harness": d.Harness, "budget": d.Budget, "reason": d.Reason})
+	}
+	return out
 }

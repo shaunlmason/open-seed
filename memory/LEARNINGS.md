@@ -1536,3 +1536,19 @@ the assertions read, and there is no copy to go stale.
   the opener applies the local declaration (ledger ref, proposer) to
   whatever remote it opens, which is wrong for a foreign ledger. Open
   with the gitref client and the remote's own genesis instead.
+
+## The executor adapters and their budget postures (os-083112ac, Phase 13 item 2)
+
+- **An optional interface keeps the public contract stable.** Adding
+  `Described` as an OPTIONAL interface (not a method on `Adapter`) lets
+  adapters state their budget posture without breaking external
+  implementers; a type assertion + a safe default (`risk-limit`) handles
+  the ones that do not implement it.
+- **The four adapters share `verifyStarted` + the `Diff` mismatch check
+  + `buildWorktree`.** The substrate-specific part is just the
+  provisioning (container start, session open, packet handoff); the
+  admitted-start gate and the tuple-mismatch refusal are the same for
+  all, so factor them.
+- **A credential in a declaration is an env-var NAME.** Lint it to an
+  identifier shape (`^[A-Za-z_][A-Za-z0-9_]*$`), which a token cannot
+  satisfy — the secret stays in the environment, never the tree.

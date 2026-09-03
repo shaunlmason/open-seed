@@ -3175,3 +3175,25 @@ session opener, which would have applied this deployment's
 declaration (its ledger ref under the forge-hosted posture, its
 proposer) to a foreign ledger. No key crosses, and the command has no
 key flag to cross with.
+
+## Phase 13 item 2 — the remaining executor adapters (os-083112ac, plan #274)
+
+**The budget posture is a per-adapter fact, and the safe default is a
+risk limit.** `executor.Described` is optional so the public `Adapter`
+interface is unchanged; an adapter that does not state its posture is
+treated as a risk limit, never enforced by default — the honest
+assumption when a substrate has not proven it can be stopped
+synchronously. Local worktree and container are `enforced` (the
+supervisor kills them); cloud session and remote worker are
+`risk-limit` (a provider or a remote process may spend past the
+reservation before the interrupt lands). `report.json` and `doctor`
+report the posture per adapter; neither averages the two.
+
+**A credential is an env-var name, never a value; the remote worker
+pulls.** The `executors` block names the container runtime/image, the
+cloud endpoint and a credential env-var NAME, and the enrolled workers;
+the lint refuses a token-shaped credential, so a secret never reaches
+the tree. The remote-worker adapter opens no connection — it puts the
+packet in the artifact store and appends the pickup line the enrolled
+service actor reads, keeping §II.9's no-inbound rule. The container
+adapter runs credential-free in CI through `executor/fakeoci`.
