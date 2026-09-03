@@ -126,6 +126,13 @@ its packet at a safe point — landed with 7.4, the envelope's
 loop that answers exhaustion by taking that exit is named in
 docs/next-build-plan.md Phase 9 item 1.
 
+**Per racer.** On a racing squad's contract ([`lifecycle.md`](lifecycle.md),
+"Racing") each racer reserves against its own fence and settles its
+own actuals; the subject's budget view sums the open reservations, and
+a settled-out racer's reservation closes with its exit or its reap
+like any other. Nothing is shared: the cost the squad declared is
+paid once per racer, which is what the declaration's sentence says.
+
 ## Surfaces
 
 - `seed budget status --ledger <dir> --subject <id>` — the derived

@@ -227,37 +227,99 @@ func (d Deps) reap(rep *Report) {
 	}
 	for _, id := range d.Fold.Subjects() {
 		s, ok := d.Fold.State(id)
-		if !ok || s.Claim == nil || s.State != "in_progress" {
+		if !ok || s.Claim == nil {
 			continue
 		}
-		stream, _ := d.Obs.StreamFor(s.Claim.Holder, obs.FormatFence(s.Claim.Fence))
-		class := obs.Classify(stream, d.Now, d.Thresholds)
-		var corr Corroboration
-		if d.Corroborate != nil {
-			corr = d.Corroborate(id, s.Claim.Fence)
-		}
-		ok2, because := Reapable(class, corr)
-		if !ok2 {
-			rep.Skipped = append(rep.Skipped, Skip{Subject: id, State: string(class.State), Because: because})
+		// A settled race (plans/os-56bee171.md D3): the first verified
+		// success closed the contract while other racers still held
+		// claims. The ledger itself corroborates the reap — nothing a
+		// settled-out racer does can land except its own exit — so
+		// each remaining claim is reaped with a packet naming the
+		// settlement, and the losers' work is visibly over.
+		if s.RaceSettled != nil {
+			for _, c := range s.Claims {
+				payload, err := RaceReapPacket(s, c.Fence, *s.RaceSettled)
+				if err != nil {
+					rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+					continue
+				}
+				if d.Append == nil {
+					continue
+				}
+				if err := d.Append("claim.reaped", id, payload); err != nil {
+					rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+					continue
+				}
+				rep.Reaped = append(rep.Reaped, Reap{
+					Subject: id, Fence: c.Fence, Holder: c.Holder,
+					State: "settled", Because: fmt.Sprintf("the race was settled at position %d and this claim outlived it", *s.RaceSettled),
+				})
+			}
 			continue
 		}
-		payload, err := ReapPacket(s, s.Claim.Fence, class, corr)
-		if err != nil {
-			rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+		if s.State != "in_progress" {
 			continue
 		}
-		if d.Append == nil {
-			continue
+		// Every active claim is classified on its own stream: one on
+		// an exclusive subject, each racer's on a racing one.
+		for _, c := range s.Claims {
+			stream, _ := d.Obs.StreamFor(c.Holder, obs.FormatFence(c.Fence))
+			class := obs.Classify(stream, d.Now, d.Thresholds)
+			var corr Corroboration
+			if d.Corroborate != nil {
+				corr = d.Corroborate(id, c.Fence)
+			}
+			ok2, because := Reapable(class, corr)
+			if !ok2 {
+				rep.Skipped = append(rep.Skipped, Skip{Subject: id, State: string(class.State), Because: because})
+				continue
+			}
+			payload, err := ReapPacket(s, c.Fence, class, corr)
+			if err != nil {
+				rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+				continue
+			}
+			if d.Append == nil {
+				continue
+			}
+			if err := d.Append("claim.reaped", id, payload); err != nil {
+				rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+				continue
+			}
+			rep.Reaped = append(rep.Reaped, Reap{
+				Subject: id, Fence: c.Fence, Holder: c.Holder,
+				State: string(class.State), Because: reapBecause(corr),
+			})
 		}
-		if err := d.Append("claim.reaped", id, payload); err != nil {
-			rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
-			continue
-		}
-		rep.Reaped = append(rep.Reaped, Reap{
-			Subject: id, Fence: s.Claim.Fence, Holder: s.Claim.Holder,
-			State: string(class.State), Because: reapBecause(corr),
-		})
 	}
+}
+
+// RaceReapPacket composes the claim.reaped payload for a settled-out
+// racer (plans/os-56bee171.md D3): the fence it kills and a packet
+// whose finding names the settlement, so the loser's packet says why
+// its work is over without inventing what it found.
+func RaceReapPacket(s transition.SubjectState, fence int, settledAt int) ([]byte, error) {
+	acceptance := "the contract's acceptance spec, which the fold does not carry"
+	if s.Acceptance != nil && s.Acceptance.Ref != "" {
+		acceptance = s.Acceptance.Ref
+	}
+	body, err := packet.Render(packet.Packet{
+		Acceptance: []string{acceptance},
+		Decisions:  []packet.Decision{},
+		Base:       packet.ZeroRange,
+		Refs:       []string{},
+		Findings: []packet.Finding{{
+			Tried:   "racing this contract against another claim",
+			Outcome: fmt.Sprintf("the race was settled at position %d by the first verified success; this claim outlived it and was reaped by the maintenance lane, its work written off as the squad's declared cost", settledAt),
+		}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(map[string]any{
+		"fence":    strconv.Itoa(fence),
+		packet.Key: json.RawMessage(body),
+	})
 }
 
 func reapBecause(corr Corroboration) string {
