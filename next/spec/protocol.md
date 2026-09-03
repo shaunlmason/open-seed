@@ -109,6 +109,28 @@
     corruption. At `seed/4` positions the verb stays unknown-and-refused
     under a `seed/5` validator too, and nothing else changes, so every
     existing chain verifies byte for byte.
+  - `seed/6` — activates racing mode ([`lifecycle.md`](lifecycle.md),
+    "Racing"): on a racing squad's contract `claim.taken` admits while
+    `in_progress` below the declared cap, each racer with its own
+    fence, and a racer's exit is claim-scoped. A `seed/5` validator's
+    lifecycle rule refuses the second claim as contention and its fold
+    applies nothing, so the two judge a `seed/6` racing record
+    differently, hence the bump, which makes a `seed/5`-only validator
+    refuse an upgraded chain at the first racing record by version
+    rather than by misjudging a race. At `seed/5` positions a second
+    claim stays contention under a `seed/6` validator too, no table row
+    changes, and every existing chain verifies byte for byte.
+  - `seed/7` — activates the request ingress ([`requests.md`](requests.md)):
+    `request.filed`, the one verb a proposal from a projection surface,
+    a dashboard or another deployment enters the ledger by, a fact that
+    changes no state and grants nothing, and `request.answered`, the
+    dispatcher's close of one. A `seed/6` validator's unknown-verb arm
+    fails a chain carrying either, so the two judge a `seed/7` record
+    differently, hence the bump, which makes a `seed/6`-only validator
+    refuse an upgraded chain at the first request by version rather
+    than as corruption. At `seed/6` positions both verbs stay
+    unknown-and-refused under a `seed/7` validator too, no table row
+    changes, and every existing chain verifies byte for byte.
 
 ## Canonical event form
 

@@ -126,10 +126,21 @@ type Governance struct {
 const ChangeProcessPROwnerReview = "pr+owner-review"
 
 // SquadGuardrail is a squad's tier posture: the tier work files at by
-// default and the highest tier an agent-kind key may claim.
+// default and the highest tier an agent-kind key may claim; and, when
+// the squad opts in, its racing block (plans/os-56bee171.md D1).
 type SquadGuardrail struct {
-	Default  string `json:"default"`
-	MaxAgent string `json:"max_agent"`
+	Default  string  `json:"default"`
+	MaxAgent string  `json:"max_agent"`
+	Racing   *Racing `json:"racing,omitempty"`
+}
+
+// Racing is a squad's explicit opt-in to racing mode (charter §II.6,
+// III.F row 7): the most claims the squad tolerates on one contract at
+// once, and the compute-for-latency trade stated in the operator's own
+// words. An absent block is no racing; a block says both or refuses.
+type Racing struct {
+	Racers int    `json:"racers"`
+	Cost   string `json:"cost"`
 }
 
 // PathFloor is the minimum tier a contract touching a prefix files at.
@@ -158,9 +169,26 @@ type Teams struct {
 }
 
 // Config is the deployment declaration.
+// FederationRemote is one read remote (plans/os-48df10a2.md D4): a
+// name, the git remote whose ledger ref is read, and that ref. Read
+// only: nothing here names a key or a write.
+type FederationRemote struct {
+	Name   string `json:"name"`
+	Remote string `json:"remote"`
+	Ref    string `json:"ref"`
+}
+
+// Federation is the declaration's federation block: the other
+// deployments this one reads, uniformly, into its org view. Absent is
+// no federation.
+type Federation struct {
+	Remotes []FederationRemote `json:"remotes"`
+}
+
 type Config struct {
-	Posture   Posture    `json:"posture"`
-	Admission *Admission `json:"admission,omitempty"`
+	Posture    Posture     `json:"posture"`
+	Admission  *Admission  `json:"admission,omitempty"`
+	Federation *Federation `json:"federation,omitempty"`
 	// Protected enumerates the protected surface (SEED-NEXT.md §II.14)
 	// as repository-relative path prefixes: a path equal to an entry,
 	// or under an entry as a directory, is write-denied to every agent
@@ -203,6 +231,20 @@ func (c *Config) AgentCeiling(squad string) (string, bool) {
 		return "", false
 	}
 	return g.MaxAgent, true
+}
+
+// RacingFor reads a squad's racing opt-in (plans/os-56bee171.md D1):
+// the declared cap and the cost in the operator's words; ok is false
+// when the guardrails, the squad or the block are undeclared.
+func (c *Config) RacingFor(squad string) (racers int, cost string, ok bool) {
+	if c == nil || c.Guardrails == nil {
+		return 0, "", false
+	}
+	g, found := c.Guardrails.Squads[squad]
+	if !found || g.Racing == nil {
+		return 0, "", false
+	}
+	return g.Racing.Racers, g.Racing.Cost, true
 }
 
 // Floor is the minimum tier a contract touching path files at: the
@@ -299,7 +341,36 @@ func Parse(b []byte) (*Config, error) {
 // table's and is checked where the table is, at admission and at
 // `seed preseed check`), prefixes clean, the change process the one
 // the charter names.
+// validateFederation holds the federation block to its shape: names
+// non-empty and unique, remotes non-empty, refs full ref names or
+// absent (the default ledger ref).
+func (c *Config) validateFederation() error {
+	if c.Federation == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	for i, r := range c.Federation.Remotes {
+		if strings.TrimSpace(r.Name) == "" || strings.ContainsAny(r.Name, " \t\r\n/\\") {
+			return fmt.Errorf("federation.remotes[%d].name is a non-empty token without spaces or slashes, got %q", i, r.Name)
+		}
+		if seen[r.Name] {
+			return fmt.Errorf("federation.remotes names %q twice", r.Name)
+		}
+		seen[r.Name] = true
+		if strings.TrimSpace(r.Remote) == "" {
+			return fmt.Errorf("federation.remotes.%s names no git remote", r.Name)
+		}
+		if r.Ref != "" && !strings.HasPrefix(r.Ref, "refs/") {
+			return fmt.Errorf("federation.remotes.%s.ref is a full ref name (refs/…) or absent for the default ledger ref, got %q", r.Name, r.Ref)
+		}
+	}
+	return nil
+}
+
 func (c *Config) validatePreseed() error {
+	if err := c.validateFederation(); err != nil {
+		return err
+	}
 	if c.Governance != nil {
 		if strings.TrimSpace(c.Governance.Root) == "" {
 			return errors.New("governance.root names the governance root's key fingerprint")
@@ -320,6 +391,14 @@ func (c *Config) validatePreseed() error {
 			}
 			if strings.TrimSpace(g.Default) == "" || strings.TrimSpace(g.MaxAgent) == "" {
 				return fmt.Errorf("guardrails.squads.%s declares both default and max_agent tiers", name)
+			}
+			if g.Racing != nil {
+				if g.Racing.Racers < 2 {
+					return fmt.Errorf("guardrails.squads.%s.racing.racers is %d: a race is two or more claims at once, and one is exclusivity (next/spec/lifecycle.md, Racing)", name, g.Racing.Racers)
+				}
+				if strings.TrimSpace(g.Racing.Cost) == "" {
+					return fmt.Errorf("guardrails.squads.%s.racing.cost is empty: the compute-for-latency trade is stated where the opt-in is, in the operator's words", name)
+				}
 			}
 		}
 		for _, f := range c.Guardrails.Paths {

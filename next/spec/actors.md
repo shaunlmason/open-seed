@@ -1,5 +1,7 @@
 # actors.md — actor events and the keyring projection
 
+> The enumeration is generated: [`../docs/generated/capabilities.md`](../docs/generated/capabilities.md) renders each verb's accepted-capability set from the table this file explains; `seed docs check` holds them equal.
+
 > Status: v0, normative for `next/**` from protocol version **`seed/1`**.
 > Authority: [`SEED-NEXT.md`](../../SEED-NEXT.md) Part II "Enrollment" and
 > "Capabilities"; [`docs/next-build-plan.md`](../../docs/next-build-plan.md)
@@ -92,6 +94,11 @@ attributed to it.
 | `suspended` | subject active | standing suspended |
 | `revoked` | subject not already revoked | standing revoked |
 
+A revocation also **reaps the revoked holder's open claims**: from the
+`actor.revoked` position on the holder can no longer act, so the
+maintenance pass reaps its `in_progress` window on the revocation alone
+(`admit.RevokedHolder`; [`maintenance.md`](maintenance.md); plans/os-32d06c65.md), re-offering the work.
+
 **Root liveness.** Suspending or revoking a governance root refuses when
 it would leave zero active roots: no admitted transition may leave the
 deployment without a key admission accepts `actor.*` from. Root rotation
@@ -135,6 +142,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `actor.*` (enrolled, granted, suspended, revoked) | `operator` |
 | `actor.qualified`, `actor.disqualified` | `supervise`, `operator` (the first non-operator actor rows: SEED-NEXT.md §5 makes suspension of a failing configuration the supervisor's attributable act with no operator ceremony, and a mint is the same act with the opposite sign; operator stays the standing override, evals.md) |
 | `intent.filed` | `dispatch`, `operator` |
+| `request.answered` | `dispatch`, `operator` (the dispatcher's close of an inbound request, from seed/7; the filing verb itself has no row — standing only, like a message — since a proposal's ingress identity holds no capability; [requests.md](requests.md)) |
 | `contract.specified` | `dispatch`, `operator` |
 | `contract.blocked` | `dispatch`, `operator` |
 | `contract.unblocked` | `dispatch`, `operator` |

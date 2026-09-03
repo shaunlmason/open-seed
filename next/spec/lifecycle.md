@@ -1,5 +1,7 @@
 # lifecycle.md — the contract lifecycle
 
+> The enumeration is generated: [`../docs/generated/lifecycle.md`](../docs/generated/lifecycle.md) renders the states and every transition from the table this file explains; `seed docs check` holds them equal.
+
 > Status: v0, normative for `next/**`. Authority: [`SEED-NEXT.md`](../../SEED-NEXT.md)
 > Part II §6 "Lifecycle" and §8 (done is a verdict and a reconciliation);
 > [`docs/next-build-plan.md`](../../docs/next-build-plan.md) Phase 5 item 1;
@@ -136,12 +138,86 @@ client refuses to draft an exclusive verb through the local dev-tool
 append (exit 2, quoting this posture); the boundary enforces
 exclusivity regardless — the client rule prevents drafting doomed
 work. Reading, planning, and continuing an admitted claim stay fully
-offline. **Racing mode is deferred entirely** (the build plan's
-binding default). `progress.milestone` and `wedge.declared` are
+offline. **Racing mode** lifts the exclusivity per squad, by declaration; see
+"Racing" below.
+
+`progress.milestone` and `wedge.declared` are
 **facts, not transitions** (`observations.md`): a milestone is the
 claim lane's coarse, monotonic, position-throttled summary and a
 declared wedge records the visible condition durably; neither
 changes state, and the pinned four `in_progress` exits stand.
+
+## Racing
+
+Charter §II.6 and III.F row 7: exclusivity is the rule, and a squad
+may opt out of it explicitly, with its compute cost stated —
+duplicate execution tolerated, the first *verified* success settling
+the contract (plans/os-56bee171.md; `seed/6`).
+
+**The opt-in is declared.** `seed.json`'s
+`guardrails.squads.<name>.racing` is `{"racers": N, "cost": "<the
+operator's sentence>"}`: the most claims the squad tolerates on one
+contract at once (two or more) and the compute-for-latency trade in
+the operator's words, both required or the declaration refuses
+`posture_invalid` ([`postures.md`](postures.md)). An absent block is
+no racing. No verb, flag or environment opts a contract in.
+
+**A racing claim admits beside the holders, each with its own
+fence.** At `seed/6`, `claim.taken` on an `in_progress` contract whose
+squad races admits while the contract holds fewer active claims than
+`racers` and the claimant holds none of them; the record is a claim
+like any other — exclusive in the table's sense, granted at admission,
+never offline — and its fence is its own position. Without the opt-in,
+or at the cap, the second claim refuses exit 2 `contention` as it
+always did, at the cap naming every holder and fence. The fold keeps
+every active claim (`Claims`) beside the singular `Claim`, which is the
+first of them, so every reader of the singular fact reads what it read
+before. The fence rule reads the active fences: a holder cites its own
+fence and no other (`fenced_out` otherwise); a prior claimant cites any
+active one.
+
+**A racer's exit is claim-scoped, except two.** The table is untouched:
+a second claim is a fact on an `in_progress` subject, not a row, and a
+racer's `submission.made`, `claim.released`, `claim.parked` or
+`claim.reaped` closes that racer's claim alone and moves no state —
+except the first submission, which enters `review` (the other racers'
+claims outlive it and they keep working), and the last racer's
+departure with no submission yet, which the table moves as it always
+has. The fold keeps every submission of the window (`Submissions`)
+and every verdict (`Verdicts`) beside the singular facts.
+
+**First verified success settles.** A verdict binds to the submission
+it cites — any submission of the window — so verdicts on different
+racers' submissions coexist, and a fail locks that submitter alone
+(`verdicts.md`'s lockout, per submission). The merge chain cites the
+newest verdict on its submission; the first `merge.observed` closes
+the contract and every other active claim is **settled-out** from
+that position: a settled-out racer's next act on the subject refuses
+exit 3 `race_settled` naming the settlement, its own deliberate exit
+still admits (a packet is never refused after the fact), and the
+maintenance pass reaps what does not exit, with a packet naming the
+settlement ([`maintenance.md`](maintenance.md)). A tie is impossible:
+chain order is total.
+
+**Spend is per racer and the race is visible.** Every racer reserves
+against its own fence ([`budgets.md`](budgets.md)); the contracts view
+carries a `racing` object (the racers, and after settlement the
+settling position and the claims it settled out;
+[`projections.md`](projections.md)); the claim response tells a racer
+its squad races and what the operator said it costs, so the sentence
+is in front of the lane that spends it.
+
+**Offline claiming stays impossible by construction.** The table's
+`exclusive` flag and the cooperative client's refusal to draft a claim
+offline are untouched; racing is a judgment inside the lifecycle rule
+beside contention, ordered by the push round-trip, never by a clock.
+
+**Before `seed/6`** a second `claim.taken` on an `in_progress` subject
+is contention at the boundary and an anomaly in the fold, as it always
+was: the widened judgment is a named version's, so every existing chain
+verifies byte for byte and a `seed/5` validator refuses an upgraded
+chain at the first racing record by version rather than by
+misjudging a race ([`protocol.md`](protocol.md)).
 
 ## Self-validation
 

@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/shaunlmason/open-seed/next/internal/decider"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
@@ -143,6 +144,7 @@ func runTrajectoryReplay(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(io.Discard)
 	dir := fs.String("ledger", "", "ledger directory the trajectory is replayed over")
 	keyPath := fs.String("key", "", "OpenSSH ed25519 private key of the lane recorded")
+	deciderName := fs.String("decider", "", "re-decide at each loop-act point with a named decider (scripted) and flag choice_diverged")
 	lanes := laneDir(fs)
 	if err := fs.Parse(rest); err != nil || fs.NArg() != 0 || file == "" || *dir == "" || *keyPath == "" {
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
@@ -164,7 +166,16 @@ func runTrajectoryReplay(args []string, stdout, stderr io.Writer) int {
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
-	res, err := trajectory.Replay(t, records, signer, *lanes)
+	var res *trajectory.Result
+	switch *deciderName {
+	case "":
+		res, err = trajectory.Replay(t, records, signer, *lanes)
+	case "scripted":
+		res, err = trajectory.ReplayWithDecider(t, records, signer, *lanes, decider.Scripted)
+	default:
+		return render(envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("unknown decider %q — scripted is the reference decider", *deciderName)), stdout, stderr)
+	}
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
