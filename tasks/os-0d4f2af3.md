@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-03T01:29:17Z"
     lease_expires: "2026-09-03T05:50:21Z"
 created_at: "2026-09-03T00:10:17Z"
-updated_at: "2026-09-03T04:50:21Z"
+updated_at: "2026-09-03T05:06:59Z"
 ---
 
 Build plan Phase 12 item 4 (docs/next-build-plan.md): the preseed file — config, guardrails, teams, protections desired-state and the declared admission posture — bootstrapping a new adoption idempotently and CI-verifiably; plus the clauses the Phase 10 exit record routes here: the guardrails include agent-only ones read off the roster's `kind` and the report's lane rates split by kind (III.E row 9), and the config enumerates the protected surface and names the governance root and its change process (III.G row 9, III.L row 2).
@@ -24,3 +24,7 @@ Expected shape, for the plan to settle: one declarative file (format decided in 
 ## Evidence ev-8994ea1a (pr, seed-next-implementer, 2026-09-03T02:36:58Z)
 
 https://github.com/shaunlmason/open-seed/pull/254
+
+## Evidence ev-2801647c (receipt, seed-next-implementer, 2026-09-03T05:06:59Z)
+
+receipts/os-0d4f2af3.json
