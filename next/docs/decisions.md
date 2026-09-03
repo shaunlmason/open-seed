@@ -2995,6 +2995,17 @@ an operator.
   classification state (no_data included, because a revocation is a
   ledger fact not silence), and no admission rule on claim.reaped
   changes. The plan (#262) was amended to match before implementation.
+## `ledger show` stamps its failing position (os-37fcf7c6, plan #259)
+
+**The stamp is where the response was computed, not the chain's
+length.** `plans/os-fa69345e.md` D3 left `show`'s `chain_invalid`
+unstamped and pinned it as a tripwire so the change would be a
+decision. The decision: the envelope spec defines the stamp as the
+position the response was computed at, a scan that read records
+`0..p-1` and failed at `p` was computed at `p`, and `verify` already
+stamps that position on the same chain; `show` now does the same, the
+tripwire is inverted, and null keeps its one meaning — a refusal
+raised before any position was read.
 
 ## Phase 12 item 5 — migration from open-seed, drilled against a real export (os-cf13fb51, plan #248)
 

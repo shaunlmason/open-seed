@@ -247,19 +247,12 @@ func TestLedgerShowNotFoundStampsTheTip(t *testing.T) {
 		t.Fatalf("a found record carries its own position: %d %+v", code, e.Position)
 	}
 
-	// chain_invalid stays UNSTAMPED (plans/os-fa69345e.md D3), even
-	// though position 0 was read before the failure at 1. This drill
-	// is a TRIPWIRE, not a claim that the behaviour is settled: D3
-	// wanted the branch pinned so a later "consistency" pass could not
-	// extend the stamp there incidentally.
-	//
-	// It should be extended there deliberately, and that is carded as
-	// os-37fcf7c6 (review finding on this PR). runLedgerVerify already
-	// stamps fail.Position, so show is the only chain failure that
-	// stamps nothing, and the envelope rule reserves null for a
-	// refusal raised before a tip was ever READ rather than before one
-	// was established. Taking that card inverts this assertion, which
-	// is the point of its being here.
+	// chain_invalid is STAMPED with the failing position
+	// (plans/os-37fcf7c6.md D1, the deliberate inversion of
+	// plans/os-fa69345e.md D3's tripwire): the scan read position 0
+	// and failed at 1, so the response was computed at 1, and verify
+	// stamps the same chain the same way. Null is reserved for a
+	// refusal raised before any position was read.
 	segs, err := filepath.Glob(filepath.Join(ld, "segments", "*.jsonl"))
 	if err != nil || len(segs) == 0 {
 		t.Fatal("no segments")
@@ -280,8 +273,12 @@ func TestLedgerShowNotFoundStampsTheTip(t *testing.T) {
 	if code != 8 || e.Error == nil || e.Error.Code != "chain_invalid" {
 		t.Fatalf("an unparsable record exits 8 chain_invalid: %d %+v", code, e)
 	}
-	if e.Position != nil {
-		t.Fatalf("a failed scan asserts no position: %v", *e.Position)
+	if e.Position == nil || *e.Position != "1" {
+		t.Fatalf("a failed scan stamps the position it failed at: %s", stampOf(e.Position))
+	}
+	v, vcode := runEnv(t, "ledger", "verify", "--ledger", ld)
+	if vcode != 8 || v.Position == nil || *v.Position != *e.Position {
+		t.Fatalf("show and verify stamp one corrupted chain alike: show %s, verify %d %s", stampOf(e.Position), vcode, stampOf(v.Position))
 	}
 }
 
@@ -363,4 +360,13 @@ func TestLedgerUsageRefusals(t *testing.T) {
 			t.Errorf("%v must exit 64, got %d", args, code)
 		}
 	}
+}
+
+// stampOf prints an envelope's position for a failure message: the
+// value, or <nil>, never the pointer.
+func stampOf(p *string) string {
+	if p == nil {
+		return "<nil>"
+	}
+	return *p
 }

@@ -1423,6 +1423,13 @@ record's own position through one derivation, `curation.AuthenticPass`
 (`memory/LEARNINGS.md`). This exit record is card os-efb2a099's task PR
 (an administrative card, not a Phase 11 item).
 
+- routed gap: `ledger show`'s `chain_invalid` stamps the position it
+  was computed at — os-37fcf7c6 — **in review** (task PR against plan
+  #259: the scan's failing position stamped, the same stamp verify
+  gives one corrupted chain, the D3 tripwire inverted on purpose, the
+  envelope spec's null sentence sharpened to "before any position was
+  read")
+
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
 - 12.2 forge-hosted admission service (stateless, sole-writer) and the
