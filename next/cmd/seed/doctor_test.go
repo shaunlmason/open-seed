@@ -109,3 +109,70 @@ func TestDoctorRefusals(t *testing.T) {
 		t.Fatal("stray arguments are a usage error")
 	}
 }
+
+// conformance: plans/os-83bc3d84.md D4, AC4 — the doctor reports the
+// Part III table at the declared posture: counts, the open rows by
+// pillar and row, complete only when nothing is open at an enforced
+// posture; the cooperative posture sets the enforced-only rows aside
+// and is never complete; a tree without the table has no section; a
+// table that drifted from the charter is an operational failure.
+func TestDoctorReportsConformanceAtThePosture(t *testing.T) {
+	repo := "../../.."
+	e, code, _ := runDoctorEnv(t, "--config", writePosture(t, `{"posture": "enforced-self-hosted"}`), "--repo", repo)
+	if code != 0 {
+		t.Fatalf("doctor: %d %+v", code, e)
+	}
+	section, ok := e.Result["conformance"].(map[string]any)
+	if !ok {
+		t.Fatalf("the repository carries the table, so the doctor reports it: %+v", e.Result)
+	}
+	counts, _ := section["counts"].(map[string]any)
+	total := 0.0
+	for _, k := range []string{"met", "partial", "routed", "open"} {
+		v, _ := counts[k].(float64)
+		total += v
+	}
+	if total != 128 {
+		t.Fatalf("every charter row is counted at the enforced posture: %v", counts)
+	}
+	if section["complete"] != false || section["because"] == "" {
+		t.Fatalf("Phase 13 rows are open, so Part III is not yet complete, and the doctor says why: %+v", section)
+	}
+	openRows, _ := section["open_rows"].([]any)
+	if len(openRows) == 0 {
+		t.Fatalf("the open rows are named: %+v", section)
+	}
+	if first, _ := openRows[0].(map[string]any); first["id"] == "" {
+		t.Fatalf("an open row carries its id: %+v", first)
+	}
+
+	// Cooperative: the enforced-only rows are set aside, and Part III
+	// cannot be complete here.
+	e, _, _ = runDoctorEnv(t, "--config", writePosture(t, `{"posture": "cooperative"}`), "--repo", repo)
+	section, _ = e.Result["conformance"].(map[string]any)
+	na, _ := section["not_applicable_here"].([]any)
+	if len(na) == 0 || section["complete"] != false || !strings.Contains(section["because"].(string), "cooperative") {
+		t.Fatalf("cooperative: enforced-only rows are not applicable and the table is not complete here: %+v", section)
+	}
+
+	// A tree without the table has no section; a tree whose table
+	// drifted from the charter fails unavailable.
+	e, _, _ = runDoctorEnv(t, "--config", writePosture(t, `{"posture": "cooperative"}`), "--repo", t.TempDir())
+	if _, ok := e.Result["conformance"]; ok {
+		t.Fatal("no table, no section")
+	}
+	broken := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(broken, "next", "spec"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	charter, _ := os.ReadFile(filepath.Join(repo, "SEED-NEXT.md"))
+	if err := os.WriteFile(filepath.Join(broken, "SEED-NEXT.md"), charter, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(broken, "next", "spec", "conformance.json"), []byte(`{"pillars": []}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if e, code, _ := runDoctorEnv(t, "--config", writePosture(t, `{"posture": "cooperative"}`), "--repo", broken); code != 5 || e.Error == nil || !strings.Contains(e.Error.Message, "conformance table") {
+		t.Fatalf("a table that is not the charter is an operational failure: %d %+v", code, e)
+	}
+}

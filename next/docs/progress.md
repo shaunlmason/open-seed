@@ -1516,6 +1516,23 @@ record's own position through one derivation, `curation.AuthenticPass`
   the refusals; `next/spec/boundary.md` new, `envelope.md`,
   `projections.md`, `postures.md`, `protocol.md` following)
 
+- the conformance report (Phase 13's exit line: "the conformance report
+  shows Part III complete at the enforced self-hosted posture"; the
+  preamble's "the doctor reports which Phase 13 criteria remain open")
+  — os-83bc3d84 — **in review** (task PR against plan #287:
+  `next/spec/conformance.json`, the charter's 128 Part III rows
+  verbatim with the status the exit records gave each (`met` with
+  evidence, `partial` or `routed` with a note, `open`), the posture
+  read off the enforced-only marker; `internal/conformance` parsing
+  Part III out of `SEED-NEXT.md` and holding the table to it row for
+  row in both directions, the vocabulary validated; `seed docs
+  generate` rendering `next/docs/generated/conformance.md` under the
+  drift gate; `seed doctor --repo` reporting the counts, the open rows
+  by pillar and row, the enforced-only rows set aside at the
+  cooperative posture, and `complete` only when nothing is open at an
+  enforced posture; Phase 13's rows `open` until its exit record flips
+  them; `next/spec/conformance.md` new, the handbook following)
+
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
 - 12.1 the compromised-actor drill and the release gate — os-465e356e

@@ -3270,3 +3270,32 @@ before it binds.
 **Claiming stays online-only.** The drill's target lanes claim through
 the library against the clone, as the offer drills do, rather than
 loosening the CLI's online-only rule for a test.
+
+## The conformance report (os-83bc3d84, plan #287)
+
+**The table transcribes the records; it does not judge.** Every
+status in `conformance.json` is what a phase exit record already
+states for the row, with the record's own citations as evidence, and
+Phase 13's rows stay `open` until that phase's record flips them. The
+alternative, a table that derives statuses from tests by name, would
+make a test's existence stand for a criterion's satisfaction, which
+is the substitution the exit records exist to refuse.
+
+**The charter is parsed, not copied.** The drill reads Part III out of
+`SEED-NEXT.md` itself and holds the table to it row for row in both
+directions, so the table cannot drift from the charter and the charter
+cannot grow a row the table does not judge. The row text is kept
+verbatim in the table anyway, so a reader of the JSON sees the
+criterion without opening the charter.
+
+**Complete is judged at the posture.** An enforced-only row cannot be
+met at the cooperative posture, so the doctor sets those rows aside
+there and never reports Part III complete on a cooperative
+deployment; the build plan's sentence names the enforced self-hosted
+posture, and the doctor says so in its `because`.
+
+**III.R stays open.** Its seven rows are outcomes promotion measures
+(build plan §5): unattended weeks, unedited plans, adoption times. No
+phase lands them, so no record can flip them, and the table says so
+in each row's note rather than leaving a reader to wonder.
+

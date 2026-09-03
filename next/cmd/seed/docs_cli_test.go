@@ -42,10 +42,14 @@ func TestDocsGenerateThenCheck(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(tmp, "next"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, d := range []string{"lanes", "internal"} {
+	for _, d := range []string{"lanes", "internal", "spec"} {
 		if err := os.Symlink(filepath.Join(real, "next", d), filepath.Join(tmp, "next", d)); err != nil {
 			t.Fatal(err)
 		}
+	}
+	// The conformance rendering reads the charter beside the table.
+	if err := os.Symlink(filepath.Join(real, "SEED-NEXT.md"), filepath.Join(tmp, "SEED-NEXT.md")); err != nil {
+		t.Fatal(err)
 	}
 	if _, code := runEnv(t, "docs", "generate", "--root", tmp); code != envelope.ExitOK {
 		t.Fatalf("docs generate must succeed, got %d", code)

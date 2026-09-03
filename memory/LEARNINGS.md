@@ -1578,3 +1578,11 @@ the assertions read, and there is no copy to go stale.
 - Sign over canonical bytes computed from the struct itself, and
   verify by recomputing; never store the canonical bytes beside the
   signature, or the two can disagree without anyone noticing.
+
+## The conformance report (os-83bc3d84)
+
+- A conformance claim is only as good as its provenance: keep the
+  status beside the criterion's verbatim text and the record that
+  judged it, hold the criteria to the charter by parsing the charter,
+  and let the doctor say what is still open rather than what is done.
+

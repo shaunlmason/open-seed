@@ -11,7 +11,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
+	"github.com/shaunlmason/open-seed/next/internal/conformance"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/propose"
@@ -24,7 +27,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	config := fs.String("config", posture.DeclarationPath, "deployment declaration file")
 	probe := fs.Bool("probe", false, "probe the admission service's health (forge-hosted)")
 	current := fs.String("current", "", "the forge's state as a snapshot file: report protections drift (forge-hosted)")
-	repo := fs.String("repo", "", "working tree for the CODEOWNERS and workflow checks beside --current")
+	repo := fs.String("repo", "", "working tree for the CODEOWNERS and workflow checks beside --current, and the source tree the conformance table is read from (default the working directory)")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes --config <path> [--probe] [--current <snapshot> [--repo <dir>]]"), stdout, stderr)
 	}
@@ -114,6 +117,22 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 				return render(envelope.Fail(envelope.ExitDrift, "protections_drift", fmt.Sprintf("%d drift(s) against the declaration", rep.DriftCount)), stdout, stderr)
 			}
 		}
+	}
+	// The conformance report (plans/os-83bc3d84.md D4): the Part III
+	// table read from the source tree and judged at the declared
+	// posture, present whenever the tree carries the table; a table
+	// that does not validate against the charter is an operational
+	// failure, never silently absent.
+	treeRoot := *repo
+	if treeRoot == "" {
+		treeRoot = "."
+	}
+	if _, statErr := os.Stat(filepath.Join(treeRoot, filepath.FromSlash(conformance.TablePath))); statErr == nil {
+		table, err := conformance.Load(treeRoot)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the conformance table does not hold: %v", err)), stdout, stderr)
+		}
+		result["conformance"] = conformance.Assess(table, cfg.Posture.Enforced())
 	}
 	return render(envelope.OK(result), stdout, stderr)
 }
