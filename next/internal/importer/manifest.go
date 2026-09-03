@@ -141,6 +141,12 @@ func Check(m *Manifest, src *Source) error {
 	if m.Counts.Records != len(want) || m.Counts.Dispositions != len(m.Records) || m.Counts.Records != m.Counts.Dispositions {
 		return fmt.Errorf("counts disagree: %d records, %d dispositions", m.Counts.Records, m.Counts.Dispositions)
 	}
+	// Every figure is recomputed from the dispositions, not trusted.
+	again := &Manifest{Records: m.Records}
+	again.finish(len(want))
+	if again.Counts != m.Counts {
+		return fmt.Errorf("counts disagree with the dispositions: stated %+v, recomputed %+v", m.Counts, again.Counts)
+	}
 	return nil
 }
 

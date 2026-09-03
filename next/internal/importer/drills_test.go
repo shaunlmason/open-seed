@@ -130,6 +130,7 @@ func newV1Source(t *testing.T, files map[string]string) *v1Source {
 	t.Helper()
 	dir := t.TempDir()
 	gitIn(t, dir, "init", "-q", "-b", "seed-state")
+	hardenGitRepo(t, dir)
 	for p, c := range files {
 		full := filepath.Join(dir, filepath.FromSlash(p))
 		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
@@ -153,7 +154,11 @@ func (v *v1Source) exportAt(t *testing.T, commit string) *Export {
 	e := &Export{SchemaVersion: "1.0", Backend: "filecards", Head: commit, Files: map[string]string{}}
 	for _, p := range strings.Split(gitIn(t, v.dir, "ls-tree", "-r", "--name-only", commit), "\n") {
 		if p = strings.TrimSpace(p); p != "" {
-			e.Files[p] = gitIn(t, v.dir, "show", commit+":"+p) + "\n"
+			raw, err := gitRaw(v.dir, "show", commit+":"+p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			e.Files[p] = string(raw)
 		}
 	}
 	return e

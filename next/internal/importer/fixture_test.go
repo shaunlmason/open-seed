@@ -44,7 +44,21 @@ func cloneBundle(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("clone the bundle: %v: %s", err, out)
 	}
+	hardenGitRepo(t, dir)
 	return dir
+}
+
+// hardenGitRepo disables git's detached auto-gc in a repository a test
+// created under t.TempDir, the same three settings the gitref and CLI
+// suites apply (internal/gitref/fixture_guard_test.go holds every
+// creation site to it).
+func hardenGitRepo(t testing.TB, repo string) {
+	t.Helper()
+	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"}} {
+		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
+			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
+		}
+	}
 }
 
 func operatorKey(t *testing.T) ed25519.PrivateKey {

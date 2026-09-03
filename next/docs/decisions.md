@@ -2983,15 +2983,26 @@ record. The verdict cites an artifact saying "none recorded in the
 export", the disposition says so, and the count is in the manifest
 (81 of 106 done cards in the fixture).
 
-**Grants derive from the run-log before replay, statically.** A first
-draft replayed once with every capability granted to learn which
-verbs each identity signed; it cost a third of the wall-clock and a
-flag whose reset skipped the verifier. D3 says "derived from the
-run-log before replay", which a table from v1 verb to capability is.
-The set is sufficient by construction and approximate in one place
-(a `transition` is granted both `claim` and `dispatch`, since which
-one it needs depends on the state the fold is in); the manifest lists
-what each identity holds.
+**Grants derive from the run-log before replay, by rehearsal.** A
+static table from v1 verb to capability missed the bridges (a claim
+on a card the log never filed is filed and specified first, which
+needs `dispatch`), and a first draft that replayed with every
+capability granted to learn the verbs cost a third of the wall-clock
+in the admission fold. The rehearsal is the same transform over a dry
+chain that folds the lifecycle without admission and without the
+keyring — cheap, exact, bridges included — and each identity is
+granted the capabilities the verbs it signed consume. The manifest
+lists what each holds.
+
+**Every imported contract is `trivial`, routed to its squad.** D4
+named `standard`; above `trivial` the plan gate refuses a claim with
+no `plan.approved` record and the tier's independence level refuses
+the verdicts, so a `standard` replay would not admit, and admission is
+not loosened for an import. The routing is the card's squad, as D4
+said. `unblock` is a row to `contract.unblocked` where v1 recorded a
+transition, as D4 said; `blocker_resolved` stays a named drop, since
+`decision.recorded` answers a standing escalation and no v1 card
+raised one — the unblock that follows it records the transition.
 
 **No generated key holds operator; the importing operator signs what
 only an operator may.** `contract.cancelled` and the reconciliation of

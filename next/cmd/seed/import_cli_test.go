@@ -25,6 +25,7 @@ func v1Repo(t *testing.T, extraLog string) (dir, commit string) {
 		return strings.TrimSpace(string(out))
 	}
 	git("init", "-q", "-b", "seed-state")
+	hardenGitRepo(t, dir)
 	files := map[string]string{
 		"tasks/os-000001.md": "---\nid: os-000001\ntitle: one\nstate: ready\npriority: P3\nsquad: core\nauthor: alice\ncreated_at: \"2026-01-01T00:00:00Z\"\nupdated_at: \"2026-01-01T00:00:05Z\"\n---\n\nbody\n",
 		"run-log.jsonl": `{"actor":"alice","data":{"title":"one"},"task":"os-000001","ts":"2026-01-01T00:00:00Z","verb":"create"}` + "\n" +

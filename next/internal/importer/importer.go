@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -85,11 +86,7 @@ func Run(o Options) (*Result, error) {
 			return nil, &Refusal{Kind: "import_unmapped", Detail: fmt.Sprintf("card %s declares state %q, which has no row in the transform table", id, src.Cards[id].State)}
 		}
 	}
-	store, err := ledger.Open(o.LedgerDir)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open ledger dir: %v", err)
-	}
-	if _, count, err := store.Tip(); err != nil {
+	if count, err := ledgerRecords(o.LedgerDir); err != nil {
 		return nil, err
 	} else if count > 0 {
 		return nil, &Refusal{Kind: "ledger_not_empty", Detail: fmt.Sprintf("%s holds %d records: the import is a genesis transform and writes into empty ledgers only", o.LedgerDir, count)}
@@ -98,15 +95,24 @@ func Run(o Options) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	ros, err := newRoster(table, src.Names(), src.Entries)
+	ros, err := newRoster(table, src.Names())
 	if err != nil {
 		return nil, err
 	}
 	r := newReplay(src, table, ros, op, o.Repo, anchor, o.Now)
-	// The first pass cites a placeholder manifest digest; its
+	// The rehearsal: the whole transform over a dry chain that folds
+	// the lifecycle without admission, so the verbs each identity
+	// signs — the bridges included — are known before any grant is
+	// derived (D3: grants derived from the run-log before replay).
+	if err := r.run(placeholderDigest, true); err != nil {
+		return nil, err
+	}
+	ros.deriveGrants()
+	trace("rehearsal")
+	// The first admitted pass cites a placeholder manifest digest; its
 	// positions are what the manifest records, since only the payload
 	// of system.imported changes when the real digest is cited.
-	if err := r.run(placeholderDigest); err != nil {
+	if err := r.run(placeholderDigest, false); err != nil {
 		return nil, err
 	}
 	trace("pass-1")
@@ -123,13 +129,25 @@ func Run(o Options) (*Result, error) {
 	// The second pass cites the real digest; every record after
 	// system.imported is re-signed over the new prev and re-admitted,
 	// and the check is that every position reproduced.
-	if err := r.run(digest); err != nil {
+	if err := r.run(digest, false); err != nil {
 		return nil, err
 	}
 	trace("pass-2")
 	final := r.manifest(tableDigest(tableBytes))
 	if err := samePlacement(fixed, final); err != nil {
 		return nil, fmt.Errorf("the manifest's positions did not reproduce: %v", err)
+	}
+	// Nothing above touched the target; the store is created only now,
+	// for a chain already admitted in full, and the emptiness read
+	// above is repeated against the store it opens.
+	store, err := ledger.Open(o.LedgerDir)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open ledger dir: %v", err)
+	}
+	if _, count, err := store.Tip(); err != nil {
+		return nil, err
+	} else if count > 0 {
+		return nil, &Refusal{Kind: "ledger_not_empty", Detail: fmt.Sprintf("%s gained %d records while the import ran", o.LedgerDir, count)}
 	}
 	art := artifact.Open(o.ArtifactsDir)
 	for _, b := range r.artifacts {
@@ -176,4 +194,22 @@ func samePlacement(a, b *Manifest) error {
 		}
 	}
 	return nil
+}
+
+// ledgerRecords counts a ledger directory's records without creating
+// or healing anything: an absent directory is an empty ledger, and one
+// that exists is opened read-only.
+func ledgerRecords(dir string) (int, error) {
+	if _, err := os.Stat(dir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	store, err := ledger.OpenReadOnly(dir)
+	if err != nil {
+		return 0, fmt.Errorf("cannot read ledger dir: %v", err)
+	}
+	_, count, err := store.Tip()
+	return count, err
 }

@@ -62,7 +62,7 @@ func newReplay(src *Source, table *Table, ros *roster, op *signer, repo string, 
 	r := &replay{src: src, table: table, ros: ros, op: op, head: src.Export.Head, anchor: anchor, now: now,
 		artifacts: map[string][]byte{}, byFP: map[string]*actor{}, repo: newRepoLookup(repo),
 		opAct: &actor{name: "the importing operator", kind: "operator", s: op, operator: true, verbs: map[string]bool{}}}
-	for _, a := range ros.byName {
+	for _, a := range ros.all() {
 		r.byFP[a.s.fp] = a
 	}
 	return r
@@ -122,14 +122,14 @@ func clip(s string) string {
 // run is one complete pass: genesis, the upgrades to seed/5,
 // system.imported citing the manifest digest, the enrollments, the
 // history, the file dispositions, the suspensions.
-func (r *replay) run(manifestDigest string) error {
+func (r *replay) run(manifestDigest string, dry bool) error {
 	r.reset()
-	ch, err := newChain(r.op, r.now)
+	ch, err := newChain(r.op, r.now, dry)
 	if err != nil {
 		return err
 	}
 	r.ch = ch
-	for _, a := range r.ros.byName {
+	for _, a := range r.ros.all() {
 		ch.keys[a.s.fp] = a.s.pub
 	}
 	if err := ch.upgradeTo(r.op, version.Seed5, r.now); err != nil {
@@ -142,8 +142,11 @@ func (r *replay) run(manifestDigest string) error {
 	if r.importedPos, err = ch.append(r.op, imported.Verb, imported.Subject, payload, r.now, "importer"); err != nil {
 		return err
 	}
-	for _, n := range r.ros.order {
-		if err := r.enroll(r.ros.byName[n]); err != nil {
+	for _, a := range r.ros.all() {
+		if a == r.ros.ver && !dry && !a.needed {
+			continue
+		}
+		if err := r.enroll(a); err != nil {
 			return err
 		}
 	}
@@ -174,8 +177,7 @@ func (r *replay) run(manifestDigest string) error {
 	for _, p := range r.src.Other {
 		r.disp = append(r.disp, Disposition{Record: p, Artifact: r.put([]byte(r.src.Export.Files[p])), Note: "a file of no known kind, stored as it was exported"})
 	}
-	for _, n := range r.ros.order {
-		a := r.ros.byName[n]
+	for _, a := range r.ros.all() {
 		if a.enrolled == 0 {
 			continue
 		}
@@ -285,6 +287,12 @@ func (r *replay) entry(e Entry) error {
 		if err = r.moveTo(subject, "ready", a, ts, &d); err == nil {
 			err = r.respecifyPlan(subject, a, ts, &d)
 		}
+	case "unblock":
+		if moved, present := e.Data["transitioned"].(bool); present && !moved {
+			r.note(&d, "v1 recorded that nothing transitioned")
+			break
+		}
+		err = r.moveTo(subject, "ready", a, ts, &d)
 	case "cancel":
 		err = r.moveTo(subject, "cancelled", a, ts, &d)
 	case "close", "accept":
@@ -323,9 +331,13 @@ func (r *replay) title(subject string) string {
 // file is intent.filed: the title as the intent, the table's default
 // tier, budget and routing.
 func (r *replay) file(subject string, a *actor, ts time.Time, d *Disposition) error {
+	routing := r.table.Defaults.Routing
+	if c := r.src.Cards[subject]; c != nil && strings.TrimSpace(c.Squad) != "" {
+		routing = strings.TrimSpace(c.Squad)
+	}
 	payload, _ := json.Marshal(map[string]string{
 		"intent": clip(r.title(subject)), "tier": r.table.Defaults.Tier,
-		"budget": r.table.Defaults.Budget, "routing": r.table.Defaults.Routing,
+		"budget": r.table.Defaults.Budget, "routing": routing,
 	})
 	_, err := r.emit(a, "intent.filed", subject, payload, ts, d)
 	return err
@@ -717,8 +729,7 @@ func (r *replay) mail(p string) error {
 // manifest renders the pass's dispositions and identities.
 func (r *replay) manifest(tableDigest string) *Manifest {
 	m := &Manifest{Schema: ManifestSchema, Source: r.table.Source, ExportHead: r.head, Anchor: *r.anchor, Table: tableDigest, Keys: KeysNote, Unresolved: append([]string{}, r.unresolved...)}
-	for _, n := range r.ros.order {
-		a := r.ros.byName[n]
+	for i, a := range r.ros.all() {
 		if a.enrolled == 0 {
 			continue
 		}
@@ -726,7 +737,11 @@ func (r *replay) manifest(tableDigest string) *Manifest {
 		if grants == nil {
 			grants = []string{}
 		}
-		m.Identities = append(m.Identities, IdentityRow{Name: a.name, Source: n, Kind: a.kind, Known: a.known, Fingerprint: a.s.fp, Grants: grants, Enrolled: a.enrolled, Suspended: a.suspended})
+		source := "(the import verifier)"
+		if i < len(r.ros.order) {
+			source = r.ros.order[i]
+		}
+		m.Identities = append(m.Identities, IdentityRow{Name: a.name, Source: source, Kind: a.kind, Known: a.known, Fingerprint: a.s.fp, Grants: grants, Enrolled: a.enrolled, Suspended: a.suspended})
 	}
 	m.Records = append([]Disposition{}, r.disp...)
 	m.finish(r.src.RecordCount())
@@ -744,13 +759,18 @@ type repoLookup struct {
 
 func newRepoLookup(dir string) *repoLookup { return &repoLookup{dir: dir, cache: map[string]string{}} }
 
+// file reads a cited path, at a commit when one is cited and readable
+// there, else from the working tree — verbatim, since the bytes are
+// what the artifact digest names. The path is confined to the
+// repository: a token that escapes it (a crafted id, a parent
+// segment) reads nothing.
 func (l *repoLookup) file(path, sha string) []byte {
-	if l.dir == "" {
+	if l.dir == "" || !repoRelative(path) {
 		return nil
 	}
 	if sha != "" {
-		if out, err := git(l.dir, "show", sha+":"+path); err == nil {
-			return []byte(out + "\n")
+		if out, err := gitRaw(l.dir, "show", sha+":"+path); err == nil {
+			return out
 		}
 	}
 	b, err := os.ReadFile(filepath.Join(l.dir, filepath.FromSlash(path)))
@@ -758,6 +778,21 @@ func (l *repoLookup) file(path, sha string) []byte {
 		return nil
 	}
 	return b
+}
+
+// repoRelative reports a clean, slash-separated path beneath the
+// repository root: no absolute form, no parent segment, no empty
+// segment.
+func repoRelative(p string) bool {
+	if p == "" || strings.HasPrefix(p, "/") || strings.Contains(p, "\\") {
+		return false
+	}
+	for _, seg := range strings.Split(p, "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return false
+		}
+	}
+	return true
 }
 
 func (l *repoLookup) cached(key string, fn func() string) string {

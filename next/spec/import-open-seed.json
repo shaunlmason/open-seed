@@ -28,8 +28,8 @@
     "attach-evidence": {"event": "artifact: the evidence block, and the receipt file where the kind is receipt"},
     "record-evidence": {"event": "artifact: the recorded reference"},
     "lease-renew": {"drop": "Seed holds no lease (next/spec/observations.md)"},
-    "unblock": {"drop": "a v1 unblock that transitioned nothing changed no state"},
-    "blocker_resolved": {"drop": "dependency bookkeeping the v1 shim kept beside the card; Seed has no dependency rows (the Phase 5 exit's dependency-cascade remainder, Phase 13's)"},
+    "unblock": {"event": "contract.unblocked where v1 recorded a transition (blocked→ready); an entry v1 marked transitioned:false changed nothing and becomes nothing, noted"},
+    "blocker_resolved": {"drop": "dependency bookkeeping the v1 shim kept beside the card: it records that a blocker was removed, and the unblock entry that follows records the transition; the plan's decision.recorded answers a standing escalation, which no v1 card raised, so it is inadmissible here (next/docs/decisions.md, Phase 12 item 5)"},
     "halt": {"drop": "a v1 halt marker is a run-log note the maintenance workflow wrote; nothing imported was halted, and Seed's halt is system.halt.declared by an operator"},
     "state-resume": {"drop": "the operator clearing v1's halt marker; see halt"},
     "state-repair": {"drop": "an operator's repair of the v1 state ref; the card's frontmatter is the repaired truth and is what the transform reads"}

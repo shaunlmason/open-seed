@@ -125,4 +125,9 @@ chain per append), and it added a "needed" flag whose reset between
 passes silently skipped the verifier's enrollment. The run-log already
 says which verbs a name performs, which is what the plan's D3 asks the
 grants to derive from; deriving them statically before replay dropped
-the pass and the flag.
+the pass and the flag — and missed the bridges the transform inserts
+(a claim on a card the log never filed needs `dispatch` for the
+filing), which review caught. What stayed is a rehearsal: the same
+transform over a dry chain whose fold is incremental (the table's
+transition check plus the claim and submission bookkeeping), so the
+verbs are exact and the pass costs its git lookups, not a re-fold.

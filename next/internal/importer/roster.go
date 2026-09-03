@@ -32,6 +32,9 @@ type actor struct {
 	// what no generated identity may (contract.cancelled, the card
 	// reconciliations) and is neither enrolled nor suspended here.
 	operator bool
+	// needed is whether the rehearsal had the identity sign anything;
+	// the verifier is enrolled only when needed.
+	needed bool
 }
 
 // capFor is the one capability the import grants for a verb it
@@ -50,65 +53,22 @@ func capFor(verb string) string {
 	return ""
 }
 
-// grantsFor derives an identity's grants from the run-log before
-// replay (plans/os-cf13fb51.md D3): the capabilities the events its
-// v1 verbs become will consume, and nothing else. Operator-only verbs
-// (contract.cancelled) are signed by the importing operator, so no
-// generated key is ever granted operator; the verdict on a card its
-// closer never claimed is the closer's, otherwise the import
-// verifier's.
-func grantsFor(name string, entries []Entry) []string {
-	set := map[string]bool{}
-	claimed := map[string]bool{}
-	for _, e := range entries {
-		if e.Actor == name && (e.Verb == "claim" || e.Verb == "release" || e.Verb == "transition") {
-			claimed[e.Task] = true
-		}
-	}
-	for _, e := range entries {
-		if e.Actor != name || e.Task == "" {
-			continue
-		}
-		switch e.Verb {
-		case "create", "promote", "plan-unblock":
-			set[keyring.CapDispatch] = true
-		case "claim":
-			set[keyring.CapClaim] = true
-		case "release", "transition":
-			// A move out of in_progress is the holder's claim act; one
-			// between ready and blocked is dispatch; a release of a
-			// claim the actor does not hold is claim.reaped (dispatch).
-			set[keyring.CapClaim] = true
-			set[keyring.CapDispatch] = true
-		case "close", "accept":
-			set[keyring.CapObserver] = true
-			if !claimed[e.Task] {
-				set[keyring.CapVerdict] = true
-			}
-		}
-	}
-	out := make([]string, 0, len(set))
-	for c := range set {
-		out = append(out, c)
-	}
-	sort.Strings(out)
-	return out
-}
-
 // roster is the identity plan: one actor per distinct v1 name, keys
 // held in memory for the import only.
 type roster struct {
 	byName map[string]*actor
 	order  []string
+	// ver is the dedicated verifier, held apart from the names so a
+	// predecessor actor called import-verifier is its own identity.
+	ver *actor
 }
 
-func newRoster(t *Table, names []string, entries []Entry) (*roster, error) {
+func newRoster(t *Table, names []string) (*roster, error) {
 	r := &roster{byName: map[string]*actor{}}
 	set := map[string]bool{}
 	for _, n := range names {
 		set[n] = true
 	}
-	set[VerifierName] = true
 	sorted := make([]string, 0, len(set))
 	for n := range set {
 		sorted = append(sorted, n)
@@ -116,25 +76,61 @@ func newRoster(t *Table, names []string, entries []Entry) (*roster, error) {
 	sort.Strings(sorted)
 	for _, n := range sorted {
 		id, known := t.IdentityFor(n)
-		if n == VerifierName {
-			id, known = Identity{Kind: "service", Name: VerifierName}, true
-		}
-		_, priv, err := ed25519.GenerateKey(rand.Reader)
+		a, err := newActor(id, known)
 		if err != nil {
 			return nil, err
 		}
-		s, err := newSigner(priv)
-		if err != nil {
-			return nil, err
-		}
-		grants := grantsFor(n, entries)
-		if n == VerifierName {
-			grants = []string{keyring.CapVerdict}
-		}
-		r.byName[n] = &actor{name: id.Name, kind: id.Kind, known: known, s: s, verbs: map[string]bool{}, grants: grants}
+		r.byName[n] = a
 		r.order = append(r.order, n)
 	}
+	ver, err := newActor(Identity{Kind: "service", Name: VerifierName}, true)
+	if err != nil {
+		return nil, err
+	}
+	r.ver = ver
 	return r, nil
+}
+
+func newActor(id Identity, known bool) (*actor, error) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	s, err := newSigner(priv)
+	if err != nil {
+		return nil, err
+	}
+	return &actor{name: id.Name, kind: id.Kind, known: known, s: s, verbs: map[string]bool{}}, nil
+}
+
+// all lists the named identities and then the verifier.
+func (r *roster) all() []*actor {
+	out := make([]*actor, 0, len(r.order)+1)
+	for _, n := range r.order {
+		out = append(out, r.byName[n])
+	}
+	return append(out, r.ver)
+}
+
+// deriveGrants turns the verbs the rehearsal had each identity sign
+// into its grants (plans/os-cf13fb51.md D3: sufficient for the verbs
+// the name performs, bridges included, minimal, listed): the one
+// capability each verb consumes, never operator.
+func (r *roster) deriveGrants() {
+	for _, a := range r.all() {
+		set := map[string]bool{}
+		for v := range a.verbs {
+			if c := capFor(v); c != "" {
+				set[c] = true
+			}
+		}
+		a.needed = len(a.verbs) > 0
+		a.grants = make([]string, 0, len(set))
+		for c := range set {
+			a.grants = append(a.grants, c)
+		}
+		sort.Strings(a.grants)
+	}
 }
 
 // get resolves a v1 actor name; a name the plan never saw (a card
@@ -147,11 +143,11 @@ func (r *roster) get(name string) *actor {
 	return nil
 }
 
-func (r *roster) verifier() *actor { return r.byName[VerifierName] }
+func (r *roster) verifier() *actor { return r.ver }
 
 // reset clears what a pass recorded, keeping the keys and grants.
 func (r *roster) reset() {
-	for _, a := range r.byName {
+	for _, a := range r.all() {
 		a.verbs = map[string]bool{}
 		a.enrolled, a.suspended = 0, 0
 	}

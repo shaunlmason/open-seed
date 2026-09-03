@@ -93,17 +93,22 @@ table (`shaunlmason` human, `seed-next-implementer` agent,
 `seed-maintenance` service, …; a name the table does not know enrolls
 as `agent` under its own name and the manifest marks it unknown; the
 empty actor is `unattributed`, a service). Grants derive from the
-run-log before replay: the capabilities the events a name's verbs
-become will consume, and nothing else — `dispatch` for filing,
-specifying and unblocking, `claim` for claim acts, `observer` for
-observing a merge, `verdict` for a closer that never claimed the card
-it closed. No generated key is ever granted `operator`: the
-operator-only verbs (`contract.cancelled`) and the card
-reconciliations are signed by the importing operator's own key. One
-more identity, `import-verifier` (a service), renders the pass verdict
-on a card its v1 closer had claimed, since the independence rule
-refuses a claimant's verdict and the import does not manufacture an
-independence the name never had.
+run-log before replay, by rehearsal: the whole transform runs once
+over a dry chain that folds the lifecycle without admission, so every
+verb each identity will sign — the bridges included — is known, and
+each identity is granted exactly the capabilities those verbs consume
+(`dispatch` for filing, specifying and unblocking, `claim` for claim
+acts, `observer` for observing a merge, `verdict` for a closer that
+never claimed the card it closed) and nothing else. No generated key
+is ever granted `operator`: the operator-only verbs
+(`contract.cancelled`) and the card reconciliations are signed by the
+importing operator's own key. One more identity, the import verifier
+(a service named `import-verifier`, held apart from the predecessor's
+names so an actor of that name stays its own identity), renders the
+pass verdict on a card its v1 closer had claimed, since the
+independence rule refuses a claimant's verdict and the import does not
+manufacture an independence the name never had; it is enrolled only
+when the rehearsal had it sign.
 
 Every replayed record carries the entry's original `ts` and is signed
 by the mapped identity, so fences, grants and the chain are replayed
@@ -126,7 +131,7 @@ no entry is skipped silently.
 
 | v1 | Seed |
 | --- | --- |
-| `create` | `intent.filed` — the title as the intent, the table's defaults |
+| `create` | `intent.filed` — the title as the intent, the routing the card's squad, the table's default tier and budget (`trivial`, `small`: see the bounds below) |
 | `promote` | `contract.specified` with acceptance `{ref: "tasks/<id>.md @ <head>", executable: false}` |
 | `plan-unblock` | `contract.unblocked`, then `contract.specified` again at `plans/<id>.md @ <commit>` when the plan file is readable from `--repo` (the file stored as an artifact) |
 | `claim` | `claim.taken` |
@@ -135,7 +140,8 @@ no entry is skipped silently.
 | `cancel`, `close` to cancelled | `contract.cancelled`, signed by the operator |
 | `comment` | `message.sent` about the card, the body an artifact (inline when short) |
 | `attach-evidence`, `record-evidence` | an artifact: the card's evidence block (the receipt file stored beside it when the kind is `receipt`), or the entry itself when no block matches |
-| `lease-renew`, `unblock`, `blocker_resolved`, `halt`, `state-resume`, `state-repair` | drops, each with its reason in the table |
+| `unblock` | `contract.unblocked` where v1 recorded a transition; an entry v1 marked `transitioned: false` changed nothing and becomes nothing, noted |
+| `lease-renew`, `blocker_resolved`, `halt`, `state-resume`, `state-repair` | drops, each with its reason in the table (`blocker_resolved` is the dependency bookkeeping beside the unblock that records the transition; `decision.recorded`, which the plan named for it, answers a standing escalation no v1 card raised) |
 
 A v1 move that does not fit Seed's table in one step is bridged along
 the shortest lifecycle path (a claim on a card the log never filed is
@@ -195,6 +201,16 @@ a non-empty ledger, an unmapped verb. `make fixture-import` regenerates
 the fixture from the live repository at the newest anchor.
 
 ## Bounds
+
+**Every imported contract is `trivial`.** The plan's D4 named the
+`standard` tier; above `trivial` the boundary's plan gate refuses a
+claim on a contract with no approved plan record, and the tier's
+independence level would refuse the verdicts, so a replayed history
+at `standard` would not admit. The card's v1 priority and squad are
+kept on the card artifact the acceptance cites, and the routing is
+the squad. A deployment that wants imported contracts under its
+guardrails re-specifies them after the import, as it would any
+contract.
 
 Only open-seed's export is understood; another predecessor is the
 same table with different rows and the same engine, and no per-system

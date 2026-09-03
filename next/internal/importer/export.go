@@ -71,13 +71,22 @@ type Anchor struct {
 }
 
 func git(dir string, args ...string) (string, error) {
+	out, err := gitRaw(dir, args...)
+	return strings.TrimSpace(string(out)), err
+}
+
+// gitRaw is git's stdout verbatim, for blobs: a file's bytes are
+// compared and stored exactly, never trimmed.
+func gitRaw(dir string, args ...string) ([]byte, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(string(out)))
+		return nil, fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
 	}
-	return strings.TrimSpace(string(out)), nil
+	return out, nil
 }
 
 // AnchorTags lists the source's seed-anchor tags, sorted by name (the
@@ -141,11 +150,13 @@ func VerifyAnchor(e *Export, source, tag string) (*Anchor, error) {
 		if !inTree[p] {
 			return nil, &Refusal{Kind: "export_mismatch", Detail: fmt.Sprintf("%s is in the export and not in the anchored tree", p)}
 		}
-		blob, err := git(source, "show", e.Head+":"+p)
+		blob, err := gitRaw(source, "show", e.Head+":"+p)
 		if err != nil {
 			return nil, &Refusal{Kind: "export_mismatch", Detail: fmt.Sprintf("%s cannot be read from the anchored tree: %v", p, err)}
 		}
-		if strings.TrimRight(blob, "\n") != strings.TrimRight(e.Files[p], "\n") {
+		// Byte for byte: a trailing newline more or less is a
+		// different file.
+		if string(blob) != e.Files[p] {
 			return nil, &Refusal{Kind: "export_mismatch", Detail: fmt.Sprintf("%s differs from the anchored tree", p)}
 		}
 	}

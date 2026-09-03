@@ -51,6 +51,9 @@ func ParseRunLog(content string) ([]Entry, error) {
 		if raw.Verb == "" || raw.TS == "" {
 			return nil, fmt.Errorf("run-log.jsonl line %d has no verb or ts", i+1)
 		}
+		if raw.Task != "" && !ValidID(raw.Task) {
+			return nil, fmt.Errorf("run-log.jsonl line %d: task %q is not an id the transform accepts", i+1, raw.Task)
+		}
 		out = append(out, Entry{Index: len(out), TS: raw.TS, Actor: raw.Actor, Verb: raw.Verb, Task: raw.Task, Data: raw.Data})
 	}
 	return out, nil
@@ -233,6 +236,17 @@ type Source struct {
 	Other    []string
 }
 
+// idRE is the predecessor's id grammar as the transform trusts it: a
+// task id becomes a subject, a path segment under tasks/, handoff/,
+// plans/ and receipts/, so it is held to one safe shape before
+// anything is derived from it.
+var idRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+
+// ValidID reports an id the transform accepts.
+func ValidID(id string) bool {
+	return idRE.MatchString(id) && !strings.Contains(id, "..")
+}
+
 // Read parses the export's files.
 func Read(e *Export) (*Source, error) {
 	s := &Source{Export: e, Cards: map[string]*Card{}, Handoffs: map[string]*Handoff{}}
@@ -255,10 +269,16 @@ func Read(e *Export) (*Source, error) {
 			if err != nil {
 				return nil, err
 			}
+			if !ValidID(c.ID) || p != "tasks/"+c.ID+".md" {
+				return nil, fmt.Errorf("%s: card id %q is not an id the transform accepts (one path segment, letters, digits, . _ -)", p, c.ID)
+			}
 			s.Cards[c.ID] = c
 			s.CardIDs = append(s.CardIDs, c.ID)
 		case strings.HasPrefix(p, "handoff/") && strings.HasSuffix(p, ".md"):
 			h := ParseHandoff(p, content)
+			if !ValidID(h.ID) {
+				return nil, fmt.Errorf("%s: handoff id %q is not an id the transform accepts", p, h.ID)
+			}
 			s.Handoffs[h.ID] = h
 		case strings.HasPrefix(p, "mail/"):
 			s.Mail = append(s.Mail, p)
