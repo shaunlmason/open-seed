@@ -1218,3 +1218,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-15464e79","kind":"pr"},"task":"os-7508ab9e","ts":"2026-09-03T02:36:55Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-8994ea1a","kind":"pr"},"task":"os-0d4f2af3","ts":"2026-09-03T02:36:58Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-e5eb282d","kind":"pr"},"task":"os-cf13fb51","ts":"2026-09-03T02:37:01Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 13 item 1 — racing mode as the per-squad opt-in with first-verified settlement (III.F)"},"task":"os-56bee171","ts":"2026-09-03T02:39:47Z","verb":"create"}
