@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-03T05:32:33Z"
     lease_expires: "2026-09-03T09:47:10Z"
 created_at: "2026-09-03T02:39:57Z"
-updated_at: "2026-09-03T08:47:10Z"
+updated_at: "2026-09-03T08:52:16Z"
 ---
 
 Build plan Phase 13 item 5 (docs/next-build-plan.md): the A2A-shaped cross-organization boundary.
@@ -24,3 +24,7 @@ Expected shape, for the plan to settle: a capability card as the published, sign
 ## Comment cm-cf05a331 (seed-next-implementer, 2026-09-03T06:27:24Z)
 
 
+
+## Evidence ev-6581e9ca (receipt, seed-next-implementer, 2026-09-03T08:52:16Z)
+
+receipts/os-40ed0ca0.json
