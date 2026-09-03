@@ -340,3 +340,15 @@ files.
   build), and a poisoned copy never feeds a rebuild.
 - III.D mirrors, observation inputs, and the CI rebuild-everything
   drill — with their phases.
+
+## The basis file
+
+`<out>/basis.json` says what a root's builds rest on when they were
+published by `seed project start` under a `signers` declaration
+([`checkpoints.md`](checkpoints.md)): the trust, the checkpoint's
+position, the position trusted up to and its attested tip, the signer,
+and how many records were trusted and how many verified. It lives in
+the root rather than in every build's stamp so that a build from a
+checkpoint and a build from genesis stay byte-identical; a full
+`project rebuild` into the same root removes it, because a replay rests
+on nothing but the chain. Consumers that care read it beside the stamp.

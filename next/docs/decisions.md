@@ -2912,6 +2912,42 @@ pushes the history through both. `internal/history` lands with this
 card rather than item 3's (which needs it for its budgets) because the
 drill that found the gap is this card's; item 3 inherits it.
 
+## Phase 12 item 3 — checkpoint trust, the replay-equals-genesis proof, and performance budgets (os-7508ab9e, plan #246)
+
+**The trust basis is a file in the output root, not a field in every
+stamp.** The plan said every published stamp would carry the basis; a
+stamp that differs between a checkpoint start and a genesis replay
+breaks the byte-identical proof the reader exists to pass, and the
+engine's build id derives from the stamp. `<out>/basis.json` carries
+the basis instead, written by `seed project start` and removed by a
+full rebuild; consumers read it beside the stamp.
+
+**What `signers` skips is exactly the prefix's signature checks.**
+`ledger.WithTrustedPrefix` still parses, links, hashes, holds the
+version discipline and folds the keyring for every record, verifies
+signatures from the trusted position on, and holds the chain hash at
+the trusted position to the attested tip. There is no incremental fold:
+a `signers` deployment saves the signature work and the trust
+question, not the fold, and the spec says so.
+
+**A checkpoint is cross-checked before anything is published.** The
+snapshot's files must equal the reader's own derivation at the cited
+position; a lying checkpoint is `checkpoint_mismatch` (exit 21's
+family) rather than a projection root nobody can explain.
+
+**The perf gate runs under `make check-next` with ceilings at three
+times the measured value, and the attempts ratio is held to the
+single-ref expectation.** `n` writers under one optimistic ref cost
+about `n/2` attempts each; the ceiling holds that shape rather than
+pretending contention is constant, and sharded intake stays the
+backlog's answer to III.C row 4's "pathologically". The gate re-measures
+cold once on a miss, the coverage gate's rule, and the loader refuses a
+ceiling with no provenance.
+
+**The undeclared choice is reported, not narrated.** The doctor's
+stderr is for the consequences the charter wants in front of an
+operator; an unmade `checkpoints.trust` is a machine field
+(`undeclared: true`) and `seed project start` is what refuses it.
 ## `ledger show` stamps its failing position (os-37fcf7c6, plan #259)
 
 **The stamp is where the response was computed, not the chain's

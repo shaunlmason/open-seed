@@ -49,6 +49,16 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		// exactly what the remote will refuse.
 		"protected": cfg.ProtectedSurface(),
 	}
+	// The checkpoint-trust choice is reported as declared or as
+	// undeclared, never filled in (next/spec/checkpoints.md).
+	if trust := cfg.CheckpointTrust(); trust != "" {
+		result["checkpoints"] = map[string]any{"trust": trust}
+	} else {
+		// Reported, not narrated: stderr is for the consequences the
+		// charter wants in front of an operator, and an unmade choice
+		// is a fact the machine field states.
+		result["checkpoints"] = map[string]any{"trust": nil, "undeclared": true}
+	}
 	switch cfg.Posture {
 	case posture.Cooperative:
 		result["consequence"] = posture.Consequence

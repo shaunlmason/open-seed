@@ -38,6 +38,12 @@ check-next:
 	@# reading is cold, because go test caches a package's coverage
 	@# contribution and a warm re-run replays the loss at the same number.
 	@cd next && go run ./cmd/covergate -gate 90 -dir .
+	@# The performance gate (plans/os-7508ab9e.md D6): the four metrics
+	@# against the representative history, each held to the ceiling in
+	@# next/perf/budgets.json, a miss re-measured cold once before it
+	@# fails. Ceilings carry their provenance; raising one is a reviewed
+	@# edit of that file, never a silent change.
+	@cd next && go run ./cmd/perfgate -budgets perf/budgets.json -dir .
 
 # End-to-end loop smoke in a temp instantiation (no model, no secrets).
 smoke:

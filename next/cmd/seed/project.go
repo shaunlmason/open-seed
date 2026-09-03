@@ -21,19 +21,22 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/project"
 	"github.com/shaunlmason/open-seed/next/internal/refusals"
 )
 
 func runProject(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "project requires a subverb: rebuild, current"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "project requires a subverb: rebuild, current, start"), stdout, stderr)
 	}
 	switch args[0] {
 	case "rebuild":
 		return runProjectRebuild(args[1:], stdout, stderr)
 	case "current":
 		return runProjectCurrent(args[1:], stdout, stderr)
+	case "start":
+		return runProjectStart(args[1:], stdout, stderr)
 	default:
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown project subverb %q", args[0])), stdout, stderr)
 	}
@@ -176,6 +179,11 @@ func runProjectRebuild(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
+	// A full replay rests on nothing but the chain: a basis an earlier
+	// checkpoint start wrote is cleared before the rebuild publishes.
+	if err := project.WriteBasis(*out, nil); err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
 	results, err := project.RebuildWith(*dir, *out, project.Default(), resolve, in)
 	if err != nil {
 		var fail *ledger.Failure
@@ -198,6 +206,84 @@ func runProjectRebuild(args []string, stdout, stderr io.Writer) int {
 	env := envelope.OK(map[string]any{"out": outAbs, "projections": list})
 	if len(results) > 0 {
 		env = stampTip(env, results[0].Position)
+	}
+	return render(env, stdout, stderr)
+}
+
+// runProjectStart is the reader a `signers` declaration permits
+// (plans/os-7508ab9e.md D2; next/spec/checkpoints.md): start every
+// projection from the newest capable checkpoint, verifying the suffix
+// in full and trusting the prefix on the checkpoint signer's word. The
+// declaration decides: undeclared refuses `trust_undeclared`, `replay`
+// names the rebuild and does nothing, `signers` starts.
+func runProjectStart(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("project start", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	dir := fs.String("ledger", "", "ledger directory")
+	artifacts := fs.String("artifacts", "", "artifact store the snapshot is retrievable from")
+	out := fs.String("out", "projections", "projection output root")
+	config := fs.String("config", posture.DeclarationPath, "deployment declaration")
+	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || *dir == "" || *artifacts == "" {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "project start --ledger <dir> --artifacts <dir> [--out <dir>] [--config <file>]"), stdout, stderr)
+	}
+	cfg, failEnv := loadDeclarationFor(*config)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	switch cfg.CheckpointTrust() {
+	case "":
+		return render(envelope.Fail(envelope.ExitNotFound, "trust_undeclared", "the declaration makes no checkpoints.trust choice: a fresh reader's verification obligation is declared, never defaulted — declare \"replay\" (verify from genesis once) or \"signers\" (start from a capable signer's checkpoint) in "+*config), stdout, stderr)
+	case posture.TrustReplay:
+		return render(envelope.OK(map[string]any{"trust": posture.TrustReplay, "action": "replay", "note": "this deployment verifies from genesis: run `seed project rebuild`"}), stdout, stderr)
+	}
+	if err := project.CheckOverlap(*dir, *out); err != nil {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
+	}
+	store, err := ledger.OpenReadOnly(*dir)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	resolve, _, err := genesis.Bootstrap(store)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+	}
+	rep, err := project.StartFromCheckpoint(*dir, *artifacts, *out, project.Default(), resolve)
+	if err != nil {
+		var fail *ledger.Failure
+		var mismatch *project.MismatchError
+		switch {
+		case errors.Is(err, project.ErrNoCheckpoint):
+			return render(envelope.Fail(envelope.ExitNotFound, "not_found", err.Error()), stdout, stderr)
+		case errors.As(err, &mismatch):
+			return render(envelope.Fail(envelope.ExitReceiptMismatch, "checkpoint_mismatch", err.Error()), stdout, stderr)
+		case errors.As(err, &fail):
+			return render(failureEnvelope(fail), stdout, stderr)
+		case errors.Is(err, project.ErrOverlap):
+			return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
+		}
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	outAbs, err := filepath.Abs(*out)
+	if err != nil {
+		outAbs = *out
+	}
+	list := make([]map[string]any, 0, len(rep.Results))
+	for _, r := range rep.Results {
+		list = append(list, map[string]any{"name": r.Name, "position": fmt.Sprintf("%d", r.Position), "tip": r.Tip, "version": r.Version})
+	}
+	env := envelope.OK(map[string]any{
+		"out":         outAbs,
+		"trust":       rep.Basis.Trust,
+		"checkpoint":  rep.Basis.Checkpoint,
+		"from":        rep.Basis.Position,
+		"tip_trusted": rep.Basis.Tip,
+		"signer":      rep.Basis.Signer,
+		"trusted":     rep.Basis.Trusted,
+		"verified":    rep.Basis.Verified,
+		"projections": list,
+	})
+	if len(rep.Results) > 0 {
+		env = stampTip(env, rep.Results[0].Position)
 	}
 	return render(env, stdout, stderr)
 }

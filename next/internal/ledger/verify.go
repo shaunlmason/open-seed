@@ -54,6 +54,11 @@ type Report struct {
 	Count         int
 	Tip           string
 	ActiveVersion string
+	// Trusted is how many leading records were replayed WITHOUT
+	// signature verification under WithTrustedPrefix: parsed, linked,
+	// hashed and folded, but taken on the checkpoint signer's word.
+	// Zero for a full replay.
+	Trusted int
 }
 
 // VerifyOption configures a verification replay.
@@ -62,6 +67,29 @@ type VerifyOption func(*verifyConfig)
 type verifyConfig struct {
 	supported map[string]bool
 	observe   func(pos int, rec *event.Record)
+	trustPos  int
+	trustTip  string
+}
+
+// ReasonTrustMismatch marks a trusted prefix whose chain hash at the
+// trusted position is not the tip the checkpoint attested: the
+// checkpoint and the chain disagree, and the reader replays instead.
+const ReasonTrustMismatch = "trusted_prefix_mismatch"
+
+// WithTrustedPrefix makes the replay trust the first position records
+// on a checkpoint signer's word (next/spec/checkpoints.md, the
+// `signers` declaration): they are still parsed, linked, hashed, held
+// to the version discipline and folded into the keyring — everything
+// but their signatures is verified — and at the trusted position the
+// chain hash must equal tip, or the replay fails with
+// ReasonTrustMismatch. Records after the prefix are verified in full.
+// What this skips is exactly the prefix's signature checks, which is
+// what "explicit trust in the signer set" means and all it means.
+func WithTrustedPrefix(position int, tip string) VerifyOption {
+	return func(c *verifyConfig) {
+		c.trustPos = position
+		c.trustTip = tip
+	}
 }
 
 // WithSupportedVersions declares the protocol versions this verification
@@ -191,12 +219,17 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 			}
 			return &Failure{Position: pos, Reason: ReasonUnknownActor, Detail: detail}
 		}
-		if err := rec.Verify(pub); err != nil {
-			reason := ReasonBadSignature
-			if errors.Is(err, event.ErrBadPayload) {
-				reason = ReasonBadPayload
+		// A trusted record (pos < trustPos) skips exactly this check:
+		// it is still parsed, linked, canonicalized for its hash below,
+		// held to the version discipline and folded into the keyring.
+		if pos >= cfg.trustPos {
+			if err := rec.Verify(pub); err != nil {
+				reason := ReasonBadSignature
+				if errors.Is(err, event.ErrBadPayload) {
+					reason = ReasonBadPayload
+				}
+				return &Failure{Position: pos, Reason: reason, Detail: err.Error()}
 			}
-			return &Failure{Position: pos, Reason: reason, Detail: err.Error()}
 		}
 		h, err := rec.Event.Hash()
 		if err != nil {
@@ -227,6 +260,10 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 		}
 		tip = h
 		count = pos + 1
+		if cfg.trustPos > 0 && count == cfg.trustPos && h != cfg.trustTip {
+			return &Failure{Position: pos, Reason: ReasonTrustMismatch,
+				Detail: fmt.Sprintf("the chain hash at the trusted position %d is %.12s, the checkpoint attested %.12s: replay from genesis instead", cfg.trustPos, h, cfg.trustTip)}
+		}
 		if headExists && count == head.Count {
 			claimedTip = h
 		}
@@ -257,5 +294,16 @@ func (s *Store) VerifyFromGenesis(resolve Resolver, opts ...VerifyOption) (*Repo
 		return nil, &Failure{Position: count, Reason: ReasonHeadWrong,
 			Detail: fmt.Sprintf("HEAD claims tip %.12s count %d, stream has tip %.12s count %d", head.Tip, head.Count, tip, count)}
 	}
-	return &Report{Count: count, Tip: tip, ActiveVersion: active}, nil
+	if cfg.trustPos > 0 && count < cfg.trustPos {
+		return nil, &Failure{Position: count, Reason: ReasonTrustMismatch,
+			Detail: fmt.Sprintf("the chain holds %d records, fewer than the trusted position %d", count, cfg.trustPos)}
+	}
+	trusted := 0
+	if cfg.trustPos > 0 {
+		trusted = cfg.trustPos
+		if trusted > count {
+			trusted = count
+		}
+	}
+	return &Report{Count: count, Tip: tip, ActiveVersion: active, Trusted: trusted}, nil
 }
