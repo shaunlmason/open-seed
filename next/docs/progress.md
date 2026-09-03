@@ -1013,7 +1013,8 @@ PR (an administrative card, not a Phase 9 item).
   and the report's `lanes` section (version 13) carries the re-triage
   and unedited-approval rates, null over nothing. III.J row 3 is met
   by the metrics half; III.O row 5's recorded half is met, its
-  simulation-mode half stays Phase 13's, and the residual is stated in
+  simulation-mode half is Phase 12 item 6's (the Phase 10 exit record
+  corrected the spec's "Phase 13"), and the residual is stated in
   `trajectories.md`: no decider re-runs at a point, so replay proves
   the configuration still presents the same frame and permits the same
   act, not that a model would choose it.)
@@ -1376,24 +1377,26 @@ rule keeps structurally ordered (decisions/0003). Item 1, the
 compromised-actor drill (os-465e356e), is planned in #241 (merged: the
 drill builds on the shipped `seed-admit` hook rather than a second one,
 and unauthorized pushes to code refs are exercised, not exempted) and
-names its follow-up card os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are carded
-and planned, their plan PRs in review: item 2, the forge-hosted
-admission service and the protections reconciler (os-5c8a312c, #244);
-item 3, checkpoint trust with the replay-equals-genesis proof and
-performance budgets, III.C row 4's contention benchmark taken there
-(os-7508ab9e, #246); item 4, the preseed with agent-only guardrails
-and the protected surface in config (os-0d4f2af3, #247); item 5,
-migration from a real export of this repository (os-cf13fb51, #248);
-item 6, docs generation, the handbook and simulation mode, which also
-takes the exit line's week-long accelerated backlog (os-16e55c11,
-#249). All six extend one declaration, `seed.json`; whichever lands
+names its follow-up card
+os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are carded
+and planned: item 2, the forge-hosted admission service and the
+protections reconciler (os-5c8a312c, plan #244 merged, implementation
+in progress); item 3, checkpoint trust with the replay-equals-genesis
+proof and performance budgets, III.C row 4's contention benchmark
+taken there (os-7508ab9e, plan #246 merged); item 4, the preseed with
+agent-only guardrails and the protected surface in config
+(os-0d4f2af3, plan #247 merged); item 5, migration from a real export
+of this repository (os-cf13fb51, plan #248 in review); item 6, docs
+generation, the handbook and simulation mode, which also takes the
+exit line's week-long accelerated backlog (os-16e55c11, plan #249
+merged). All six extend one declaration, `seed.json`; whichever lands
 later merges the struct.
 
-**Next action: implement Phase 12 item 1 against its merged plan
-(#241), and drive the item 2–6 plan PRs (#244, #246, #247, #248, #249)
-through review to merge** — implementation PRs as drafts until the
-Phase 11 exit record (os-efb2a099) merges and the phase gate opens
-(decisions/0003). The derivation, stated rather than read off a
+**Next action: implement Phase 12 in item order — item 1 against
+#241 and item 2 against #244 are in progress; items 3, 4 and 6 follow
+against their merged plans, and item 5 once #248 merges** —
+implementation PRs as drafts until the Phase 11 exit record
+(os-efb2a099) merges and the phase gate opens (decisions/0003). The derivation, stated rather than read off a
 summary: every Phase 10 item has a merged PR and the exit record above
 walks III.E, III.G, III.O and III.J row 3 and routes what it found
 unmet, so nothing in Phase 10 remains to claim; every Phase 11 item is
