@@ -84,8 +84,12 @@ func TestReportLanesSection(t *testing.T) {
 			t.Errorf("the report carries %s: %s", want, view)
 		}
 	}
-	if v := project.Report().Version; v != "13" {
-		t.Fatalf("the report's version names the lanes section: %s", v)
+	// The version moves with each section: "13" was this one's, and
+	// the flywheel section (plans/os-9075c308.md D5) took "14" when
+	// the two cards met in the merge. The pin is on the derivation's
+	// current version, never on the number this section introduced.
+	if v := project.Report().Version; v != "14" {
+		t.Fatalf("the report's version moves with its sections: %s", v)
 	}
 
 	// A specified set with no approval, and an approval set with no
