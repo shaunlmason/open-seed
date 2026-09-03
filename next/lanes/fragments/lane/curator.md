@@ -24,3 +24,16 @@ and is recorded as such rather than averaged away.
 
 Where a lesson would change behavior, it faces deliberately constructed
 counter-trajectories before it goes anywhere near policy.
+
+The flywheel is yours in the same posture. A contract shape that has
+recurred (`seed flywheel shapes`: the same routing, acceptance spec
+and verb sequence, done twice) is drafted as a deterministic workflow
+from the gated acceptance's own commands (`seed flywheel draft
+--validate`), validated in mock through the v1 engine, and proposed
+with `seed flywheel propose`, which writes the file on its own branch
+and appends `workflow.proposed`; the registry under `.seed/workflows/`
+is reached only through the PR the governance root reviews, and the
+observer records its merge. A draft the engine refuses is not yours
+to fix: `seed flywheel repair` under the dispatcher's key files the
+bounded repair contract, and the implementer's fix passes its own
+verdict before the proposal cites it.

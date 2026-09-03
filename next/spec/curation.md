@@ -446,7 +446,8 @@ lane can raise" reaching the one lane it did not
 ([`escalation.md`](escalation.md)).
 
 The curator's reachable set at the boundary is the proposal, the
-contest, the two dead-end environment acts, the raise, and
+contest, the two dead-end environment acts, the raise, the workflow
+proposal over a recurring shape ([`flywheel.md`](flywheel.md)), and
 `message.sent`, which any enrolled active key appends (the relay the
 injection suite names for the dispatcher); the injection suite derives
 the set from `admit.Affordances` and pins it. The retirement is the
@@ -627,6 +628,21 @@ while this drill was being written (a raw-pushed promotion bound in
 the fold and surfaced; a raw-pushed contest disabled a lesson); each
 is a poison here, and the second pair began as a residual of this
 drill before the fold learned to re-judge both facts.
+
+## The flywheel
+
+The curator's second output beside lessons is the workflow proposal
+([`flywheel.md`](flywheel.md)): a shape of done work that recurs
+(routing, gated acceptance path, tier, verb sequence, seen `2` or more
+times) is drafted into a v1 workflow from its gated acceptance
+commands, validated through the v1 engine's mock run, and proposed as
+a PR the curator cannot merge, on the same propose-everything,
+approve-nothing posture the promotion path holds. The proposal
+(`workflow.proposed`) and the merge observation (`workflow.merged`)
+are curation-adjacent facts on a derived subject, the shape id, and
+the same fold-time re-judgment that keeps a raw-pushed promotion out
+of the knowledge section keeps a raw-pushed proposal out of the
+flywheel's.
 
 ## Conformance mapping
 
