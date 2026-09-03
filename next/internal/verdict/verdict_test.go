@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -346,6 +347,9 @@ func TestWorkspaceCannotReachParentRefs(t *testing.T) {
 }
 
 func TestRunnerTimeoutKillsProcessGroup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows has no process groups: the runner kills the shell alone and its children may hold the pipes (next/spec/platform.md)")
+	}
 	dir, _, _, head := repo(t)
 	ws, err := NewWorkspace(dir, head)
 	if err != nil {

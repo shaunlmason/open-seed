@@ -1,3 +1,8 @@
+//go:build !windows
+
+// These drills observe file modes and the umask, which Windows does
+// not enforce (next/spec/platform.md).
+
 package project_test
 
 // The write-boundary drills (plans/os-8d5e9c45.md step 3; conformance

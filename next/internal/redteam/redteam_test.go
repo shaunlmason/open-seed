@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	hookBin = filepath.Join(dir, "seed-admit")
+	hookBin = filepath.Join(dir, "seed-admit"+exeSuffix())
 	if out, err := exec.Command("go", "build", "-o", hookBin, "../../cmd/seed-admit").CombinedOutput(); err != nil {
 		fmt.Fprintf(os.Stderr, "building the enforced hook: %v\n%s", err, out)
 		os.Exit(1)
@@ -385,4 +385,13 @@ func TestTablesValidate(t *testing.T) {
 			t.Errorf("residuals %q must refuse", name)
 		}
 	}
+}
+
+// exeSuffix is the platform's executable suffix: a built binary
+// without it is not runnable on Windows (next/spec/platform.md).
+func exeSuffix() string {
+	if runtime.GOOS == "windows" {
+		return ".exe"
+	}
+	return ""
 }

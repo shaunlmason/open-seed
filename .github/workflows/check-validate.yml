@@ -50,6 +50,9 @@ jobs:
         with:
           go-version-file: next/go.mod
           cache-dependency-path: next/go.sum
+      - name: 'LF-only git (next/spec/platform.md: the suites need core.autocrlf=false where git converts by default)'
+        if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
       - name: go test (the Seed suites on ${{ matrix.os }})
         run: go test ./... -count=1
         working-directory: next

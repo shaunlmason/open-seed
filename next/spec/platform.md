@@ -97,6 +97,14 @@ than papered over:
   concurrent reader holds. HEAD replacement retries briefly; an
   artifact put that lost a rename race to a rival that landed the
   same bytes is complete (the content is addressed by its digest).
+- **No advisory file locks.** The client state dir is held by an
+  exclusively created lock file with a bounded wait, and a lock left
+  by a dead process is taken over after that bound; POSIX uses
+  `flock`.
+- **The suites need `core.autocrlf=false`.** A Windows runner's git
+  converts by default; the matrix sets it globally before the suites,
+  and the mode and umask drills (`internal/project/boundary_test.go`)
+  are Unix-only by build constraint, since Windows has neither.
 - **Line endings.** Git on Windows converts by default; the
   repository's `.gitattributes` declares LF for every text file, the
   gitref client tells git `core.autocrlf=false` and `core.eol=lf` on
