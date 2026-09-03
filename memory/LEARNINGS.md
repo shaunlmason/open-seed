@@ -1378,3 +1378,29 @@ the assertions read, and there is no copy to go stale.
 - Copying a mapping into a second binary is how two postures come to
   disagree on a code. When the second caller appears, move the mapping
   to a package both can import before writing the second caller.
+- 2026-09-03 (no card; from Can Bölük, "The Harness Playbook", Stencil,
+  2026-09-02): the machine-protocol surface (build plan Phase 13 item
+  6) should stay tiny. Every permanent tool taxes every turn and a
+  changing tool roster invalidates provider caches, so expose one
+  passthrough over the CLI plus at most a situation read, with the
+  affordance envelope as the schema the model inspects, never one
+  protocol tool per verb. The CLI is already the complete interface
+  (charter II.15); a second surface adds no second semantics.
+- 2026-09-03 (no card; same source): when planning the container, cloud
+  session and remote worker executor adapters (Phase 13 item 2), use the
+  playbook's design questions as an adapter checklist: a kill boundary
+  the adapter can terminate rather than cooperative cancellation (the
+  force-kill fallback in charter II.9 assumes one exists), every stream
+  leaving the executor bounded before it reaches host memory or the
+  ledger, and workspace isolation as "child gets a view, parent receives
+  a diff", which is how packets already anchor artifacts. The playbook
+  trusts the harness host and distrusts only the sandbox; Seed trusts
+  neither, so its host-side policy is defense in depth the ledger never
+  relies on. Keep that distinction out of the handbook.
+- 2026-09-03 (no card; same source): nothing under `next/spec` or the
+  build plan carries a formal model of admission. Ordering, fences, the
+  monotonic-head rule and halt are proven by drills (claim race storms,
+  rollback, raw-git writers), which are examples rather than proofs. A
+  TLA+ model of admission over concurrent proposers is a backlog item
+  (build plan §3, non-conformance-blocking, filed after Phase 13), not
+  a charter change.
