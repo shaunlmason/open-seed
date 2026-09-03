@@ -350,7 +350,7 @@ func (c *Config) validateFederation() error {
 	}
 	seen := map[string]bool{}
 	for i, r := range c.Federation.Remotes {
-		if strings.TrimSpace(r.Name) == "" || strings.ContainsAny(r.Name, " /\\") {
+		if strings.TrimSpace(r.Name) == "" || strings.ContainsAny(r.Name, " \t\r\n/\\") {
 			return fmt.Errorf("federation.remotes[%d].name is a non-empty token without spaces or slashes, got %q", i, r.Name)
 		}
 		if seen[r.Name] {
