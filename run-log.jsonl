@@ -1336,3 +1336,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-ad610334","ts":"2026-09-03T09:16:48Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 13 item 7 — tuple ranking as supervisor policy: eval results rank qualified tuples and the planner lane's offers carry the strongest (III.J row 3)"},"task":"os-c7554f18","ts":"2026-09-03T09:17:33Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-c7554f18","ts":"2026-09-03T09:17:36Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T10:17:39Z"},"task":"os-c7554f18","ts":"2026-09-03T09:17:39Z","verb":"claim"}
