@@ -117,7 +117,13 @@ type loopSession struct {
 
 func openLoopSession(f *loopFlags) (*loopSession, *envelope.Envelope) {
 	if *f.remote != "" {
-		rs, failEnv := openRemoteSessionUnder(*f.remote, *f.refName, *f.stateDir, *f.supported, *f.config)
+		// A caller that builds its flags by hand (eval file) may not
+		// bind --config; the declaration is then found by its defaults.
+		config := ""
+		if f.config != nil {
+			config = *f.config
+		}
+		rs, failEnv := openRemoteSessionUnder(*f.remote, *f.refName, *f.stateDir, *f.supported, config)
 		if failEnv != nil {
 			return nil, failEnv
 		}

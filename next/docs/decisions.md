@@ -2879,3 +2879,19 @@ repository on a local path has no notion of who pushes, so the
 fixture's ruleset stand-in reads an environment variable the drill sets
 around the service's pushes and clears around the actor's. It is a
 model of the forge's rule and the spec says so; production sets nothing.
+
+**The hook builds each record's context with the CLI's constructor,
+and a representative history is the drill that proves it.** Pushing a
+generated history (`internal/history`: the loop's ten records per
+contract, reservations and run brackets included) through the hook
+refused `run.started` at the budget rule: the hook assembled its
+per-record context by hand (count, tip, keyring, halt, fold) and never
+set `Records`, which the budget rule's validity replays read, so a
+record the cooperative client admitted was refused at the server — and
+would have been refused at the service, which reuses the hook's
+judgment. `admitUpdate` now calls `admit.ContextOver(records[:i])` for
+every record after genesis, the constructor the trajectory harness
+already shares with the CLI, and `TestHookAndServiceAdmitTheRepresentativeHistory`
+pushes the history through both. `internal/history` lands with this
+card rather than item 3's (which needs it for its budgets) because the
+drill that found the gap is this card's; item 3 inherits it.
