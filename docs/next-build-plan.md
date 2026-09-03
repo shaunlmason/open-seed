@@ -421,6 +421,10 @@ posture.
 
 Dashboard tiers beyond the report (no Part III criterion requires them) and sharded
 admission intake (III.B says MAY). File cards when Phase 13 is exhausted.
+The contention benchmark at target scale (III.C row 4): the per-PR storm stays at
+24 writers under the perf gate; a scheduled run with hundreds of writers, tracked
+against the same budgets, is a card for when Phase 13 is exhausted (the Phase 12
+exit record routes the row here).
 
 ## 4. Progress tracking
 
