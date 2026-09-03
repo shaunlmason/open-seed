@@ -1633,3 +1633,13 @@ the assertions read, and there is no copy to go stale.
   offer's scope) survives a policy that sends work to the strongest,
   and a first eval's offer stays the one unscoped door.
 
+## seed ledger audit (os-7599c27d)
+
+- A verb that reads an invariant over a chain verifies the chain
+  first and only then reads: a bar over an unverified chain is a bar
+  over nothing, and the ordering makes the "empty chain" arm of the
+  library's audit unreachable through the verb, which is correct
+  rather than a gap.
+- `ledger append` is the cooperative posture's self-validating client,
+  not a raw seam; a drill that needs a chain admission would refuse
+  signs with the root and appends through the library.

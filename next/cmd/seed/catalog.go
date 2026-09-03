@@ -21,7 +21,7 @@ func catalog(stdin io.Reader) *registry.Registry {
 	return registry.New(
 		registry.Group{Name: "version", Run: runVersion},
 		registry.Group{Name: "init", Run: runInit},
-		registry.Group{Name: "ledger", Subs: []string{"verify", "append", "show"}, Run: runLedger},
+		registry.Group{Name: "ledger", Subs: []string{"verify", "append", "show", "audit"}, Run: runLedger},
 		registry.Group{Name: "project", Subs: []string{"rebuild", "current", "start"}, Run: runProject},
 		registry.Group{Name: "situation", Run: runSituation},
 		registry.Group{Name: "obs", Subs: []string{"emit"}, Run: runObs},

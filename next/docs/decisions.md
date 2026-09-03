@@ -3430,3 +3430,30 @@ refusal needed a code; `ranking_empty` refines exit 4 `not_found`
 `envelope.md` is where every such code is recorded, so the row went
 there beside `trust_undeclared`. No new exit number.
 
+
+## seed ledger audit (os-7599c27d)
+
+**The refusal carries the lists in its message.** The plan asked for
+the audit result beside the error so a reader needs no second call;
+the envelope's `result` and `error` are exclusive by its shape, so
+the message names each violated bar with the records it names
+(`silent_abandonments [c-1]`), the same lists a clean audit renders as
+fields. No second field, no second envelope.
+
+**The lost-updates bar is unreachable through the verb, by design.**
+An empty chain has no genesis and fails verification first; D1 puts
+verification first so a bar is never read over an unverified chain,
+and the drill asserts `chain_invalid` there rather than inventing an
+audit of nothing.
+
+**The drills append past admission with the root key.** The dev tool
+self-validates (the cooperative posture's rule), so a planted
+violation cannot go through it; the drills sign with the governance
+root and append through the library, which is the raw-push posture
+the bars exist to catch, and the chain still verifies because the
+root signed.
+
+**The packet's clause waits for the packet.** `next/docs/promotion.md`
+is on #294, not on `main`, so the one clause the plan names lands in
+this branch's merge-forward once the packet merges, never by stacking
+a task PR on another.

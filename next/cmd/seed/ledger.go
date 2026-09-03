@@ -25,13 +25,14 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/refusal"
+	"github.com/shaunlmason/open-seed/next/internal/simulate"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 func runLedger(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "ledger requires a subverb: verify, append, or show"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "ledger requires a subverb: verify, append, show, or audit"), stdout, stderr)
 	}
 	switch args[0] {
 	case "verify":
@@ -40,6 +41,8 @@ func runLedger(args []string, stdout, stderr io.Writer) int {
 		return runLedgerAppend(args[1:], stdout, stderr)
 	case "show":
 		return runLedgerShow(args[1:], stdout, stderr)
+	case "audit":
+		return runLedgerAudit(args[1:], stdout, stderr)
 	default:
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown ledger subverb %q", args[0])), stdout, stderr)
 	}
@@ -118,6 +121,79 @@ func runLedgerVerify(args []string, stdout, stderr io.Writer) int {
 	}
 	env := envelope.OK(map[string]any{"count": rep.Count, "tip": rep.Tip})
 	return render(stampTip(env, rep.Count), stdout, stderr)
+}
+
+// runLedgerAudit is the five-bar audit over any ledger
+// (plans/os-7599c27d.md; simulation.md "The five-bar audit"): verify
+// from genesis first, exactly as ledger verify does, so an invalid
+// chain refuses chain_invalid before a bar is read, then simulate.Audit
+// over the verified records in position order. A clean audit is the
+// bars with every list empty, stamped at the tip audited; a violated
+// bar refuses exit 28 drift refined audit_violated, the message naming
+// each violated bar with the records it names, because the envelope's
+// result and error are exclusive and a reader must not need a second
+// call to learn what broke.
+func runLedgerAudit(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("ledger audit", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	dir := fs.String("ledger", "", "ledger directory")
+	supported := fs.String("supported", "", "comma-separated supported protocol versions (default: this build's)")
+	if err := fs.Parse(args); err != nil || *dir == "" || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "ledger audit requires --ledger <dir>"), stdout, stderr)
+	}
+	store, failEnv := openStore(*dir)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	resolve, _, err := genesis.Bootstrap(store)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+	}
+	var opts []ledger.VerifyOption
+	if *supported != "" {
+		opts = append(opts, ledger.WithSupportedVersions(strings.Split(*supported, ",")...))
+	}
+	rep, err := store.VerifyFromGenesis(resolve, opts...)
+	if err != nil {
+		var fail *ledger.Failure
+		if errors.As(err, &fail) {
+			return render(failureEnvelope(fail), stdout, stderr)
+		}
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	var records []*event.Record
+	if err := store.Records(func(_ int, rec *event.Record) error {
+		records = append(records, rec)
+		return nil
+	}); err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	a := simulate.Audit(records)
+	bars := []struct {
+		name string
+		list []string
+	}{
+		{"chain_violations", a.ChainViolations},
+		{"lost_updates", a.LostUpdates},
+		{"silent_abandonments", a.SilentAbandonments},
+		{"guardrail_breaches", a.GuardrailBreaches},
+		{"unreserved_spend", a.UnreservedSpend},
+	}
+	if !a.Clean {
+		var violated []string
+		for _, b := range bars {
+			if len(b.list) > 0 {
+				violated = append(violated, fmt.Sprintf("%s [%s]", b.name, strings.Join(b.list, "; ")))
+			}
+		}
+		env := envelope.Fail(envelope.ExitDrift, "audit_violated", fmt.Sprintf("the chain breaks %d of the five bars: %s", len(violated), strings.Join(violated, "; ")))
+		return render(stampTip(env, rep.Count), stdout, stderr)
+	}
+	result := map[string]any{"count": rep.Count, "tip": rep.Tip, "clean": true}
+	for _, b := range bars {
+		result[b.name] = b.list
+	}
+	return render(stampTip(envelope.OK(result), rep.Count), stdout, stderr)
 }
 
 func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
