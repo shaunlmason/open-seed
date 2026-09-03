@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-40ed0ca0",
-  "merge_base": "4cf97f189149c9631a1f75e23b270132dde235b8",
-  "head": "bc2dad79ee9102b4cb9912676e68d59809c2e604",
+  "merge_base": "8df74209575958f72d8e2b9cf9278f8e428eb7b2",
+  "head": "6e8518f6a0cb5265f6780f52418f87163001feb0",
   "plan_path": "plans/os-40ed0ca0.md",
   "plan_sha256": "5e46be9387d007307ef79be02b99d164c551166fcc7f8bd81516abf7a4a5ff1e",
   "diff_files": [
@@ -31,7 +31,7 @@
     "next/spec/projections.md",
     "next/spec/protocol.md"
   ],
-  "diff_sha256": "bde171e1d8f55d2bc69ffb8191dff45dff205f92e60e1dcd82af4d35bd5b20cb",
+  "diff_sha256": "b0f96e634ab1512013350d6c105075f35f6a8e6183b2b2f6d726da59f9624797",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/boundary/ ./internal/project/ ./internal/artifact/ ./cmd/seed/ -run 'Boundary|Card|CrossOrg|Opacity|Federation' -count=1",
