@@ -1482,9 +1482,6 @@ record's own position through one derivation, `curation.AuthenticPass`
   perf run`; the doctor's trust report; `next/spec/checkpoints.md` new,
   `maintenance.md`, `projections.md` and `envelope.md` following)
 
-## Frontier
-
-
 - 12.4 preseed (config, guardrails, teams, protections, posture)
   idempotent and CI-verified; agent-only guardrails and human/agent
   metrics reading `kind` (III.E row 9); the protected surface and the

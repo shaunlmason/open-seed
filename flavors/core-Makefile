@@ -44,13 +44,10 @@ check-next:
 	@# fails. Ceilings carry their provenance; raising one is a reviewed
 	@# edit of that file, never a silent change.
 	@cd next && go run ./cmd/perfgate -budgets perf/budgets.json -dir .
-<<<<<<< HEAD
 	@# The fixture deployment's declaration is CI-verified
 	@# (plans/os-0d4f2af3.md D2): tiers in the vocabulary, teams naming
 	@# shipped manifests, the protected surface complete.
 	@cd next && go run ./cmd/seed preseed check --config fixtures/deployment/seed.json --lanes lanes >/dev/null
-=======
->>>>>>> origin/main
 
 # End-to-end loop smoke in a temp instantiation (no model, no secrets).
 smoke:
