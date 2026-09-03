@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-40ed0ca0",
-  "merge_base": "42df80f246af3b367c084bc0f69e118925f0ed64",
-  "head": "498db6901ff8a80e9225df795a9f741b85457fbf",
+  "merge_base": "35f444ef3eb8c363825fb15241000ee2d857b507",
+  "head": "2440a86bf3b8c5327aa15c5761fc6c38ecba020e",
   "plan_path": "plans/os-40ed0ca0.md",
   "plan_sha256": "5e46be9387d007307ef79be02b99d164c551166fcc7f8bd81516abf7a4a5ff1e",
   "diff_files": [
