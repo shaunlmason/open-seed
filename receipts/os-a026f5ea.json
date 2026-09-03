@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-a026f5ea",
-  "merge_base": "ff180c1f73df16526b7278b4dee461b62ea202ae",
-  "head": "4bc3d2b2fe465aa84f5bfa0b0b2299a58827d7da",
+  "merge_base": "03c23b30e7c0ce4d54a4706a99dc41c033018572",
+  "head": "b7fdd237ba95557dd75fc9232b6c12d8a117c96f",
   "plan_path": "plans/os-a026f5ea.md",
   "plan_sha256": "015a5629b50adf868bf0de533aa32f7a4581216914fa2f2ed3f932c2e2746146",
   "diff_files": [
@@ -12,7 +12,7 @@
     "next/spec/trajectories.md",
     "next/spec/verdicts.md"
   ],
-  "diff_sha256": "94bcdbe94a45aaf4083e901f3c63d02e1b064073b9ceb8ec0f92787e1eda69c0",
+  "diff_sha256": "2c391bdfa66d69fbd76e80af73bfaa8e8c7fd928fece795a62175367d9a20f69",
   "validation": [
     {
       "cmd": "export PATH=/home/shaun/go-toolchain/go/bin:$PATH",
