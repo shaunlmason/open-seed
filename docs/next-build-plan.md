@@ -307,10 +307,8 @@ lanes-operable and loop-completeness gates (§5).
 ### Phase 10 — Qualification and evaluation  *(deps: 9)*
 
 1. Runtime tuples in enrollment/grants; adapters report provisioned tuple; drift =
-   out-of-grant; the offer's `tuples` scope as the scheduling input the supervisor
-   writes (III.J row 3's "strongest tuples by policy", routed here by the Phase 9 exit
-   record; the ranking policy that fills it from eval results is Phase 13 item 7's,
-   the Phase 10 exit record's revision of this clause).
+   out-of-grant; the planner lane receives the strongest tuples by policy (III.J row
+   3, routed here by the Phase 9 exit record).
 2. Eval contracts against fixture repos through the production machinery; grants cite
    passing tuples; scheduled spot-checks; suspension on failure.
 3. Independence levels L2/L3 declared per tier and recorded in verdicts.
@@ -322,8 +320,7 @@ lanes-operable and loop-completeness gates (§5).
    harness).
 
 *Exit:* charter III.E (tuples) + III.G (levels, calibration) + III.O eval items + III.J
-row 3's metrics half (its policy clause is Phase 13 item 7's, by the Phase 10 exit
-record's revision).
+row 3.
 
 ### Phase 11 — Curator and flywheel  *(deps: 9)*
 
@@ -349,42 +346,24 @@ converts to a workflow through the gates.
 
 1. **Compromised-actor drill**: red-team harness with valid key + credential + raw git
    against an enforced fixture; asserts the §I.2 ceiling item by item. This is the
-   release gate — it runs in CI from here on. The consequence's second half is owed
-   beside the ceiling: revoking the compromised key reaps its open claims **on the
-   revocation alone** — the record proves the holder can never exit its window, the one
-   case where the ledger rather than the observation channel corroborates a reap — with
-   packets, so the work is re-offered (III.E row 8's reap arm, routed here by the Phase
-   10 exit record). A reap corroborated by the revocation record is a lifecycle change
-   with its own boundary rule and drills, so it lands as item 1's follow-up card
-   os-32d06c65 rather than inside the drill, which asserts today's consequence (a
-   revoked key's proposals refuse at the push).
+   release gate — it runs in CI from here on.
 2. Forge-hosted admission service (stateless, sole-writer pattern) + protections
    desired-state reconciler.
 3. Checkpoint trust docs + replay-equals-genesis CI proof; performance budgets
    (admission latency, replay, rebuild) tracked.
 4. Preseed file (config, guardrails, teams, protections, posture) — idempotent init.
-   The guardrails it declares include the agent-only ones, read off the roster's
-   `kind`, and the report's lane rates split by kind (III.E row 9, routed here by the
-   Phase 10 exit record); the config it declares enumerates the protected surface and
-   names the governance root and its change process (III.G row 9 and III.L row 2,
-   routed likewise).
 5. **Migration**: `seed import --from-open-seed <export>` — v1 lossless export → verify
    anchors → transform (cards→contracts, run-log→events, receipts→verdict records,
    mail→messages) → genesis import refusing non-empty ledgers; drilled against a real
    v1 fixture.
 6. Docs generation: lifecycle prose from `transitions.json`; operator handbook;
-   simulation mode (credential-free end-to-end; III.O row 5's second half, the seam
-   where a decider plugs into the trajectory harness — routed here by the Phase 10 exit
-   record).
+   simulation mode (credential-free end-to-end).
 
 This phase carries promotion's migration gate (item 5) and, in item 1, the drill
 that must be green before the self-hosting cutover (§5).
 
-*Exit:* charter III.B (service posture), III.O (the compromised-actor drill in CI;
-simulation mode closing row 5), III.P complete, and the rows the Phase 10 exit record
-routes here (III.E rows 8 and 9, III.G row 9); the pillars no earlier exit line owns —
-III.C, III.L, III.M and III.Q — are walked at this exit, each row met by citation or
-routed to Phase 13; the fixture organization runs a week-long simulated backlog
+*Exit:* charter III.B (service posture), III.O (compromised-actor drill in CI),
+III.P complete; the fixture organization runs a week-long simulated backlog
 (accelerated clock) meeting III.R's zero-violation bar.
 
 ### Phase 13 — Conformance completion  *(deps: 12)*
@@ -407,15 +386,9 @@ adapter), and the doctor reports which Phase 13 criteria remain open until then.
    platform parity (including Windows) documented and tested (III.I — the row the
    Phase 8 exit routes here; the CLI stays the complete interface, so this adds a
    second surface over the same rule set, never a second semantics).
-7. Tuple ranking as supervisor policy: eval results (mints, spot-checks, calibration
-   agreement) rank qualified tuples, and the planner lane's offers carry the strongest
-   into the `tuples` scope Phase 10 item 1 landed as the scheduling input (III.J row 3's
-   policy clause, routed here by the Phase 10 exit record: Phase 10 item 2 deferred
-   ranking by name and no later item re-homed it).
 
-*Exit:* the named III.F/III.H/III.I/III.N criteria green, and III.J rows 2 and 3 beside
-III.I; the conformance report shows Part III complete at the enforced self-hosted
-posture.
+*Exit:* the named III.F/III.H/III.I/III.N criteria green, and III.J row 2 beside III.I;
+the conformance report shows Part III complete at the enforced self-hosted posture.
 
 ## 3. Backlog (true extras, not conformance-blocking)
 

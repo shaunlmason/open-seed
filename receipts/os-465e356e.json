@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-465e356e",
-  "merge_base": "03c23b30e7c0ce4d54a4706a99dc41c033018572",
-  "head": "9f06857117133990216ed9e9ac89db5f14d8ac0e",
+  "merge_base": "97c60b6a53a4d67291dd4ee3e2b5e6b79668a711",
+  "head": "8216540271bbb754368bb096d0763f8ad4de8d69",
   "plan_path": "plans/os-465e356e.md",
   "plan_sha256": "1322406d677cd5739cb3d35a5d41363cc9a1a53939bc903f31d17ba5fa5dd824",
   "diff_files": [
@@ -29,7 +29,7 @@
     "next/spec/lanes.md",
     "next/spec/redteam.md"
   ],
-  "diff_sha256": "cc85daee51f9c04b6991319959ceb8acea61f5a0c6147b4af30337e9f3d48486",
+  "diff_sha256": "602f33c378f67845d5db978825c93bf07e3bd49638388979c76c229ee7b7e277",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/redteam/ ./cmd/seed-admit/ ./internal/posture/ ./cmd/seed/ -count=1",
