@@ -1221,3 +1221,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 13 item 1 — racing mode as the per-squad opt-in with first-verified settlement (III.F)"},"task":"os-56bee171","ts":"2026-09-03T02:39:47Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 13 item 2 — the remaining executor adapters: container, cloud agent session, enrolled remote worker (III.H)"},"task":"os-083112ac","ts":"2026-09-03T02:39:50Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 13 item 3 — a non-primary forge adapter for the forge extras (III.N)"},"task":"os-ad610334","ts":"2026-09-03T02:39:53Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 13 item 4 — federation read remotes, cross-repo request ingress and the request.* rows (III.N, III.J row 2)"},"task":"os-48df10a2","ts":"2026-09-03T02:39:56Z","verb":"create"}
