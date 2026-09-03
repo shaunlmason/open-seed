@@ -1,5 +1,7 @@
 # lifecycle.md — the contract lifecycle
 
+> The enumeration is generated: [`../docs/generated/lifecycle.md`](../docs/generated/lifecycle.md) renders the states and every transition from the table this file explains; `seed docs check` holds them equal.
+
 > Status: v0, normative for `next/**`. Authority: [`SEED-NEXT.md`](../../SEED-NEXT.md)
 > Part II §6 "Lifecycle" and §8 (done is a verdict and a reconciliation);
 > [`docs/next-build-plan.md`](../../docs/next-build-plan.md) Phase 5 item 1;

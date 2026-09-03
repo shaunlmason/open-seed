@@ -50,6 +50,9 @@ func startAdapter(name string) (executor.Adapter, *envelope.Envelope) {
 	if name == localAdapterName {
 		return executor.LocalWorktree{}, nil
 	}
+	if name == executor.MockName {
+		return executor.Mock{}, nil
+	}
 	return nil, envelope.Fail(envelope.ExitUsage, "usage",
 		fmt.Sprintf("unknown adapter %q — %s is the one adapter this build provisions through (next/spec/executors.md)", name, localAdapterName))
 }
