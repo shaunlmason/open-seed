@@ -1404,3 +1404,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T15:33:27Z"},"task":"os-ad610334","ts":"2026-09-03T14:33:27Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T15:41:09Z"},"task":"os-c7554f18","ts":"2026-09-03T14:41:09Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T15:56:13Z"},"task":"os-c7554f18","ts":"2026-09-03T14:56:13Z","verb":"lease-renew"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-1812ecd2","kind":"pr"},"task":"os-083112ac","ts":"2026-09-03T14:57:03Z","verb":"attach-evidence"}
