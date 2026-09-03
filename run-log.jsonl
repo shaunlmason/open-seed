@@ -1196,3 +1196,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T02:23:49Z"},"task":"os-7508ab9e","ts":"2026-09-03T01:23:49Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-115f1928","kind":"pr"},"task":"os-efb2a099","ts":"2026-09-03T01:24:21Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-080e98d5","kind":"receipt"},"task":"os-efb2a099","ts":"2026-09-03T01:24:24Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-efb2a099","ts":"2026-09-03T01:24:27Z","verb":"transition"}
