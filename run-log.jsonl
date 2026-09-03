@@ -1454,3 +1454,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: sharded admission intake (III.B row 6, MAY) — a true extra"},"task":"os-7953612b","ts":"2026-09-03T22:57:48Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: dashboard tiers beyond the report — a true extra"},"task":"os-f17567a6","ts":"2026-09-03T22:57:52Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-98ce6f8a","ts":"2026-09-03T22:58:35Z","verb":"transition"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-f262585a","ts":"2026-09-03T22:59:07Z","verb":"transition"}
