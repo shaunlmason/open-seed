@@ -150,3 +150,50 @@ maintenance loop's job; it presupposes exactly these semantics, and
 reap requires an admitted `run.interrupted` on the active fence (or a
 `wedge.declared`) BESIDE the expiry classification, because the
 observation channel is lossy and silence alone can never reap.
+
+## The remaining substrates (Phase 13 item 2)
+
+Beside the local worktree, three adapters implement the same public
+`executor.Adapter`/`Run` contract (no method added), each resolving all
+five tuple fields and refusing `ErrTupleMismatch` when the substrate
+resolves anything the admitted `run.started` did not declare:
+
+| Adapter | Harness | Environment | Budget |
+|---|---|---|---|
+| **container** | `container/v0` | the image digest (or `fake-oci:<digest>` under the in-process fake) | **enforced** — the supervisor stops the container |
+| **cloud-session** | `cloud-session/v0` | the provider-reported runtime | **risk-limit** — a provider may bill past the reservation before the close lands |
+| **remote-worker** | `remote-worker/v0` | the worker's enrolled environment | **risk-limit** — a remote process may spend past the reservation before the interrupt reaches it |
+
+### The budget posture is honest, per adapter
+
+`executor.Described` (optional, so the public interface is unchanged)
+states whether the substrate can be stopped synchronously. An adapter
+that does not implement it is treated as a **risk limit** — the safe
+default. `seed doctor` lists every adapter this build provisions through
+with its posture, and `report.json`'s `adapters` section names, per
+adapter, the runs started under its harness and its budget posture. A
+cloud or remote adapter never claims enforcement.
+
+### The declaration names the substrates, never a secret
+
+The `executors` block declares `container: {runtime: docker|podman|fake,
+image}`, `cloud: {endpoint, credential}` and `remote: {workers:
+[{name, environment}]}`. A **credential is the NAME of an environment
+variable**, read at provision time; the lint refuses a token-shaped
+value, so a secret pasted where a name belongs never reaches the tree.
+`seed run start --adapter container|cloud-session|remote-worker` reads
+the block; an undeclared adapter is refused by name.
+
+### Credential-free CI
+
+The container adapter provisions through `executor/fakeoci` (an
+in-process OCI runtime) when the declared runtime is `fake`, so the
+drills run with no runtime and no credentials. A declared `docker` or
+`podman` that is not on PATH refuses by name rather than falling back:
+a runtime absent in CI is a named reason, never a silent substitution.
+The cloud provider answers `GET /runtime` with the runtime its sessions
+report, so the adapter's static tuple carries the environment before a
+session opens. The cloud and
+remote adapters drill against an in-process fake provider and a fake
+worker. `merge.observed` and the spend-bracket verbs are unchanged; no
+executor takes inbound connectivity — the remote worker pulls.

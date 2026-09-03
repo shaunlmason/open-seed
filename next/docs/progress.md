@@ -1462,6 +1462,17 @@ record's own position through one derivation, `curation.AuthenticPass`
   gives one corrupted chain, the D3 tripwire inverted on purpose, the
   envelope spec's null sentence sharpened to "before any position was
   read")
+- 13.2 the remaining executor adapters — container, cloud session,
+  enrolled remote worker (III.H) — os-083112ac — **draft in progress**
+  (draft PR #282 against plan #274 per decisions/0003: executor.Described
+  (optional; enforced|risk-limit), Container over an OCIRuntime with
+  executor/fakeoci (credential-free) and OCICommand (docker/podman),
+  CloudSession and RemoteWorker (risk-limit; the worker pulls, no
+  inbound), the executors declaration block with the secret lint, seed
+  run start --adapter wiring, the doctor's adapters list, spec/executors.md.
+  Still to land: report.json's adapters section, the per-adapter
+  disposability/preemption drills in cmd/seed, docs receipt. Awaits #274
+  merge + a make-check window)
 - 13.3 a non-primary forge adapter (Forgejo) for the forge extras (III.N
   row 2) — os-ad610334 — **draft in review** (draft PR #281 against plan
   #275 per decisions/0003: internal/protections/forgejo.go over Forgejo's
