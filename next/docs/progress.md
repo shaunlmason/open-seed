@@ -606,7 +606,10 @@ administrative card, not a Phase 8 item).
   post-merge review found three defects, all live on main and carded
   as os-9b3f3ef3: derived arguments not re-derived across the
   optimistic retry, a remote refusal stamped from the stale view, and
-  a JSON null packet panicking the CLI.
+  a JSON null packet panicking the CLI — fixed by that card's own task
+  PR, which also records in `next/spec/loop-verbs.md` that a derived
+  value is re-examined against the refreshed tip and refused rather
+  than replaced.
 - **9.5 part (b) is MET** (os-8451d939, plan #209): the situation read
   carries the caller's messages, with "unread" derived from the cited
   `--since` position rather than stored read-state, so no
@@ -690,26 +693,97 @@ administrative card, not a Phase 8 item).
     - **The situation read withheld the acceptance anchor**, so a lane
       could not write the packet its own exit requires. The window now
       reports it.
-- 9.2 escalation with packet, question and decision — backlog. An
+  Item 1 is complete with 1a (#188), 1c (#191) and 1b (#192), its
+  four review findings landed as os-378e44f3, and the four ergonomic
+  obligations are real rather than declared: the one position-stamped
+  read each manifest names (since 1c, in the posture the lane can
+  actually claim in), the loop verbs as the loop's acts (enforced by
+  1c's act gate, which refuses anything `acts_through` does not
+  declare), liveness riding the loop's own steps (emitted as a
+  side-effect of a declared act that succeeded, keyed to the lane's
+  actor and fence), and the one-inbox doctrine (the loop acts on its
+  read, never on a wake).
+- 9.2 escalation with packet, question and decision — os-f781f0da —
+  **done** (#200 against plan #197): `escalation.raised` (`ready`,
+  `review` -> `blocked`) and `decision.recorded` (`blocked` -> `ready`)
+  are the two new rows; from `in_progress` an escalation rides
+  `claim.parked`, because what `lifecycle.md` pins is the set of verbs
+  that may LEAVE that state, so the four deliberate exits stay exactly
+  four and their existing pinning test is now the enforcement of that
+  rule. `next/spec/escalation.md` carries the design. Raising is broad
+  because raising grants nothing; answering is the fourth no-fallback
+  operator row. While a question stands, `contract.unblocked` refuses
+  and `contract.cancelled` must cite the escalation it answers. An
   escalation answering a refusal carries that refusal's code and
-  message, so the human is asked the boundary's own question (this
-  card).
+  message, so the human is asked the boundary's own question. Waiting
+  escalations surface as `escalation.pending` with the raising event's
+  `ts`, because age is elapsed time and a position difference is event
+  count wearing a clock's clothes.
 - 9.3 unattended maintenance, whose lint list carries the Phase 7
-  exit's unsettled-run detection — backlog. 9.1's loop emitting
-  observations from its own steps makes an expired classification
-  better evidence, by removing forgotten bookkeeping as a cause of
-  silence; it does NOT make silence proof, because the channel is
-  lossy by declaration, so the reap stays a judgment needing
-  corroboration and no_data carries no reap path at all. No heartbeat
-  predicate is added either, because non-advancing observations are a
-  legitimate long-running step (os-68ea0b2d).
-- 9.4 small-team and fleet fixtures — backlog. Both run with no wake
-  channel, and every refusal converges within one retry in one of
-  three ways: an admitting act, a refreshed read showing the act is no
-  longer owed, or an escalation carrying the refusal. The middle arm
-  is the common case (a fleet-mode claim race means the loser
-  re-orients), and what is forbidden is the fourth outcome: a blind
-  retry or a silent loop (os-68ea0b2d).
+  exit's unsettled-run detection — os-8a5f14bb — **done** (#205
+  against plan #203): `seed maintain run`, one unattended pass (reap,
+  lint, file, rebuild, checkpoint) with no scheduler and no wake
+  channel. Three things about it are worth carrying forward rather
+  than rediscovering. **The reap answers an unanswered request, never
+  a timeout**: `observations.md` says Seed holds no lease, so there is
+  no expiry to elapse, and the channel is declared lossy — a dropped
+  stream and dead work look identical from outside; a reap therefore
+  needs the `expired`/`wedged` classification BESIDE an admitted
+  `run.interrupted` on the active fence (or a `wedge.declared`), which
+  is exactly the force path `executors.md` named this loop as the
+  consumer of, and `no_data` carries no reap path at all, however old
+  the claim. 9.1's loop emitting observations from its own steps makes
+  an expired classification better evidence, by removing forgotten
+  bookkeeping as a cause of silence; it does NOT make silence proof,
+  and no heartbeat predicate is added either, because non-advancing
+  observations are a legitimate long-running step (os-68ea0b2d). **The
+  pass consumes the COMPLETE reconcile result**: the evidence-grade
+  checks — attested heads, rewritten targets, receipt retrievability —
+  moved out of `cmd/seed` into `internal/reconcile`, because a pass
+  built on the record-derived half alone reports clean over a
+  rewritten target. **Checkpoints persist a snapshot a fresh reader
+  starts from**, its hash and location in a versioned payload the
+  boundary validates, the materialization written to the artifact
+  store first: shape at the door, contents at the read, drilled by a
+  round trip.
+- 9.4 small-team and fleet fixtures — os-6a08b166 — **done** (#207
+  against plan #204): both modes run the full loop to `done` on the
+  remote posture, wakeless, with every convergence arm exercised —
+  every refusal converges within one retry in one of three ways (an
+  admitting act, a refreshed read showing the act is no longer owed,
+  or an escalation carrying the refusal), the middle arm the common
+  case (a fleet-mode claim race means the loser re-orients), and the
+  forbidden fourth outcome — a blind retry or a silent loop — pinned
+  by its own detector (os-68ea0b2d). Three things this card settled.
+  **The terminal surface was missing, not merely local-only**:
+  `merge.requested` and `merge.observed` had no CLI verb at all,
+  existing only through `ledger append`, which runs no rules; all
+  three terminal verbs (with `verdict render --remote`, the gap plan
+  #204 found and carded as os-a00b6950, absorbed by this PR and the
+  card cancelled) now reach both postures, so the chain's last steps
+  are drivable by a lane. **The mode is purely the identity plan**:
+  both modes run remote — fleet needs it for contention, and
+  small-team could never have run locally, because `claim take` is
+  refused off the remote and a claim is the loop's first act; neither
+  clause of III.J mentions transport. **The role-grant gap**, below,
+  which this card's fixtures surfaced.
+- (out of item) the shipped lane set granted neither `supervise` nor
+  `observer` nor — found in review, the worst of the three since it
+  has no operator fallback — `sealer` — os-d6a52784 — **done** (#212
+  against plan #210): the charter's six lanes (§II.11) are a closed
+  enumeration, and both missing parts already exist in the charter
+  outside it (the supervisor is §II.9 and the observer is §8's
+  governed observer), so they ship as **roles**, manifests of a
+  required `kind` beside the six, validated by the same code, refused
+  by name if they claim to be a seventh lane; `sealer` rides the
+  verifier, whose keyring the sealed bodies are already encrypted to.
+  The mode fixtures provision both roles from their manifests rather
+  than staging them as identities the test invented, which is what
+  makes the closure real rather than reported. The drill whose
+  absence let this reach Phase 9 reads the capability table's own
+  source and, run against the pre-fix tree, names **six** ungranted
+  verbs across the three capabilities — three more than the card had
+  found.
 - out-of-item: a reservation outlives its window — os-d6963652 —
   **review** (task PR against plan #175: admission gated all three
   budget verbs on `in_progress`, so a reservation whose claim window
@@ -813,7 +887,7 @@ PR (an administrative card, not a Phase 9 item).
   nothing.)
 - 10.2 eval contracts through the production machinery; grants cite
   passing tuples; spot-checks; suspension on failure — os-03e47abb —
-  **in review** (task PR against plan #217: `seed/3` in the register
+  **done** (#221 against plan #217: `seed/3` in the register
   with `version.EvalApplies` gating the `eval` marker and the two verbs
   at `seed/3` exactly; `internal/eval` (definitions under
   `next/evals/<name>/`, the anchor read from the repository's last
@@ -836,8 +910,7 @@ PR (an administrative card, not a Phase 9 item).
   `next/spec/evals.md` and eight spec edits. Ranking waits on item 5's
   metrics; calibration is item 4.)
 - 10.3 independence levels L2/L3 declared per tier and recorded in
-  verdicts — not started; its table is built: **the tier vocabulary**
-  verdicts — **in review** (os-99829835, task PR against plan #223:
+  verdicts — os-99829835 — **done** (#233 against plan #223:
   `seed/4` activates the ordered level vocabulary, `verdict.rendered`'s
   `independence` widening from the literal `L1` to `L1`/`L2`/`L3` and
   optionally carrying the verifier's declared `tuple`; the tier table's
@@ -862,9 +935,9 @@ PR (an administrative card, not a Phase 9 item).
   contracts projection republishes as version 13; `EvalApplies`
   is the named list `{seed/3, seed/4}`; both modes drive a `critical`
   contract to `done`, small-team at L2 with a second model family and
-  fleet at L3 on an executable gated spec); its table is built: **the
-  tier vocabulary**
-  (os-be12ac16, merged as #222 against plan #219) is **done** —
+  fleet at L3 on an executable gated spec)
+- (out of item) the tier vocabulary and its table, the residual item
+  1b found — os-be12ac16 — **done** (#222 against plan #219:
   `next/spec/tiers.md` declares `trivial`, `standard` and `critical`
   with a plan-required, sealed-checks-required and human-review column
   each, mirrored by `transition.Tier(name)` and pinned against the spec
@@ -876,11 +949,11 @@ PR (an administrative card, not a Phase 9 item).
   had three) read the table through `TierGates`, an unknown tier taking
   the strictest row; the injection suite's characterization pin is
   replaced by the vocabulary drill, with mis-tiering (filing the valid
-  `trivial`) kept pinned as tier provenance's residual. Item 3 added
-  the `independence` column.
+  `trivial`) kept pinned as tier provenance's residual; item 3 added
+  the `independence` column)
 - 10.4 rubric verdicts (per-item, evidence-cited, uncertainty-marked);
   calibration harness with authority suspension on drift —
-  os-2e34f66a — **merged** (#238 against plan #225: the
+  os-2e34f66a — **done** (#238 against plan #225: the
   `## Rubric` section of the acceptance spec read at the anchor as the
   commands are (`plan.Rubric`, a duplicate or empty id refusing
   `spec_unrunnable`); the scorecard artifact (items with score,
@@ -920,8 +993,8 @@ PR (an administrative card, not a Phase 9 item).
   `actors.md`, `protocol.md`, `lanes.md`)
 - 10.5 trajectory-prefix regression harness; dispatcher re-triage rate
   and planner unedited-approval rate (III.J row 3's metrics half,
-  routed here by the Phase 9 exit record) — os-6bd9ffff — **in
-  review** (task PR against plan #227: `internal/trajectory` records a
+  routed here by the Phase 9 exit record) — os-6bd9ffff — **done**
+  (#239 against plan #227: `internal/trajectory` records a
   lane's decision points at the frames it decided from, its admitted
   records at `records[:p]` and its refused journal lines at
   `records[:p+1]`, and replays them against the chain and the lane
@@ -939,15 +1012,16 @@ PR (an administrative card, not a Phase 9 item).
   keeps the first proposal's and the approval's; unedited iff equal),
   and the report's `lanes` section (version 13) carries the re-triage
   and unedited-approval rates, null over nothing. III.J row 3 is met
-  by the metrics half; III.O row 3's recorded half is met, its
-  simulation-mode half stays Phase 13's, and the residual is stated in
+  by the metrics half; III.O row 5's recorded half is met, its
+  simulation-mode half is Phase 12 item 6's (the Phase 10 exit record
+  corrected the spec's "Phase 13"), and the residual is stated in
   `trajectories.md`: no decider re-runs at a point, so replay proves
   the configuration still presents the same frame and permits the same
   act, not that a model would choose it.)
 
 - out of item: the client's private git dir and the verifier's clone
-  arm auto-gc in production — os-711b3028 — **in review** (task PR
-  against plan #224: `gitref.NewClient` writes `gc.auto=0`,
+  arm auto-gc in production — os-711b3028 — **done** (#232 against
+  plan #224: `gitref.NewClient` writes `gc.auto=0`,
   `gc.autoDetach=false` and `receive.autoGC=false` into its git dir on
   every construction, so a state dir an older build created is
   hardened the first time a newer build opens it; `verdict.NewWorkspace`
@@ -956,11 +1030,168 @@ PR (an administrative card, not a Phase 9 item).
   config --local`, which the test binary's global config cannot
   satisfy, and an older-build drill proves the write happens on the
   no-init path and that a second open changes nothing).
+**Phase 10 exit (docs/next-build-plan.md's exit line as this record
+revises it: charter III.E tuples, III.G levels and calibration, III.O
+eval items, III.J row 3's metrics half): met.** The revision comes
+first because it is the record's one act of judgment. The exit line
+as written named III.J row 3 whole, and the row's policy clause ("the
+planner lane receives the strongest tuples by policy") is not met:
+item 1 landed the offer's `tuples` scope as the scheduling input,
+item 2's `evals.md` deferred the ranking policy by name, and no later
+Phase 10 item re-homed it. Two honest courses exist from there —
+hold the phase open until a ranking policy lands, or revise the
+criterion in the plan's own text and say so — and this record takes
+the second: holding Phase 10 open would block Phase 12, the release
+gate and the migration promotion needs, on a quality policy that §5's
+reasoning for what must precede cutover does not reach. So Phase 10
+item 1's clause and Phase 10's exit line now say what landed and
+where the policy went (Phase 13 item 7), the row itself is recorded
+UNMET below, and what this record claims met is the revised line.
+Each of its terms is backed by named drills on
+`main`. *III.E tuples* (rows 6 and 7):
+`TestRunStartDeclaresTheTupleAndDriftIsOutOfGrant`,
+`TestDriftIsPerFieldAgainstTheHolder` and
+`TestSmallTeamQualifiedWorkerIsOfferedAndHeldToItsConfiguration`
+(#216); `TestDueOffersMintsAndDisqualifies`,
+`TestDueSpotChecksAgeFromTheDeclaredInstant`,
+`TestEvalLifecycleMintsDisqualifiesAndReTests` and
+`TestSmallTeamEvalQualifiesAndDisqualifiesThroughTheProductionMachinery`
+(#221). *III.G levels* (row 6): `TestLevelsAreOrderedAndTiered`,
+`TestLevelClaimedMustEqualTheLevelSupported`,
+`TestLevelShortOfTheTierRefuses`,
+`TestLevelsAreReappliedAlongTheMergeChain`,
+`TestSmallTeamCriticalContractReachesDoneAtL2` and
+`TestFleetExecutableCriticalContractReachesDoneAtL3` (#233 over
+#222's `TestTierTableMirrorsSpec`). *III.G calibration* (row 8):
+`TestRubricVerdictsAtTheTerminal`, `TestHumanVerdictAndTheDeferral`,
+`TestScorecardDerivationAtAdmission`,
+`TestCalibrationQualifiesTheVerifierAndBindsItsRenders`,
+`TestCalibrationOwesMintsDriftAndTheDefect` and
+`TestSmallTeamRubricContractsReachDone` (#238). *III.O eval items*
+(rows 1 and 2, and row 5's recorded half):
+`TestEvalCheckProvesTheKnownVerdict` and
+`TestCheckProvesTheKnownVerdict` (#221), the calibration drills above
+(#238), `TestTrajectoryCorpusIsTheRecorderScenario`,
+`TestTrajectoryCorpusReplaysGreenAndPlantedRowsDiverge` and
+`TestReplayClassifiesEveryDivergence` (#239). *III.J row 3's metrics
+half*: `TestReportLanesSection`,
+`TestReportLanesRatesAreNullOverNothing`,
+`TestRespecificationActivatesAtSeed4` and
+`TestPlanDigestsThroughTheBoundary` (#239). Every numbered item has a
+merged PR: 1 in #216, 2 in #221, 3 in #233 (over the tier
+vocabulary's #222), 4 in #238, 5 in #239, and the out-of-item auto-gc
+fix in #232.
+
+III.E is walked in full rather than the two rows the exit line
+scopes, the Phase 8 and 9 posture: every row is met by citation or
+recorded UNMET and routed, never glossed and never a fraction. Row 1
+(identity, credential, principal and runtime distinct; no claim
+exceeds what signatures prove): met by #100, with #216 making
+principal and runtime fields of the declared tuple, distinct from the
+signing key. Row 2 (keypair actors, standing events, the keyring
+projection, signatures on every proposal): met by #100 and #102. Row
+3 (kind an operator assertion): met by #100. Row 4 (enrollment is an
+identity plus a scoped credential; no inbound connectivity or
+registration server): met by #100 — `actor.enrolled` carries the
+public key and the operator's assertion and nothing else — with
+#145's wakeless poll-only drill showing a worker needs no inbound
+path. Row 5 (grants at admission; out-of-grant structural;
+operator-only refusals; no self-approval by key disjointness): met by
+#102, #135 and #137. Row 6 (qualification binds to the runtime tuple;
+grants cite tuples; adapters report; drift is out of grant): met by
+#216, with #221's mints feeding the same rule. Row 7 (scheduled
+spot-checks re-test active tuples; failures suspend grants
+attributably): met by #221 and, for verdict qualifications, #238;
+"scheduled" is what a routine invoking `seed eval act` supplies, as
+the maintenance pass's schedule is the deployment's. Row 8 (rotation
+and revocation drilled: standing ends, **claims reaped**, attribution
+preserved, sealed rotation for verifier keys): **UNMET, not claimed**
+— standing and attribution by #104, sealed rotation by #139, and the
+reap by nothing: the Phase 3 record routed it to Phase 5, Phase 5's
+exit did not land it, and the maintenance reap (#205) needs an
+interrupt answered by silence, which a revoked holder's `no_data`
+stream never supplies. Routed to Phase 12 item 1 as its follow-up
+card os-32d06c65: a reap corroborated by the revocation record alone,
+the one case where the ledger rather than the observation channel
+proves the holder can never exit its window. Row 9 (humans and
+machines distinguished in the roster; agent-only guardrails and
+human/agent metrics read it): **UNMET, not claimed** — distinguished
+by #100, #117 and #119; read by nothing, the tier table's human-review
+column (#238) routing to operator standing, not to kind; the Phase 3
+record routed it to Phases 8 and 11 and neither consumed it. Routed
+to Phase 12 item 4.
+
+III.G is walked in full likewise. Rows 1 and 2 (the chain; divergence
+induced and reconciled): met by #137, extended by #139 and #141. Row
+3 (verdict keys disjoint from implementing keys; override its own
+verb): met by #135 and #141. Row 4 (per-run isolation, no collisions,
+cleanup pass or fail, enumerable self-executed inputs): met by #135.
+Row 5 (receipts bind and recompute): met by #135 and #139. Row 6
+(levels defined, declared per tier, enforced, recorded; L2 or L3 for
+high-consequence tiers): met by #233 with #222. Row 7 (red lockout):
+met by #141. Row 8 (rubric verdicts, the human deferral, calibration
+with suspension on drift): met by #238, with its residual stated — no
+calibration definition ships, because the gold set is held outside
+the tree by design and committed to by digest. Row 9 (the protected
+surface; the governance root and its change process named in config;
+the capability audit in CI): **UNMET, not claimed** — the audit half
+is met by #139, #102 and #234, and the config half by nothing: no
+config under `next/` enumerates the protected surface or names the
+root's change process; the root is named by genesis (#83) and
+`next/**` is guarded today only by v1's guardrails as ordinary paths.
+Routed to Phase 12 item 4 beside III.L row 2, which shares its
+substance. Row 10 (evidence, receipts and verdicts queryable by
+contract, actor, time and outcome): **UNMET, not claimed** —
+contract, actor and outcome by #119's cache and the artifact store;
+time by nothing, since no table carries the event's `ts` and position
+is order, not a clock. A gap in the tree, so a card rather than a
+line: os-74ce2261.
+
+III.O and III.J row 3, walked. O.1 (eval contracts through the
+production machinery gate qualification; spot-checks scheduled): met
+by #221. O.2 (calibration with automatic suspension): met by #238.
+O.3 (the compromised-actor drill in CI): Phase 12 item 1's, planned as
+#241. O.4 (the standing drills in CI): met — projection rebuild #109,
+checkpoint verification #205, packet-resume with dead-end assertions
+#124 and #127, claim race storms #123, halt including the raw-git
+bypass under enforced #84 and #99, key revocation with keyring
+rotation #104 and #139, verdict/merge divergence #137, the hostile
+classification corpus #80, budget reservation races #149, curator
+poisoning #236, all under `make check`. O.5 (trajectory-prefix
+regression; simulation mode credential-free end to end): **UNMET, not
+claimed** — the recorded half by #239; simulation mode is Phase 12
+item 6's by the build plan, and `trajectories.md` said "Phase 13's"
+and "III.O row 3" (the drill's row) in three places each, corrected
+by this record along with the two wrong III.G row numbers in
+`verdicts.md` and `lanes.md` the walk found. J.3: **UNMET, not
+claimed**, the metrics half met by #239 and the policy clause routed
+to Phase 13 item 7 with the Phase 10 criterion revised to match, as
+the opening says.
+
+Two things this phase settled are worth carrying forward. A deferral
+by name is only as good as its re-homing: item 2's `evals.md`
+deferred tuple ranking "by name" and nothing in the phase picked it
+up, so a deferral names the item that owns it or it names nobody. And
+walking a pillar in full reaches rows the exit lines never mention:
+III.C, III.L, III.M and III.Q are on no exit line in the build plan
+at all, so this record puts them on Phase 12's, where `deps: all`
+makes the walk possible. The routing this record makes in the build
+plan's own text, the Phase 8 and 9 move: III.E row 8's reap arm to
+Phase 12 item 1 (os-32d06c65); III.E row 9's consumer half and III.G
+row 9's config half to Phase 12 item 4, with III.L on that exit line;
+III.O row 5's simulation half to Phase 12 item 6; III.J row 3's policy
+clause to a new Phase 13 item 7, with III.J row 3 on Phase 13's exit
+line beside row 2; and the four unowned pillars to Phase 12's exit
+line. Full III.E, III.G, III.O and III.J conformance is therefore
+claimable only once Phase 12 and Phase 13 both close. This exit
+record is card os-a026f5ea's task PR (an administrative card, not a
+Phase 10 item).
+
 ## Phase 11 — Curation and the flywheel (docs/next-build-plan.md Phase 11; deps: 9 ✓)
 
 - 11.1 staged curation stores (observations → hypotheses → validated
   lessons → policy) with grant-gated boundaries; workers append
-  candidates only — os-f30ee0d3 — **merged** (#234 against plan
+  candidates only — os-f30ee0d3 — **done** (#234 against plan
   #226: `internal/curation` with the three facts, `curation.deadend.recorded`
   on the contract inside the holder's window (the packet finding's
   shape plus the charter's failure condition and environment),
@@ -981,7 +1212,7 @@ PR (an administrative card, not a Phase 9 item).
   standing-only relay; `next/spec/curation.md` and six spec edits).
 - 11.2 promotion gate (≥2-trajectory support, applies-when,
   provenance, last-validated; adversarial evaluation; contested state;
-  lessons at claim time) — os-96850e5a — **merged** (#235 against
+  lessons at claim time) — os-96850e5a — **done** (#235 against
   plan #228: `applies_when` is a predicate over
   record-derivable fields (`routing`, which the fold now reads, `tier`,
   `paths`), one implementation for the boundary, the lint and the
@@ -1008,8 +1239,8 @@ PR (an administrative card, not a Phase 9 item).
   the unverified reported as such; `lesson_unverified` at evidence
   grade; the projection's `contested` stage and per-lesson
   `surfaces`).
-- 11.3 poisoning drill — os-e2f1ad23 — **in review** (task PR #236
-  against plan #229: `internal/admit/testdata/poisoning/`
+- 11.3 poisoning drill — os-e2f1ad23 — **done** (#236 against plan
+  #229: `internal/admit/testdata/poisoning/`
   declares forty-seven poisons over the thirty-two registered gates and
   five residuals; `poisoning_test.go` derives coverage from
   `curation.Gates()` pinned to the spec table both ways, scripts every
@@ -1023,8 +1254,8 @@ PR (an administrative card, not a Phase 9 item).
   drill" and `lanes.md` records III.K row 4 as met)
 - 11.4 expiry, retirement (evidence kept), rollback by revert; dead
   ends un-retired on environment change; staleness flags, dedup and
-  structure lint (III.K rows 6, 7 and 9) — os-0d537fbd — **in review**
-  (task PR against plan #230, stacked on item 3's: expiry derived at a
+  structure lint (III.K rows 6, 7 and 9) — os-0d537fbd — **done**
+  (#237 against plan #230, stacked on item 3's: expiry derived at a
   declared instant (`curation.Expired`, at-or-past) and never a fact;
   the fold keeps the latest admitted promotion per lesson path, keyed
   by path, and a re-promotion refuses at `promotion.revalidation`
@@ -1065,7 +1296,7 @@ PR (an administrative card, not a Phase 9 item).
   `actors.md`, `projections.md`, `maintenance.md`,
   `reconciliation.md` and `loop-verbs.md` follow, and the build plan
   names row 9 at Phase 11 item 4)
-- 11.5 flywheel v0 — os-9075c308 — **in review** (task PR against plan
+- 11.5 flywheel v0 — os-9075c308 — **done** (#240 against plan
   #231: `internal/flywheel` derives every done subject's shape from the
   record (the JCS form of routing, acceptance path, tier and verb
   sequence, `s-<12 hex>`), counts recurrence at `RecurringAfter` (2,
@@ -1128,176 +1359,58 @@ implementation (5(a) #171, 5(c) #173, 1a #188, 1c #191, 1b #192, 2
 out-of-item fixes (#175's task PR, os-9b3f3ef3, os-378e44f3, budget
 exhaustion's exit code #208), and the exit record above (card
 os-e6cdb3d9's task PR) are merged with every card closed.
-Phase 10 is under way: item 1 (os-8e53ffd9) merged (#216 against plan
-#215); item 2 (os-03e47abb) merged (#221 against plan #217), so
-`actor.qualified` is defined; the tier vocabulary (os-be12ac16) merged
-(#222 against plan #219); item 3 (os-99829835) is implemented against
-plan #223 and in review, so a verdict's level is computed from the
-records and held to its tier. The plans for item 4 (#225), item 5
-(#227) and Phase 11 items 1 (#226) and 2 (#228) are merged; the plans
-for Phase 11 items 3, 4 and 5 (#229, #230, #231) are in review. Item 3
-merged (#233); item 4 (os-2e34f66a, rubric verdicts and the
-calibration harness) is implemented against plan #225 and merged
-(#238); item 5 (os-6bd9ffff, the trajectory-prefix harness and the
-two lane-quality metrics) is implemented against plan #227 and in
-review. Phase 10's exit waits on that merge and on the recorded-half
-caveat of III.O row 3 (`trajectories.md`), whose simulation-mode half
-is Phase 13's.
-#215); item 2 (os-03e47abb) is implemented against plan #217 and in
-review, and `actor.qualified` is now defined. The frontier is item 2's
-merge, then item 3 (independence levels per tier), whose tier
-vocabulary is carded as os-be12ac16 with its plan in review (#219).
-Phase 11 has opened in parallel, depending on Phase 9 alone: item 1
-(os-f30ee0d3, the staged curation stores) is merged (#234 against
-plan #226), so the curator holds its proposal grant and the curation
-verbs exist; item 2 (os-96850e5a, the promotion gate, the
-contested state and delivery at claim time) is implemented against
-plan #228 and merged (#235); item 3 (os-e2f1ad23, the poisoning
-drill) is implemented against plan #229 and in review (#236); item 4
-(os-0d537fbd, expiry, retirement, dead-end applicability and bloat)
-is implemented against plan #230 on top of item 3 and merged (#237);
-item 5 (os-9075c308, the flywheel) is implemented against plan #231
-and in review. With item 5 merged, Phase 11's exit criteria are all
-met by their items, and the phase exit record is the next card.
-Phase 9 was under way: item 5's derivation and read merged (#171) and
-its loop verbs merged (#173), so the lane-facing surface is whole in
-shape — `seed situation` says what is true and what is owed, and the
-loop verbs are how a lane acts on it without hand-assembling protocol
-arguments. Two things qualify that. Part (b) is **partially met**: it
-carries no unread messages, which item 5's text now names as the
-remainder. And #173's post-merge review found three defects, carded
-as **os-9b3f3ef3** and fixed by this card's own task PR — derived
-arguments not re-derived across the optimistic retry (a rival
-reservation landing mid-flight was silently closed, the exact choice
-`soleOpenReservation` exists to refuse), a remote refusal stamped from
-the stale view, and a JSON null packet panicking the CLI — which also
-records in `next/spec/loop-verbs.md` that a derived value is
-re-examined against the refreshed tip and refused rather than
-replaced.
-**Phase 9 item 2 is done**: escalation with packet, question and
-minimal decision, planned in #197 and implemented by this card's task
-PR. `escalation.raised` (`ready`, `review` -> `blocked`) and
-`decision.recorded` (`blocked` -> `ready`) are the two new rows; from
-`in_progress` an escalation rides `claim.parked`, because what
-`lifecycle.md` pins is the set of verbs that may LEAVE that state, so
-the four deliberate exits stay exactly four and their existing pinning
-test is now the enforcement of that rule. `next/spec/escalation.md`
-carries the design. Raising is broad because raising grants nothing;
-answering is the fourth no-fallback operator row. While a question
-stands, `contract.unblocked` refuses and `contract.cancelled` must cite
-the escalation it answers. Waiting escalations surface as
-`escalation.pending` with the raising event's `ts`, because age is
-elapsed time and a position difference is event count wearing a clock's
-clothes.
+Phase 10 is done and closed: every plan (#215, #217, #219, #223,
+#224, #225, #227), every implementation (10.1 #216, 10.2 #221, the
+tier vocabulary #222, 10.3 #233, 10.4 #238, 10.5 #239), the
+out-of-item auto-gc fix (#232), and the exit record above (card
+os-a026f5ea's task PR) are merged with every card closed.
 
-**Next action: Phase 10 item 1** — runtime tuples in enrollment and
-grants, adapters reporting the provisioned tuple, drift as
-out-of-grant. The derivation, stated rather than read off a summary:
-Phase 9's items 1, 2, 3, 4, 5(a), 5(b), 5(c) and the role-grant gap
-each have a merged PR (#188/#191/#192, #200, #205, #207, #171, #211,
-#173, #212), the exit record above walks III.J and routes its two
-unmet rows, so nothing in Phase 9 remains to claim. A correction
-worth keeping, because it was made here and then unmade: an earlier revision of this line claimed the phase was complete
-once items 3 and 4 merged. It was not. **Item 5(b) had no
-implementation**, which the build plan and this file both said in other
-paragraphs while the frontier line said otherwise — a frontier is only
-useful if it is the same claim as the rest of the document. Assembling
-the exit record is what surfaced it, one item too late.
+Phase 11's five items are merged (#234, #235, #236, #237, #240 against
+plans #226, #228, #229, #230, #231), so its exit criteria are met by
+their items; the Phase 11 exit record is carded as os-efb2a099 with
+its plan merged (#243), and its task PR is what closes the phase.
 
-Item 4 was os-6a08b166's task
-PR, and with item 3 (#205) every numbered item in the phase had an
-implementation except 5(b). Both modes run the full loop to `done` on the remote
-posture, wakeless, with every convergence arm exercised. Three things
-this card settled are worth carrying forward.
+Phase 12 declares `deps: all`, so its gate opens when the Phase 11
+exit record merges; until then its cards are filed and planned, and
+any implementation opens as a draft PR that CI's plan-at-merge-base
+rule keeps structurally ordered (decisions/0003). Item 1, the
+compromised-actor drill (os-465e356e), is planned in #241 (merged: the
+drill builds on the shipped `seed-admit` hook rather than a second one,
+and unauthorized pushes to code refs are exercised, not exempted) and
+names its follow-up card
+os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are carded
+and planned: item 2, the forge-hosted admission service and the
+protections reconciler (os-5c8a312c, plan #244 merged, implementation
+in progress); item 3, checkpoint trust with the replay-equals-genesis
+proof and performance budgets, III.C row 4's contention benchmark
+taken there (os-7508ab9e, plan #246 merged); item 4, the preseed with
+agent-only guardrails and the protected surface in config
+(os-0d4f2af3, plan #247 merged); item 5, migration from a real export
+of this repository (os-cf13fb51, plan #248 in review); item 6, docs
+generation, the handbook and simulation mode, which also takes the
+exit line's week-long accelerated backlog (os-16e55c11, plan #249
+merged). All six extend one declaration, `seed.json`; whichever lands
+later merges the struct.
 
-- **The terminal surface was missing, not merely local-only.**
-  `merge.requested` and `merge.observed` had no CLI verb at all,
-  existing only through `ledger append`, which runs no rules. All three
-  terminal verbs (with `verdict render --remote`) now reach both
-  postures, so the chain's last steps are drivable by a lane.
-- **The mode is purely the identity plan.** Both modes run remote:
-  fleet needs it for contention, and small-team could never have run
-  locally, because `claim take` is refused off the remote and a claim
-  is the loop's first act. Neither clause of III.J mentions transport.
-- **III.J's closing row is met, and the gap it recorded is CLOSED**
-  (os-d6a52784, plan #210). No shipped manifest granted `supervise`,
-  `observer` or — found in review, the worst of the three since it has
-  no operator fallback — `sealer`. The charter's six lanes (§II.11) are
-  a closed enumeration, and both missing parts already exist in the
-  charter outside it: the supervisor is §II.9 and the observer is §8's
-  governed observer. So they ship as **roles**, manifests of a required
-  `kind` beside the six, validated by the same code, refused by name if
-  they claim to be a seventh lane; `sealer` rides the verifier, whose
-  keyring the sealed bodies are already encrypted to. The mode fixtures
-  now provision both roles **from their manifests** rather than staging
-  them as identities the test invented, which is what makes the closure
-  real rather than reported. The drill whose absence let this reach
-  Phase 9 reads the capability table's own source and, run against the
-  pre-fix tree, names **six** ungranted verbs across the three
-  capabilities — three more than the card had found.
+**Next action: implement Phase 12 in item order — item 1 against
+#241 and item 2 against #244 are in progress; items 3, 4 and 6 follow
+against their merged plans, and item 5 once #248 merges** —
+implementation PRs as drafts until the Phase 11 exit record
+(os-efb2a099) merges and the phase gate opens (decisions/0003). The derivation, stated rather than read off a
+summary: every Phase 10 item has a merged PR and the exit record above
+walks III.E, III.G, III.O and III.J row 3 and routes what it found
+unmet, so nothing in Phase 10 remains to claim; every Phase 11 item is
+merged and its exit record is planned; every Phase 12 item is carded
+and planned and none is implemented.
 
-Item 1 is COMPLETE: 1a
-merged (#188), 1c merged (#191), 1b merged (#192), with its four review
-findings landing as os-378e44f3. III.J's first row is met; its second is
-**two-thirds met** and the spec says so — intents and tool output are
-covered, mirrors are not, because `request.*` has zero rows in the
-transition table.
-
-Item 1's four ergonomic obligations are now all real rather than
-declared: the one position-stamped read each manifest names (and, since
-1c, names in the posture the lane can actually claim in), the loop verbs
-as the loop's acts (enforced by 1c's act gate, which refuses anything
-`acts_through` does not declare), liveness riding the loop's own steps
-(emitted as a side-effect of a declared act that succeeded, keyed to the
-lane's actor and fence), and the one-inbox doctrine (the loop acts on
-its read, never on a wake).
-
-Item 2 merged (#200): escalation with packet, question and decision,
-carrying the refusal it answers.
-
-Item 3 is THIS card's task PR — `seed maintain run`, one unattended
-pass (reap, lint, file, rebuild, checkpoint) with no scheduler and no
-wake channel. Three things about it are worth carrying forward rather
-than rediscovering:
-
-- **The reap answers an unanswered request, never a timeout.**
-  `observations.md` says Seed holds no lease, so there is no expiry to
-  elapse, and the channel is declared lossy — a dropped stream and dead
-  work look identical from outside. A reap therefore needs the
-  `expired`/`wedged` classification BESIDE an admitted `run.interrupted`
-  on the active fence (or a `wedge.declared`), which is exactly the
-  force path `executors.md` named this loop as the consumer of.
-  `no_data` carries no reap path at all, however old the claim.
-- **The pass consumes the COMPLETE reconcile result.** The
-  evidence-grade checks — attested heads, rewritten targets, receipt
-  retrievability — moved out of `cmd/seed` into `internal/reconcile`,
-  because a pass built on the record-derived half alone reports clean
-  over a rewritten target: green, and omitting the very divergence the
-  charter asks this loop to reconcile.
-- **Checkpoints persist a snapshot a fresh reader starts from**, its
-  hash and location in a versioned payload the boundary validates,
-  the materialization written to the artifact store first. Shape at the
-  door, contents at the read: admission reads the ledger alone, so
-  retrievability is the reader's check, drilled by a round trip.
-
-Item 4 (small-team and fleet fixtures, run wakeless and asserting
-one-retry convergence) is planned in #204, which also records what it
-found: `verdict render` defines no `--remote` flag, so a fleet's
-verifier lane cannot act against the shared ledger. That is carded as
-**os-a00b6950** rather than widened into a fixtures card, and III.J's
-closing row is therefore met for small-team mode and met-to-submission
-for fleet until it lands.
-The III.I remainder rides the phases it was routed to: Phase 11 item
-2 carries claim-time lesson surfacing, and Phase 13 carries the
-machine-protocol surface and platform parity, with III.I on its exit
-line — full III.I conformance closes only when both do.
-**The destination is promotion (spin-out)**, now defined:
-`docs/next-build-plan.md` §5 (merged #169, card os-768361cc) makes
-it two steps — Seed coordinating this repository's own development,
-then becoming what new users clone — with seven criteria, Phases 0
+**The destination is promotion (spin-out)**, defined in
+`docs/next-build-plan.md` §5 (merged #169, card os-768361cc) as two
+steps — Seed coordinating this repository's own development, then
+becoming what new users clone — with seven criteria, Phases 0
 through 12 required and Phase 13 alone following, and **neither
 cutover autonomously decidable**: spin-out IS the entry-point
 switch, so both are escalations. That section is the authority; no
 promotion criteria are restated here.
+
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

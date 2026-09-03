@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "task": "os-a026f5ea",
+  "merge_base": "03c23b30e7c0ce4d54a4706a99dc41c033018572",
+  "head": "b7fdd237ba95557dd75fc9232b6c12d8a117c96f",
+  "plan_path": "plans/os-a026f5ea.md",
+  "plan_sha256": "015a5629b50adf868bf0de533aa32f7a4581216914fa2f2ed3f932c2e2746146",
+  "diff_files": [
+    "docs/next-build-plan.md",
+    "next/docs/progress.md",
+    "next/spec/lanes.md",
+    "next/spec/trajectories.md",
+    "next/spec/verdicts.md"
+  ],
+  "diff_sha256": "2c391bdfa66d69fbd76e80af73bfaa8e8c7fd928fece795a62175367d9a20f69",
+  "validation": [
+    {
+      "cmd": "export PATH=/home/shaun/go-toolchain/go/bin:$PATH",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    },
+    {
+      "cmd": "scripts/seed validate",
+      "exit": 0
+    },
+    {
+      "cmd": "git diff --name-only origin/main | grep -vE '^next/docs/progress.md$|^docs/next-build-plan.md$|^next/spec/(trajectories|lanes|verdicts).md$|^receipts/os-a026f5ea.json$' | grep -q . \u0026\u0026 echo SCOPE-VIOLATION || echo scope ok",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
