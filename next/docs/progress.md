@@ -1295,9 +1295,43 @@ Phase 10 item).
   `actors.md`, `projections.md`, `maintenance.md`,
   `reconciliation.md` and `loop-verbs.md` follow, and the build plan
   names row 9 at Phase 11 item 4)
-- 11.5 flywheel v0 (recurring-shape detection from the ledger, the
-  drafted workflow, mock validation, the proposal PR, the conversion
-  rate) — os-9075c308 — plan #231 (merged); task PR #240 **in review**
+- 11.5 flywheel v0 — os-9075c308 — **done** (#240 against plan
+  #231: `internal/flywheel` derives every done subject's shape from the
+  record (the JCS form of routing, acceptance path, tier and verb
+  sequence, `s-<12 hex>`), counts recurrence at `RecurringAfter` (2,
+  pinned to the spec's sentence), drafts one deterministic v1 workflow
+  per shape from the gated acceptance's own validation commands (one
+  run step per command in order, the role steps for the sequence's
+  judgment points, inputs exactly the varying fields, prompts over
+  inputs and artifacts only; `ungated` and `divergent` refused; golden
+  bytes committed), validates a draft through the v1 engine's
+  `workflow validate` and `workflow run --mock` from a detached staging
+  worktree that leaves nothing behind (the engine's refusal naming
+  stage, step and finding; `name_taken` before staging; the drill
+  skipping by name without the engine), folds `workflow.proposed`
+  (`curate` alone, on the shape id, citing at least two distinct
+  admitted done occurrences of the shape, a path directly under
+  `.seed/workflows/`, no standing proposal, a passed repair cited and an
+  open one refusing `repair_open`) and `workflow.merged` (`observer` or
+  `operator`, citing the standing proposal's file) re-judged at their
+  positions with the grant, and derives the report's `flywheel` section
+  (version "14": recurring, proposed, merged, repairs filed and done,
+  the rate over recurring); the repair contract (D7) filed under the
+  dispatcher's key at `trivial` and `small` on the shape's routing with
+  its acceptance under `next/flywheel/<shape>/` at the branch commit
+  quoting the finding and carrying the engine's two commands, the
+  proposal after its verdict validating the branch's file as it stands;
+  `seed flywheel shapes | draft [--validate] | propose | repair |
+  observe | status`, the proposal on `seed/flywheel-<shape>` and never
+  on main; drilled in the package, at the boundary (every gate, the raw
+  push, the curator's reach joined into the residual drill), in the
+  keyring, the projection, the terminal, and end to end in the
+  small-team fixture (the chore worked three times converts; the
+  planted harness break is repaired on the branch, the verifier's
+  render runs the two commands green, the proposal cites the contract
+  and one merge closes both); `next/spec/flywheel.md` new, with
+  `protocol.md`, `projections.md`, `lanes.md`, `curation.md`,
+  `actors.md` and `envelope.md` following)
 
 ## Frontier
 
@@ -1330,22 +1364,19 @@ tier vocabulary #222, 10.3 #233, 10.4 #238, 10.5 #239), the
 out-of-item auto-gc fix (#232), and the exit record above (card
 os-a026f5ea's task PR) are merged with every card closed.
 
-Phase 11 is under way, in parallel with Phase 10 as the build plan
-allows (both declare `deps: 9`): items 1 through 4 are merged (#234,
-#235, #236, #237 against plans #226, #228, #229, #230); item 5, the
-flywheel (os-9075c308), is implemented against plan #231 and in
-review as #240; the Phase 11 exit record is carded as os-efb2a099 and
-blocks on #240's merge, the way the Phase 9 record blocked on #212.
+Phase 11's five items are merged (#234, #235, #236, #237, #240 against
+plans #226, #228, #229, #230, #231), so its exit criteria are met by
+their items; the Phase 11 exit record is carded as os-efb2a099 with
+its plan merged (#243), and its task PR is what closes the phase.
 
 Phase 12 declares `deps: all`, so its gate opens when the Phase 11
 exit record merges; until then its cards are filed and planned, and
 any implementation opens as a draft PR that CI's plan-at-merge-base
 rule keeps structurally ordered (decisions/0003). Item 1, the
-compromised-actor drill (os-465e356e), is planned in #241, under
-revision for two review findings (the drill builds on the shipped
-`seed-admit` hook rather than a second one; unauthorized pushes to
-code refs are exercised, not exempted), and names its follow-up card
-os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are carded
+compromised-actor drill (os-465e356e), is planned in #241 (merged: the
+drill builds on the shipped `seed-admit` hook rather than a second one,
+and unauthorized pushes to code refs are exercised, not exempted) and
+names its follow-up card os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are carded
 and planned, their plan PRs in review: item 2, the forge-hosted
 admission service and the protections reconciler (os-5c8a312c, #244);
 item 3, checkpoint trust with the replay-equals-genesis proof and
@@ -1358,15 +1389,16 @@ takes the exit line's week-long accelerated backlog (os-16e55c11,
 #249). All six extend one declaration, `seed.json`; whichever lands
 later merges the struct.
 
-**Next action: drive the Phase 12 plan PRs (#241, #244, #246, #247,
-#248, #249) through review to merge, then implement in item order,
-item 1 first** — as drafts until the Phase 11 exit record merges and
-the phase gate opens (decisions/0003). The derivation, stated rather
-than read off a summary: every Phase 10 item has a merged PR and the
-exit record above walks III.E, III.G, III.O and III.J row 3 and routes
-what it found unmet, so nothing in Phase 10 remains to claim; Phase
-11's one open item is in review with its exit record carded; every
-Phase 12 item is carded and planned and none is implemented.
+**Next action: implement Phase 12 item 1 against its merged plan
+(#241), and drive the item 2–6 plan PRs (#244, #246, #247, #248, #249)
+through review to merge** — implementation PRs as drafts until the
+Phase 11 exit record (os-efb2a099) merges and the phase gate opens
+(decisions/0003). The derivation, stated rather than read off a
+summary: every Phase 10 item has a merged PR and the exit record above
+walks III.E, III.G, III.O and III.J row 3 and routes what it found
+unmet, so nothing in Phase 10 remains to claim; every Phase 11 item is
+merged and its exit record is planned; every Phase 12 item is carded
+and planned and none is implemented.
 
 **The destination is promotion (spin-out)**, defined in
 `docs/next-build-plan.md` §5 (merged #169, card os-768361cc) as two

@@ -22,6 +22,11 @@
       "consequence": "bounded by the standing retirement and its environment: admits only over an admitted retirement and in an environment other than the one it named, so a persuaded curator can restore a dead end to the listing and nothing more; the dead end's own evidence never changed (next/spec/curation.md)"
     },
     {
+      "verb": "workflow.proposed",
+      "why_admitted": "proposing a validated workflow for a recurring shape is the curator's flywheel act, on the same propose-everything, approve-nothing posture as the lesson proposal (plans/os-9075c308.md D4)",
+      "consequence": "bounded by the record and the gates: the proposal cites at least two admitted done occurrences folding to its shape, recomputed from the record, names a file directly under the registry, stands alone for its shape, and cites a passed repair where one exists; the file reaches main only through a PR the governance root reviews and the merge observation is the observer's, so a persuaded curator can propose a workflow the trajectories already ran, drafted from gated acceptance commands, and nothing more (next/spec/flywheel.md)"
+    },
+    {
       "verb": "escalation.raised",
       "why_admitted": "any lane may raise blocked(needs-you) per the charter; the curator joined the row with its proposal grant",
       "consequence": "freezes a contract until a human answers: denial of progress, never escalation of authority, attributable and reversible (next/spec/escalation.md)"
