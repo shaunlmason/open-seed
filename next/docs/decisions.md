@@ -3104,6 +3104,52 @@ not loosened to raise the number.
   2m30s on a 4-core host, which was most of every `make check` in CI.
   (CI/CD performance PR)
 
+## Phase 12 item 6 — docs generation, the handbook, and simulation mode (os-16e55c11, plan #249)
+
+**The generated docs read the same tables the machinery does, and the
+exit-codes doc parses the envelope's own constants.** `internal/docs`
+renders lifecycle/capabilities/exit-codes/per-lane from `transitions.json`,
+`admit.CatalogVerbs()` + `keyring.AcceptedCapabilities`, the parsed
+`envelope` `Exit*`/`Code*` constants, and `lane.Resolve`. There is no
+runtime enumeration of Go constants, and inventing a hand-kept exit list
+is the drift the card forbids, so the generator parses the envelope
+source with `go/ast` — a planted constant change fails `docs check`
+(`docs_drift`, a new refinement `envelope.CodeDocsDrift` of exit 28). The
+refinement codes become exported `Code*` constants: that is the
+"refinement registry" the plan names, enumerable from the same parse and
+cited by the `Fail` call sites.
+
+**The reference decider is partial — the frame does not determine the
+loop's act.** D4 posits a decider that re-runs at recorded points and
+agrees with the corpus. But the recorded corpus's loop-act points are not
+a function of `trajectory.Frame`: identical frames (implementer pos44 and
+pos53) recorded different acts, because the loop's per-iteration choice
+depends on internal state the frame does not carry — the very reason #239
+recorded frames rather than deciders. A stateless decider cannot
+reproduce the corpus, and re-recording it would break the five existing
+classes' planted-row drills (a retention requirement). So `decider.Scripted`
+decides only where the frame determines the act (a claimable contract in
+`ready` is taken) and abstains elsewhere; `replay --decider scripted`
+passes on the existing corpus (agree where determinate, abstain where
+not) and `choice_diverged` catches a decider that would choose a
+different act at a determinate point — the behavioral regression III.O
+row 5 wanted, without regenerating the corpus.
+
+**`claim take` is remote-only, so both simulation postures run on a bare
+remote.** The plan's D3 split the postures as "a bare remote for
+enforced-self-hosted; a local ledger otherwise", but the loop's first act
+refuses off a remote (an exclusive verb, online-only). So cooperative and
+enforced both build a bare remote; enforced additionally installs the
+`seed-admit` pre-receive hook. And the base clock defaults to the real
+wall time, because admission stamps each event's ts with it and an
+offer's expiry must sit past that — the accelerated `--days` instant
+feeds only the reporting surfaces.
+
+**Only planner and implementer are loop lanes.** The plan's "runs every
+lane's loop through loop.Driver" is imprecise: only those two declare
+`acts_through`. The simulation drives them through `internal/loop` and
+the other six lanes/roles through their ordinary CLI verbs, all through
+the one credential-free `loopVerbs` seam.
 ## Phase 13 item 1 — racing mode (os-56bee171, plan #256)
 
 **A racing claim is a fact on an `in_progress` subject, never a table
