@@ -56,11 +56,9 @@ func (c RemoteWorker) Provision(spec ProvisionSpec) (Run, error) {
 	if c.ArtifactDir == "" {
 		return nil, fmt.Errorf("the remote-worker adapter needs the artifact store")
 	}
-	store := artifact.Open(c.ArtifactDir)
-	digest, err := store.Put(spec.Packet)
-	if err != nil {
-		return nil, fmt.Errorf("storing the packet for the worker: %w", err)
-	}
+	// The resolved-against-admitted check runs BEFORE any side effect, so
+	// a refused provision stores no packet and appends no pickup — the
+	// local adapter's "a refused provision leaks nothing" principle.
 	resolve := func(declared Tuple) Tuple {
 		out := declared
 		out.Harness = RemoteHarness
@@ -75,6 +73,11 @@ func (c RemoteWorker) Provision(spec ProvisionSpec) (Run, error) {
 		}
 	} else {
 		resolved = resolve(Tuple{})
+	}
+	store := artifact.Open(c.ArtifactDir)
+	digest, err := store.Put(spec.Packet)
+	if err != nil {
+		return nil, fmt.Errorf("storing the packet for the worker: %w", err)
 	}
 	// The pickup: the worker reads the packet digest and the base from
 	// the stream it already orients on. Nothing is pushed to the worker.
