@@ -333,7 +333,7 @@ func reportView(records []*event.Record) (*ReportView, error) {
 		view.Reconciliation = rec
 		metrics := flywheel.Derive(records, fold)
 		view.Flywheel = &metrics
-		view.Lanes = lanesSection(fold)
+		view.Lanes = lanesSection(records, fold)
 		view.Lanes.ByKind = lanesByKind(records, fold)
 	}
 	if curation.Fold(records).Any() {
@@ -390,7 +390,7 @@ func requestsSection(reqs []transition.IngressFact, records []*event.Record) *Re
 // lanesSection derives the lane-quality metrics from the fold
 // (plans/os-6bd9ffff.md D6): re-triage over subjects with a
 // specification, unedited approvals over the measured ones.
-func lanesSection(fold *transition.Fold) *ReportLanes {
+func lanesSection(records []*event.Record, fold *transition.Fold) *ReportLanes {
 	sec := &ReportLanes{}
 	for _, subject := range fold.Subjects() {
 		s, ok := fold.State(subject)
@@ -418,15 +418,18 @@ func lanesSection(fold *transition.Fold) *ReportLanes {
 	}
 	sec.Dispatcher.RetriageRate = reportRate(sec.Dispatcher.Respecified, sec.Dispatcher.Specified)
 	sec.Planner.UneditedRate = reportRate(sec.Planner.Unedited, sec.Planner.Unedited+sec.Planner.Edited)
-	sec.Planner.Strongest = strongestOffered(fold)
+	sec.Planner.Strongest = strongestOffered(records, fold)
 	return sec
 }
 
-// strongestOffered is the tuples scope of the latest applied offer
+// strongestOffered is the tuples scope of the latest AUTHORIZED offer
 // that carries one, across every subject: the configurations the
-// planner lane last received by policy (next/spec/ranking.md). Nil
-// when no offer has carried a scope.
-func strongestOffered(fold *transition.Fold) []tuple.Tuple {
+// planner lane last received by policy (next/spec/ranking.md). The
+// tolerant fold records a raw-pushed offer as a fact, so the signer's
+// supervise standing is replayed to the offer's own position before
+// it counts, the same check the list surface makes (review finding on
+// the task PR). Nil when no such offer exists.
+func strongestOffered(records []*event.Record, fold *transition.Fold) []tuple.Tuple {
 	latest := -1
 	var out []tuple.Tuple
 	for _, subject := range fold.Subjects() {
@@ -435,13 +438,24 @@ func strongestOffered(fold *transition.Fold) []tuple.Tuple {
 			continue
 		}
 		for _, o := range s.Offers {
-			if len(o.Tuples) > 0 && o.Pos > latest {
-				latest = o.Pos
-				out = append([]tuple.Tuple(nil), o.Tuples...)
+			if len(o.Tuples) == 0 || o.Pos <= latest || !offerAuthorized(records, o) {
+				continue
 			}
+			latest = o.Pos
+			out = append([]tuple.Tuple(nil), o.Tuples...)
 		}
 	}
 	return out
+}
+
+// offerAuthorized replays the keyring to the offer's own position and
+// asks whether the signer held the supervise boundary there.
+func offerAuthorized(records []*event.Record, o transition.OfferFact) bool {
+	if o.Pos < 0 || o.Pos >= len(records) {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:o.Pos])
+	return err == nil && ring != nil && ring.HasAnyCapability(o.Signer, keyring.AcceptedCapabilities(transition.OfferPublishedVerb))
 }
 
 // reportRate is a ratio as a fixed three-decimal string, null at a

@@ -307,6 +307,33 @@ func TestAgreementRefinesOnlyWithGold(t *testing.T) {
 	if top.Agreement == nil || *top.Agreement != "0.900" || top.Evidence[0].Agreement == nil || *top.Evidence[0].Agreement != "0.900" {
 		t.Fatalf("the agreement is carried on the entry and its evidence: %+v", top)
 	}
+	// Two means that round to one display string are still two means:
+	// the higher ranks first even when the lower is the newer pass
+	// (review finding on the task PR).
+	t.Run("unrounded means", func(t *testing.T) {
+		s := newStand(t)
+		hi, lo := tupleJSON("m/hi", "v"), tupleJSON("m/lo", "v")
+		s.next("root", keyring.VerbGranted, s.fps["v"], `{"capability": "verdict", "tuple": `+hi+`}`)
+		s.next("root", keyring.VerbGranted, s.fps["v"], `{"capability": "verdict", "tuple": `+lo+`}`)
+		s.qualify("v", keyring.CapVerdict, hi, "cal-hi", 30)
+		s.qualify("v", keyring.CapVerdict, lo, "cal-lo", 31) // newer
+		close := func(contract string, verdict int) (float64, bool) {
+			switch contract {
+			case "cal-hi":
+				return 0.90049, true
+			case "cal-lo":
+				return 0.90041, true
+			}
+			return 0, false
+		}
+		r := s.derive(close)
+		if got := order(r, keyring.CapVerdict); got != "m/hi:1 m/lo:1" {
+			t.Fatalf("the unrounded mean orders, not the display string: %s", got)
+		}
+		if a, b := r.Capabilities[keyring.CapVerdict][0].Agreement, r.Capabilities[keyring.CapVerdict][1].Agreement; a == nil || b == nil || *a != *b {
+			t.Fatalf("the display strings round equal: %v %v", a, b)
+		}
+	})
 	// A pass the gold cannot score sorts after the scored ones.
 	s.qualify("v", keyring.CapVerdict, tupleJSON("m/3", "v"), "cal-3", 22)
 	s.next("root", keyring.VerbGranted, s.fps["v"], `{"capability": "verdict", "tuple": `+tupleJSON("m/3", "v")+`}`)

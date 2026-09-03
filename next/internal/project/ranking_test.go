@@ -138,4 +138,12 @@ func TestRankingProjectionAndTheReportsStrongest(t *testing.T) {
 	if got := rep.Lanes.Planner.Strongest; len(got) != 1 || got[0].Model != "m/1" {
 		t.Fatalf("the report carries the latest scoped offer's tuples: %+v", got)
 	}
+	// A raw-pushed offer by a key holding no supervise grant folds as a
+	// fact and counts for nothing here (review finding on the task PR).
+	add(worker, version.Seed3, "offer.published", "c-1", `{"eligibility": {"capabilities": ["claim"], "tuples": [`+two+`]}, "expires": "2027-01-01T00:00:00Z"}`)
+	out7 := rebuild()
+	readView(t, out7, "report", project.ReportFile, &rep)
+	if got := rep.Lanes.Planner.Strongest; len(got) != 1 || got[0].Model != "m/1" {
+		t.Fatalf("an unauthorized offer's scope is not the planner's strongest: %+v", got)
+	}
 }

@@ -77,6 +77,11 @@ type Entry struct {
 	Holders   []string    `json:"holders"`
 	Evidence  []Evidence  `json:"evidence"`
 	Agreement *string     `json:"agreement"`
+	// mean is the unrounded agreement the order reads (review finding
+	// on the task PR): two means that round to one display string are
+	// still two means, and the higher ranks first.
+	mean    float64
+	hasMean bool
 }
 
 // Ranking is one derivation: the declared instant it was derived at,
@@ -276,7 +281,8 @@ func entry(capability string, fs []fact, holders []string, agreement func(string
 	}
 	e.Score = len(e.Evidence)
 	if scored > 0 {
-		mean := fmt.Sprintf("%.3f", sum/float64(scored))
+		e.mean, e.hasMean = sum/float64(scored), true
+		mean := fmt.Sprintf("%.3f", e.mean)
 		e.Agreement = &mean
 	}
 	return e, true
@@ -294,12 +300,12 @@ func sortEntries(entries []Entry, refined bool) {
 		}
 		if refined {
 			switch {
-			case a.Agreement != nil && b.Agreement == nil:
+			case a.hasMean && !b.hasMean:
 				return true
-			case a.Agreement == nil && b.Agreement != nil:
+			case !a.hasMean && b.hasMean:
 				return false
-			case a.Agreement != nil && b.Agreement != nil && *a.Agreement != *b.Agreement:
-				return *a.Agreement > *b.Agreement
+			case a.hasMean && b.hasMean && a.mean != b.mean:
+				return a.mean > b.mean
 			}
 		}
 		if c := compareTS(a.Latest, b.Latest); c != 0 {
