@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-48df10a2",
-  "merge_base": "2ebc938ca95a7d2f7d26815615ece1ee620e8c68",
-  "head": "df6a0d6bfb7e891bd15a632524f0382e44a0bbd2",
+  "merge_base": "160bed4c627d768424cde5a6d6e5df5ed14cc3a1",
+  "head": "ebd84b3e3e8b7d7b75892f6e2dd3a457576acd79",
   "plan_path": "plans/os-48df10a2.md",
   "plan_sha256": "5d9daea9a55fc2541b1270117c4dfe816157ad3c60f9411aa961a252fff6aef8",
   "diff_files": [
@@ -10,31 +10,18 @@
     "flavors/core-Makefile",
     "memory/DEADENDS.md",
     "memory/LEARNINGS.md",
-    "next/cmd/seed/affordances.go",
-    "next/cmd/seed/audit_test.go",
-    "next/cmd/seed/doctor.go",
     "next/cmd/seed/federation.go",
-    "next/cmd/seed/floor_cli_test.go",
     "next/cmd/seed/import.go",
     "next/cmd/seed/import_cli_test.go",
     "next/cmd/seed/loop.go",
     "next/cmd/seed/main.go",
-    "next/cmd/seed/maintain.go",
-    "next/cmd/seed/offer.go",
-    "next/cmd/seed/plan.go",
-    "next/cmd/seed/preseed.go",
-    "next/cmd/seed/preseed_cli_test.go",
     "next/cmd/seed/racing_cli_test.go",
-    "next/cmd/seed/remote.go",
     "next/cmd/seed/remote_test.go",
     "next/cmd/seed/request.go",
     "next/cmd/seed/request_cli_test.go",
-    "next/cmd/seed/seal.go",
     "next/cmd/seed/situation.go",
-    "next/cmd/seed/verdict.go",
     "next/docs/decisions.md",
     "next/docs/progress.md",
-    "next/fixtures/deployment/seed.json",
     "next/fixtures/import/open-seed/README.md",
     "next/fixtures/import/open-seed/export.json",
     "next/fixtures/import/open-seed/regenerate.sh",
@@ -45,7 +32,6 @@
     "next/internal/admit/imported_test.go",
     "next/internal/admit/injection_request_test.go",
     "next/internal/admit/obligation_sweep_test.go",
-    "next/internal/admit/policy_test.go",
     "next/internal/admit/racing_test.go",
     "next/internal/admit/request_test.go",
     "next/internal/admit/soundness_test.go",
@@ -72,17 +58,11 @@
     "next/internal/maintain/maintain.go",
     "next/internal/maintain/racing_test.go",
     "next/internal/obligation/obligation.go",
-    "next/internal/plan/plan.go",
     "next/internal/posture/posture.go",
     "next/internal/posture/posture_test.go",
-    "next/internal/project/cache.go",
     "next/internal/project/contracts.go",
-    "next/internal/project/flywheel_test.go",
-    "next/internal/project/knowledge_test.go",
-    "next/internal/project/lanes_report_test.go",
     "next/internal/project/lifecycle_views_test.go",
     "next/internal/project/racing_view_test.go",
-    "next/internal/project/refusals_report_test.go",
     "next/internal/project/report.go",
     "next/internal/project/requests_view_test.go",
     "next/internal/refusal/refusal.go",
@@ -101,27 +81,25 @@
     "next/spec/lifecycle.md",
     "next/spec/maintenance.md",
     "next/spec/obligations.md",
-    "next/spec/plans.md",
     "next/spec/postures.md",
     "next/spec/projections.md",
     "next/spec/protocol.md",
     "next/spec/requests.md",
-    "next/spec/tiers.md",
     "next/trajectories/lanes/dispatcher.json"
   ],
-  "diff_sha256": "fab792d47582c3b56afa842f0256366c060a239739d2d6a439dfb71610cb49a0",
+  "diff_sha256": "400004960fcb2922e55514b252aed9f807da72656bb619e2ed38b4c82f37d290",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/obligation/ ./internal/project/ ./internal/posture/ ./cmd/seed/ -run 'Request|Federation|Injection|Dispatcher|Obligation' -count=1",
-      "exit": 127
+      "exit": 0
     },
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
-      "exit": 127
+      "exit": 0
     },
     {
       "cmd": "make check",
-      "exit": 2
+      "exit": 0
     }
   ],
   "generated_by": "local"

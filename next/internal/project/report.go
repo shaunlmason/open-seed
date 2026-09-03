@@ -333,10 +333,12 @@ func reportView(records []*event.Record) (*ReportView, error) {
 		stages := DeriveKnowledge(records).Stages
 		view.Knowledge = &stages
 	}
-	if table, err := transition.Default(); err == nil {
-		if reqs := table.FoldRecords(records).Requests(); len(reqs) > 0 {
-			view.Requests = requestsSection(reqs, records)
-		}
+	table, err := transition.Default()
+	if err != nil {
+		return nil, err
+	}
+	if reqs := table.FoldRecords(records).Requests(); len(reqs) > 0 {
+		view.Requests = requestsSection(reqs, records)
 	}
 	return &view, nil
 }

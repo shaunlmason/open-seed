@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
@@ -64,13 +65,16 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("%s on %s refused: %s (next/spec/requests.md)", e.Verb, e.Subject, e.Reason)
 }
 
+// strict decodes exactly one JSON object into the struct pointer
+// `into`, refusing unknown fields and anything after the object but
+// whitespace.
 func strict(raw []byte, into any) error {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&into); err != nil {
+	if err := dec.Decode(into); err != nil {
 		return err
 	}
-	if dec.More() {
+	if _, err := dec.Token(); err != io.EOF {
 		return fmt.Errorf("trailing data after the payload")
 	}
 	return nil
