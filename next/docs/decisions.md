@@ -2918,7 +2918,10 @@ drill that found the gap is this card's; item 3 inherits it.
 and is stored as written; `ts_unix` is the instant it names, parsed as
 RFC 3339 with optional fractional seconds, because a range over the
 text mis-orders mixed precision (a review finding on the plan). An
-unparseable `ts` folds NULL rather than a guessed instant. Generation
+unparseable `ts` folds NULL rather than a guessed instant, queryable as
+such and counted under the cache's `ts_unparsed` report key (a review
+finding: the lifecycle fold's anomaly count is the lifecycle's, and the
+cache does not borrow it). Generation
 13 is taken here on `main`; Phase 12 item 4 (#254) also takes 13 for
 `by_kind`, and whichever lands second re-bumps to 14 — a one-line
 change with its pins, noted on both PRs.

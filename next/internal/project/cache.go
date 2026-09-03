@@ -30,7 +30,9 @@ import (
 const CacheFile = "cache.db"
 
 // cacheSchemaVersion is the database's own schema generation, stamped
-// via PRAGMA user_version; it bumps with the table set, not with the
+// via PRAGMA user_version (12: ts and ts_unix on every per-event table
+// and the ts_unparsed report row, plans/os-74ce2261.md); it bumps with
+// the table set, not with the
 // chain position. Generation 2 added contract_state and the derived
 // queue rows (plans/os-d69a6c91.md); generation 3 the claim columns
 // (plans/os-5dc16a7c.md); generation 4 the acceptance columns
@@ -43,7 +45,7 @@ const CacheFile = "cache.db"
 // (plans/os-cecac5de.md); generation 10 the runs table
 // (plans/os-1dad487d.md); generation 11 the interrupts table
 // (plans/os-0f718b4e.md).
-const cacheSchemaVersion = 11
+const cacheSchemaVersion = 12
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
@@ -165,7 +167,10 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 	// instant it names as nanoseconds since the epoch for range queries
 	// — RFC 3339 permits mixed fractional precision, so the text mis-orders
 	// as text and the integer is what a range compares. NULL when the
-	// string does not parse, which the cache's anomaly count reports.
+	// string does not parse; such rows stay queryable by their NULL, and
+	// the report table carries their count under ts_unparsed (the fold's
+	// anomaly count is the lifecycle's, not this).
+	tsUnparsed := map[int]bool{}
 	at := func(pos int) (string, any) {
 		if pos < 0 || pos >= len(records) {
 			return "", nil
@@ -174,6 +179,7 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 		if t, err := time.Parse(time.RFC3339Nano, ts); err == nil {
 			return ts, t.UnixNano()
 		}
+		tsUnparsed[pos] = true
 		return ts, nil
 	}
 	for _, c := range contractEntries(records) {
@@ -282,6 +288,7 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 			}
 		}
 	}
+	w.exec(`INSERT INTO report VALUES ('ts_unparsed', ?)`, fmt.Sprintf("%d", len(tsUnparsed)))
 	w.exec(`INSERT INTO report VALUES ('chain', ?)`, w.jsonOf(view.Chain))
 	w.exec(`INSERT INTO report VALUES ('actors', ?)`, w.jsonOf(view.Actors))
 	w.exec(`INSERT INTO report VALUES ('halt', ?)`, w.jsonOf(view.Halt))

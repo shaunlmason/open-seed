@@ -18,8 +18,9 @@ import (
 // per-event cache table carries the envelope's ts verbatim beside the
 // instant it names as an integer, a range compares the integer (RFC
 // 3339 mixes fractional precision, which mis-orders as text), an
-// unparseable ts folds NULL and counts, and the four names of the row
-// answer in one query.
+// unparseable ts folds NULL (queryable as such) and is counted in the
+// report table's ts_unparsed row, and the four names of the row answer
+// in one query.
 func TestCacheIsQueryableByTime(t *testing.T) {
 	root, worker := pKey(t, 1), pKey(t, 2)
 	dir := t.TempDir()
@@ -85,6 +86,9 @@ func TestCacheIsQueryableByTime(t *testing.T) {
 	}
 	if n := one[int](t, db, `SELECT COUNT(*) FROM contracts WHERE subject = 'c-T' AND position = 7 AND ts_unix IS NULL AND ts = 'not-an-instant'`); n != 1 {
 		t.Fatalf("an unparseable ts folds NULL beside the verbatim string, got %d rows", n)
+	}
+	if got := one[string](t, db, `SELECT value FROM report WHERE key = 'ts_unparsed'`); got != "1" {
+		t.Fatalf("the report table counts the unparseable instant once, got %q", got)
 	}
 	// A range on the integer orders the fractional instant between its
 	// neighbors: [01:00:02, 01:00:03) holds positions 4 and 5 and not 6.
