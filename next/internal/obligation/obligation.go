@@ -20,6 +20,7 @@ import (
 	"sort"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -60,6 +61,11 @@ const (
 	// a human is a key with operator standing, and discharged by the
 	// verdict.rendered such a key makes on the same submission.
 	KindVerdictHuman = "verdict.human"
+	// KindReapOwed is an in_progress claim whose holder has been revoked:
+	// it can end no other way than a reap, because a revoked holder
+	// cannot submit, release or park (plans/os-32d06c65.md D4). Distinct
+	// from KindClaimHeld, which any deliberate exit discharges.
+	KindReapOwed = "claim.reap-owed"
 	// KindRequestPending is an inbound request nobody has answered
 	// (plans/os-48df10a2.md D2): owed by the dispatch lane, one row per
 	// subject carrying the oldest unanswered request's position and
@@ -174,6 +180,9 @@ func (d Deps) able(actor string, verbs []string) bool {
 // a stable order (subject, then kind).
 func Derive(records []*event.Record, table *transition.Table, deps Deps) []Row {
 	fold := table.FoldRecords(records)
+	// The keyring's standing is what tells the reap obligation from an
+	// ordinary held claim: a revoked holder's open window owes a reap.
+	ring, _, _ := keyring.StateAt(records)
 	var rows []Row
 	for _, subject := range fold.Subjects() {
 		s, ok := fold.State(subject)
@@ -181,6 +190,11 @@ func Derive(records []*event.Record, table *transition.Table, deps Deps) []Row {
 			continue
 		}
 		rows = append(rows, subjectRows(subject, s, table, deps)...)
+		if ring != nil && s.Claim != nil && s.State == "in_progress" {
+			if e, ok := ring.Get(s.Claim.Holder); ok && e.Standing == keyring.StandingRevoked {
+				rows = append(rows, Row{Subject: subject, Kind: KindReapOwed, OwedBy: LaneOperator, Since: s.Claim.Fence, DischargedBy: []string{"claim.reaped"}})
+			}
+		}
 	}
 	rows = append(rows, requestRows(fold)...)
 	sort.Slice(rows, func(i, j int) bool {
