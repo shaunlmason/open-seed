@@ -99,6 +99,13 @@ func TestCloudAdapterFullBracket(t *testing.T) {
 	if err := run.Meter(3, "work"); err != nil {
 		t.Fatalf("meter polls usage: %v", err)
 	}
+	// The recorded figure is the provider's poll (7), never the estimate
+	// plus the poll (10): a risk-limit meter reports what the provider
+	// will bill, and never double-counts.
+	stream := filepath.Join(spec.ObsDir, spec.Actor, strconv.Itoa(spec.Fence)+".jsonl")
+	if b, err := os.ReadFile(stream); err != nil || !strings.Contains(string(b), `"units":7`) || strings.Contains(string(b), `"units":10`) {
+		t.Fatalf("the cloud meter records the provider's poll, not the sum: %v %q", err, b)
+	}
 	if err := run.Dispose(); err != nil || !closed {
 		t.Fatalf("dispose closes the session: %v closed=%v", err, closed)
 	}

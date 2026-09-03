@@ -146,14 +146,20 @@ type cloudRun struct {
 func (r *cloudRun) Workspace() string { return "cloud-session:" + r.session }
 func (r *cloudRun) Tuple() Tuple      { return r.tuple }
 
-// Meter polls the session's usage and records it, adding the provided
-// units — the metered figure the risk-limit budget is settled against.
+// Meter records the run's metered usage: the GREATER of the loop's
+// estimate and the provider's reported usage. It never adds the two (a
+// double count) and never takes only the estimate — the provider's poll
+// is what it will bill, and a risk-limit budget must never under-report
+// it. The figure is what the budget is settled against.
 func (r *cloudRun) Meter(units int, step string) error {
 	var u cloudUsage
 	if err := r.adapter.do(http.MethodGet, "/sessions/"+r.session+"/usage", nil, &u); err != nil {
 		return err
 	}
-	total := units + u.Units
+	total := units
+	if u.Units > total {
+		total = u.Units
+	}
 	return obs.Append(r.spec.ObsDir, r.spec.Actor, obs.FormatFence(r.spec.Fence), obs.Line{
 		TS: time.Now().UTC().Format(time.RFC3339), Subject: r.spec.Subject, Step: step, Units: total,
 	})
