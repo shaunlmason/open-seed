@@ -143,3 +143,19 @@ func TestBuildRepoFailsOnBadDir(t *testing.T) {
 		t.Error("buildRepo must fail when its working directory cannot be created")
 	}
 }
+
+func TestStageContractHorizonWithPastArrival(t *testing.T) {
+	// An arrival instant in the past: the offer's expiry must still sit
+	// past the real event ts, so the horizon takes the wall-clock branch
+	// rather than the arrival. The dispatcher's two facts admit, the
+	// offer is reached, then refused — exercising the horizon branch.
+	d := &deployment{
+		remote: "r", state: "s", verbs: &okThenFail{n: 2},
+		keys: map[string]string{"dispatcher": "d", "supervisor": "s"},
+		now:  time.Now(),
+	}
+	past := time.Now().Add(-48 * time.Hour)
+	if err := d.stageContract("c-1", repo{spec: "abc"}, past); err == nil {
+		t.Error("stageContract must surface the offer refusal after the horizon is computed")
+	}
+}
