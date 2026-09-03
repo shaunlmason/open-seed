@@ -48,6 +48,10 @@ check-next:
 	@# (plans/os-0d4f2af3.md D2): tiers in the vocabulary, teams naming
 	@# shipped manifests, the protected surface complete.
 	@cd next && go run ./cmd/seed preseed check --config fixtures/deployment/seed.json --lanes lanes >/dev/null
+	@# The governed docs are drift-checked (plans/os-16e55c11.md D1): the
+	@# lifecycle, capability, exit-code and per-lane documents must match
+	@# what `seed docs generate` renders from the tables they came from.
+	@cd next && go run ./cmd/seed docs check --root .. >/dev/null
 
 # End-to-end loop smoke in a temp instantiation (no model, no secrets).
 smoke:

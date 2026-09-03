@@ -72,6 +72,10 @@ const (
 	// declaration first, and every later declared-versus-observed
 	// comparison as a refinement, the message naming each difference.
 	ExitDrift = 28
+	// CodeDocsDrift refines ExitDrift for the governed-docs generator
+	// (plans/os-16e55c11.md D1): a committed generated document differs
+	// from what `seed docs generate` now renders from the table.
+	CodeDocsDrift = "docs_drift"
 	// ExitImportRefused is the predecessor import refusing before any
 	// write (plans/os-cf13fb51.md D1, D4): unanchored, export_mismatch,
 	// import_unmapped.

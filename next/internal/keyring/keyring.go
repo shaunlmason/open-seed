@@ -201,6 +201,11 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapDispatch, CapOperator}
 	case "merge.overridden":
 		return []string{CapOperator}
+	case "request.answered":
+		// The dispatcher's close of an inbound proposal
+		// (plans/os-48df10a2.md D1); request.filed itself is standing-only,
+		// like message.sent, and appears in no case.
+		return []string{CapDispatch, CapOperator}
 	// The supervisor lane (plans/os-c61c3392.md): offers invite
 	// claims and grant nothing, so the standard operator fallback
 	// stands.

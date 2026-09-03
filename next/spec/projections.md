@@ -112,7 +112,12 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   (Version "4"; `lifecycle.md`).
   One file, not per-subject files (subjects are opaque strings; the
   cache is the lookup-throughput surface). An empty chain yields an
-  empty array, not a missing file.
+  empty array, not a missing file. Version 14 adds the
+  `racing` object on a subject that raced (plans/os-56bee171.md D4):
+  `racers` (the active claims by fence order), and after settlement
+  `settled_at` and `settled_out`; absent on every other subject, so
+  chains without a race are byte-identical.
+
 - **`queue`** (`queue.json`): the claimable-work surface —
   `{schema_version: "1", derivation, ready: […]}`, entries carrying
   `{subject, since_position}`. The derivation is
@@ -142,6 +147,11 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   section and its `contested` count, [`curation.md`](curation.md), so
   an unchanged tip republishes with the section; version "12" its
   `retired` and `stale` counts, the latter at the declared instant;
+  version "15" carries `requests` when the prefix holds a request
+  ([`requests.md`](requests.md), from `seed/7`: total, unanswered, by
+  kind, by outcome, mean answer latency in elapsed seconds), a
+  section absent from every chain that carries none, so no version
+  moves for it (no chain before `seed/7` can hold one);
   version "15" splits `lanes` by the acting key's roster kind
   (`by_kind`: a specification under its appender's kind, an approval
   under its approver's, the kind read from the keyring at the record's

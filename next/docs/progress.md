@@ -1423,6 +1423,32 @@ record's own position through one derivation, `curation.AuthenticPass`
 (`memory/LEARNINGS.md`). This exit record is card os-efb2a099's task PR
 (an administrative card, not a Phase 11 item).
 
+## Phase 13 — Conformance completion (docs/next-build-plan.md Phase 13; deps: 12)
+
+- 13.1 racing mode as the per-squad opt-in with first-verified
+  settlement (III.F row 7) — os-56bee171 — **in review** (task PR
+  against plan #256, stacked on Phase 12 item 5, a draft until the
+  Phase 12 exit record merges: the `racing` block on a squad's
+  guardrails (`racers` two or more, `cost` in the operator's words,
+  refused otherwise, absent is exclusivity); at `seed/6` a further
+  `claim.taken` admits on an `in_progress` racing contract below the
+  cap for a claimant holding none, its fence its own position,
+  `contention` naming every holder at the cap; the fold's plural
+  `Claims`, `Submissions` and `Verdicts` beside the singular facts;
+  claim-scoped exits (every racer's exit but the first submission and
+  the last departure moves no state, the table untouched); verdicts
+  binding to the submission they cite with the lockout per submission;
+  the merge chain citing the newest verdict on its submission;
+  settlement at `merge.observed` with the other claims settled-out
+  (`race_settled` on their next act, their own exit still admitted, the
+  maintenance pass reaping the silent ones with a packet naming the
+  settlement); the contracts view's `racing` object at version 14 and
+  the claim response's racing note; drilled at the boundary (the
+  opt-in, the cap, the fences, the exits, the settlement, the reap's
+  admission), in the maintenance pass and at the declaration;
+  `next/spec/lifecycle.md` "Racing" new, `postures.md`, `envelope.md`,
+  `maintenance.md`, `budgets.md`, `projections.md` and `protocol.md`
+  (`seed/6`) following)
 - routed gap: the cache carries the event's `ts`, so evidence is
   queryable by time (charter III.G row 10, recorded UNMET at the Phase
   10 exit) — os-74ce2261 — **in review** (task PR against plan #260:
@@ -1436,6 +1462,35 @@ record's own position through one derivation, `curation.AuthenticPass`
   gives one corrupted chain, the D3 tripwire inverted on purpose, the
   envelope spec's null sentence sharpened to "before any position was
   read")
+- 13.4 mirrors and dashboards propose, federation as uniform read
+  remotes, cross-repo work as a proposal (III.J row 2, III.N row 4,
+  §II.15) — os-48df10a2 — **in review** (task PR against plan #257,
+  stacked on 13.1: `request.filed`, the one door a surface's proposal
+  enters by, strict `{origin, kind, reference, summary ≤ 200 bytes,
+  about?}` on the contract `about` names or on `system`, a fact that
+  changes no state and needs standing only; `request.answered`, the
+  dispatcher's close citing the intent it filed or the reason it
+  declined, once per request; both at `seed/7` (the plan said
+  `seed/6`, which racing took first); the fold's request facts, the
+  `request` rule, `request_refused` (exit 3); `request.pending` owed
+  to `lane:dispatch` with its age; the situation read's `requests`
+  notices (origin, kind, size, position, age, never the summary) and
+  the report's `requests` section (present only when a request
+  exists, so every existing build is byte-identical); the affordance
+  catalog's two probes and the walk's seed/7 station; the dispatcher
+  manifest's `request answer` as a lane act beside the loop acts, the
+  corpus re-recorded on purpose; the injection corpus's request arm
+  at the boundary and the terminal (III.J row 2 met in full, the lanes
+  spec saying so); the declaration's `federation` block and `seed
+  federation report` (fetch, verify under each remote's own keyring,
+  fold, `federation.json` byte-identical on the same tips, a tampered
+  remote reported and not folded, no key, nothing appended); the
+  cross-repo drill (a source contract proposed into a target by an
+  ingress key with standing only, answered with a citing intent,
+  read back through the source's read remote, the source's tip never
+  moving); `next/spec/requests.md` new, `protocol.md` (`seed/7`),
+  `lanes.md`, `obligations.md`, `projections.md`, `postures.md`,
+  `envelope.md`, `actors.md` following)
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
@@ -1548,6 +1603,19 @@ record's own position through one derivation, `curation.AuthenticPass`
   the synthetic predecessor, the four refusals, the CLI's envelopes, the
   spec mirror); `next/spec/import.md` new, `protocol.md` (`seed/5`),
   `envelope.md` (exit 29) and `actors.md` following)
+- 12.6 docs generation (lifecycle/capabilities/exit-codes/per-lane from
+  the tables, drift-checked), the operator handbook, and simulation mode
+  — os-16e55c11 — **in review** (task PR against plan #249:
+  `admit.CatalogVerbs()`, `internal/docs` + `seed docs generate/check`
+  (`docs_drift` refining exit 28) + `make check-next`; `internal/decider`
+  + `trajectory.ChoiceDiverged` + `trajectory replay --decider scripted`;
+  `executor.Mock`, `internal/simulate` + `seed simulate [--days]
+  [--posture]` driving every lane to done credential-free under both
+  postures with the five-bar ledger audit; `next/spec/simulation.md`,
+  the handbook, the committed `next/docs/generated/`. Reconciliations in
+  decisions.md: the reference decider is partial because the frame does
+  not determine the loop's per-iteration act; `claim take` is remote-only
+  so both postures run on a bare remote)
 of this repository (os-cf13fb51, plan #248 merged); item 6, docs
 **Next action: implement Phase 12 in item order — item 1 (#250) is
 merged; items 2, 3, 4 and 5 are in review against their merged plans,
