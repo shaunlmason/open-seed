@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-9075c308",
-  "merge_base": "c4b720c994447059ba0eab2d9f74290fdc68e52d",
-  "head": "ff6aef026b67ff80c74b3241cfecc54097422f60",
+  "merge_base": "4fea8f1ba645bf82e942c33d0a1e4dfd244dee2f",
+  "head": "6015c91708b479a77af69ee4c63fa3afed99c2e6",
   "plan_path": "plans/os-9075c308.md",
   "plan_sha256": "440d2ab9ecf28bc205387f48157657f22297b5d5a42c07a1c47c13e170c7c161",
   "diff_files": [
@@ -28,6 +28,7 @@
     "next/internal/keyring/keyring.go",
     "next/internal/project/flywheel_test.go",
     "next/internal/project/knowledge_test.go",
+    "next/internal/project/lanes_report_test.go",
     "next/internal/project/refusals_report_test.go",
     "next/internal/project/report.go",
     "next/internal/transition/transition.go",
@@ -38,9 +39,10 @@
     "next/spec/flywheel.md",
     "next/spec/lanes.md",
     "next/spec/projections.md",
-    "next/spec/protocol.md"
+    "next/spec/protocol.md",
+    "next/trajectories/lanes/curator.json"
   ],
-  "diff_sha256": "2653754efd6ad9dcba5a3e914ef2fc92791a6b891c8ded3546f762e3158626f3",
+  "diff_sha256": "36d477327335d219f4c379acf4d655f23d9eba6c6425c06fad6d7da045665e32",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/flywheel/ ./internal/keyring/ ./internal/admit/ ./internal/project/ ./cmd/seed/ -count=1",
