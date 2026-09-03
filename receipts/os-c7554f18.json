@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-c7554f18",
   "merge_base": "ef1fa0ed3e17deb6a0a6cdaeacb99e66afce0021",
-  "head": "aa0e9a407a070d4603a48df1f7293dd9dee1cf62",
+  "head": "c64f97db6af577718caf37a97d73595d6f897c4c",
   "plan_path": "plans/os-c7554f18.md",
   "plan_sha256": "3e99674fa4e3cafa5cbc4769b39b30ad3da2c890a18c22b71a3c79c8d5e29a20",
   "diff_files": [
@@ -33,7 +33,7 @@
     "next/spec/qualification.md",
     "next/spec/ranking.md"
   ],
-  "diff_sha256": "99179d1e34e47453a83c79d4cbdd17a59fd98e63ac80920accdaf42bec7fc389",
+  "diff_sha256": "56fc5e8824ab4d231dd4c1858d520c79ac583ba3481ef665dbab4ce29449f031",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/ranking/ ./internal/eval/ ./internal/project/ ./cmd/seed/ -run 'Rank|Strongest|Offer|Eval|Doctor' -count=1",
