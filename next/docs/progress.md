@@ -1547,6 +1547,26 @@ record's own position through one derivation, `curation.AuthenticPass`
   the doctor's report; the CI matrix on Linux, macOS and Windows;
   `next/spec/platform.md` new, `protocol.md` and `envelope.md`
   following)
+- 13.7 tuple ranking as supervisor policy: eval results rank
+  qualified tuples and the planner lane's offers carry the strongest
+  (III.J row 3's policy clause, §II.9) — os-c7554f18 — **in review**
+  (task PR against plan #276: `internal/ranking`, the record-derived
+  policy table (score by qualifying evidence since the tuple last
+  held, ties by the latest pass then the canonical JSON, disqualified
+  and holder-less tuples absent, agreement refining the verdict
+  ranking only with the gold supplied), pinned to `next/spec/ranking.md`
+  by a drill that parses the table; `seed offer publish --strongest n
+  --capability c` filling the `tuples` scope from the ranking at the
+  offer's own instant and refusing `ranking_empty` (exit 4) rather
+  than widening; `eval.Due`'s offers by policy (the configuration
+  under re-test, else the strongest claim tuple, else unscoped with a
+  `ranking_empty` note, the bootstrap); the `ranking` projection
+  (version 1, both capabilities, byte-identical), `seed doctor
+  --ledger` naming the top tuple per capability, the report's
+  `lanes.planner.strongest` at version 16; drilled at the derivation,
+  the verbs and the projection, with the mutation evidence D4 names;
+  `ranking.md` new, `offers.md`, `qualification.md` (the deferral
+  closed), `evals.md`, `projections.md` and `envelope.md` following)
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 

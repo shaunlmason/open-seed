@@ -13,10 +13,13 @@ import (
 	"io"
 
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/platform"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
+	"github.com/shaunlmason/open-seed/next/internal/project"
 	"github.com/shaunlmason/open-seed/next/internal/propose"
 	"github.com/shaunlmason/open-seed/next/internal/protections"
+	"github.com/shaunlmason/open-seed/next/internal/ranking"
 )
 
 func runDoctor(args []string, stdout, stderr io.Writer) int {
@@ -26,8 +29,9 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	probe := fs.Bool("probe", false, "probe the admission service's health (forge-hosted)")
 	current := fs.String("current", "", "the forge's state as a snapshot file: report protections drift (forge-hosted)")
 	repo := fs.String("repo", "", "working tree for the CODEOWNERS and workflow checks beside --current")
+	ledgerDir := fs.String("ledger", "", "ledger directory: name the strongest qualified tuple per capability (next/spec/ranking.md)")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes --config <path> [--probe] [--current <snapshot> [--repo <dir>]]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes --config <path> [--probe] [--current <snapshot> [--repo <dir>]] [--ledger <dir>]"), stdout, stderr)
 	}
 	cfg, err := posture.Load(*config)
 	if err != nil {
@@ -122,6 +126,34 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 				return render(envelope.Fail(envelope.ExitDrift, "protections_drift", fmt.Sprintf("%d drift(s) against the declaration", rep.DriftCount)), stdout, stderr)
 			}
 		}
+	}
+	// The ranking's top per capability (plans/os-c7554f18.md D3): read
+	// at the ledger's tip, null where nothing ranks, absent without a
+	// ledger since the doctor otherwise reads the declaration alone.
+	if *ledgerDir != "" {
+		store, failEnv := openStore(*ledgerDir)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
+		}
+		var records []*event.Record
+		if err := store.Records(func(_ int, rec *event.Record) error {
+			records = append(records, rec)
+			return nil
+		}); err != nil {
+			return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		}
+		r, err := project.DeriveRanking(records)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		}
+		top := map[string]any{}
+		for _, capability := range ranking.Capabilities {
+			top[capability] = nil
+			if t := ranking.Top(r, capability, 1); len(t) == 1 {
+				top[capability] = t[0]
+			}
+		}
+		result["ranking"] = map[string]any{"as_of": r.AsOf, "strongest": top}
 	}
 	return render(envelope.OK(result), stdout, stderr)
 }

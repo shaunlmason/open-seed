@@ -127,8 +127,8 @@ func TestReportRefusalsSection(t *testing.T) {
 	// moved the report to 11, its retired and stale counts to 12, and
 	// the lanes section to 13, each republishing every prefix in its
 	// turn.
-	if v := project.Report().Version; v != "15" {
-		t.Fatalf("the report's version is 15 (10 added the refusals section, 11 the knowledge section, 12 its retired and stale counts, 13 the lanes section, 14 the flywheel section, 15 the lanes section's by_kind split), got %s", v)
+	if v := project.Report().Version; v != "16" {
+		t.Fatalf("the report's version is 16 (10 added the refusals section, 11 the knowledge section, 12 its retired and stale counts, 13 the lanes section, 14 the flywheel section, 15 the lanes section's by_kind split, 16 the planner's strongest), got %s", v)
 	}
 }
 
