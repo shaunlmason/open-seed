@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -46,7 +47,10 @@ const cacheSchemaVersion = 11
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-const cacheVersion = "12"
+// Generation 13 adds `ts` and `ts_unix` to every per-event table
+// (plans/os-74ce2261.md; charter III.G row 10), so evidence is
+// queryable by time.
+const cacheVersion = "13"
 
 // Cache returns the cache projection.
 func Cache() Projection {
@@ -59,22 +63,22 @@ func Cache() Projection {
 var cacheDDL = []string{
 	`CREATE TABLE stamp (name TEXT NOT NULL, position INTEGER NOT NULL, tip TEXT NOT NULL, version TEXT NOT NULL)`,
 	`CREATE TABLE roster (fingerprint TEXT PRIMARY KEY, kind TEXT NOT NULL, name TEXT NOT NULL, standing TEXT NOT NULL, root INTEGER NOT NULL, grants TEXT NOT NULL) WITHOUT ROWID`,
-	`CREATE TABLE contracts (subject TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL)`,
+	`CREATE TABLE contracts (subject TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, verb TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL)`,
 	`CREATE INDEX contracts_subject ON contracts(subject)`,
 	`CREATE TABLE queue (subject TEXT NOT NULL, since_position INTEGER NOT NULL)`,
 	`CREATE TABLE contract_state (subject TEXT PRIMARY KEY, state TEXT, anomalies INTEGER NOT NULL, holder TEXT, fence TEXT, acc_ref TEXT, acc_executable INTEGER, acc_gated INTEGER, verdict_position INTEGER, verdict TEXT, verdict_receipt TEXT, requested_position INTEGER, merged_position INTEGER, merged_sha TEXT, sealed_position INTEGER, sealed_commitment TEXT, override_position INTEGER, override_reason TEXT, last_claim INTEGER, budget_class TEXT, budget_capacity INTEGER, budget_remaining INTEGER) WITHOUT ROWID`,
-	`CREATE TABLE offers (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, capabilities TEXT NOT NULL, tiers TEXT NOT NULL, expires TEXT NOT NULL)`,
+	`CREATE TABLE offers (subject TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, signer TEXT NOT NULL, capabilities TEXT NOT NULL, tiers TEXT NOT NULL, expires TEXT NOT NULL)`,
 	`CREATE INDEX offers_subject ON offers(subject)`,
-	`CREATE TABLE reservations (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, amount INTEGER NOT NULL, closed_position INTEGER, closed_kind TEXT, closed_actuals INTEGER)`,
+	`CREATE TABLE reservations (subject TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, signer TEXT NOT NULL, amount INTEGER NOT NULL, closed_position INTEGER, closed_kind TEXT, closed_actuals INTEGER)`,
 	`CREATE INDEX reservations_subject ON reservations(subject)`,
-	`CREATE TABLE runs (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, fence INTEGER NOT NULL, kind TEXT NOT NULL, reservation INTEGER, units INTEGER, lines INTEGER)`,
-	`CREATE TABLE interrupts (subject TEXT NOT NULL, position INTEGER NOT NULL, signer TEXT NOT NULL, fence INTEGER NOT NULL)`,
+	`CREATE TABLE runs (subject TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, signer TEXT NOT NULL, fence INTEGER NOT NULL, kind TEXT NOT NULL, reservation INTEGER, units INTEGER, lines INTEGER)`,
+	`CREATE TABLE interrupts (subject TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, signer TEXT NOT NULL, fence INTEGER NOT NULL)`,
 	`CREATE INDEX interrupts_subject ON interrupts(subject)`,
 	`CREATE INDEX runs_subject ON runs(subject)`,
 	`CREATE TABLE queue_meta (schema_version TEXT NOT NULL, derivation TEXT NOT NULL)`,
-	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
+	`CREATE TABLE actor_history (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, verb TEXT NOT NULL, acting TEXT NOT NULL)`,
 	`CREATE INDEX actor_history_fp ON actor_history(fingerprint)`,
-	`CREATE TABLE actor_signed (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, verb TEXT NOT NULL, subject TEXT NOT NULL)`,
+	`CREATE TABLE actor_signed (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, verb TEXT NOT NULL, subject TEXT NOT NULL)`,
 	`CREATE INDEX actor_signed_fp ON actor_signed(fingerprint)`,
 	`CREATE TABLE report (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID`,
 }
@@ -156,10 +160,27 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 		return nil, err
 	}
 	fold := table.FoldRecords(records)
+	// at is the event's instant for a per-event row (plans/os-74ce2261.md
+	// D1; charter III.G row 10): the envelope's ts verbatim, and the
+	// instant it names as nanoseconds since the epoch for range queries
+	// — RFC 3339 permits mixed fractional precision, so the text mis-orders
+	// as text and the integer is what a range compares. NULL when the
+	// string does not parse, which the cache's anomaly count reports.
+	at := func(pos int) (string, any) {
+		if pos < 0 || pos >= len(records) {
+			return "", nil
+		}
+		ts := records[pos].Event.TS
+		if t, err := time.Parse(time.RFC3339Nano, ts); err == nil {
+			return ts, t.UnixNano()
+		}
+		return ts, nil
+	}
 	for _, c := range contractEntries(records) {
 		for _, e := range c.Events {
-			w.exec(`INSERT INTO contracts VALUES (?, ?, ?, ?, ?)`,
-				c.Subject, e.Position, e.Verb, e.Actor, string(e.Payload))
+			ts, tsUnix := at(e.Position)
+			w.exec(`INSERT INTO contracts VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				c.Subject, e.Position, ts, tsUnix, e.Verb, e.Actor, string(e.Payload))
 		}
 		var state, holder, fence, accRef, accExec, accGated any
 		var verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment, overridePos, overrideReason, lastClaim any
@@ -196,23 +217,27 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 				lastClaim = s.LastClaim
 			}
 			for _, o := range s.Offers {
-				w.exec(`INSERT INTO offers VALUES (?, ?, ?, ?, ?, ?)`,
-					c.Subject, o.Pos, o.Signer, w.jsonOf(o.Capabilities), w.jsonOf(o.Tiers), o.Expires)
+				ts, tsUnix := at(o.Pos)
+				w.exec(`INSERT INTO offers VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+					c.Subject, o.Pos, ts, tsUnix, o.Signer, w.jsonOf(o.Capabilities), w.jsonOf(o.Tiers), o.Expires)
 			}
 			if s.Budget != "" {
 				budgetClass = s.Budget
 			}
 			for _, st := range s.RunStarts {
-				w.exec(`INSERT INTO runs VALUES (?, ?, ?, ?, 'started', ?, NULL, NULL)`,
-					c.Subject, st.Pos, st.Signer, st.Fence, st.Reservation)
+				ts, tsUnix := at(st.Pos)
+				w.exec(`INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, 'started', ?, NULL, NULL)`,
+					c.Subject, st.Pos, ts, tsUnix, st.Signer, st.Fence, st.Reservation)
 			}
 			for _, r := range s.Runs {
-				w.exec(`INSERT INTO runs VALUES (?, ?, ?, ?, 'settled', NULL, ?, ?)`,
-					c.Subject, r.Pos, r.Signer, r.Fence, r.Units, r.Lines)
+				ts, tsUnix := at(r.Pos)
+				w.exec(`INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, 'settled', NULL, ?, ?)`,
+					c.Subject, r.Pos, ts, tsUnix, r.Signer, r.Fence, r.Units, r.Lines)
 			}
 			for _, it := range s.Interrupts {
-				w.exec(`INSERT INTO interrupts VALUES (?, ?, ?, ?)`,
-					c.Subject, it.Pos, it.Signer, it.Fence)
+				ts, tsUnix := at(it.Pos)
+				w.exec(`INSERT INTO interrupts VALUES (?, ?, ?, ?, ?, ?)`,
+					c.Subject, it.Pos, ts, tsUnix, it.Signer, it.Fence)
 			}
 			if len(s.Reservations) > 0 || len(s.BudgetCloses) > 0 {
 				// The view posture (plans/os-cecac5de.md D6): the
@@ -227,8 +252,9 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 					if cl, ok := view.ClosedBy[r.Pos]; ok {
 						cp, ck, ca = cl.Pos, cl.Kind, cl.Actuals
 					}
-					w.exec(`INSERT INTO reservations VALUES (?, ?, ?, ?, ?, ?, ?)`,
-						c.Subject, r.Pos, r.Signer, r.Amount, cp, ck, ca)
+					ts, tsUnix := at(r.Pos)
+					w.exec(`INSERT INTO reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						c.Subject, r.Pos, ts, tsUnix, r.Signer, r.Amount, cp, ck, ca)
 				}
 			}
 		}
@@ -247,11 +273,12 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 	for _, fp := range candidateFingerprints(records) {
 		for pos, rec := range records {
 			ev := &rec.Event
+			ts, tsUnix := at(pos)
 			if isActorVerbOn(ev, fp) {
-				w.exec(`INSERT INTO actor_history VALUES (?, ?, ?, ?)`, fp, pos, ev.Verb, ev.Actor)
+				w.exec(`INSERT INTO actor_history VALUES (?, ?, ?, ?, ?, ?)`, fp, pos, ts, tsUnix, ev.Verb, ev.Actor)
 			}
 			if ev.Actor == fp {
-				w.exec(`INSERT INTO actor_signed VALUES (?, ?, ?, ?)`, fp, pos, ev.Verb, ev.Subject)
+				w.exec(`INSERT INTO actor_signed VALUES (?, ?, ?, ?, ?, ?)`, fp, pos, ts, tsUnix, ev.Verb, ev.Subject)
 			}
 		}
 	}

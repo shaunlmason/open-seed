@@ -1423,6 +1423,14 @@ record's own position through one derivation, `curation.AuthenticPass`
 (`memory/LEARNINGS.md`). This exit record is card os-efb2a099's task PR
 (an administrative card, not a Phase 11 item).
 
+- routed gap: the cache carries the event's `ts`, so evidence is
+  queryable by time (charter III.G row 10, recorded UNMET at the Phase
+  10 exit) — os-74ce2261 — **in review** (task PR against plan #260:
+  `ts` verbatim and `ts_unix` parsed on every per-event table at cache
+  generation 13, ranges over the integer since RFC 3339 mixes
+  fractional precision, an unparseable `ts` NULL and counted, the
+  time-range drill with the four names of the row in one query)
+
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
 - 12.2 forge-hosted admission service (stateless, sole-writer) and the
