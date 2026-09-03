@@ -53,6 +53,13 @@ with its fact:
 
 - **`claim.held`** — an active claim window; owed by its holder;
   discharged by the verbs leaving `in_progress`.
+- **`claim.reap-owed`** — an `in_progress` claim whose holder has been
+  **revoked**; owed by the operator lane and discharged by
+  `claim.reaped`. Distinct from `claim.held`, which any deliberate exit
+  discharges: a revoked holder can end its window no other way than a
+  reap, because it can no longer submit, release or park
+  ([`maintenance.md`](maintenance.md), "Revocation is the third
+  corroboration"; plans/os-32d06c65.md).
 - **`verdict.human`** — a `verdict.deferred` on the current
   submission window with no render after it; owed by the operator
   lane, since a human is a key with operator standing, and discharged

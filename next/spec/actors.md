@@ -92,6 +92,11 @@ attributed to it.
 | `suspended` | subject active | standing suspended |
 | `revoked` | subject not already revoked | standing revoked |
 
+A revocation also **reaps the revoked holder's open claims**: from the
+`actor.revoked` position on the holder can no longer act, so the
+maintenance pass reaps its `in_progress` window on the revocation alone
+(`admit.RevokedHolder`; [`maintenance.md`](maintenance.md); plans/os-32d06c65.md), re-offering the work.
+
 **Root liveness.** Suspending or revoking a governance root refuses when
 it would leave zero active roots: no admitted transition may leave the
 deployment without a key admission accepts `actor.*` from. Root rotation

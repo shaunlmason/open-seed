@@ -306,10 +306,36 @@ type ContentionError struct {
 	Subject string
 	Holder  string
 	Fence   int
+	// Racers and Cap are set on a racing squad's contract at its cap:
+	// every active claim, and the declared limit.
+	Racers []transition.Claim
+	Cap    int
 }
 
 func (e *ContentionError) Error() string {
+	if e.Cap > 0 {
+		parts := make([]string, 0, len(e.Racers))
+		for _, r := range e.Racers {
+			parts = append(parts, fmt.Sprintf("%s (fence %d)", r.Holder, r.Fence))
+		}
+		return fmt.Sprintf("contract %s is at its squad's racing cap of %d: held by %s — a racer joins only below the cap (seed.json guardrails.squads.<squad>.racing; next/spec/lifecycle.md, Racing)", e.Subject, e.Cap, strings.Join(parts, ", "))
+	}
 	return fmt.Sprintf("contract %s is already claimed by %s (fence %d, held since position %d) — exclusivity is granted at admission, one claim at a time", e.Subject, e.Holder, e.Fence, e.Fence)
+}
+
+// RaceSettledError is a settled-out racer's act after the race closed
+// (plans/os-56bee171.md D3): the first verified success settled the
+// contract at SettledAt, the actor's claim outlived it, and only its
+// own deliberate exit is still admissible.
+type RaceSettledError struct {
+	Subject   string
+	Actor     string
+	Fence     int
+	SettledAt int
+}
+
+func (e *RaceSettledError) Error() string {
+	return fmt.Sprintf("contract %s was settled at position %d while %s still held fence %d — a settled-out racer's next act refuses; its own deliberate exit (submission, release, park) still admits, and the reaper reaps what does not exit (next/spec/lifecycle.md, Racing)", e.Subject, e.SettledAt, e.Actor, e.Fence)
 }
 
 // LevelShortError is the level-short refusal (exit 17 not_independent
@@ -742,24 +768,43 @@ func coreRules() []Rule {
 				}
 				return nil
 			}
+			// The actor's own fence when it holds one of the active
+			// claims (the one on an exclusive subject, its own on a
+			// racing one); any active fence for a prior claimant
+			// (plans/os-56bee171.md D2).
+			own, holds := s.HolderFence(rec.Event.Actor)
 			required := false
 			if c.Table.IsLifecycleVerb(verb) {
 				// The deliberate exits are exactly the lifecycle verbs
-				// the table allows out of the held state.
-				required = c.Table.Allows(s.State, verb)
-			} else if rec.Event.Actor == s.Claim.Holder || s.PriorClaimants[rec.Event.Actor] {
+				// the table allows out of the held state — and, on a
+				// racing subject, every racer's exit wherever the
+				// state stands.
+				required = c.Table.Allows(s.State, verb) || (s.Racing && transition.IsExit(verb))
+			} else if holds || s.PriorClaimants[rec.Event.Actor] {
 				required = true
 			}
 			if !hasCited {
 				if required {
-					return &FenceError{Subject: rec.Event.Subject, Active: s.Claim.Fence, Holder: s.Claim.Holder}
+					active, holder := s.Claim.Fence, s.Claim.Holder
+					if holds {
+						active, holder = own, rec.Event.Actor
+					}
+					return &FenceError{Subject: rec.Event.Subject, Active: active, Holder: holder}
 				}
 				return nil
 			}
-			if cited != fmt.Sprintf("%d", s.Claim.Fence) {
-				return &FenceError{Subject: rec.Event.Subject, Cited: cited, Active: s.Claim.Fence, Holder: s.Claim.Holder}
+			if holds {
+				if cited != fmt.Sprintf("%d", own) {
+					return &FenceError{Subject: rec.Event.Subject, Cited: cited, Active: own, Holder: rec.Event.Actor}
+				}
+				return nil
 			}
-			return nil
+			for _, f := range s.ActiveFences() {
+				if cited == fmt.Sprintf("%d", f) {
+					return nil
+				}
+			}
+			return &FenceError{Subject: rec.Event.Subject, Cited: cited, Active: s.Claim.Fence, Holder: s.Claim.Holder}
 		}},
 		{Name: "packet", Check: func(c *Context, rec *event.Record) error {
 			// Every deliberate exit carries a four-part handoff packet
@@ -773,6 +818,25 @@ func coreRules() []Rule {
 			}
 			_, err := packet.FromPayload(rec.Event.Subject, rec.Event.Payload)
 			return err
+		}},
+		{Name: "race_settled", Check: func(c *Context, rec *event.Record) error {
+			// A settled-out racer (plans/os-56bee171.md D3): the race
+			// closed at RaceSettled while its claim was active. Its
+			// own deliberate exit still admits (a packet is never
+			// refused after the fact); every other act on the subject
+			// refuses, naming the settlement.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			s, ok := c.Lifecycle.State(rec.Event.Subject)
+			if !ok || s.RaceSettled == nil {
+				return nil
+			}
+			fence, holds := s.HolderFence(rec.Event.Actor)
+			if !holds || transition.IsExit(rec.Event.Verb) {
+				return nil
+			}
+			return &RaceSettledError{Subject: rec.Event.Subject, Actor: rec.Event.Actor, Fence: fence, SettledAt: *s.RaceSettled}
 		}},
 		{Name: "escalation", Check: func(c *Context, rec *event.Record) error {
 			// The escalation channel (plans/os-f781f0da.md): a question
@@ -958,9 +1022,22 @@ func coreRules() []Rule {
 			if s.Submission == nil {
 				return &VerdictError{Subject: subject, Reason: "the fold records no submission on this review subject, so there is nothing to bind a verdict to"}
 			}
-			if p.Submission != fmt.Sprintf("%d", s.Submission.Pos) {
-				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("submission %q is not the bound submission at position %d — a verdict judges exactly the submission that produced the review state", p.Submission, s.Submission.Pos)}
+			citedSub, err := strconv.Atoi(strings.TrimSpace(p.Submission))
+			bound, isBound := s.SubmissionAt(citedSub)
+			if err != nil || !isBound {
+				if len(s.Submissions) <= 1 {
+					return &VerdictError{Subject: subject, Reason: fmt.Sprintf("submission %q is not the bound submission at position %d — a verdict judges exactly the submission that produced the review state", p.Submission, s.Submission.Pos)}
+				}
+				positions := make([]string, 0, len(s.Submissions))
+				for _, sub := range s.Submissions {
+					positions = append(positions, fmt.Sprintf("%d", sub.Pos))
+				}
+				return &VerdictError{Subject: subject, Reason: fmt.Sprintf("submission %q is not a bound submission of this racing window (%s) — a verdict judges exactly the submission it cites", p.Submission, strings.Join(positions, ", "))}
 			}
+			// The rest of the rule judges the cited submission: on a
+			// racing subject each racer's submission is its own window
+			// for the lockout and the independence check.
+			s.Submission = &bound
 			// The red-verdict lockout (plans/os-d2497eb7.md): pass
 			// over a submission an authenticated fail already judged
 			// refuses until a NEW submission; fail restatements stay
@@ -1696,14 +1773,23 @@ func coreRules() []Rule {
 				if s.Verdict == nil {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "no verdict has been rendered on this subject — the chain starts at verdict.rendered(pass)"}
 				}
-				if cited != s.Verdict.Pos {
-					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("cites position %d; the admitted verdict on this subject is at position %d", cited, s.Verdict.Pos)}
+				fact, rendered := s.VerdictAt(cited)
+				if latest, ok := latestVerdictFor(s, fact.Submission); !rendered || (ok && latest.Pos != fact.Pos) {
+					// The admitted verdict is the latest on its
+					// submission; an earlier one is stale.
+					named := s.Verdict.Pos
+					if ok {
+						named = latest.Pos
+					}
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("cites position %d; the admitted verdict on this subject is at position %d", cited, named)}
 				}
-				if s.Verdict.Verdict != "pass" {
-					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the verdict at position %d is %q — a red verdict is unmergeable", s.Verdict.Pos, s.Verdict.Verdict)}
+				if fact.Verdict != "pass" {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the verdict at position %d is %q — a red verdict is unmergeable", fact.Pos, fact.Verdict)}
 				}
-				if ce := launderedVerdict(c, subject, verb, s); ce != nil {
-					return ce
+				if c.Keyring != nil {
+					if ce := verdictBoundary(c, subject, verb, s, fact); ce != nil {
+						return ce
+					}
 				}
 				return nil
 			case transition.MergeObservedVerb:
@@ -1746,14 +1832,23 @@ func coreRules() []Rule {
 					}
 					return nil
 				}
-				if s.Verdict == nil || s.Verdict.Verdict != "pass" {
+				if s.Verdict == nil {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "no pass verdict on this subject — done is reachable only through the full chain"}
 				}
-				if s.Requested == nil || s.Requested.CitedVerdict != s.Verdict.Pos {
+				if s.Requested == nil {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("no merge.requested cites the pass verdict at position %d — each chain step is its own event", s.Verdict.Pos)}
 				}
-				if ce := launderedVerdict(c, subject, verb, s); ce != nil {
-					return ce
+				fact, rendered := s.VerdictAt(s.Requested.CitedVerdict)
+				if latest, ok := latestVerdictFor(s, fact.Submission); rendered && ok && latest.Pos != fact.Pos {
+					rendered = false
+				}
+				if !rendered || fact.Verdict != "pass" {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "no pass verdict on this subject — done is reachable only through the full chain"}
+				}
+				if c.Keyring != nil {
+					if ce := verdictBoundary(c, subject, verb, s, fact); ce != nil {
+						return ce
+					}
 				}
 				return nil
 			case transition.MergeOverriddenVerb:
@@ -1912,14 +2007,44 @@ func coreRules() []Rule {
 			}
 			current := ""
 			var claim *transition.Claim
-			if s, ok := c.Lifecycle.State(rec.Event.Subject); ok {
+			s, known := c.Lifecycle.State(rec.Event.Subject)
+			if known {
 				current = s.State
 				claim = s.Claim
 			}
 			if c.Table.Exclusive(verb) && claim != nil {
 				// Exclusivity not granted: the subject is held. The
 				// loser learns who holds and since when (exit 2).
+				// Racing (plans/os-56bee171.md D2): on a racing squad's
+				// contract, at seed/6, a further claim admits below the
+				// declared cap for a claimant holding none — a claim
+				// like any other, exclusive in the table's sense
+				// (granted here, never offline), its fence its own
+				// position.
+				if version.RacingApplies(c.Active) && c.Declaration != nil && current == "in_progress" {
+					if racers, _, races := c.Declaration.RacingFor(s.Routing); races {
+						if own, holds := s.HolderFence(rec.Event.Actor); holds {
+							// A racer that already holds a claim is refused
+							// naming its own fence, not the first holder's.
+							return &ContentionError{Subject: rec.Event.Subject, Holder: rec.Event.Actor, Fence: own}
+						}
+						if len(s.Claims) >= racers {
+							return &ContentionError{Subject: rec.Event.Subject, Holder: claim.Holder, Fence: claim.Fence, Racers: s.Claims, Cap: racers}
+						}
+						return nil
+					}
+				}
 				return &ContentionError{Subject: rec.Event.Subject, Holder: claim.Holder, Fence: claim.Fence}
+			}
+			// A racer's claim-scoped exit (D3) closes its own claim and
+			// moves no state, so the table's origin check does not
+			// apply to it; the fence and packet rules still do.
+			if known && s.Racing && transition.IsExit(verb) && version.RacingApplies(c.Active) {
+				if cited, has := fenceCitation(rec.Event.Payload); has {
+					if fence, ferr := strconv.Atoi(cited); ferr == nil && s.ClaimScopedExit(verb, fence) {
+						return nil
+					}
+				}
 			}
 			if verb == "contract.specified" && current == "ready" && !version.LevelsApply(c.Active) {
 				// The ready origin is the table's seed/4 row
@@ -2349,6 +2474,11 @@ func evalBound(s transition.SubjectState) bool {
 
 func authenticFail(c *Context, subject string, s transition.SubjectState) *transition.VerdictFact {
 	for i := range s.SubmissionFails {
+		// A fail locks the submission it judged: on a racing subject
+		// another racer's submission is another window.
+		if s.Submission != nil && s.SubmissionFails[i].Submission != s.Submission.Pos {
+			continue
+		}
 		if verdictBoundary(c, subject, "", s, s.SubmissionFails[i]) == nil {
 			return &s.SubmissionFails[i]
 		}
@@ -2940,4 +3070,22 @@ func checkEvalMarker(active, subject string, raw json.RawMessage) error {
 		}
 	}
 	return nil
+}
+
+// latestVerdictFor is the newest verdict of the window on one
+// submission: the one the merge chain may cite. With one submission it
+// is the subject's latest verdict; on a racing subject each racer's
+// submission carries its own.
+func latestVerdictFor(s transition.SubjectState, submission int) (transition.VerdictFact, bool) {
+	var out transition.VerdictFact
+	found := false
+	for _, v := range s.Verdicts {
+		if v.Submission == submission {
+			out, found = v, true
+		}
+	}
+	if !found && s.Verdict != nil && s.Verdict.Submission == submission {
+		return *s.Verdict, true
+	}
+	return out, found
 }
