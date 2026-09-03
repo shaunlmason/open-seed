@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-083112ac",
-  "merge_base": "aa686c5a5ad2a4fd0fcff8f6f49d7be0837209f5",
-  "head": "24a682a4662fc1460d146e197a6d0f1477256105",
+  "merge_base": "c14df44e60cc803759555beee553b396ce07a3bc",
+  "head": "0f99c0ad08a2415d7ae4e95dfeb493695aa06d7b",
   "plan_path": "plans/os-083112ac.md",
   "plan_sha256": "7424c3f1b7a72eb318f6bf2522ccc4b056fdfea8920cabdb4ca0629649054c79",
   "diff_files": [
@@ -20,6 +20,7 @@
     "next/executor/fakeoci/fakeoci.go",
     "next/executor/ocicommand.go",
     "next/executor/remote.go",
+    "next/executor/static_tuple_test.go",
     "next/internal/posture/executors_test.go",
     "next/internal/posture/posture.go",
     "next/internal/project/adapters_test.go",
@@ -31,7 +32,7 @@
     "next/spec/executors.md",
     "next/spec/projections.md"
   ],
-  "diff_sha256": "5c4d89f1f1f7fe3517c3affe889d7cbecf990ace70ea2e58224bd2d5cb32381e",
+  "diff_sha256": "9fbc7da0a5b55ea2075a8ae5a9a1e296a2b972fcb5230cd8388ba92b497c717a",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./executor/... ./internal/posture/ ./internal/project/ ./cmd/seed/ -run 'Adapter|Container|Cloud|Remote|Disposab|Preempt|RunStart|Executors' -count=1",
