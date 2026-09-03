@@ -1456,3 +1456,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-98ce6f8a","ts":"2026-09-03T22:58:35Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-f262585a","ts":"2026-09-03T22:59:07Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"id":"msg-20260903230509-4691","to":"seed-next-implementer","type":"info"},"task":"","ts":"2026-09-03T23:05:09Z","verb":"mail-send"}
+{"actor":"seed-next-implementer","data":{"title":"next: the flywheel engine drill's skip path races TempDir cleanup on macOS (directory not empty)"},"task":"os-222189a3","ts":"2026-09-03T23:10:47Z","verb":"create"}
