@@ -53,14 +53,14 @@ func runProtectionsReconcile(verb string, args []string, stdout, stderr io.Write
 	fs := flag.NewFlagSet("protections "+verb, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	config := fs.String("config", posture.DeclarationPath, "deployment declaration")
-	forgeKind := fs.String("forge", "snapshot", "forge adapter: snapshot | github")
+	forgeKind := fs.String("forge", "snapshot", "forge adapter: snapshot | github | forgejo")
 	snapshot := fs.String("snapshot", "", "the forge's state as a JSON file (snapshot forge)")
 	repo := fs.String("repo", "", "working tree for CODEOWNERS and the workflow lint (omit to skip both)")
-	github := fs.String("github", "", "owner/name of the repository (github forge)")
-	api := fs.String("api", "", "GitHub API base URL (default https://api.github.com)")
+	github := fs.String("github", "", "owner/name of the repository (github or forgejo forge)")
+	api := fs.String("api", "", "forge API base URL (github default https://api.github.com; forgejo default admission.api)")
 	tokenEnv := fs.String("token-env", "GITHUB_TOKEN", "environment variable holding the forge token (github forge)")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "protections "+verb+" [--config <file>] --forge snapshot --snapshot <file> [--repo <dir>] | --forge github --github <owner/name> [--api <url>] [--token-env NAME] [--repo <dir>]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "protections "+verb+" [--config <file>] --forge snapshot --snapshot <file> [--repo <dir>] | --forge github|forgejo --github <owner/name> [--api <url>] [--token-env NAME] [--repo <dir>]"), stdout, stderr)
 	}
 	cfg, failEnv := loadDeclarationFor(*config)
 	if failEnv != nil {
@@ -86,8 +86,31 @@ func runProtectionsReconcile(verb string, args []string, stdout, stderr io.Write
 			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the github forge needs a token in $%s", *tokenEnv)), stdout, stderr)
 		}
 		forge = protections.NewGitHub(*api, owner, name, token)
+	case "forgejo":
+		owner, name, ok := strings.Cut(*github, "/")
+		if !ok || owner == "" || name == "" {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", "the forgejo forge needs --github <owner/name>"), stdout, stderr)
+		}
+		base := *api
+		if base == "" && cfg.Admission != nil {
+			base = cfg.Admission.Api
+		}
+		if base == "" {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", "the forgejo forge needs its instance URL in --api or admission.api"), stdout, stderr)
+		}
+		env := *tokenEnv
+		if env == "GITHUB_TOKEN" {
+			env = "FORGEJO_TOKEN" // the forge default when --token-env is left at the github default
+		}
+		token := os.Getenv(env)
+		if token == "" {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the forgejo forge needs a token in $%s", env)), stdout, stderr)
+		}
+		fj := protections.NewForgejo(base, owner, name, token)
+		fj.LedgerBranch = strings.TrimPrefix(cfg.LedgerRef(), "refs/heads/")
+		forge = fj
 	default:
-		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown forge %q (snapshot | github)", *forgeKind)), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown forge %q (snapshot | github | forgejo)", *forgeKind)), stdout, stderr)
 	}
 	var rep *protections.Report
 	var err error
