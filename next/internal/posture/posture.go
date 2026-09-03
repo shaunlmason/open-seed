@@ -13,6 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
+	"sort"
+	"strings"
 )
 
 // Posture is one of the charter's three named admission deployments.
@@ -59,14 +62,29 @@ func (p Posture) Enforced() bool {
 	return p == EnforcedSelfHosted || p == EnforcedForgeHosted
 }
 
+// DeclarationPath is where the reference deployment keeps the
+// declaration, relative to the repository root: the file `seed doctor`
+// reads by default, and the one the enforced hook reads from the
+// default branch's tip to learn the protected surface
+// (plans/os-465e356e.md D1). It is protected by construction: a list
+// that could be unprotected by editing the file that carries it would
+// protect nothing.
+const DeclarationPath = "seed.json"
+
 // Config is the deployment declaration.
 type Config struct {
 	Posture Posture `json:"posture"`
+	// Protected enumerates the protected surface (SEED-NEXT.md §II.14)
+	// as repository-relative path prefixes: a path equal to an entry,
+	// or under an entry as a directory, is write-denied to every agent
+	// credential at the enforced hook. Optional; the declaration's own
+	// path is always protected whether or not it is listed.
+	Protected []string `json:"protected,omitempty"`
 }
 
-// Load reads a strict declaration {"posture": "<name>"}: unknown fields,
-// trailing data, and unknown postures refuse; a missing file is
-// ErrUndeclared.
+// Load reads a strict declaration {"posture": "<name>", "protected"?}:
+// unknown fields, trailing data, unknown postures and malformed
+// protected entries refuse; a missing file is ErrUndeclared.
 func Load(path string) (*Config, error) {
 	b, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -75,6 +93,13 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnreadable, err)
 	}
+	return Parse(b)
+}
+
+// Parse decodes the declaration's bytes with Load's strictness, for a
+// reader that already holds them (the hook reads the file out of a
+// commit rather than off a filesystem).
+func Parse(b []byte) (*Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
 	var c Config
@@ -87,5 +112,56 @@ func Load(path string) (*Config, error) {
 	if !c.Posture.Valid() {
 		return nil, fmt.Errorf("%q is not a Seed posture (valid postures: %s)", c.Posture, validList())
 	}
+	for i, p := range c.Protected {
+		if err := validProtectedEntry(p); err != nil {
+			return nil, fmt.Errorf("protected[%d] %q: %v (valid postures: %s)", i, p, err, validList())
+		}
+	}
 	return &c, nil
+}
+
+// validProtectedEntry admits a clean repository-relative path prefix:
+// non-empty, not absolute, not escaping the root, nothing a git
+// pathname would not spell the same way.
+func validProtectedEntry(p string) error {
+	trimmed := strings.TrimSuffix(p, "/")
+	switch {
+	case strings.TrimSpace(trimmed) == "":
+		return errors.New("an empty entry protects nothing")
+	case strings.HasPrefix(p, "/"):
+		return errors.New("entries are repository-relative, never absolute")
+	case strings.Contains(p, "\\"):
+		return errors.New("entries use forward slashes")
+	case path.Clean(trimmed) != trimmed || trimmed == "." || trimmed == ".." || strings.HasPrefix(trimmed, "../"):
+		return errors.New("entries are clean relative paths (no '.', '..' or doubled separators)")
+	}
+	return nil
+}
+
+// ProtectedSurface is the declared list plus the declaration's own
+// path, deduplicated and sorted: the enumeration the hook and the
+// doctor both report.
+func (c *Config) ProtectedSurface() []string {
+	seen := map[string]bool{DeclarationPath: true}
+	out := []string{DeclarationPath}
+	for _, p := range c.Protected {
+		e := strings.TrimSuffix(p, "/")
+		if !seen[e] {
+			seen[e] = true
+			out = append(out, e)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// Protects reports whether a repository path falls on the protected
+// surface: equal to an entry, or under it as a directory.
+func (c *Config) Protects(p string) bool {
+	for _, e := range c.ProtectedSurface() {
+		if p == e || strings.HasPrefix(p, e+"/") {
+			return true
+		}
+	}
+	return false
 }

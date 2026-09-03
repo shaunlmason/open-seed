@@ -1306,3 +1306,31 @@ the assertions read, and there is no copy to go stale.
 - A field documented as an anchor is validated as one at the shape
   rule, not only where a flag's help text says so: the CLI is one
   path to the boundary, and the raw seam is another.
+- A boundary that guards one ref by content but exempts every other ref
+  by identity has only half a ceiling. The Phase 2 hook refused invalid
+  ledger pushes but passed every code ref untouched, so a compromised
+  credential could push the default branch, another actor's branch, a
+  tag, or the check pipeline. A release-gate drill that exempted
+  non-ledger refs would have reported three §I.2 clauses green by never
+  asking. The code-ref half derives its authorization from the same
+  ledger the hook already guards (standing, claim holders) plus the
+  transport's identity assertion — one derivation, two callers.
+- "The protected surface is changed only by the governance root" is not
+  "by an operator". The maintenance lane holds `operator` and is an
+  agent key, so gating the surface on operator standing lets a
+  compromised maintenance key rewrite the gates that judge it. Gate the
+  protected surface on `keyring.IsActiveRoot`; operator standing moves
+  the branch, root standing moves the surface (Copilot review, #247).
+- A revoked key still "holds" its claim in the tolerant lifecycle fold
+  until the claim is reaped, so a code-ref rule that authorizes by claim
+  holder alone lets a revoked key keep pushing its branch. Gate the
+  contract-branch push on active standing (`HasAnyCapability(claim|
+  operator)`) too: the branch closes with the standing, before the
+  reap.
+- A rewrite drill must push a DESCENDANT of the admitted tip, not an
+  orphan. An orphan force-push bounces at the commit-graph
+  fast-forward check before the hook's content rules run, so it proves
+  nothing about append-only-ness; committing on the current tip and
+  rewriting the last record's payload (re-signed, same version and
+  prev) verifies from genesis yet diverges, which is exactly what the
+  record-level prefix check catches and a fast-forward check misses.

@@ -44,15 +44,19 @@ func main() {
 	if guarded == "" {
 		guarded = defaultRef
 	}
-	os.Exit(run(os.Stdin, os.Stderr, ".", guarded))
+	os.Exit(run(os.Stdin, os.Stderr, ".", guarded, os.Getenv(pusherEnv)))
 }
 
 // run processes the pre-receive update lines. Any refusal fails the
 // whole push atomically (git applies no ref updates when the hook exits
-// non-zero), which is exactly the boundary the charter wants.
-func run(stdin io.Reader, stderr io.Writer, gitDir, guarded string) int {
+// non-zero), which is exactly the boundary the charter wants. The
+// guarded ref takes the ledger half (admitUpdate); every other ref
+// takes the code-ref half (authorizeRef, plans/os-465e356e.md D1),
+// judged for the pusher the transport asserted.
+func run(stdin io.Reader, stderr io.Writer, gitDir, guarded, pusher string) int {
 	scanner := bufio.NewScanner(stdin)
 	scanner.Buffer(make([]byte, 1<<16), 1<<20)
+	var code *codeRefContext
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) != 3 {
@@ -61,6 +65,30 @@ func run(stdin io.Reader, stderr io.Writer, gitDir, guarded string) int {
 		}
 		oldID, newID, ref := fields[0], fields[1], fields[2]
 		if ref != guarded {
+			if pusher == "" {
+				// Refused before any repository access: with no
+				// identity there is nothing to authorize against.
+				fmt.Fprintf(stderr, "seed-admit: rule ref: %s: no pusher identity asserted (%s) — code refs are refused without one\n", ref, pusherEnv)
+				return 1
+			}
+			if code == nil {
+				// The code-ref context is the ledger as it stands
+				// BEFORE this push (the guarded ref's current tip),
+				// loaded once per push: a push that carries both a
+				// ledger update and a code update is judged on the
+				// code side against admitted standing, never against
+				// what the same push proposes.
+				ctx, err := loadCodeRefContext(gitDir, guarded, pusher)
+				if err != nil {
+					fmt.Fprintf(stderr, "seed-admit: %v\n", err)
+					return 1
+				}
+				code = ctx
+			}
+			if err := code.authorize(gitDir, oldID, newID, ref); err != nil {
+				fmt.Fprintf(stderr, "seed-admit: %v\n", err)
+				return 1
+			}
 			continue
 		}
 		if err := admitUpdate(gitDir, oldID, newID); err != nil {

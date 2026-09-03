@@ -69,3 +69,62 @@ func TestPostureProperties(t *testing.T) {
 		t.Error("the forge-hosted gap must name Phase 12")
 	}
 }
+
+// conformance: III.L — the protected surface is enumerated in config
+// (plans/os-465e356e.md D1): the declaration carries it as clean
+// repository-relative prefixes, its own path is protected by
+// construction, and membership is exact-or-under.
+func TestProtectedSurfaceIsDeclaredAndSelfIncluding(t *testing.T) {
+	cfg, err := Load(write(t, `{"posture": "enforced-self-hosted", "protected": ["Makefile", ".github/workflows/", "next/spec/transitions.json", "Makefile"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{".github/workflows", "Makefile", "next/spec/transitions.json", "seed.json"}
+	if got := cfg.ProtectedSurface(); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("surface %v, want %v (deduplicated, sorted, self-including)", got, want)
+	}
+	for p, want := range map[string]bool{
+		"Makefile":                        true,
+		"seed.json":                       true,
+		".github/workflows/check.yml":     true,
+		".github/workflows":               true,
+		"next/spec/transitions.json":      true,
+		"next/spec/transitions.json.bak":  false,
+		"Makefile.old":                    false,
+		"docs/seed.json":                  false,
+		"next/spec/lanes.md":              false,
+		".github/workflowsX/a.yml":        false,
+		"next/internal/redteam/x_test.go": false,
+	} {
+		if got := cfg.Protects(p); got != want {
+			t.Errorf("Protects(%q) = %v, want %v", p, got, want)
+		}
+	}
+	// A declaration without the field protects exactly its own path.
+	bare, err := Load(write(t, `{"posture": "enforced-self-hosted"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := bare.ProtectedSurface(); len(got) != 1 || got[0] != DeclarationPath || !bare.Protects(DeclarationPath) || bare.Protects("Makefile") {
+		t.Fatalf("an unlisted surface is the declaration alone, got %v", got)
+	}
+	for name, content := range map[string]string{
+		"empty entry":     `{"posture": "cooperative", "protected": [""]}`,
+		"absolute":        `{"posture": "cooperative", "protected": ["/etc"]}`,
+		"escaping":        `{"posture": "cooperative", "protected": ["../x"]}`,
+		"dot":             `{"posture": "cooperative", "protected": ["."]}`,
+		"unclean":         `{"posture": "cooperative", "protected": ["a//b"]}`,
+		"backslash":       `{"posture": "cooperative", "protected": ["a\\b"]}`,
+		"not a list":      `{"posture": "cooperative", "protected": "Makefile"}`,
+		"not strings":     `{"posture": "cooperative", "protected": [1]}`,
+		"unknown sibling": `{"posture": "cooperative", "protected": [], "protect": []}`,
+	} {
+		if _, err := Load(write(t, content)); err == nil || !strings.Contains(err.Error(), "valid postures") {
+			t.Errorf("%s must refuse naming the valid postures, got %v", name, err)
+		}
+	}
+	// Parse is Load without the file: the same strictness on bytes.
+	if _, err := Parse([]byte(`{"posture": "anarchy"}`)); err == nil {
+		t.Fatal("Parse must apply Load's validity check")
+	}
+}

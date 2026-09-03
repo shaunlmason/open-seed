@@ -1067,6 +1067,30 @@ PR (an administrative card, not a Phase 9 item).
   names row 9 at Phase 11 item 4)
 - 11.5 flywheel v0 — os-9075c308 — plan in review (#231)
 
+## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
+
+- 12.1 the compromised-actor drill, the release gate — os-465e356e —
+  plan PR #241 (merged, amended per review: the drill extends the
+  Phase 2 `seed-admit` hook rather than shipping a second boundary,
+  and asserts each permission beside its refused negative; D9 routes
+  the revocation reap to os-32d06c65), task PR — **in review**: the
+  hook's code-ref half (`cmd/seed-admit/coderef.go`) authorizing every
+  non-ledger ref from the ledger at the guarded tip and the
+  `SEED_PUSHER` identity — default branch operator-only and
+  append-only, contract branches by the active claim (closed with a
+  revoked holder's standing), immutable tags, and the protected
+  surface (`posture.Config.Protected`) write-denied to every non-root
+  key at the default branch's current tip; `internal/redteam` playing
+  the §I.2 adversary against the enforced fixture with the ceiling
+  (`testdata/ceiling.json`) asserted clause by clause at the push,
+  coverage derived both ways, one derivation shared with `admit.Check`,
+  and the residuals (`testdata/residuals.json`) named and pinned; the
+  gate is `make check`; `next/spec/admission.md` and
+  `next/spec/redteam.md` new, `lanes.md` records III.O row 3 met.
+  Items 2 through 6 are carded and planned by the parallel session
+  (os-5c8a312c, os-7508ab9e, os-0d4f2af3, os-cf13fb51, os-16e55c11;
+  plans #244, #246, #247, #248, #249).
+
 ## Frontier
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,

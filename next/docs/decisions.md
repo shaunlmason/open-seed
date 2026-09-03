@@ -2732,3 +2732,20 @@ merge commit the approval observes; the CLI refuses a non-anchor as
 usage before the session opens, and the shape rule refuses `pr` that
 is not `<pr> @ <merged-commit>` at every version, the fixtures having
 carried the anchor form throughout.
+
+- 2026-09-03 — the compromised-actor drill (os-465e356e) extends the
+  Phase 2 `seed-admit` hook rather than shipping a second boundary.
+  The reviewed plan's first revision claimed no server-side hook
+  existed and proposed `seed hook pre-receive`; the premise was false
+  (`next/cmd/seed-admit` is the reference deployment, installed by the
+  Phase 2 drills), and a second hook would have given the release gate
+  a boundary deployments do not use while leaving two security-critical
+  implementations free to drift. The hook gains a code-ref half beside
+  its ledger half, both derived from the repository it already guards;
+  `internal/admit` is untouched (the ledger half consumes the rule set
+  as it stands). The pusher's identity is the transport's assertion
+  (`SEED_PUSHER`), which the reference deployment's ssh forced command
+  derives from the authenticated key; forging it is credential theft,
+  outside §I.2. The protected surface (`posture.Config.Protected`) is
+  the governance root's alone, not the operator's, so the maintenance
+  lane's operator key cannot rewrite the gates it is judged by.

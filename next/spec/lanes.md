@@ -402,6 +402,15 @@ ordered fragment list prevents.
   the verifier lane's summary and fragment carry the scorecard and
   the deferral.
 
+- III.O row 3 (the compromised-actor drill passes in CI — the
+  architecture's own definition of done) — met by Phase 12 item 1
+  ([`redteam.md`](redteam.md), "Conformance"): the §I.2 adversary
+  played against the enforced reference deployment
+  ([`admission.md`](admission.md)), the ceiling asserted clause by
+  clause at the push with coverage derived both ways, one derivation
+  shared with `admit.Check`, and the residuals named and pinned. The
+  gate is `make check`, so CI runs it with the rest of the suite.
+
 ## A gap the mode fixtures surfaced
 
 No shipped manifest grants `supervise` or `observer`, while
