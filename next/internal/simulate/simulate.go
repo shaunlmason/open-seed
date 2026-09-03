@@ -63,6 +63,7 @@ type Report struct {
 	Posture string         `json:"posture"`
 	Intents int            `json:"intents"`
 	Done    int            `json:"done"`
+	Days    int            `json:"days"`
 	Results []IntentResult `json:"results"`
 	Audit   *AuditResult   `json:"audit,omitempty"`
 }
@@ -85,15 +86,26 @@ func Run(cfg Config) (*Report, error) {
 		return nil, err
 	}
 	cat := catalog(cfg.Seed)
-	rep := &Report{Posture: postureName(cfg.Enforced), Intents: cfg.Intents}
+	rep := &Report{Posture: postureName(cfg.Enforced), Intents: cfg.Intents, Days: cfg.Days}
+	base := d.now
 	for i := 0; i < cfg.Intents; i++ {
 		subject := fmt.Sprintf("c-%d", i+1)
 		intent := cat[i%len(cat)]
+		// The accelerated clock (D5): arrivals spread across the declared
+		// window, the reporting instant advancing per intent. Admission
+		// still stamps each event with the real wall clock; the sim
+		// instant only feeds the clock-reading surfaces (offer expiry,
+		// the maintenance --as-of), which is the whole point — a clock is
+		// a declared input, never a fact admission reads.
+		at := base
+		if cfg.Days > 0 {
+			at = base.Add(time.Duration(i) * time.Duration(cfg.Days) * 24 * time.Hour / time.Duration(cfg.Intents))
+		}
 		repo, err := d.buildRepo(subject, intent)
 		if err != nil {
 			return nil, fmt.Errorf("%s repo: %w", subject, err)
 		}
-		if err := d.stageContract(subject, repo); err != nil {
+		if err := d.stageContract(subject, repo, at); err != nil {
 			return nil, fmt.Errorf("%s stage: %w", subject, err)
 		}
 		if err := d.drive(subject, repo); err != nil {
@@ -108,8 +120,12 @@ func Run(cfg Config) (*Report, error) {
 	}
 	// The curator and maintenance lanes run their passes once over the
 	// completed backlog (proposals from what recurred; the reap pass).
+	end := base
+	if cfg.Days > 0 {
+		end = base.Add(time.Duration(cfg.Days) * 24 * time.Hour)
+	}
 	d.curate()
-	d.maintain()
+	d.maintain(end)
 
 	records, err := d.records()
 	if err != nil {
@@ -123,7 +139,7 @@ func Run(cfg Config) (*Report, error) {
 // stageContract has the dispatcher file the intent and specify its
 // acceptance, and the supervisor publish an offer — every act admitted
 // through the boundary under the lane's own key.
-func (d *deployment) stageContract(subject string, r repo) error {
+func (d *deployment) stageContract(subject string, r repo, at time.Time) error {
 	if err := d.append1(d.keys["dispatcher"], "intent.filed", subject,
 		`{"intent": "fix the check", "tier": "trivial", "budget": "small", "routing": "core"}`); err != nil {
 		return err
@@ -132,7 +148,13 @@ func (d *deployment) stageContract(subject string, r repo) error {
 		fmt.Sprintf(`{"acceptance": {"ref": "accept.md @ %s", "executable": false}}`, r.spec)); err != nil {
 		return err
 	}
-	expires := d.now.Add(time.Hour).UTC().Format(time.RFC3339)
+	// The offer stays live through the run: its expiry sits a generous
+	// window past both the arrival instant and the real event ts.
+	horizon := at.Add(time.Hour)
+	if real := time.Now().UTC().Add(time.Hour); real.After(horizon) {
+		horizon = real
+	}
+	expires := horizon.UTC().Format(time.RFC3339)
 	offer := fmt.Sprintf(`{"eligibility": {"capabilities": ["claim"], "tiers": ["trivial"]}, "expires": %q}`, expires)
 	return d.append1(d.keys["supervisor"], "offer.published", subject, offer)
 }
@@ -184,9 +206,9 @@ func (d *deployment) curate() {
 }
 
 // maintain runs the maintenance pass over the backlog.
-func (d *deployment) maintain() {
+func (d *deployment) maintain(at time.Time) {
 	_ = d.verbs.Run("maintain", "run", "--remote", d.remote, "--state", d.state,
-		"--key", d.keys["maintenance"], "--as-of", d.now.UTC().Format(time.RFC3339))
+		"--key", d.keys["maintenance"], "--as-of", at.UTC().Format(time.RFC3339))
 }
 
 // materialize fetches and materializes the remote ledger into a temp

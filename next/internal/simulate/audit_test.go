@@ -21,6 +21,7 @@ func happy(subject string) []*event.Record {
 	return []*event.Record{
 		rec("intent.filed", subject),
 		rec("contract.specified", subject),
+		rec("offer.published", subject),
 		rec("claim.taken", subject),
 		rec("budget.reserved", subject),
 		rec("run.started", subject),
@@ -40,6 +41,7 @@ func TestAuditCatchesSilentAbandonment(t *testing.T) {
 	recs := []*event.Record{
 		rec("intent.filed", "c-1"),
 		rec("contract.specified", "c-1"),
+		rec("offer.published", "c-1"),
 		rec("claim.taken", "c-1"),
 		rec("budget.reserved", "c-1"),
 	}
@@ -57,6 +59,7 @@ func TestAuditCatchesUnreservedSpend(t *testing.T) {
 	recs := []*event.Record{
 		rec("intent.filed", "c-1"),
 		rec("contract.specified", "c-1"),
+		rec("offer.published", "c-1"),
 		rec("claim.taken", "c-1"),
 		rec("run.started", "c-1"),
 		rec("submission.made", "c-1"),
@@ -81,6 +84,21 @@ func TestAuditCatchesEmptyChain(t *testing.T) {
 	a := Audit(nil)
 	if len(a.LostUpdates) == 0 {
 		t.Fatal("an empty chain is a lost-everything")
+	}
+}
+
+func TestAuditCatchesUnofferedClaim(t *testing.T) {
+	// A claim with no preceding offer.published is a guardrail breach.
+	recs := []*event.Record{
+		rec("intent.filed", "c-1"),
+		rec("contract.specified", "c-1"),
+		rec("claim.taken", "c-1"),
+		rec("budget.reserved", "c-1"),
+		rec("submission.made", "c-1"),
+	}
+	a := Audit(recs)
+	if len(a.GuardrailBreaches) != 1 || a.GuardrailBreaches[0] != "c-1" {
+		t.Fatalf("a claim with no offer must be a guardrail breach, got %+v", a.GuardrailBreaches)
 	}
 }
 

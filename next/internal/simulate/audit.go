@@ -63,9 +63,9 @@ func Audit(records []*event.Record) AuditResult {
 	// Per-subject: silent abandonment (a window opened by claim.taken
 	// and never closed by a deliberate exit) and unreserved spend.
 	type window struct {
-		open      bool
-		reserved  bool
-		lastFence int
+		open     bool
+		reserved bool
+		offered  bool
 	}
 	subj := map[string]*window{}
 	get := func(s string) *window {
@@ -79,8 +79,15 @@ func Audit(records []*event.Record) AuditResult {
 	for _, rec := range records {
 		s := rec.Event.Subject
 		switch rec.Event.Verb {
+		case "offer.published":
+			get(s).offered = true
 		case "claim.taken":
 			w := get(s)
+			// A claim must ride a published offer: claiming work the
+			// supervisor never offered is a guardrail breach.
+			if !w.offered {
+				res.GuardrailBreaches = append(res.GuardrailBreaches, s)
+			}
 			w.open = true
 			w.reserved = false
 		case "budget.reserved":

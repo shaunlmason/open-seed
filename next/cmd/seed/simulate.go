@@ -75,6 +75,7 @@ func runSimulate(args []string, stdout, stderr io.Writer) int {
 		"posture": rep.Posture,
 		"intents": rep.Intents,
 		"done":    rep.Done,
+		"days":    rep.Days,
 		"results": results,
 	}
 	if rep.Audit != nil {

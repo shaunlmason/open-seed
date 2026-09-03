@@ -45,6 +45,27 @@ func TestSimulateReachesDoneCooperative(t *testing.T) {
 	simDone(t, "cooperative", 2)
 }
 
+func TestSimulateAcceleratedBacklog(t *testing.T) {
+	// The seven-day accelerated backlog (D5) reaches done with a clean
+	// audit, the reporting instant advancing while admission reads no
+	// clock.
+	e, code := runEnv(t, "simulate", "--lanes", "../../lanes", "--intents", "3",
+		"--days", "7", "--posture", "cooperative", "--work", t.TempDir())
+	if code != envelope.ExitOK || !e.OK {
+		t.Fatalf("accelerated simulate must succeed, got %d: %+v", code, e.Error)
+	}
+	if days, _ := e.Result["days"].(float64); int(days) != 7 {
+		t.Fatalf("the report must carry the day span, got %v", e.Result["days"])
+	}
+	if done, _ := e.Result["done"].(float64); int(done) != 3 {
+		t.Fatalf("every intent must reach done over the backlog, got %v", done)
+	}
+	audit, _ := e.Result["audit"].(map[string]any)
+	if clean, _ := audit["clean"].(bool); !clean {
+		t.Fatalf("the seven-day audit must be clean, got %+v", audit)
+	}
+}
+
 func TestSimulateReachesDoneEnforced(t *testing.T) {
 	if testing.Short() {
 		t.Skip("enforced posture builds the seed-admit hook; skipped under -short")
