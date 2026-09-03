@@ -1590,6 +1590,11 @@ record's own position through one derivation, `curation.AuthenticPass`
   the synthetic predecessor, the four refusals, the CLI's envelopes, the
   spec mirror); `next/spec/import.md` new, `protocol.md` (`seed/5`),
   `envelope.md` (exit 29) and `actors.md` following)
+of this repository (os-cf13fb51, plan #248 merged); item 6, docs
+**Next action: implement Phase 12 in item order — item 1 (#250) is
+merged; items 2, 3, 4 and 5 are in review against their merged plans,
+stacked in that order; item 6 follows against #249** —
+
 
 ## Frontier
 
@@ -1647,15 +1652,15 @@ proof and performance budgets, III.C row 4's contention benchmark
 taken there (os-7508ab9e, plan #246 merged); item 4, the preseed with
 agent-only guardrails and the protected surface in config
 (os-0d4f2af3, plan #247 merged); item 5, migration from a real export
-of this repository (os-cf13fb51, plan #248 merged); item 6, docs
+of this repository (os-cf13fb51, plan #248 in review); item 6, docs
 generation, the handbook and simulation mode, which also takes the
 exit line's week-long accelerated backlog (os-16e55c11, plan #249
 merged). All six extend one declaration, `seed.json`; whichever lands
 later merges the struct.
 
-**Next action: implement Phase 12 in item order — item 1 (#250) is
-merged; items 2, 3, 4 and 5 are in review against their merged plans,
-stacked in that order; item 6 follows against #249** —
+**Next action: implement Phase 12 in item order — item 1 (#250,
+in review) and item 2 against #244 are in progress; items 3, 4 and 6 follow
+against their merged plans, and item 5 once #248 merges** —
 implementation PRs as drafts until the Phase 11 exit record
 (os-efb2a099) merges and the phase gate opens (decisions/0003). The derivation, stated rather than read off a
 summary: every Phase 10 item has a merged PR and the exit record above
