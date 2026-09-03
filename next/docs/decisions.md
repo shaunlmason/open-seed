@@ -2749,3 +2749,83 @@ carried the anchor form throughout.
   outside §I.2. The protected surface (`posture.Config.Protected`) is
   the governance root's alone, not the operator's, so the maintenance
   lane's operator key cannot rewrite the gates it is judged by.
+## Phase 11 item 5 — flywheel v0 (os-9075c308, plan #231)
+
+**The report version is "14", not the plan's "12".** Item 4
+(os-0d537fbd) took "12" for the `retired` and `stale` counts while this
+card was planned, and Phase 10 item 5 (os-6bd9ffff) took "13" for the
+`lanes` section while it was in review, so the flywheel section moves
+the version twice past the plan's figure. The plan named the next free
+number at planning time; the number belongs to the derivation, not to
+the item, and the merge of `main` that collided the two is where this
+one was settled.
+
+**A flywheel gate refuses at exit 3.** `flywheel.Error` names its gate
+(`proposal.shape`, `proposal.path`, `proposal.occurrences`,
+`proposal.duplicate`, `proposal.repair_open`, `proposal.repair`,
+`merge.proposal`) in the message and rides `invalid_transition`: the
+act is an illegal step at this position of the record, which is that
+family's meaning, and no new exit is allocated (`envelope.md`'s
+allocation rule). `name_taken` is the one refinement, at exit 3, since
+the caller's next move is to look at the file that holds the name.
+
+**The fold re-judges the grant, not only the record gates.** The first
+cut of `flywheel.Fold` re-ran `CheckProposal` and `CheckMerge` at each
+position and bound a well-formed proposal pushed raw under a `claim`
+key; the admit drill's raw-push arm caught it. The fold now reads the
+keyring at the position and counts a signer without an accepted grant
+as an anomaly, the curation fold's posture exactly.
+
+**The proposal probe cites a passed repair.** With a repair contract
+passed, the boundary requires the proposal to cite it, so an
+affordance probe that cited nothing was refused and the verb vanished
+from the curator's list at the one moment it is owed. `flywheelProbes`
+carries the citation; an open repair leaves the probe refused, as the
+proposal is. `flywheel.Repairs` is the one derivation the boundary,
+the probe and the CLI read.
+
+**The mock run binds every declared input to a placeholder.** The v1
+engine refuses `workflow run --mock` when a declared required input is
+not supplied, so the validation and the repair's acceptance command
+both pass `--input <name>=placeholder` per declared input; the names
+are read from the staged file (flow and block layouts), since a repair
+may have rewritten it.
+
+**The boundary runs before the branch write.** `flywheel propose`
+drafts the proposal as it would stand at the base and runs
+`admit.Check` over it before staging or writing: a claim key, a
+standing proposal or an open repair refuse with nothing written. The
+first cut wrote the branch and let the append refuse, leaving a branch
+behind a refusal.
+
+**A sixth surface, `seed flywheel observe`.** The plan listed five
+subverbs and left `workflow.merged` to "observation"; the raw seam runs
+no rules, so the observer needs a boundary-checked act. `observe`
+derives the standing proposal's path and cites it at the merged
+commit, the `merge observe` posture.
+
+**A seed instantiation is four paths, and the fixture vendors the
+engine.** The engine's mock run reads `.seed/`, `scripts/seed`,
+`scripts/seed-harness` and `scripts/harness/`; the first fixture
+omitted the dispatcher and every role step failed with "harness mock
+failed". The verdict runner's scrubbed environment has no HOME, so a
+fixture whose acceptance commands are the engine's two verbs writes a
+`vendor <path>` line into its own `engine.lock`, the shim's air-gapped
+resolution; `flywheel.EnginePath` resolves the path the way the shim
+does.
+
+**The planted break is the harness, not the draft.** A deterministic
+draft has no step of its own to break: its run steps are the
+acceptance's commands (recorded, never executed, in mock) and its role
+steps stub from schemas the drafter fixes. The end-to-end break is a
+mock adapter that fails on the verdict step, and the repair is the
+harness restored on the branch, which is what a real repair of a
+generated workflow looks like: the environment or the file, fixed
+where the PR lives.
+
+**The walk's completeness check lists the new verbs pre-upgrade.**
+`TestAffordancesWalk` accepts `workflow.*` because the root lists every
+verb at `seed/0`, where no keyring applies, the same way it accepts the
+`curation.*` verbs; the curator's reach over a recurring shape is
+pinned by the flywheel admit drill and joined into the curator residual
+drill's sweep instead.

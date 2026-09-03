@@ -26,6 +26,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/flywheel"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -1793,6 +1794,35 @@ func Default() []Rule {
 			}
 			_, err := c.Table.Check(rec.Event.Subject, current, verb)
 			return err
+		}},
+		{Name: "flywheel", Check: func(c *Context, rec *event.Record) error {
+			// The flywheel's two facts (plans/os-9075c308.md D4;
+			// next/spec/flywheel.md): a proposal from the curator's
+			// grant cites at least RecurringAfter distinct admitted
+			// done occurrences folding to its shape, recomputed from
+			// the record, names a file under the registry, stands
+			// alone for its shape, and cites a passed repair where one
+			// exists; a merge observation cites the standing proposal.
+			// Capability rides the grant rule.
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil || c.Table == nil {
+				return nil
+			}
+			subject := rec.Event.Subject
+			switch rec.Event.Verb {
+			case flywheel.ProposedVerb:
+				p, err := flywheel.ParseProposal(subject, rec.Event.Payload)
+				if err != nil {
+					return err
+				}
+				return flywheel.CheckProposal(c.Records, c.Lifecycle, subject, p)
+			case flywheel.MergedVerb:
+				m, err := flywheel.ParseMerge(subject, rec.Event.Payload)
+				if err != nil {
+					return err
+				}
+				return flywheel.CheckMerge(c.Records, c.Lifecycle, subject, m)
+			}
+			return nil
 		}},
 		{Name: "curation", Check: func(c *Context, rec *event.Record) error {
 			// The staged curation stores (plans/os-f30ee0d3.md;

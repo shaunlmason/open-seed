@@ -319,7 +319,11 @@ edge closed with Phase 11 items 1 and 2: the four implemented verbs
 are in the catalog and the table, and the curator's own reachable set
 (the proposal, the contest, the raise, the standing-only relay) is
 derived from the boundary and pinned against its residual table
-exactly as the dispatcher's is ([`curation.md`](curation.md)).
+exactly as the dispatcher's is ([`curation.md`](curation.md)). The
+`workflow.*` edge closed with Phase 11 item 5: both verbs are in the
+catalog and the table, the proposal reachable by the curator alone and
+the merge by the observer, and the curator's residual table names the
+proposal ([`flywheel.md`](flywheel.md)).
 
 ## The loop-verb registry
 
@@ -392,6 +396,15 @@ ordered fragment list prevents.
   knowledge bloat managed) — met by Phase 11 item 4
   ([`curation.md`](curation.md), "Expiry, retirement and
   applicability" and "Bloat"), the mapping there naming each drill.
+- III.K row 8 (the flywheel closes through gates: recurring shapes,
+  drafted workflows, mock validation, PR; repair roles propose patches
+  as PRs; conversion rate tracked) — met by Phase 11 item 5
+  ([`flywheel.md`](flywheel.md), "Conformance mapping"): the shape
+  from the record, the draft from gated acceptance commands, the v1
+  engine's validate and mock run from a staging worktree, the proposal
+  on its branch and never main, the repair contract under the
+  dispatcher's key with its patch on the same branch, and the report's
+  `flywheel` section.
 
 - III.G row 7 and III.O row 2 (rubric verdicts scored item by item
   with cited evidence and explicit uncertainty; low-confidence items
