@@ -167,6 +167,24 @@ re-triaging.
 
 The doctor reports every block as declared or not (`preseed`).
 
+**The racing block.** A squad's `guardrails.squads.<name>.racing`
+(`{"racers": N, "cost": "…"}`) is its explicit opt-in to racing mode
+([`lifecycle.md`](lifecycle.md), "Racing"): `racers` two or more,
+`cost` a non-empty sentence in the operator's words. Both are held at
+load (`posture_invalid`) and at `seed preseed check`
+(`preseed_incomplete`); an absent block is exclusivity, never a
+default race. The boundary reads the block through the same
+declaration the ceiling and routing rules read.
+
+**The federation block.** `federation.remotes` is the list of other
+ledgers this deployment reads ([`requests.md`](requests.md),
+"Federation"): each `{"name", "remote", "ref"}`, the name one token
+unique in the list, the remote non-empty, the ref optional
+(`refs/seed/ledger` when absent). Strict and read-only: the block
+names what `seed federation report` fetches and verifies under each
+remote's own keyring; nothing in the declaration lets a remote write
+here or this deployment write there. Held at load (`posture_invalid`).
+
 ## The proposal protocol
 
 Under the forge-hosted posture an actor's credential can fetch the

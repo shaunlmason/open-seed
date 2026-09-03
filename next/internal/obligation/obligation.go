@@ -20,6 +20,7 @@ import (
 	"sort"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -60,6 +61,16 @@ const (
 	// a human is a key with operator standing, and discharged by the
 	// verdict.rendered such a key makes on the same submission.
 	KindVerdictHuman = "verdict.human"
+	// KindReapOwed is an in_progress claim whose holder has been revoked:
+	// it can end no other way than a reap, because a revoked holder
+	// cannot submit, release or park (plans/os-32d06c65.md D4). Distinct
+	// from KindClaimHeld, which any deliberate exit discharges.
+	KindReapOwed = "claim.reap-owed"
+	// KindRequestPending is an inbound request nobody has answered
+	// (plans/os-48df10a2.md D2): owed by the dispatch lane, one row per
+	// subject carrying the oldest unanswered request's position and
+	// timestamp, discharged by the dispatcher's request.answered.
+	KindRequestPending = "request.pending"
 )
 
 // Lane names used where an obligation is owed by a role rather than
@@ -70,6 +81,7 @@ const (
 	LaneObserver   = "lane:observer"
 	LaneSupervisor = "lane:supervise"
 	LaneOperator   = "lane:operator"
+	LaneDispatcher = "lane:dispatch"
 )
 
 // factDischargers is the closed set of fact-shaped obligations: their
@@ -90,6 +102,8 @@ var factDischargers = map[string][]string{
 	KindEscalationPending: {"contract.cancelled", "decision.recorded"},
 	// next/spec/verdicts.md: the human's render answers the deferral.
 	KindVerdictHuman: {"verdict.rendered"},
+	// next/spec/requests.md: the dispatcher's answer closes a request.
+	KindRequestPending: {"request.answered"},
 }
 
 // mergeRequestVerb discharges a standing pass verdict that no merge
@@ -166,6 +180,9 @@ func (d Deps) able(actor string, verbs []string) bool {
 // a stable order (subject, then kind).
 func Derive(records []*event.Record, table *transition.Table, deps Deps) []Row {
 	fold := table.FoldRecords(records)
+	// The keyring's standing is what tells the reap obligation from an
+	// ordinary held claim: a revoked holder's open window owes a reap.
+	ring, _, _ := keyring.StateAt(records)
 	var rows []Row
 	for _, subject := range fold.Subjects() {
 		s, ok := fold.State(subject)
@@ -173,7 +190,13 @@ func Derive(records []*event.Record, table *transition.Table, deps Deps) []Row {
 			continue
 		}
 		rows = append(rows, subjectRows(subject, s, table, deps)...)
+		if ring != nil && s.Claim != nil && s.State == "in_progress" {
+			if e, ok := ring.Get(s.Claim.Holder); ok && e.Standing == keyring.StandingRevoked {
+				rows = append(rows, Row{Subject: subject, Kind: KindReapOwed, OwedBy: LaneOperator, Since: s.Claim.Fence, DischargedBy: []string{"claim.reaped"}})
+			}
+		}
 	}
+	rows = append(rows, requestRows(fold)...)
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].Subject != rows[j].Subject {
 			return rows[i].Subject < rows[j].Subject
@@ -304,4 +327,29 @@ func runFlaggable(s transition.SubjectState, fence int) bool {
 		}
 	}
 	return false
+}
+
+// requestRows is the unanswered requests as obligations on the
+// dispatch lane (plans/os-48df10a2.md D2): one row per subject, since
+// identity is (Subject, Kind), carrying the oldest unanswered request
+// on it; the situation read lists every request as its own notice.
+// The requests on system are owed like the ones on a contract.
+func requestRows(fold *transition.Fold) []Row {
+	var rows []Row
+	seen := map[string]bool{}
+	for _, r := range fold.Requests() {
+		if r.Answered != nil || seen[r.Subject] {
+			continue
+		}
+		seen[r.Subject] = true
+		rows = append(rows, Row{
+			Subject:      r.Subject,
+			Kind:         KindRequestPending,
+			OwedBy:       LaneDispatcher,
+			Since:        r.Pos,
+			TS:           r.TS,
+			DischargedBy: append([]string(nil), factDischargers[KindRequestPending]...),
+		})
+	}
+	return rows
 }

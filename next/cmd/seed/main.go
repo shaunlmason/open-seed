@@ -81,6 +81,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runLane(args[1:], stdout, stderr)
 	case "message":
 		return runMessage(args[1:], stdout, stderr)
+	case "request":
+		return runRequest(args[1:], stdout, stderr)
+	case "federation":
+		return runFederation(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
 	case "protections":
@@ -102,6 +106,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runFlywheel(args[1:], stdout, stderr)
 	case "trajectory":
 		return runTrajectory(args[1:], stdout, stderr)
+	case "docs":
+		return runDocs(args[1:], stdout, stderr)
+	case "simulate":
+		return runSimulate(args[1:], stdout, stderr)
 	default:
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown verb %q — try 'seed version'", args[0])), stdout, stderr)
 	}

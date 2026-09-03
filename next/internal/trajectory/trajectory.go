@@ -377,7 +377,18 @@ const (
 	ManifestChanged Class = "manifest_changed"
 	// PostureChanged: the resolved fragments' digest differs.
 	PostureChanged Class = "posture_changed"
+	// ChoiceDiverged: the frame is unchanged and the configuration still
+	// declares, grants and affords the recorded act, but the decider
+	// re-run at this point chooses a different act (plans/os-16e55c11.md
+	// D4). It is the behavioral regression III.O row 5 asked for: the
+	// choice moved though nothing in the configuration did.
+	ChoiceDiverged Class = "choice_diverged"
 )
+
+// Decider chooses the loop act a lane would take at a frame, or "" when
+// the frame does not determine the choice. ReplayWithDecider re-runs it
+// at each recorded loop-act point.
+type Decider func(frame Frame, m lane.Manifest) string
 
 // Verdict is one point's replay: the point's identity and its class,
 // with the detail that names what differed.
@@ -429,6 +440,18 @@ func (r *Result) Diverged() bool {
 // cannot probe the boundary, and another key's affordances are
 // another lane's frame.
 func Replay(t *Trajectory, records []*event.Record, key ed25519.PrivateKey, lanesDir string) (*Result, error) {
+	return replayCore(t, records, key, lanesDir, nil)
+}
+
+// ReplayWithDecider replays as Replay does, and additionally re-runs the
+// decider at each admitted loop-act point whose frame is unchanged and
+// whose act the configuration still permits; a definite choice that
+// differs from the recorded act is ChoiceDiverged (D4).
+func ReplayWithDecider(t *Trajectory, records []*event.Record, key ed25519.PrivateKey, lanesDir string, dec func(Frame, lane.Manifest) string) (*Result, error) {
+	return replayCore(t, records, key, lanesDir, dec)
+}
+
+func replayCore(t *Trajectory, records []*event.Record, key ed25519.PrivateKey, lanesDir string, dec func(Frame, lane.Manifest) string) (*Result, error) {
 	if len(key) != ed25519.PrivateKeySize {
 		return nil, errors.New("replay needs the lane's own private key: a fingerprint alone cannot probe the boundary")
 	}
@@ -475,6 +498,17 @@ func Replay(t *Trajectory, records []*event.Record, key ed25519.PrivateKey, lane
 			v.Class, v.Detail = ActUngranted, fmt.Sprintf("grants %v no longer intersect %s's accepted capabilities %v", cfg.Manifest.Grants, p.Verb, keyring.AcceptedCapabilities(p.Verb))
 		case admitted && !slices.Contains(frame.Affordances, p.Verb):
 			v.Class, v.Detail = ActInadmissible, fmt.Sprintf("the boundary no longer affords %s at the point's prefix", p.Verb)
+		}
+		// The decider re-decision (D4): only on a point still Same —
+		// frame unchanged and the configuration permitting the act — so
+		// a divergence is the CHOICE moving, never the frame or the
+		// configuration (those are the five classes above). A "" choice
+		// abstains: the frame did not determine the act.
+		if v.Class == Same && dec != nil && admitted && p.Act != "" {
+			if choice := dec(frame, cfg.Manifest); choice != "" && choice != p.Act {
+				v.Class = ChoiceDiverged
+				v.Detail = fmt.Sprintf("the decider chose %q where the point recorded %q, the frame and the configuration unchanged", choice, p.Act)
+			}
 		}
 		r.Points = append(r.Points, v)
 	}

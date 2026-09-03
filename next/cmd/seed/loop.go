@@ -539,6 +539,17 @@ func runClaimTake(args []string, stdout, stderr io.Writer) int {
 	// deriving it here is what spares the lane a projection read.
 	return ls.commit(f, loopAct{verb: claimTakenVerb, payload: []byte(`{}`), derive: deriveLessons, resultAt: func(pos int) map[string]any {
 		out := map[string]any{"subject": subject, "fence": fmt.Sprintf("%d", pos), "lessons": lessons}
+		// The racing note (plans/os-56bee171.md D4): a racer learns at
+		// claim time that its squad races and what the operator said
+		// the race costs, so the cost sentence is in front of the lane
+		// that spends it.
+		if ls.ctx != nil && ls.ctx.Declaration != nil && ls.ctx.Lifecycle != nil {
+			if s, ok := ls.ctx.Lifecycle.State(subject); ok {
+				if racers, cost, races := ls.ctx.Declaration.RacingFor(s.Routing); races {
+					out["racing"] = map[string]any{"racers": racers, "cost": cost}
+				}
+			}
+		}
 		if *repo == "" {
 			out["lessons_unverified"] = fmt.Sprintf("%d", unresolvedCount())
 		} else {

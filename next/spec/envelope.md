@@ -147,7 +147,9 @@ rule above forbids:
 | 29 | `import_unmapped` | `seed import` over an export carrying a run-log verb or a card state the transform table has no row for: the family's answer with the verb or state named, since a drop is a row and no entry is skipped silently (`import.md`) |
 | 13 | `preseed_incomplete` | a declaration missing something the charter requires it to say — a required member of the protected surface, a tier outside the vocabulary, a lane that is no manifest, an undeclared squad under a guardrail: a judgment on the declaration's content, like `posture_invalid`, and distinct from drift against a chain (`postures.md`) |
 | 3 | `tier_above_ceiling` | `claim.taken` by an agent- or service-kind key on a contract above its squad's declared `max_agent`: an illegal step at this position under this deployment's guardrails, naming the kind, the squad, the tier and the ceiling; a human key is not ceilinged (`postures.md`) |
+| 3 | `race_settled` | an act on a contract by a racer whose claim outlived the race's settlement (`lifecycle.md`, "Racing"): the first verified success closed the contract at the named position, so an illegal step by construction, naming the settlement, the actor and its fence; the racer's own deliberate exit still admits, and `contention` at a racing squad's cap names every holder |
 | 3 | `routing_unknown` | `intent.filed` whose `routing` names no declared squad: the residual `tiers.md` named, closed by the declaration's teams (`postures.md`) |
+| 3 | `request_refused` | a request verb whose shape, subject or citation is wrong ([`requests.md`](requests.md)): an unknown kind, a reference that is not one, a summary over 200 bytes or a body in the payload, an `about` no contract resolves, an answer to no request or to an answered one, `filed` without its intent or `declined` without its reason, an intent not admitted after the request |
 | 18 | `under_tiered` | `seed plan lint --config --tier` on a file scope, or `seed verdict render --config` on a receipt's changed files, touching a floored prefix at a tier below its floor: content whose gate is short, the family's answer, with the path and the two tiers named (`postures.md`, `plans.md`) |
 
 A refinement is not a way around the allocation rule. A condition a caller
@@ -173,3 +175,12 @@ machine consumer needs it.
   serialized field set) and the CLI tests in `next/cmd/seed`.
 - III.I "affordance computation and admission enforcement consume the same
   rule set" — Phase 8, against `internal/admit`.
+
+## Refinements added in Phase 12 item 6
+
+- `docs_drift` refines exit 28 `drift` (`envelope.CodeDocsDrift`): a
+  committed generated document differs from what `seed docs generate`
+  renders from its table. See [`simulation.md`](simulation.md).
+- `choice_diverged` is a trajectory replay divergence class, not an exit
+  code: it travels in the replay result and shares the `trajectory_diverged`
+  refusal (exit 26 `lane_invalid`). See [`trajectories.md`](trajectories.md).
