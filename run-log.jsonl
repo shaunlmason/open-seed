@@ -1178,3 +1178,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:244","to":"ready"},"task":"os-5c8a312c","ts":"2026-09-03T00:52:24Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T01:52:27Z"},"task":"os-5c8a312c","ts":"2026-09-03T00:52:27Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:246","to":"ready"},"task":"os-7508ab9e","ts":"2026-09-03T00:53:50Z","verb":"plan-unblock"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:247","to":"ready"},"task":"os-0d4f2af3","ts":"2026-09-03T00:53:54Z","verb":"plan-unblock"}
