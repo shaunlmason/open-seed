@@ -274,11 +274,11 @@ func TestLedgerShowNotFoundStampsTheTip(t *testing.T) {
 		t.Fatalf("an unparsable record exits 8 chain_invalid: %d %+v", code, e)
 	}
 	if e.Position == nil || *e.Position != "1" {
-		t.Fatalf("a failed scan stamps the position it failed at: %+v", e.Position)
+		t.Fatalf("a failed scan stamps the position it failed at: %s", stampOf(e.Position))
 	}
 	v, vcode := runEnv(t, "ledger", "verify", "--ledger", ld)
 	if vcode != 8 || v.Position == nil || *v.Position != *e.Position {
-		t.Fatalf("show and verify stamp one corrupted chain alike: show %v, verify %d %+v", *e.Position, vcode, v.Position)
+		t.Fatalf("show and verify stamp one corrupted chain alike: show %s, verify %d %s", stampOf(e.Position), vcode, stampOf(v.Position))
 	}
 }
 
@@ -360,4 +360,13 @@ func TestLedgerUsageRefusals(t *testing.T) {
 			t.Errorf("%v must exit 64, got %d", args, code)
 		}
 	}
+}
+
+// stampOf prints an envelope's position for a failure message: the
+// value, or <nil>, never the pointer.
+func stampOf(p *string) string {
+	if p == nil {
+		return "<nil>"
+	}
+	return *p
 }
