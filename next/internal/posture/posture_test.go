@@ -215,3 +215,28 @@ func TestRacingBlockSaysBothOrRefuses(t *testing.T) {
 		}
 	}
 }
+
+// conformance: plans/os-48df10a2.md AC4 — the federation block is
+// strict and read-only: names one token and unique, remotes named,
+// refs full ref names or absent for the default, and no field that
+// could name a key or a write.
+func TestFederationBlockIsStrictAndReadOnly(t *testing.T) {
+	base := `{"posture": "cooperative", "federation": {"remotes": [%s]}}`
+	cfg, err := Parse([]byte(fmt.Sprintf(base, `{"name": "alpha", "remote": "git@x:a.git", "ref": "refs/seed/ledger"}, {"name": "beta", "remote": "/srv/b.git"}`)))
+	if err != nil || cfg.Federation == nil || len(cfg.Federation.Remotes) != 2 || cfg.Federation.Remotes[1].Ref != "" {
+		t.Fatalf("two remotes, the second on the default ref: %v %+v", err, cfg)
+	}
+	for name, remotes := range map[string]string{
+		"blank name":   `{"name": " ", "remote": "x"}`,
+		"slash name":   `{"name": "a/b", "remote": "x"}`,
+		"duplicate":    `{"name": "a", "remote": "x"}, {"name": "a", "remote": "y"}`,
+		"no remote":    `{"name": "a", "remote": ""}`,
+		"short ref":    `{"name": "a", "remote": "x", "ref": "seed-ledger"}`,
+		"a key field":  `{"name": "a", "remote": "x", "key": "/etc/key"}`,
+		"a write flag": `{"name": "a", "remote": "x", "write": true}`,
+	} {
+		if _, err := Parse([]byte(fmt.Sprintf(base, remotes))); err == nil {
+			t.Errorf("%s: the block parsed", name)
+		}
+	}
+}

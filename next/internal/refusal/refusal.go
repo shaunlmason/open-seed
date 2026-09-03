@@ -16,6 +16,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/request"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -86,6 +87,12 @@ func Envelope(err error) *envelope.Envelope {
 	var settled *admit.RaceSettledError
 	if errors.As(err, &settled) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "race_settled", err.Error())
+	}
+	// A request refusal (plans/os-48df10a2.md; next/spec/requests.md):
+	// the shape, the subject or the citation is wrong.
+	var req *request.Error
+	if errors.As(err, &req) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "request_refused", err.Error())
 	}
 	var ceil *admit.CeilingError
 	if errors.As(err, &ceil) {

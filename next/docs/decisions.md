@@ -3134,3 +3134,53 @@ fail cannot shadow another's earlier pass.
 needs no observation stream to reap: nothing a settled-out racer does
 can land but its exit, so the maintenance pass reaps each remaining
 claim with a packet naming the settlement, reported as `settled`.
+
+## Phase 13 item 4 — the request ingress, federation and cross-repo work (os-48df10a2, plan #257)
+
+**`seed/7`, not the plan's `seed/6`.** The plan was written before
+racing landed and named `seed/6` for the request verbs; racing took
+`seed/6` first (13.1), and a version is a named list a validator
+either registers or not, so the ingress is `seed/7` and the register
+says why. Nothing else in the plan moved.
+
+**A request is a fact beside the lifecycle, not a row.** Both verbs
+change no state, so `transitions.json` gained nothing and the fold
+keeps request facts the way it keeps the verdict and the escalation:
+position, signer, subject, origin, kind, and the answer. The rule
+holds the shapes and the citations; standing is the keyring's and
+dispatch is the grant rule's, as everywhere.
+
+**The subject is derived, never chosen.** `about` names the contract
+the proposal concerns and the record's subject must agree with it, or
+be `system` when it names none; a subject that resolves to nothing
+refuses. That is what keeps hostile text off the notice's subject
+field without a second oracle: the situation read carries a subject
+only because admission already held it to a contract or to `system`.
+
+**One obligation row per subject.** Obligation identity is
+(subject, kind), so two pending requests on `system` are one
+`request.pending` row carrying the oldest; the situation read lists
+every request as its own notice. Splitting the identity for one kind
+would have made the delta's removal names ambiguous for every other.
+
+**`request answer` is a lane act, not a loop act.** The loop is seven
+acts by spec and by test, and the dispatcher runs no worker loop; the
+lane validator gained a closed set of lane acts held to the same
+grant intersection, and a lane declaring only those owes no liveness
+source. The dispatcher's manifest names it, the trajectory corpus was
+re-recorded on purpose, and the frame's act check is unchanged.
+
+**The report's version did not move.** The `requests` section is
+present only when the prefix carries a request, and no chain before
+`seed/7` can carry one, so every existing build is byte-identical
+without a republish; the projections spec records the section under
+version 15 with that reasoning.
+
+**The federation read has no declaration in the loop.** `seed
+federation report` opens each remote with the gitref client alone —
+fetch, materialize, verify from the remote's own genesis with the
+resolver that genesis bootstraps — rather than through the loop's
+session opener, which would have applied this deployment's
+declaration (its ledger ref under the forge-hosted posture, its
+proposer) to a foreign ledger. No key crosses, and the command has no
+key flag to cross with.

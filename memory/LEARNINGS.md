@@ -1534,3 +1534,15 @@ the assertions read, and there is no copy to go stale.
   backend fakes run concurrently, a tmpfs TMPDIR (the drills fsync and
   spawn git, so sys time halves), and one live run per pull request. No
   gate, ceiling, or command changed.
+- An ingress verb is safest as a fact with a derived subject: hold the
+  record's subject to what the payload cites (a contract on the chain
+  or `system`) at admission, and every downstream notice can carry
+  the subject without re-checking it.
+- A projection section that only chains from a new version can carry
+  needs no projection version bump: `omitempty` keeps every older
+  build byte-identical, and the spec can say so in place of a
+  republish. Bump when an unchanged tip would render differently.
+- A federation read should never reuse the loop's session opener:
+  the opener applies the local declaration (ledger ref, proposer) to
+  whatever remote it opens, which is wrong for a foreign ledger. Open
+  with the gitref client and the remote's own genesis instead.
