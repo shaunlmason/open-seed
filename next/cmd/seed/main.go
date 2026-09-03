@@ -104,6 +104,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runTrajectory(args[1:], stdout, stderr)
 	case "docs":
 		return runDocs(args[1:], stdout, stderr)
+	case "simulate":
+		return runSimulate(args[1:], stdout, stderr)
 	default:
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown verb %q — try 'seed version'", args[0])), stdout, stderr)
 	}
