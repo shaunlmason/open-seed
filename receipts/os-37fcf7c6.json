@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-37fcf7c6",
-  "merge_base": "2ebc938ca95a7d2f7d26815615ece1ee620e8c68",
-  "head": "3fa74f35b508d7dfd9c1a5f79352cdab253a9f6c",
+  "merge_base": "160bed4c627d768424cde5a6d6e5df5ed14cc3a1",
+  "head": "9351b6f453efe148ae4d39a9997712c394466bbf",
   "plan_path": "plans/os-37fcf7c6.md",
   "plan_sha256": "652018d1c571c09977f0c2a49cc06a73e060a43fc7708c11d27e7e0006e5047f",
   "diff_files": [
@@ -12,7 +12,7 @@
     "next/docs/progress.md",
     "next/spec/envelope.md"
   ],
-  "diff_sha256": "e85c26279cd3db4a12bb42d936c60770cf49c468ab111ae530e8855ed5c41443",
+  "diff_sha256": "36a85e4d8065416c0edfbc4bace26341508ced6a5e7877da3aa70cf697fd6092",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -run 'TestLedgerShow|TestLedgerVerify' -count=1",
@@ -27,5 +27,5 @@
       "exit": 0
     }
   ],
-  "generated_by": "seed-next-implementer"
+  "generated_by": "local"
 }
