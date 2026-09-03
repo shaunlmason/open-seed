@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "task": "os-32d06c65",
+  "merge_base": "19cd92c952f2b617cfcd91a7f3827f0f096b49b4",
+  "head": "25155614a5371dd96189a3d6c0666ba68c8b1832",
+  "plan_path": "plans/os-32d06c65.md",
+  "plan_sha256": "691d5a8786dcd0668e4f6ff0e0382b1af6a4a8ac7b0356675a9f94b06be74066",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/maintain.go",
+    "next/docs/decisions.md",
+    "next/internal/admit/revoked.go",
+    "next/internal/admit/revoked_test.go",
+    "next/internal/maintain/maintain.go",
+    "next/internal/maintain/maintain_test.go",
+    "next/internal/obligation/obligation.go",
+    "next/internal/obligation/reap_test.go",
+    "next/internal/redteam/testdata/residuals.json",
+    "next/spec/actors.md",
+    "next/spec/maintenance.md",
+    "next/spec/obligations.md"
+  ],
+  "diff_sha256": "db68e30fb100ad6866dde491d30c49236dbf89d960de9a4471964fc8de2dbc30",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/obligation/ ./internal/maintain/ ./internal/redteam/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
