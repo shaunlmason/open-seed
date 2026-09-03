@@ -34,7 +34,7 @@
         {
           "row": 4,
           "text": "Any mutation *within* retained history — reorder, rewrite, interior deletion, forgery — is detected by chain verification and (*enforced-only*) refused at the remote; the drill proves both with corrupted fixtures and a raw-git adversary.",
-          "posture": "enforced-only",
+          "posture": "mixed",
           "status": "met",
           "phase": "2",
           "evidence": "#79, #83, #85 (corrupted fixtures: reordered, rewritten, forged-sig, bad-prev, lying HEAD, lying genesis, detected with positioned reasons); #94 (rewrite, truncation, force-update and deletion refused at the hook), #99 TestDrillRawAdversaryPerPosture (cmd/seed-admit/drill_test.go)",
@@ -88,7 +88,7 @@
         {
           "row": 10,
           "text": "`halt.declared` stops admission of everything except an operator's `halt.lifted`, enforced at the admission boundary; the halt drill includes a client-bypassing writer (*enforced-only*).",
-          "posture": "enforced-only",
+          "posture": "mixed",
           "status": "met",
           "phase": "2",
           "evidence": "#84 (halt in the rule set, exit 7 halted, operator-only lift) TestHaltRefusesEverythingButLift (internal/halt); #99 TestDrillRawAdversaryPerPosture (cmd/seed-admit/drill_test.go)",
@@ -121,7 +121,7 @@
         {
           "row": 1,
           "text": "A stateless admission validator exists and (*enforced-only*) is the only writer of the ledger ref; it validates signature, capability, fence, transition, schema, data classification, protocol version, halt state, and budget reservation before atomic admission, and refuses with structured, attributable rejections.",
-          "posture": "enforced-only",
+          "posture": "mixed",
           "status": "met",
           "phase": "12",
           "evidence": "#94 (the pre-receive hook); #252 TestServiceAgreesWithTheBoundaryAndTheHook, TestServiceAdmitsRefusesAndTheForgeRefusesTheActor (cmd/seed-admit/serve_test.go); TestDrillRawAdversaryPerPosture (cmd/seed-admit/drill_test.go)",
@@ -937,7 +937,7 @@
         {
           "row": 5,
           "text": "Forge protections are declared desired-state and reconciled: required checks, admission-only ledger writes (*enforced-only*), immutable tags; scheduled/CI identities are least-privilege.",
-          "posture": "enforced-only",
+          "posture": "mixed",
           "status": "met",
           "phase": "12",
           "evidence": "#252 TestPlanAndApplyThroughTheSnapshot, TestLintWorkflowsFindsScheduledWriters (internal/protections/protections_test.go), TestGitHubAdapterReconciles (internal/protections/github_test.go); TestCodeRefTagsAreImmutable (cmd/seed-admit/coderef_test.go)",
@@ -1199,64 +1199,64 @@
           "row": 1,
           "text": "One-sentence intents become routed contracts whose draft acceptance specs survive human review unedited in the majority of cases.",
           "posture": "any",
-          "status": "open",
+          "status": "routed",
           "phase": "",
           "evidence": "",
-          "note": "an outcome promotion measures (build plan section 5), not a mechanism a phase lands"
+          "note": "routed to promotion (build plan section 5): measured at the shadow run by the dispatcher's re-triage rate in the report's lanes section and a human-review sample of draft acceptance specs; met when the shadow run's evidence card records the majority unedited"
         },
         {
           "row": 2,
           "text": "Planner plan-PRs pass human review >80% unedited; implementers reach verdict-passed submissions unassisted on the happy path.",
           "posture": "any",
-          "status": "open",
+          "status": "routed",
           "phase": "",
           "evidence": "",
-          "note": "an outcome promotion measures (build plan section 5), not a mechanism a phase lands"
+          "note": "routed to promotion: measured at the shadow run by lanes.planner.unedited_rate above 0.800 and the receipts' independence on happy-path submissions; met when the shadow run's evidence card records it"
         },
         {
           "row": 3,
           "text": "The verifier lane holds quality alone on low tiers; humans review only high-tier plans, the protected surface, and escalations.",
           "posture": "any",
-          "status": "open",
+          "status": "routed",
           "phase": "",
           "evidence": "",
-          "note": "an outcome promotion measures (build plan section 5), not a mechanism a phase lands"
+          "note": "routed to promotion: measured at the shadow run by the tiers' independence levels (tiers.md) and the verifiers' calibration agreement, humans reviewing only high-tier plans, the protected surface and escalations; met when the evidence card records it"
         },
         {
           "row": 4,
           "text": "Every escalation is one packet + one question + one decision; transcript-dumping is a defect.",
           "posture": "any",
-          "status": "open",
+          "status": "routed",
           "phase": "",
           "evidence": "",
-          "note": "an outcome promotion measures (build plan section 5), not a mechanism a phase lands"
+          "note": "routed to promotion: measured at the shadow run by every escalation.raised carrying one packet, one question and one decision, a transcript dump filed as a defect; met when the evidence card records it"
         },
         {
           "row": 5,
           "text": "The system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches, zero unreserved spend — and the ledger alone reconstructs and justifies everything.",
           "posture": "any",
-          "status": "open",
+          "status": "routed",
           "phase": "",
           "evidence": "",
-          "note": "an outcome promotion measures (build plan section 5), not a mechanism a phase lands"
+          "note": "routed to promotion: the shadow run itself, one week unattended on a real backlog with the five-bar ledger audit (simulation.md) applied to the real chain; met when the evidence card records zero chain violations, lost updates, silent abandonments, guardrail breaches and unreserved spend"
         },
         {
           "row": 6,
           "text": "The flywheel demonstrably compounds over a quarter (chore→workflow conversion, packet-resume success, cost per contract), from ledger metrics alone.",
           "posture": "any",
-          "status": "open",
+          "status": "routed",
           "phase": "",
           "evidence": "",
-          "note": "an outcome promotion measures (build plan section 5), not a mechanism a phase lands"
+          "note": "routed to promotion: measured over the quarter after the self-hosting cutover by the report's flywheel and knowledge sections and the cost per contract from budgets; met when the evidence card records the compounding"
         },
         {
           "row": 7,
           "text": "A team that has never spoken to the authors adopts from the README in under an hour, on their forge, with their declared admission posture, and reaches their first agent-shipped, verifier-passed, human-reviewed PR the same day.",
           "posture": "any",
-          "status": "open",
+          "status": "routed",
           "phase": "",
           "evidence": "",
-          "note": "an outcome promotion measures (build plan section 5), not a mechanism a phase lands"
+          "note": "routed to promotion's distribution step: the first team that adopts from the README on its own forge and reaches a verifier-passed, human-reviewed PR the same day; met when that team's outcome is recorded"
         }
       ]
     }

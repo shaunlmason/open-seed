@@ -64,20 +64,29 @@ func TestTableIsTheCharterRowForRow(t *testing.T) {
 	if _, err := conformance.Load(root); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	// The enforced-only marker is read off the text.
-	found := false
+	// The enforced-only marker is read off the text: opening the row
+	// it marks the whole row, inside it one clause (mixed).
+	whole, mixed := 0, 0
 	for _, p := range c {
 		for _, r := range p.Rows {
-			if strings.Contains(r.Text, "(*enforced-only*)") && r.Posture != conformance.PostureEnforcedOnly {
-				t.Fatalf("%s.%d carries the marker and is not enforced-only", p.ID, r.Row)
-			}
-			if r.Posture == conformance.PostureEnforcedOnly {
-				found = true
+			switch {
+			case strings.HasPrefix(r.Text, conformance.Marker):
+				if r.Posture != conformance.PostureEnforcedOnly {
+					t.Fatalf("%s.%d opens with the marker and is not enforced-only", p.ID, r.Row)
+				}
+				whole++
+			case strings.Contains(r.Text, conformance.Marker):
+				if r.Posture != conformance.PostureMixed {
+					t.Fatalf("%s.%d carries the marker inside a clause and is not mixed", p.ID, r.Row)
+				}
+				mixed++
+			case r.Posture != conformance.PostureAny:
+				t.Fatalf("%s.%d carries no marker and is not any", p.ID, r.Row)
 			}
 		}
 	}
-	if !found {
-		t.Fatal("the charter marks some rows enforced-only")
+	if whole == 0 || mixed == 0 {
+		t.Fatalf("the charter marks whole rows (%d) and clauses (%d) enforced-only", whole, mixed)
 	}
 }
 
@@ -153,31 +162,44 @@ func TestParseIsStrict(t *testing.T) {
 	}
 }
 
-// conformance: D4, AC4 — complete means no open row at the enforced
-// posture; the cooperative posture sets the enforced-only rows aside
-// and is never complete; the open rows are named by pillar and row.
+// conformance: D4, AC4 — complete means every row judged at the
+// enforced posture is met: open, partial and routed rows are all
+// outstanding, named by pillar and row with their status; the
+// cooperative posture sets the enforced-only rows aside, judges the
+// mixed rows while naming them, and is never complete.
 func TestAssessJudgesAtThePosture(t *testing.T) {
 	tb := conformance.Table{Pillars: []conformance.Pillar{{ID: "B", Title: "The Admission Boundary", Rows: []conformance.Row{
 		{Row: 1, Text: "x", Posture: conformance.PostureEnforcedOnly, Status: conformance.StatusMet, Evidence: "#1"},
 		{Row: 2, Text: "y", Posture: conformance.PostureAny, Status: conformance.StatusOpen, Phase: "13", Note: "item 6"},
 		{Row: 3, Text: "z", Posture: conformance.PostureAny, Status: conformance.StatusRouted, Note: "backlog"},
+		{Row: 4, Text: "w", Posture: conformance.PostureMixed, Status: conformance.StatusPartial, Note: "half"},
 	}}}}
 	rep := conformance.Assess(tb, true)
-	if rep.Complete || len(rep.OpenRows) != 1 || rep.OpenRows[0].ID != "B.2" || rep.OpenRows[0].Phase != "13" || rep.Counts.Met != 1 || rep.Counts.Routed != 1 || rep.Counts.Open != 1 || len(rep.NotApplicable) != 0 {
-		t.Fatalf("enforced: the open row is named and the table is incomplete: %+v", rep)
+	ids := func(rows []conformance.OutstandingRow) string {
+		var out []string
+		for _, r := range rows {
+			out = append(out, r.ID+":"+r.Status)
+		}
+		return strings.Join(out, " ")
 	}
-	tb.Pillars[0].Rows[1].Status = conformance.StatusMet
-	tb.Pillars[0].Rows[1].Evidence = "#2"
+	if rep.Complete || ids(rep.Outstanding) != "B.2:open B.3:routed B.4:partial" || rep.Outstanding[0].Phase != "13" || rep.Counts.Met != 1 || rep.Counts.Routed != 1 || rep.Counts.Open != 1 || rep.Counts.Partial != 1 || len(rep.NotApplicable) != 0 || len(rep.MixedHere) != 0 {
+		t.Fatalf("enforced: every unmet row is outstanding, by status: %+v", rep)
+	}
+	for i := 1; i < 4; i++ {
+		tb.Pillars[0].Rows[i].Status = conformance.StatusMet
+		tb.Pillars[0].Rows[i].Evidence = "#2"
+		tb.Pillars[0].Rows[i].Note = ""
+	}
 	rep = conformance.Assess(tb, true)
-	if !rep.Complete || len(rep.OpenRows) != 0 || !strings.Contains(rep.Because, "no row is open") {
-		t.Fatalf("enforced with nothing open: complete, routed rows carrying their notes: %+v", rep)
+	if !rep.Complete || len(rep.Outstanding) != 0 || !strings.Contains(rep.Because, "every row is met") {
+		t.Fatalf("enforced with every row met: complete: %+v", rep)
 	}
 	rep = conformance.Assess(tb, false)
-	if rep.Complete || len(rep.NotApplicable) != 1 || rep.NotApplicable[0] != "B.1" || rep.Counts.Met != 1 || !strings.Contains(rep.Because, "cooperative") {
-		t.Fatalf("cooperative: the enforced-only row is set aside and Part III is not complete here: %+v", rep)
+	if rep.Complete || len(rep.NotApplicable) != 1 || rep.NotApplicable[0] != "B.1" || len(rep.MixedHere) != 1 || rep.MixedHere[0] != "B.4" || rep.Counts.Met != 3 || !strings.Contains(rep.Because, "cooperative") {
+		t.Fatalf("cooperative: the enforced-only row is set aside, the mixed row judged and named, and Part III is not complete here: %+v", rep)
 	}
 	b, _ := json.Marshal(rep)
-	if !strings.Contains(string(b), `"open_rows":[]`) {
-		t.Fatalf("the open rows render as an empty list, never null: %s", b)
+	if !strings.Contains(string(b), `"outstanding_rows":[]`) {
+		t.Fatalf("the outstanding rows render as an empty list, never null: %s", b)
 	}
 }

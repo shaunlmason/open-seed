@@ -1548,11 +1548,13 @@ record's own position through one derivation, `curation.AuthenticPass`
   Part III out of `SEED-NEXT.md` and holding the table to it row for
   row in both directions, the vocabulary validated; `seed docs
   generate` rendering `next/docs/generated/conformance.md` under the
-  drift gate; `seed doctor --repo` reporting the counts, the open rows
-  by pillar and row, the enforced-only rows set aside at the
-  cooperative posture, and `complete` only when nothing is open at an
-  enforced posture; Phase 13's rows `open` until its exit record flips
-  them; `next/spec/conformance.md` new, the handbook following)
+  drift gate; `seed doctor --repo` reporting the counts, every row not
+  yet met by pillar, row and status, the enforced-only rows set aside
+  at the cooperative posture and the mixed rows named there, and
+  `complete` only when every row is met at an enforced posture; Phase
+  13's rows `open` until its exit record flips them, III.R's routed
+  to promotion's measures; `next/spec/conformance.md` new, the
+  handbook following)
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 

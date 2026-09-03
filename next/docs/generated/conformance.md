@@ -25,8 +25,8 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | O. Evaluation infrastructure | 5 | 0 | 0 | 0 |
 | P. Distribution, supply chain, adoption | 5 | 0 | 0 | 0 |
 | Q. Quality, docs, community | 6 | 1 | 0 | 0 |
-| R. The autonomy end-state | 0 | 0 | 0 | 7 |
-| **all** | 97 | 5 | 8 | 18 |
+| R. The autonomy end-state | 0 | 0 | 7 | 0 |
+| **all** | 97 | 5 | 15 | 11 |
 
 ## A. The Ledger
 
@@ -238,10 +238,10 @@ Every row of the charter's Part III with the status the phase exit records gave 
 
 | row | status | phase | criterion | evidence | note |
 |---|---|---|---|---|---|
-| R.1 | `open` | — | One-sentence intents become routed contracts whose draft acceptance specs survive human review unedited in the majority of cases. | — | an outcome promotion measures (build plan section 5), not a mechanism a phase lands |
-| R.2 | `open` | — | Planner plan-PRs pass human review >80% unedited; implementers reach verdict-passed submissions unassisted on the happy path. | — | an outcome promotion measures (build plan section 5), not a mechanism a phase lands |
-| R.3 | `open` | — | The verifier lane holds quality alone on low tiers; humans review only high-tier plans, the protected surface, and escalations. | — | an outcome promotion measures (build plan section 5), not a mechanism a phase lands |
-| R.4 | `open` | — | Every escalation is one packet + one question + one decision; transcript-dumping is a defect. | — | an outcome promotion measures (build plan section 5), not a mechanism a phase lands |
-| R.5 | `open` | — | The system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches, zero unreserved spend — and the ledger alone reconstructs and justifies everything. | — | an outcome promotion measures (build plan section 5), not a mechanism a phase lands |
-| R.6 | `open` | — | The flywheel demonstrably compounds over a quarter (chore→workflow conversion, packet-resume success, cost per contract), from ledger metrics alone. | — | an outcome promotion measures (build plan section 5), not a mechanism a phase lands |
-| R.7 | `open` | — | A team that has never spoken to the authors adopts from the README in under an hour, on their forge, with their declared admission posture, and reaches their first agent-shipped, verifier-passed, human-reviewed PR the same day. | — | an outcome promotion measures (build plan section 5), not a mechanism a phase lands |
+| R.1 | `routed` | — | One-sentence intents become routed contracts whose draft acceptance specs survive human review unedited in the majority of cases. | — | routed to promotion (build plan section 5): measured at the shadow run by the dispatcher's re-triage rate in the report's lanes section and a human-review sample of draft acceptance specs; met when the shadow run's evidence card records the majority unedited |
+| R.2 | `routed` | — | Planner plan-PRs pass human review >80% unedited; implementers reach verdict-passed submissions unassisted on the happy path. | — | routed to promotion: measured at the shadow run by lanes.planner.unedited_rate above 0.800 and the receipts' independence on happy-path submissions; met when the shadow run's evidence card records it |
+| R.3 | `routed` | — | The verifier lane holds quality alone on low tiers; humans review only high-tier plans, the protected surface, and escalations. | — | routed to promotion: measured at the shadow run by the tiers' independence levels (tiers.md) and the verifiers' calibration agreement, humans reviewing only high-tier plans, the protected surface and escalations; met when the evidence card records it |
+| R.4 | `routed` | — | Every escalation is one packet + one question + one decision; transcript-dumping is a defect. | — | routed to promotion: measured at the shadow run by every escalation.raised carrying one packet, one question and one decision, a transcript dump filed as a defect; met when the evidence card records it |
+| R.5 | `routed` | — | The system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches, zero unreserved spend — and the ledger alone reconstructs and justifies everything. | — | routed to promotion: the shadow run itself, one week unattended on a real backlog with the five-bar ledger audit (simulation.md) applied to the real chain; met when the evidence card records zero chain violations, lost updates, silent abandonments, guardrail breaches and unreserved spend |
+| R.6 | `routed` | — | The flywheel demonstrably compounds over a quarter (chore→workflow conversion, packet-resume success, cost per contract), from ledger metrics alone. | — | routed to promotion: measured over the quarter after the self-hosting cutover by the report's flywheel and knowledge sections and the cost per contract from budgets; met when the evidence card records the compounding |
+| R.7 | `routed` | — | A team that has never spoken to the authors adopts from the README in under an hour, on their forge, with their declared admission posture, and reaches their first agent-shipped, verifier-passed, human-reviewed PR the same day. | — | routed to promotion's distribution step: the first team that adopts from the README on its own forge and reaches a verifier-passed, human-reviewed PR the same day; met when that team's outcome is recorded |

@@ -25,15 +25,26 @@ evidence the row cites.
   from 1 within the pillar; `text` is the charter's row, verbatim
   after whitespace normalization (continuation lines joined by one
   space).
-- `posture` is `any` or `enforced-only`, read off the row's
-  `(*enforced-only*)` marker: an enforced-only row is judged at the
-  enforced postures alone.
+- `posture` is `any`, `enforced-only` or `mixed`, read off the row's
+  `(*enforced-only*)` marker: a marker opening the row marks the whole
+  row enforced-only, judged at the enforced postures alone; a marker
+  inside the row qualifies one clause, and the row is `mixed`, judged
+  at every posture with the doctor naming it at the cooperative one,
+  where that clause is not exercised (III.A row 4 requires mutation
+  detection everywhere and remote refusal enforced-only; III.L row 5
+  makes only admission-only ledger writes enforced-only).
 - `status` is exactly one of `met`, `partial`, `routed`, `open`. A
   `met` row names its `evidence` (pull requests and test names, as the
   record cites them); a `partial` or `routed` row's `note` names where
   the rest lives (a phase, an item, the backlog, promotion); an `open`
   row is one no record has met, and its note may say which item lands
-  it.
+  it. III.R's rows are `routed` to the promotion evidence that measures
+  each (build plan §5): the note names the measure (the report's lanes,
+  flywheel and knowledge sections, the tiers' independence levels, the
+  calibration agreement, the shadow run's ledger audit, the first
+  external team's outcome) and the row flips to `met` when the
+  promotion evidence card records it, so an outcome pillar has a
+  closure path rather than a permanent exception.
 - `phase` is the phase whose exit record judged the row, as its
   number; empty where none has.
 
@@ -46,9 +57,7 @@ that the table lacks, a row the table has that the charter lacks, a
 reworded row, a posture that is not the charter's, a status outside
 the vocabulary, a `met` without evidence or a `partial` or `routed`
 without a note each refuse by name, and the generator refuses to
-render a table that does not hold. III.R, the autonomy end-state, is
-`open` throughout: its rows are outcomes promotion measures (build
-plan §5), not mechanisms a phase lands, and each row's note says so.
+render a table that does not hold.
 
 ## The rendering
 
@@ -68,20 +77,25 @@ table is the source and the exit records are the evidence.
 
 ```json
 "conformance": {"counts": {"met": 0, "partial": 0, "routed": 0, "open": 0},
-                "open_rows": [{"id": "N.2", "phase": "", "posture": "any", "note": "Phase 13 item 3"}],
-                "not_applicable_here": ["B.1", "B.4", "B.5"],
+                "outstanding_rows": [{"id": "N.2", "status": "open", "phase": "", "posture": "any", "note": "Phase 13 item 3"}],
+                "not_applicable_here": ["B.4", "B.5", "O.3"],
+                "mixed_here": ["A.4", "A.10", "B.1", "L.5"],
                 "complete": false,
                 "because": "..."}
 ```
 
-The counts are over the rows judged at the declared posture; at the
-cooperative posture the enforced-only rows are set aside as
-`not_applicable_here` and Part III is not complete there, whatever the
-rest says; at an enforced posture `complete` is true exactly when no
-row is `open`, `partial` and `routed` rows carrying their notes. The
-`open_rows` list is what the build plan's Phase 13 preamble asks for:
-which criteria remain open, by pillar and row, with the phase that
-last judged them. A table that does not hold against the charter is an
+The counts are over the rows judged at the declared posture. The
+charter admits a conformance claim only when every criterion holds,
+so `complete` is true exactly when every judged row is `met` at an
+enforced posture: `open`, `partial` and `routed` rows are all
+`outstanding_rows`, each with its status and note, and that list is
+what the build plan's Phase 13 preamble asks for, which criteria
+remain open by pillar and row with the phase that last judged them.
+At the cooperative posture the enforced-only rows are set aside as
+`not_applicable_here`, which is the documentation the charter's Part
+III preamble requires of a cooperative deployment (the criteria that
+do not hold for it), the mixed rows are judged and named under
+`mixed_here`, and Part III is never complete there. A table that does not hold against the charter is an
 operational failure (`unavailable`, exit 5), never a silently absent
 section; a tree without the table has no section.
 

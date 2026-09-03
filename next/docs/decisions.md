@@ -3358,14 +3358,34 @@ cannot grow a row the table does not judge. The row text is kept
 verbatim in the table anyway, so a reader of the JSON sees the
 criterion without opening the charter.
 
-**Complete is judged at the posture.** An enforced-only row cannot be
+**Complete means every row met.** The plan's first draft called Part
+III complete when no row was `open`, which would have reported a
+knowingly non-conformant tree complete while rows stayed `partial` or
+`routed` (review finding on the plan PR; the charter admits a
+conformance claim only when every criterion holds). The doctor now
+lists every row not met, by status, and reports `complete` only when
+none remains at an enforced posture. An enforced-only row cannot be
 met at the cooperative posture, so the doctor sets those rows aside
-there and never reports Part III complete on a cooperative
-deployment; the build plan's sentence names the enforced self-hosted
-posture, and the doctor says so in its `because`.
+there as the documentation the charter asks a cooperative deployment
+to keep, and never reports Part III complete on one.
 
-**III.R stays open.** Its seven rows are outcomes promotion measures
-(build plan §5): unattended weeks, unedited plans, adoption times. No
-phase lands them, so no record can flip them, and the table says so
-in each row's note rather than leaving a reader to wonder.
+**A marker inside a row is a clause, not the row.** III.A row 4 and
+III.L row 5 carry the enforced-only marker on one clause among
+several that apply everywhere (review finding on the plan PR); a
+posture model that set the whole row aside at the cooperative posture
+would suppress requirements that hold there. Such rows are `mixed`:
+judged at every posture, and named at the cooperative one so a reader
+knows which clause is not exercised.
+
+**III.R is routed, not abandoned.** Its seven rows are outcomes
+promotion measures (build plan §5), and a table that left them `open`
+forever would make the Phase 13 exit line unachievable (review
+finding on the plan PR). Each row is `routed` to the promotion
+evidence that measures it, the note naming the measure and its owner:
+the report's lanes, flywheel and knowledge sections, the tiers'
+independence levels and the calibration agreement, the shadow run's
+ledger audit, the first external team's outcome. The rows flip to
+`met` when the promotion evidence card records the measurement, which
+is why the build plan's critical path puts the shadow run and the two
+cutovers before Phase 13's exit.
 

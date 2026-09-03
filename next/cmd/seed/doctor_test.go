@@ -136,14 +136,22 @@ func TestDoctorReportsConformanceAtThePosture(t *testing.T) {
 		t.Fatalf("every charter row is counted at the enforced posture: %v", counts)
 	}
 	if section["complete"] != false || section["because"] == "" {
-		t.Fatalf("Phase 13 rows are open, so Part III is not yet complete, and the doctor says why: %+v", section)
+		t.Fatalf("Phase 13 rows are open and III.R is routed, so Part III is not yet complete, and the doctor says why: %+v", section)
 	}
-	openRows, _ := section["open_rows"].([]any)
-	if len(openRows) == 0 {
-		t.Fatalf("the open rows are named: %+v", section)
+	outstanding, _ := section["outstanding_rows"].([]any)
+	if len(outstanding) == 0 {
+		t.Fatalf("the rows not yet met are named: %+v", section)
 	}
-	if first, _ := openRows[0].(map[string]any); first["id"] == "" {
-		t.Fatalf("an open row carries its id: %+v", first)
+	statuses := map[string]bool{}
+	for _, row := range outstanding {
+		r, _ := row.(map[string]any)
+		if r["id"] == "" || r["status"] == "" {
+			t.Fatalf("an outstanding row carries its id and status: %+v", r)
+		}
+		statuses[r["status"].(string)] = true
+	}
+	if !statuses["open"] || !statuses["routed"] {
+		t.Fatalf("open and routed rows are both outstanding: %v", statuses)
 	}
 
 	// Cooperative: the enforced-only rows are set aside, and Part III
@@ -151,8 +159,9 @@ func TestDoctorReportsConformanceAtThePosture(t *testing.T) {
 	e, _, _ = runDoctorEnv(t, "--config", writePosture(t, `{"posture": "cooperative"}`), "--repo", repo)
 	section, _ = e.Result["conformance"].(map[string]any)
 	na, _ := section["not_applicable_here"].([]any)
-	if len(na) == 0 || section["complete"] != false || !strings.Contains(section["because"].(string), "cooperative") {
-		t.Fatalf("cooperative: enforced-only rows are not applicable and the table is not complete here: %+v", section)
+	mixed, _ := section["mixed_here"].([]any)
+	if len(na) == 0 || len(mixed) == 0 || section["complete"] != false || !strings.Contains(section["because"].(string), "cooperative") {
+		t.Fatalf("cooperative: enforced-only rows are not applicable, mixed rows are named, and the table is not complete here: %+v", section)
 	}
 
 	// A tree without the table has no section; a tree whose table
