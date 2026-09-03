@@ -14,6 +14,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/flywheel"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
@@ -129,6 +130,11 @@ type ReportView struct {
 	// present only when the prefix carries a curation fact, so builds
 	// of chains that carry none stay byte-identical.
 	Knowledge *KnowledgeStages `json:"knowledge,omitempty"`
+	// Flywheel is the conversion-rate section (plans/os-9075c308.md
+	// D5): shapes recurring, proposed and merged, the repair contracts
+	// filed and done, and merged over recurring, record-derivable from
+	// the fold alone. Null when no work subject exists.
+	Flywheel *flywheel.Metrics `json:"flywheel"`
 	// Lanes is the lane-quality section (plans/os-6bd9ffff.md D6;
 	// charter III.J row 3): the dispatcher's re-triage rate and the
 	// planner's unedited-approval rate, record-derivable from the
@@ -207,14 +213,15 @@ type ReportReconciliation struct {
 // it (review finding on the item 3 PR). Version "12" moves with the
 // section again: the retired and stale counts, the latter judged at
 // the declared instant (plans/os-0d537fbd.md D4). Version "13" adds
-// the lanes section (plans/os-6bd9ffff.md D6), the same posture:
+// the lanes section (plans/os-6bd9ffff.md D6) and version "14" the
+// flywheel section (plans/os-9075c308.md D5), both the same posture:
 // record-derivable from the fold, so an unchanged tip republishes
-// with it. Inputs marks it as
+// with them. Inputs marks it as
 // an input-consuming projection; the knowledge projection is the
 // other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "13", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "14", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -285,6 +292,8 @@ func reportView(records []*event.Record) (*ReportView, error) {
 			rec.ByClass[f.Class]++
 		}
 		view.Reconciliation = rec
+		metrics := flywheel.Derive(records, fold)
+		view.Flywheel = &metrics
 		view.Lanes = lanesSection(fold)
 	}
 	if curation.Fold(records).Any() {

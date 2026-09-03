@@ -91,6 +91,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runEval(args[1:], stdout, stderr)
 	case "knowledge":
 		return runKnowledge(args[1:], stdout, stderr)
+	case "flywheel":
+		return runFlywheel(args[1:], stdout, stderr)
 	case "trajectory":
 		return runTrajectory(args[1:], stdout, stderr)
 	default:

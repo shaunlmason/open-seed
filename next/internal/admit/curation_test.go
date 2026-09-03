@@ -613,6 +613,12 @@ func TestCuratorRaisesAndItsReachableSetIsNamed(t *testing.T) {
 	st.ctx = st.step(st.curator, v, curation.DeadEndRetireVerb, "c-1",
 		`{"deadend": "`+cite("c-1", st.deadEnd1)+`", "environment": "moved", "reason": "the environment moved"}`)
 	sweep()
+	// The flywheel's proposal is reachable only over a recurring shape
+	// (plans/os-9075c308.md D4), which this stand never forms: the
+	// flywheel stand's reach joins the sweep so the table names it.
+	for _, verb := range flywheelCuratorReach(t) {
+		seen[verb] = true
+	}
 	for verb := range seen {
 		if !named[verb] {
 			t.Errorf("the curator can reach %s and the residual table does not name it", verb)
