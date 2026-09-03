@@ -2986,6 +2986,18 @@ never edited to match a declaration.
 in the result says which blocks are declared; nothing new is printed to
 stderr, which stays for the consequences the charter wants in front of
 an operator.
+## The cache carries the event's ts (os-74ce2261, plan #260)
+
+**Verbatim beside parsed.** The envelope's `ts` string is the record
+and is stored as written; `ts_unix` is the instant it names, parsed as
+RFC 3339 with optional fractional seconds, because a range over the
+text mis-orders mixed precision (a review finding on the plan). An
+unparseable `ts` folds NULL rather than a guessed instant, queryable as
+such and counted under the cache's `ts_unparsed` report key (a review
+finding: the lifecycle fold's anomaly count is the lifecycle's, and the
+cache does not borrow it). Phase 12 item 4 (#254) took generation 13 for `by_kind` and landed
+first, so this card re-bumps to generation 14 with its pins and its
+migration, as both PRs said whichever landed second would.
 ## `ledger show` stamps its failing position (os-37fcf7c6, plan #259)
 
 **The stamp is where the response was computed, not the chain's
