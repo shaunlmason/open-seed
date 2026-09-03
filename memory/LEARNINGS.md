@@ -1463,6 +1463,19 @@ the assertions read, and there is no copy to go stale.
 - A test helper's third return is not always what its name suggests:
   `writeKeys`'s `pub` is a second operator's key, not the signer's.
   Derive a fingerprint from the key you signed with.
+- claim.reaped admission never gated on reap corroboration — that
+  discipline (InterruptValid/WedgeDeclared) is the maintenance loop's
+  (the Corroborate closure + Reapable), not an admission rule. A card
+  that assumed an "admission reap gate" would wire its change to the
+  wrong place; the reap is already admissible from the reaping lane, and
+  what a new corroboration changes is whether the LOOP chooses to reap.
+- A revocation is the one reap corroboration the ledger itself supplies:
+  a revoked holder provably cannot exit its window, so its claim reaps
+  in every classification state, no_data included — the single exception
+  to "no_data is never reaped", and only because the chain, not the
+  lossy observation channel, corroborates it. Judge the revocation at
+  its own position (the InterruptValid posture) so a raw or unprivileged
+  one, or a suspension whose standing can return, corroborates nothing.
 - Replaying a thousand records through a from-scratch admission
   context is quadratic in JSON decoding, not in signatures: profile
   before optimizing, and cut passes (derive grants from the source

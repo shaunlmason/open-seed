@@ -49,10 +49,17 @@ type Corroboration struct {
 	Interrupted bool
 	// Wedged: an admitted wedge.declared stands on the active fence.
 	Wedged bool
+	// Revoked: the active claim's holder has been revoked
+	// (admit.RevokedHolder). Unlike Interrupted and Wedged this is a
+	// LEDGER fact rather than a stream signal — a revoked holder
+	// provably cannot exit its window — so it corroborates a reap in
+	// every classification state, no_data included
+	// (plans/os-32d06c65.md D1, D5).
+	Revoked bool
 }
 
 // Stands reports whether any corroborating fact was found.
-func (c Corroboration) Stands() bool { return c.Interrupted || c.Wedged }
+func (c Corroboration) Stands() bool { return c.Interrupted || c.Wedged || c.Revoked }
 
 // Reapable is the whole reap rule, and it is deliberately pure.
 //
@@ -77,6 +84,14 @@ func (c Corroboration) Stands() bool { return c.Interrupted || c.Wedged }
 // this is where the instinct to reap is strongest and the evidence
 // weakest.
 func Reapable(c obs.Classification, corr Corroboration) (bool, string) {
+	// A revocation is a ledger fact, not a stream classification: a
+	// revoked holder can no longer act on its claim, so the claim is
+	// reapable in EVERY classification state, no_data included — the
+	// one place a no_data stream is reaped, and only because the chain,
+	// not the channel, corroborates it (plans/os-32d06c65.md D5).
+	if corr.Revoked {
+		return true, ""
+	}
 	switch c.State {
 	case obs.NoData:
 		return false, "the stream holds nothing at all, so there is no evidence either way — absence of data is stated, never read as death (next/spec/observations.md)"
@@ -246,10 +261,14 @@ func (d Deps) reap(rep *Report) {
 }
 
 func reapBecause(corr Corroboration) string {
-	if corr.Interrupted {
+	switch {
+	case corr.Revoked:
+		return "the claim's holder was revoked and can no longer act on it, so its open claim is reaped on the revocation alone"
+	case corr.Interrupted:
 		return "an admitted run.interrupted on the active fence went unanswered"
+	default:
+		return "an admitted wedge.declared stands on the active fence"
 	}
-	return "an admitted wedge.declared stands on the active fence"
 }
 
 // ReapPacket composes the whole claim.reaped payload: the fence the
@@ -274,7 +293,10 @@ func ReapPacket(s transition.SubjectState, fence int, c obs.Classification, corr
 		acceptance = s.Acceptance.Ref
 	}
 	tried := "the holder was asked to stop by an admitted run.interrupted on this fence"
-	if !corr.Interrupted {
+	switch {
+	case corr.Revoked:
+		tried = "the holder's key was revoked, so it can no longer act on this claim and the open window is reaped on the revocation alone"
+	case !corr.Interrupted:
 		tried = "the holder's run was declared wedged on this fence"
 	}
 	outcome := fmt.Sprintf("no deliberate exit followed and the stream classified %s (last observation %q, last advance %q, count %d) — reaped by the maintenance lane, and the run's actuals settle afterward",
