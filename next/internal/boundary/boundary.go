@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"sort"
 	"strings"
@@ -207,6 +208,9 @@ func Parse(b []byte) (*Card, error) {
 	if err := dec.Decode(&c); err != nil {
 		return nil, &Error{Reason: fmt.Sprintf("the card is the strict object of %s: %v", strings.Join(CardFields, ", "), err)}
 	}
+	if _, err := dec.Token(); err != io.EOF {
+		return nil, &Error{Reason: "the card is one object and nothing after it"}
+	}
 	if err := c.check(true); err != nil {
 		return nil, err
 	}
@@ -226,6 +230,7 @@ func (c *Card) check(signed bool) error {
 	if len(c.Ingress.Kinds) == 0 || strings.TrimSpace(c.Ingress.Through) == "" {
 		return &Error{Reason: "the ingress names the request kinds accepted and what a request is filed through"}
 	}
+	seenKind := map[string]bool{}
 	for _, k := range c.Ingress.Kinds {
 		known := false
 		for _, want := range request.Kinds {
@@ -234,10 +239,15 @@ func (c *Card) check(signed bool) error {
 		if !known {
 			return &Error{Reason: fmt.Sprintf("ingress kind %q is not a request kind (%s)", k, strings.Join(request.Kinds, ", "))}
 		}
+		if seenKind[k] {
+			return &Error{Reason: fmt.Sprintf("ingress kind %q is listed twice", k)}
+		}
+		seenKind[k] = true
 	}
 	if len(c.Artifacts) == 0 {
 		return &Error{Reason: "the card names the artifact kinds a task returns"}
 	}
+	seenArtifact := map[string]bool{}
 	for _, a := range c.Artifacts {
 		known := false
 		for _, want := range ArtifactKinds {
@@ -246,6 +256,10 @@ func (c *Card) check(signed bool) error {
 		if !known {
 			return &Error{Reason: fmt.Sprintf("artifact kind %q is not one a task publishes (%s)", a, strings.Join(ArtifactKinds, ", "))}
 		}
+		if seenArtifact[a] {
+			return &Error{Reason: fmt.Sprintf("artifact kind %q is listed twice", a)}
+		}
+		seenArtifact[a] = true
 	}
 	for _, s := range c.Squads {
 		if strings.TrimSpace(s.Name) == "" {

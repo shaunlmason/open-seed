@@ -70,6 +70,9 @@ func TestCardSaysWhatIsOfferedAndNothingElse(t *testing.T) {
 		"a foreign kind":  strings.Replace(string(b), `"cross-repo"`, `"wish"`, 1),
 		"a foreign kind2": strings.Replace(string(b), `"receipt"`, `"ledger"`, 1),
 		"no protocol":     strings.Replace(string(b), `"seed/7"`, `"seed/99"`, 1),
+		"trailing data":   string(b) + ` {"more": true}`,
+		"duplicate kind":  strings.Replace(string(b), `["cross-repo"]`, `["cross-repo","cross-repo"]`, 1),
+		"duplicate kind2": strings.Replace(string(b), `"receipt","plan"`, `"receipt","receipt"`, 1),
 	} {
 		if _, err := Parse([]byte(body)); err == nil {
 			t.Errorf("%s: the card parsed", name)

@@ -39,28 +39,33 @@ func (s *Store) path(digest string) string {
 // renames into place, so rivals cannot interleave partial bytes.
 func (s *Store) Put(b []byte) (string, error) {
 	digest := Digest(b)
+	return digest, s.put(digest, b)
+}
+
+// put writes b under a digest already computed.
+func (s *Store) put(digest string, b []byte) error {
 	dst := s.path(digest)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return "", fmt.Errorf("artifact store: %w", err)
+		return fmt.Errorf("artifact store: %w", err)
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "put-*")
 	if err != nil {
-		return "", fmt.Errorf("artifact store: %w", err)
+		return fmt.Errorf("artifact store: %w", err)
 	}
 	if _, err := tmp.Write(b); err != nil {
 		tmp.Close()
 		os.Remove(tmp.Name())
-		return "", fmt.Errorf("artifact store: %w", err)
+		return fmt.Errorf("artifact store: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
 		os.Remove(tmp.Name())
-		return "", fmt.Errorf("artifact store: %w", err)
+		return fmt.Errorf("artifact store: %w", err)
 	}
 	if err := os.Rename(tmp.Name(), dst); err != nil {
 		os.Remove(tmp.Name())
-		return "", fmt.Errorf("artifact store: %w", err)
+		return fmt.Errorf("artifact store: %w", err)
 	}
-	return digest, nil
+	return nil
 }
 
 // PutVerified stores b under the digest the caller expected, refusing
@@ -74,8 +79,7 @@ func (s *Store) PutVerified(digest string, b []byte) error {
 	if got := Digest(b); got != digest {
 		return fmt.Errorf("artifact store: content hashes to %s, not the %s it was fetched as — refused on arrival", got, digest)
 	}
-	_, err := s.Put(b)
-	return err
+	return s.put(digest, b)
 }
 
 // Get returns the bytes stored under digest, recomputing and checking

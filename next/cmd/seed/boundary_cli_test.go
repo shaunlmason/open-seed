@@ -304,6 +304,10 @@ func TestBoundaryRefusals(t *testing.T) {
 			_, _ = w.Write([]byte(`[{"request": 1, "answer": null, "state": "requested", "artifacts": [], "actor": "0123"}]`))
 			return
 		}
+		if r.URL.Path == "/tasks/2" {
+			_, _ = w.Write([]byte(`{"request": 2, "answer": null, "state": "requested"}`))
+			return
+		}
 		_, _ = w.Write([]byte(`{"request": 1, "answer": null, "state": "requested", "artifacts": [], "fence": "3"}`))
 	}))
 	defer fake.Close()
@@ -312,6 +316,9 @@ func TestBoundaryRefusals(t *testing.T) {
 	}
 	if e, code := runEnv(t, "boundary", "tasks", "--remote", fake.URL, "--request", "1"); code != 3 || e.Error == nil || e.Error.Code != "boundary_unpinned" {
 		t.Fatalf("one task with an unpinned field: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "tasks", "--remote", fake.URL, "--request", "2"); code != 3 || e.Error == nil || e.Error.Code != "boundary_unpinned" {
+		t.Fatalf("a task missing a pinned field: %d %+v", code, e)
 	}
 	ld, root, _, _, _ := requestLedger(t)
 	dir := t.TempDir()

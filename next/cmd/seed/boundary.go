@@ -294,7 +294,8 @@ func runBoundaryServe(args []string, stdout, stderr io.Writer) int {
 			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 		}
 	}
-	fmt.Fprintf(stdout, "{\"listening\": %q, \"routes\": %q}\n", endpoint, boundary.Routes)
+	announced, _ := json.Marshal(map[string]any{"listening": endpoint, "routes": boundary.Routes})
+	fmt.Fprintln(stdout, string(announced))
 	srv := &http.Server{Handler: svc.handler(), ReadHeaderTimeout: 10 * time.Second}
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
@@ -329,22 +330,17 @@ func boundaryGet(remote, path, bearer string) ([]byte, int, error) {
 	return b, resp.StatusCode, err
 }
 
-// pinned refuses a task object carrying a field outside the pin: a
+// pinned refuses a task object whose fields are not exactly the pin: a
 // field the other side added is a deliberate change to a pinned list,
-// and a stranger's reader does not silently learn a new word.
+// and a stranger's reader does not silently learn a new word — nor
+// does it read a view that dropped one.
 func pinned(body []byte) *envelope.Envelope {
 	fields, err := boundary.FieldsOf(body)
 	if err != nil {
 		return envelope.Fail(envelope.ExitInvalidTransition, "boundary_unpinned", "the task is not an object")
 	}
-	for _, f := range fields {
-		known := false
-		for _, want := range boundary.TaskFields {
-			known = known || f == want
-		}
-		if !known {
-			return envelope.Fail(envelope.ExitInvalidTransition, "boundary_unpinned", fmt.Sprintf("the task carries %q, which the pin does not list (%s)", f, strings.Join(boundary.TaskFields, ", ")))
-		}
+	if strings.Join(fields, ",") != strings.Join(boundary.TaskFields, ",") {
+		return envelope.Fail(envelope.ExitInvalidTransition, "boundary_unpinned", fmt.Sprintf("the task carries the fields %s; the pin is exactly %s", strings.Join(fields, ", "), strings.Join(boundary.TaskFields, ", ")))
 	}
 	return nil
 }
