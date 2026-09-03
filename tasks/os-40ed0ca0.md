@@ -6,7 +6,7 @@ priority: P2
 squad: core
 author: seed-next-implementer
 created_at: "2026-09-03T02:39:57Z"
-updated_at: "2026-09-03T08:52:19Z"
+updated_at: "2026-09-03T09:52:14Z"
 ---
 
 Build plan Phase 13 item 5 (docs/next-build-plan.md): the A2A-shaped cross-organization boundary.
@@ -22,5 +22,9 @@ Expected shape, for the plan to settle: a capability card as the published, sign
 
 
 ## Evidence ev-6581e9ca (receipt, seed-next-implementer, 2026-09-03T08:52:16Z)
+
+receipts/os-40ed0ca0.json
+
+## Evidence ev-c2a65141 (receipt, seed-next-implementer, 2026-09-03T09:52:14Z)
 
 receipts/os-40ed0ca0.json
