@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 )
 
 // Store is a filesystem-rooted content-addressed store.
@@ -62,8 +63,13 @@ func (s *Store) Put(b []byte) (string, error) {
 		// holds (Windows) reports the rival's win as an error; the
 		// content is addressed by its digest, so a rival that landed
 		// the same bytes is this put done.
-		if have, rerr := os.ReadFile(dst); rerr == nil && Digest(have) == digest {
-			return digest, nil
+		// The rival's rename may still be in flight when this one is
+		// refused, so the read is retried briefly before the put fails.
+		for attempt := 0; attempt < 50; attempt++ {
+			if have, rerr := os.ReadFile(dst); rerr == nil && Digest(have) == digest {
+				return digest, nil
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
 		return "", fmt.Errorf("artifact store: %w", err)
 	}

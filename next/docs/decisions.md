@@ -3183,6 +3183,18 @@ now keeps a carriage return and the record parser (`internal/event`)
 refuses it. Two small edits outside the listed scope, each required by
 D4's "refuses rather than silently normalizes".
 
+**The Windows matrix is the only Windows run, so it owns two fixes
+from main.** The simulate gate drills used a path under `/proc` as a
+root nothing can be created under; Windows creates it, and the
+deployment reached genesis with no key and panicked. The drills now
+use a path beneath a regular file, which every platform refuses. The
+artifact store's concurrent-put drill raced eight renames onto one
+digest; Windows refuses a rename while a rival's is in flight, and the
+read that should have recognized the rival's identical bytes ran
+before those bytes landed. The read is now retried briefly. Two edits
+outside the listed scope, each visible only on this PR's platform
+matrix.
+
 **The path lint reads call sites.** Slash-joined strings are legitimate
 for refs, URLs and repository-relative names, so a lint over every
 concatenation would refuse the spec's own vocabulary; the lint flags
