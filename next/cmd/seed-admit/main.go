@@ -28,7 +28,6 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
-	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
@@ -40,19 +39,28 @@ const (
 )
 
 func main() {
+	// The service form (plans/os-5c8a312c.md D1): the same judgment,
+	// answering proposals instead of reading the hook protocol.
+	if len(os.Args) > 1 && os.Args[1] == "serve" {
+		os.Exit(runServe(os.Args[2:], os.Stdout, os.Stderr))
+	}
 	guarded := os.Getenv("SEED_ADMIT_REF")
 	if guarded == "" {
 		guarded = defaultRef
 	}
-	os.Exit(run(os.Stdin, os.Stderr, ".", guarded))
+	os.Exit(run(os.Stdin, os.Stderr, ".", guarded, os.Getenv(pusherEnv)))
 }
 
 // run processes the pre-receive update lines. Any refusal fails the
 // whole push atomically (git applies no ref updates when the hook exits
-// non-zero), which is exactly the boundary the charter wants.
-func run(stdin io.Reader, stderr io.Writer, gitDir, guarded string) int {
+// non-zero), which is exactly the boundary the charter wants. The
+// guarded ref takes the ledger half (admitUpdate); every other ref
+// takes the code-ref half (authorizeRef, plans/os-465e356e.md D1),
+// judged for the pusher the transport asserted.
+func run(stdin io.Reader, stderr io.Writer, gitDir, guarded, pusher string) int {
 	scanner := bufio.NewScanner(stdin)
 	scanner.Buffer(make([]byte, 1<<16), 1<<20)
+	var code *codeRefContext
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) != 3 {
@@ -61,6 +69,30 @@ func run(stdin io.Reader, stderr io.Writer, gitDir, guarded string) int {
 		}
 		oldID, newID, ref := fields[0], fields[1], fields[2]
 		if ref != guarded {
+			if pusher == "" {
+				// Refused before any repository access: with no
+				// identity there is nothing to authorize against.
+				fmt.Fprintf(stderr, "seed-admit: rule ref: %s: no pusher identity asserted (%s) — code refs are refused without one\n", ref, pusherEnv)
+				return 1
+			}
+			if code == nil {
+				// The code-ref context is the ledger as it stands
+				// BEFORE this push (the guarded ref's current tip),
+				// loaded once per push: a push that carries both a
+				// ledger update and a code update is judged on the
+				// code side against admitted standing, never against
+				// what the same push proposes.
+				ctx, err := loadCodeRefContext(gitDir, guarded, pusher)
+				if err != nil {
+					fmt.Fprintf(stderr, "seed-admit: %v\n", err)
+					return 1
+				}
+				code = ctx
+			}
+			if err := code.authorize(gitDir, oldID, newID, ref); err != nil {
+				fmt.Fprintf(stderr, "seed-admit: %v\n", err)
+				return 1
+			}
 			continue
 		}
 		if err := admitUpdate(gitDir, oldID, newID); err != nil {
@@ -98,13 +130,13 @@ func admitUpdate(gitDir, oldID, newID string) error {
 	// records to the admission pass.
 	resolve, _, err := genesis.Bootstrap(newStore)
 	if err != nil {
-		return fmt.Errorf("rule verify: %v", err)
+		return fmt.Errorf("rule verify: %w", err)
 	}
 	var records []*event.Record
 	if _, err := newStore.VerifyFromGenesis(resolve, ledger.WithObserver(func(pos int, rec *event.Record) {
 		records = append(records, rec)
 	})); err != nil {
-		return fmt.Errorf("rule verify: %v", err)
+		return fmt.Errorf("rule verify: %w", err)
 	}
 
 	// The previously admitted range is a strict record prefix: same
@@ -153,30 +185,25 @@ func admitUpdate(gitDir, oldID, newID string) error {
 		prev = h
 	}
 	for i := oldCount; i < len(records); i++ {
-		// The keyring projection over the prefix supplies the standing
-		// context for record i: the resolver (from seed/1) and the state
-		// the standing rule previews against. The full replay above
-		// already proved the prefix, so StateAt cannot fail.
-		ring, ringActive, err := keyring.StateAt(records[:i])
-		if err != nil {
-			return fmt.Errorf("rule ref: %v", err)
-		}
-		res := resolve
-		if keyring.Applies(ringActive) && ring.Seeded() {
-			res = ring.Resolver()
-		}
-		ctx := &admit.Context{
-			Count:     i,
-			Tip:       prev,
-			Active:    ringActive,
-			Halt:      halt.StateAt(records[:i]),
-			Resolve:   res,
-			Keyring:   ring,
-			Table:     table,
-			Lifecycle: table.FoldRecords(records[:i]),
+		// The context for record i is the CLI's own over the verified
+		// prefix (admit.ContextOver): the resolver from seed/1, the
+		// keyring, the halt state, the fold, the supported set and the
+		// record list the budget rule's validity replays read. A hook
+		// that built a narrower context by hand refused a run.started
+		// the cooperative client admitted — found by the Phase 12
+		// item 3 storm — so the two now share one constructor. The
+		// genesis record has no prefix and keeps the empty context.
+		var ctx *admit.Context
+		if i == 0 {
+			ctx = &admit.Context{Count: 0, Tip: prev, Resolve: resolve, Keyring: keyring.New(), Table: table, Lifecycle: table.FoldRecords(nil)}
+		} else {
+			ctx, err = admit.ContextOver(records[:i])
+			if err != nil {
+				return fmt.Errorf("rule ref: %v", err)
+			}
 		}
 		if err := admit.Run(ctx, records[i], rules); err != nil {
-			return fmt.Errorf("position %d: %v", i, err)
+			return fmt.Errorf("position %d: %w", i, err)
 		}
 		h, err := records[i].Event.Hash()
 		if err != nil {

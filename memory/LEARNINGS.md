@@ -1306,6 +1306,34 @@ the assertions read, and there is no copy to go stale.
 - A field documented as an anchor is validated as one at the shape
   rule, not only where a flag's help text says so: the CLI is one
   path to the boundary, and the raw seam is another.
+- A boundary that guards one ref by content but exempts every other ref
+  by identity has only half a ceiling. The Phase 2 hook refused invalid
+  ledger pushes but passed every code ref untouched, so a compromised
+  credential could push the default branch, another actor's branch, a
+  tag, or the check pipeline. A release-gate drill that exempted
+  non-ledger refs would have reported three §I.2 clauses green by never
+  asking. The code-ref half derives its authorization from the same
+  ledger the hook already guards (standing, claim holders) plus the
+  transport's identity assertion — one derivation, two callers.
+- "The protected surface is changed only by the governance root" is not
+  "by an operator". The maintenance lane holds `operator` and is an
+  agent key, so gating the surface on operator standing lets a
+  compromised maintenance key rewrite the gates that judge it. Gate the
+  protected surface on `keyring.IsActiveRoot`; operator standing moves
+  the branch, root standing moves the surface (Copilot review, #247).
+- A revoked key still "holds" its claim in the tolerant lifecycle fold
+  until the claim is reaped, so a code-ref rule that authorizes by claim
+  holder alone lets a revoked key keep pushing its branch. Gate the
+  contract-branch push on active standing (`HasAnyCapability(claim|
+  operator)`) too: the branch closes with the standing, before the
+  reap.
+- A rewrite drill must push a DESCENDANT of the admitted tip, not an
+  orphan. An orphan force-push bounces at the commit-graph
+  fast-forward check before the hook's content rules run, so it proves
+  nothing about append-only-ness; committing on the current tip and
+  rewriting the last record's payload (re-signed, same version and
+  prev) verifies from genesis yet diverges, which is exactly what the
+  record-level prefix check catches and a fast-forward check misses.
 - A fold that re-judges a fact "through the same checks" must include
   the grant: re-running the record gates alone binds a well-formed
   fact pushed raw under the wrong key. Read the keyring at the
@@ -1329,3 +1357,24 @@ the assertions read, and there is no copy to go stale.
 - `loop.go`'s `gitOut` treats empty output as an error; git verbs that
   succeed silently (`add`, `commit --quiet`, `worktree remove`) need a
   runner that reads the exit status alone.
+
+- In one test process "who is pushing" is an environment fact. A
+  fixture that models a forge's sole-writer rule with an environment
+  variable must set it around the service's pushes and clear it around
+  the actor's, or the actor's raw push and the service's proposal look
+  like the same writer and the drill proves nothing about either.
+- A hook that wraps refusals with `%v` prints the same text as one
+  that wraps with `%w`, and only the second lets a service built on the
+  same judgment answer with the boundary's typed code. Wrap with `%w`
+  where a second caller might ever need `errors.As`.
+- Forges protect branches and tags, not custom ref namespaces: a
+  ledger that a forge must guard lives under `refs/heads/`. The ref
+  name is one parameter of every seam, so this is a declaration, not a
+  code path — but only if nobody hard-codes the default a second time.
+- A client that lands a write through a third party must not persist
+  a commit it does not hold: the monotonic-head rule compares by
+  ancestry in the client's own git dir, and an object that is not
+  there reads as a regression on the next fetch.
+- Copying a mapping into a second binary is how two postures come to
+  disagree on a code. When the second caller appears, move the mapping
+  to a package both can import before writing the second caller.

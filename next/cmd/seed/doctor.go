@@ -14,14 +14,19 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
+	"github.com/shaunlmason/open-seed/next/internal/propose"
+	"github.com/shaunlmason/open-seed/next/internal/protections"
 )
 
 func runDoctor(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	config := fs.String("config", "seed.json", "deployment declaration file")
+	config := fs.String("config", posture.DeclarationPath, "deployment declaration file")
+	probe := fs.Bool("probe", false, "probe the admission service's health (forge-hosted)")
+	current := fs.String("current", "", "the forge's state as a snapshot file: report protections drift (forge-hosted)")
+	repo := fs.String("repo", "", "working tree for the CODEOWNERS and workflow checks beside --current")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes only --config <path>"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes --config <path> [--probe] [--current <snapshot> [--repo <dir>]]"), stdout, stderr)
 	}
 	cfg, err := posture.Load(*config)
 	if err != nil {
@@ -38,6 +43,11 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	result := map[string]any{
 		"posture":  string(cfg.Posture),
 		"enforced": cfg.Posture.Enforced(),
+		// The protected surface the enforced hook write-denies to
+		// agent credentials (plans/os-465e356e.md D1): the declared
+		// entries plus the declaration itself, so the operator sees
+		// exactly what the remote will refuse.
+		"protected": cfg.ProtectedSurface(),
 	}
 	switch cfg.Posture {
 	case posture.Cooperative:
@@ -46,8 +56,46 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		// only a machine field.
 		fmt.Fprintln(stderr, posture.Consequence)
 	case posture.EnforcedForgeHosted:
-		result["gap"] = posture.ForgeHostedGap
-		fmt.Fprintln(stderr, posture.ForgeHostedGap)
+		// The third posture reports the deployment it can see: where
+		// proposals go, which branch the ledger rides and which forge
+		// identity is its sole writer (plans/os-5c8a312c.md D7). The
+		// gap sentence that stood here until the service landed is
+		// gone with the gap.
+		a := cfg.Admission
+		result["admission"] = map[string]any{
+			"endpoint":   a.Endpoint,
+			"identity":   a.Identity,
+			"ledger_ref": cfg.LedgerRef(),
+			"checks":     append([]string{}, a.Checks...),
+			"reviews":    a.Reviews,
+			"owners":     append([]string{}, a.Owners...),
+		}
+		fmt.Fprintf(stderr, "enforced-forge-hosted: proposals go to %s; the ledger rides %s, written by %s alone\n", a.Endpoint, cfg.LedgerRef(), a.Identity)
+		if *probe {
+			h, err := propose.New(a.Endpoint).Probe()
+			if err != nil {
+				return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the admission service at %s did not answer the probe: %v", a.Endpoint, err)), stdout, stderr)
+			}
+			service := map[string]any{"remote": h.Remote, "ref": h.Ref, "tip": h.Tip, "position": nil}
+			if h.Position != nil {
+				service["position"] = *h.Position
+			}
+			result["service"] = service
+			if h.Ref != cfg.LedgerRef() {
+				fmt.Fprintf(stderr, "warning: the service serves %s while the declaration names %s\n", h.Ref, cfg.LedgerRef())
+			}
+		}
+		if *current != "" {
+			rep, _, err := protections.Plan(cfg, protections.Snapshot{Path: *current}, *repo)
+			if err != nil {
+				return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+			}
+			result["protections"] = reportResult(rep)
+			if rep.DriftCount > 0 {
+				fmt.Fprintf(stderr, "protections: %d drift(s) against the declaration; run `seed protections plan` for each\n", rep.DriftCount)
+				return render(envelope.Fail(envelope.ExitDrift, "protections_drift", fmt.Sprintf("%d drift(s) against the declaration", rep.DriftCount)), stdout, stderr)
+			}
+		}
 	}
 	return render(envelope.OK(result), stdout, stderr)
 }
