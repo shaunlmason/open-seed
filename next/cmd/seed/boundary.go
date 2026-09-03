@@ -151,8 +151,14 @@ func runBoundaryCheck(args []string, stdout, stderr io.Writer) int {
 	}
 	got := *card
 	got.Signer, got.Signature = "", ""
-	gotCanon, _ := got.Canonical()
-	wantCanon, _ := want.Canonical()
+	gotCanon, err := got.Canonical()
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot canonicalize the card at %s: %v", *cardPath, err)), stdout, stderr)
+	}
+	wantCanon, err := want.Canonical()
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot canonicalize the rendered card: %v", err)), stdout, stderr)
+	}
 	if string(gotCanon) != string(wantCanon) {
 		return render(envelope.Fail(envelope.ExitDrift, "card_drift", fmt.Sprintf("%s does not say what the declaration renders: re-render it with boundary card", *cardPath)), stdout, stderr)
 	}
