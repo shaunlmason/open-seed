@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "task": "os-c7554f18",
+  "merge_base": "70374b5fe329192a65693c3e8cf78ef4a2689aac",
+  "head": "6e3bc2ba9e6956778ff515146c80152ceb236b3f",
+  "plan_path": "plans/os-c7554f18.md",
+  "plan_sha256": "3e99674fa4e3cafa5cbc4769b39b30ad3da2c890a18c22b71a3c79c8d5e29a20",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/doctor.go",
+    "next/cmd/seed/offer.go",
+    "next/cmd/seed/project_cli_test.go",
+    "next/cmd/seed/ranking_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/eval/eval.go",
+    "next/internal/eval/eval_test.go",
+    "next/internal/project/flywheel_test.go",
+    "next/internal/project/knowledge_test.go",
+    "next/internal/project/lanes_report_test.go",
+    "next/internal/project/project.go",
+    "next/internal/project/project_test.go",
+    "next/internal/project/ranking.go",
+    "next/internal/project/ranking_test.go",
+    "next/internal/project/refusals_report_test.go",
+    "next/internal/project/report.go",
+    "next/internal/ranking/ranking.go",
+    "next/internal/ranking/ranking_test.go",
+    "next/spec/envelope.md",
+    "next/spec/evals.md",
+    "next/spec/offers.md",
+    "next/spec/projections.md",
+    "next/spec/qualification.md",
+    "next/spec/ranking.md"
+  ],
+  "diff_sha256": "359fbcbc1269a2414a84eba22222e72d0cbc66c77c0d61d04b559111b0a24cd5",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/ranking/ ./internal/eval/ ./internal/project/ ./cmd/seed/ -run 'Rank|Strongest|Offer|Eval|Doctor' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
