@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-03T04:04:53Z"
     lease_expires: "2026-09-03T05:10:51Z"
 created_at: "2026-09-01T08:55:24Z"
-updated_at: "2026-09-03T04:10:51Z"
+updated_at: "2026-09-03T04:34:27Z"
 ---
 
 Review finding on #183, deliberately not taken there because plans/os-fa69345e.md D3 decided the opposite in advance ('the drill pins it so a future consistency cleanup does not extend the stamp there'). This card is that cleanup, made deliberate.
@@ -28,3 +28,7 @@ Scope: next/cmd/seed/ledger.go (one return), next/cmd/seed/ledger_test.go (inver
 ## Evidence ev-2874fe7c (pr, seed-next-implementer, 2026-09-03T04:06:42Z)
 
 https://github.com/shaunlmason/open-seed/pull/265
+
+## Evidence ev-4697c36a (receipt, seed-next-implementer, 2026-09-03T04:34:27Z)
+
+receipts/os-37fcf7c6.json@2b6587c (three cold make check readings exit 0, coverage 92.0% against the 90% gate; receipt validation [0,0,0])
