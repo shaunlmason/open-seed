@@ -1345,20 +1345,28 @@ compromised-actor drill (os-465e356e), is planned in #241, under
 revision for two review findings (the drill builds on the shipped
 `seed-admit` hook rather than a second one; unauthorized pushes to
 code refs are exercised, not exempted), and names its follow-up card
-os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are
-uncarded.
+os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are carded
+and planned, their plan PRs in review: item 2, the forge-hosted
+admission service and the protections reconciler (os-5c8a312c, #244);
+item 3, checkpoint trust with the replay-equals-genesis proof and
+performance budgets, III.C row 4's contention benchmark taken there
+(os-7508ab9e, #246); item 4, the preseed with agent-only guardrails
+and the protected surface in config (os-0d4f2af3, #247); item 5,
+migration from a real export of this repository (os-cf13fb51, #248);
+item 6, docs generation, the handbook and simulation mode, which also
+takes the exit line's week-long accelerated backlog (os-16e55c11,
+#249). All six extend one declaration, `seed.json`; whichever lands
+later merges the struct.
 
-**Next action: card and plan Phase 12 items 2 through 6, in order** —
-the forge-hosted admission service with the protections reconciler
-(item 2), checkpoint trust docs with the replay-equals-genesis proof
-and performance budgets (item 3), the preseed (item 4), migration
-(item 5), docs generation with simulation mode (item 6) — while #240
-and #241 are driven to merge. The derivation, stated rather than read
-off a summary: every Phase 10 item has a merged PR and the exit
-record above walks III.E, III.G, III.O and III.J row 3 and routes
+**Next action: drive the Phase 12 plan PRs (#241, #244, #246, #247,
+#248, #249) through review to merge, then implement in item order,
+item 1 first** — as drafts until the Phase 11 exit record merges and
+the phase gate opens (decisions/0003). The derivation, stated rather
+than read off a summary: every Phase 10 item has a merged PR and the
+exit record above walks III.E, III.G, III.O and III.J row 3 and routes
 what it found unmet, so nothing in Phase 10 remains to claim; Phase
-11's one open item is in review with its exit record carded; Phase
-12's item 1 is planned and nothing else in it exists.
+11's one open item is in review with its exit record carded; every
+Phase 12 item is carded and planned and none is implemented.
 
 **The destination is promotion (spin-out)**, defined in
 `docs/next-build-plan.md` §5 (merged #169, card os-768361cc) as two
