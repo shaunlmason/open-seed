@@ -247,7 +247,7 @@ func RebuildWith(ledgerDir, outDir string, projections []Projection, resolve led
 		return nil, err
 	}
 	defer func() {
-		if cerr := os.Chmod(outDir, 0o555); err == nil && cerr != nil {
+		if cerr := setMode(outDir, 0o555); err == nil && cerr != nil {
 			err = cerr
 		}
 	}()
@@ -319,12 +319,12 @@ func openDirs(dirs ...string) error {
 	var opened []string
 	relock := func() {
 		for i := len(opened) - 1; i >= 0; i-- {
-			_ = os.Chmod(opened[i], 0o555)
+			_ = setMode(opened[i], 0o555)
 		}
 	}
 	for _, dir := range dirs {
 		if info, err := os.Stat(dir); err == nil && info.IsDir() {
-			if err := os.Chmod(dir, 0o755); err != nil {
+			if err := setMode(dir, 0o755); err != nil {
 				relock()
 				return err
 			}
@@ -335,7 +335,7 @@ func openDirs(dirs ...string) error {
 			relock()
 			return err
 		}
-		if err := os.Chmod(dir, 0o755); err != nil {
+		if err := setMode(dir, 0o755); err != nil {
 			relock()
 			return err
 		}
@@ -346,10 +346,10 @@ func openDirs(dirs ...string) error {
 
 // closeWindow relocks the swap directories.
 func closeWindow(root, builds string) error {
-	if err := os.Chmod(builds, 0o555); err != nil {
+	if err := setMode(builds, 0o555); err != nil {
 		return err
 	}
-	return os.Chmod(root, 0o555)
+	return setMode(root, 0o555)
 }
 
 // lockTree locks a completed build tree: files 0444, directories 0555,
@@ -364,13 +364,13 @@ func lockTree(path string) error {
 			dirs = append(dirs, p)
 			return nil
 		}
-		return os.Chmod(p, 0o444)
+		return setMode(p, 0o444)
 	})
 	if err != nil {
 		return err
 	}
 	for i := len(dirs) - 1; i >= 0; i-- {
-		if err := os.Chmod(dirs[i], 0o555); err != nil {
+		if err := setMode(dirs[i], 0o555); err != nil {
 			return err
 		}
 	}
@@ -388,7 +388,7 @@ func unlockDirs(path string) error {
 			return err
 		}
 		if d.IsDir() {
-			return os.Chmod(p, 0o755)
+			return setMode(p, 0o755)
 		}
 		return nil
 	})
@@ -482,7 +482,7 @@ func publish(root, buildID string, files map[string][]byte) (err error) {
 	}
 	// WriteFile's mode is weakened by the process umask; the published
 	// pointer must be exactly 0444 (review finding on #112).
-	if err := os.Chmod(tmpCur, 0o444); err != nil {
+	if err := setMode(tmpCur, 0o444); err != nil {
 		return err
 	}
 	if err := os.Rename(tmpCur, cur); err != nil {

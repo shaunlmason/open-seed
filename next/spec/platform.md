@@ -105,6 +105,11 @@ than papered over:
   converts by default; the matrix sets it globally before the suites,
   and the mode and umask drills (`internal/project/boundary_test.go`)
   are Unix-only by build constraint, since Windows has neither.
+- **The published projection tree is not write-locked.** POSIX
+  publishes a tree read-only; on Windows the read-only attribute
+  would block the tree's own replacement and enforces nothing
+  against a writer with the directory's ACL, so publication there
+  sets no modes.
 - **Line endings.** Git on Windows converts by default; the
   repository's `.gitattributes` declares LF for every text file, the
   gitref client tells git `core.autocrlf=false` and `core.eol=lf` on
