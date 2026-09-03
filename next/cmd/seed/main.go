@@ -85,6 +85,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runDoctor(args[1:], stdout, stderr)
 	case "protections":
 		return runProtections(args[1:], stdout, stderr)
+	case "perf":
+		return runPerf(args[1:], stdout, stderr)
 	case "run":
 		return runRun(args[1:], stdout, stderr)
 	case "eval":

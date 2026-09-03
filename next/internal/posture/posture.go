@@ -95,6 +95,21 @@ type Admission struct {
 	Owners    []string `json:"owners"`
 }
 
+// Trust choices a fresh reader may declare for checkpoints
+// (next/spec/checkpoints.md; plans/os-7508ab9e.md D1).
+const (
+	TrustReplay  = "replay"  // every fresh reader verifies from genesis once
+	TrustSigners = "signers" // a fresh reader may start from a capable signer's checkpoint
+)
+
+// Checkpoints is the declaration's checkpoint-trust block: which of a
+// fresh clone's two verification obligations this deployment chose.
+// An absent block is undeclared — never a default — because the
+// charter says the choice is declared, not defaulted.
+type Checkpoints struct {
+	Trust string `json:"trust"`
+}
+
 // Config is the deployment declaration.
 type Config struct {
 	Posture   Posture    `json:"posture"`
@@ -104,7 +119,17 @@ type Config struct {
 	// or under an entry as a directory, is write-denied to every agent
 	// credential at the enforced hook. Optional; the declaration's own
 	// path is always protected whether or not it is listed.
-	Protected []string `json:"protected,omitempty"`
+	Protected   []string     `json:"protected,omitempty"`
+	Checkpoints *Checkpoints `json:"checkpoints,omitempty"`
+}
+
+// CheckpointTrust returns the declared trust choice, or "" when the
+// block is absent (undeclared).
+func (c *Config) CheckpointTrust() string {
+	if c == nil || c.Checkpoints == nil {
+		return ""
+	}
+	return c.Checkpoints.Trust
 }
 
 // LedgerRef is the ref the ledger rides under this declaration: the
@@ -152,6 +177,9 @@ func Parse(b []byte) (*Config, error) {
 	}
 	if err := c.validateAdmission(); err != nil {
 		return nil, fmt.Errorf("%v (valid postures: %s)", err, validList())
+	}
+	if c.Checkpoints != nil && c.Checkpoints.Trust != TrustReplay && c.Checkpoints.Trust != TrustSigners {
+		return nil, fmt.Errorf("checkpoints.trust is %q or %q (a fresh reader's verification obligation is declared, not defaulted), got %q", TrustReplay, TrustSigners, c.Checkpoints.Trust)
 	}
 	for i, p := range c.Protected {
 		if err := validProtectedEntry(p); err != nil {

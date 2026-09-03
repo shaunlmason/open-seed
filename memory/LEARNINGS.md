@@ -1378,6 +1378,20 @@ the assertions read, and there is no copy to go stale.
 - Copying a mapping into a second binary is how two postures come to
   disagree on a code. When the second caller appears, move the mapping
   to a package both can import before writing the second caller.
+- A proof that two paths produce identical output must not stamp the
+  output with which path produced it. Put the provenance beside the
+  output (a basis file in the root), or the proof is unwritable.
+- A chain hash that excludes the signature is what makes "trust the
+  signer set" a real trade-off: the drill that shows a corrupted prefix
+  signature slipping past the trusting reader is the drill worth
+  having, not the one that shows the two readers agreeing.
+- A generated representative history is a better adversary than any
+  hand-written fixture: pushing one through the hook found a context
+  the hook built by hand and the CLI built by constructor, disagreeing
+  on the one field the budget rule reads.
+- Under one optimistic ref, `n` racing writers cost about `n/2`
+  attempts each. Budget the ratio to that shape and say why; a flat
+  ceiling would fail on the day someone raises the writer count.
 - 2026-09-03 (no card; from Can Bölük, "The Harness Playbook", Stencil,
   2026-09-02): the machine-protocol surface (build plan Phase 13 item
   6) should stay tiny. Every permanent tool taxes every turn and a

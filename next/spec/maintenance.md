@@ -196,6 +196,9 @@ it filed, and a maintenance loop that remembers is one that can forget.
 
 ## Checkpoints carry a snapshot a reader can start from
 
+What a reader may trust, and the declaration that says so, is
+[`checkpoints.md`](checkpoints.md); this section is the mechanism.
+
 A checkpoint that carried only a signature over a projection hash buys
 a fresh reader nothing it can spend: it could confirm that somebody
 attested to a state it has no way to obtain, and would replay anyway.

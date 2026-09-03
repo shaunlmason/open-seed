@@ -25,6 +25,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 )
 
 // Verb is the checkpoint event. It mirrors keyring's private constant
@@ -157,4 +160,57 @@ func ReadSnapshot(b []byte) (*Snapshot, error) {
 		return nil, fmt.Errorf("the snapshot's format %q is not %q — replay rather than starting from a materialization this build cannot read", s.Format, Format)
 	}
 	return &s, nil
+}
+
+// Cited is the newest admitted checkpoint a reader may start from,
+// with where it sits in the chain and who signed it.
+type Cited struct {
+	Checkpoint *Checkpoint
+	Position   int    // the checkpoint record's own position in the chain
+	Signer     string // the signing fingerprint
+}
+
+// Capable reports whether the signer may checkpoint at the prefix
+// before the record: the maintenance or operator capability, or root
+// standing (the system.checkpoint row, next/spec/actors.md). The
+// keyring at a seed/0 prefix is unseeded, and there the genesis root is
+// the only capable signer.
+func Capable(prefix []*event.Record, signer string) bool {
+	ring, active, err := keyring.StateAt(prefix)
+	if err != nil {
+		return false
+	}
+	if ring.IsActiveRoot(signer) {
+		return true
+	}
+	if !keyring.Applies(active) {
+		return false
+	}
+	e, ok := ring.Get(signer)
+	if !ok || e.Standing != keyring.StandingActive {
+		return false
+	}
+	return ring.HasAnyCapability(signer, []string{keyring.CapMaintenance, keyring.CapOperator})
+}
+
+// Latest finds the newest system.checkpoint record whose payload
+// parses and whose signer was capable at its own position; nil when
+// the chain carries none. A checkpoint by an incapable signer is not
+// a checkpoint a reader may start from, whatever its payload says.
+func Latest(records []*event.Record) *Cited {
+	for i := len(records) - 1; i >= 0; i-- {
+		rec := records[i]
+		if rec.Event.Verb != Verb {
+			continue
+		}
+		c, err := Parse(rec.Event.Subject, rec.Event.Payload)
+		if err != nil {
+			continue
+		}
+		if !Capable(records[:i], rec.Event.Actor) {
+			continue
+		}
+		return &Cited{Checkpoint: c, Position: i, Signer: rec.Event.Actor}
+	}
+	return nil
 }
