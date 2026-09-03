@@ -1567,6 +1567,35 @@ the assertions read, and there is no copy to go stale.
   the opener applies the local declaration (ledger ref, proposer) to
   whatever remote it opens, which is wrong for a foreign ledger. Open
   with the gitref client and the remote's own genesis instead.
+
+## The GitHub↔Gitea protection impedance (os-ad610334, Phase 13 item 3)
+
+- **Gitea/Forgejo has no unified "ruleset" model.** Protection splits
+  across `branch_protections` (keyed by `rule_name`, which IS the branch
+  glob — no separate name) and `tag_protections` (keyed by id). A branch
+  protection's existence carries deletion + non-fast-forward; the push
+  whitelist carries "only the identity may update"; so an adapter maps
+  the four Desired rulesets onto those two resources and remembers each
+  protection's key (like the GitHub adapter's `ids`) for update/delete.
+- **`Unexpressible` is rule-TYPE level, and `differences()` is
+  param-exact.** A forge that expresses a rule partially (Forgejo:
+  approvals yes, thread-resolution/code-owner no) cannot both apply the
+  expressible part and avoid drift on the rest. The honest resolution is
+  to mark the WHOLE rule unexpressible (manual) rather than half-apply it
+  and read back as falsely compliant — the mutation drill forbids the
+  silent drop.
+- **A forge field defaulting keeps old declarations valid.**
+  `admission.forge` absent = github; the CLI `--forge` default must stay
+  the credential-free `snapshot` arm the existing drills rely on.
+- **A refinement code emitted as a string literal needs a row in
+  `next/spec/envelope.md`.** `merge observe`'s `not_merged` on exit 3
+  (invalid_transition) is a refinement; `TestEmittedCodesAppearInTheTable`
+  parses the refinements table and rejects any emitted code that is
+  neither the exit's canonical code nor a listed refinement. Only codes
+  promoted to `Code*` constants render into generated `exit-codes.md`;
+  literals live solely in the table. The strict test arrived via the
+  item-6 merge, so a pre-merge draft receipt passed and the
+  merge-forward surfaced it — regenerate after merging main.
 - A published statement across a trust boundary should be a strict
   object with a pinned field list on both sides: the writer refuses
   to add a field without moving the pin, and the reader refuses a
@@ -1575,6 +1604,19 @@ the assertions read, and there is no copy to go stale.
   verify by recomputing; never store the canonical bytes beside the
   signature, or the two can disagree without anyone noticing.
 
+
+## Tuple ranking as supervisor policy (os-c7554f18, Phase 13 item 7)
+
+- A policy table belongs in one place with a mirror the tests hold to
+  it: `ranking.Rules` states the rows in the spec's own words and a
+  drill parses `ranking.md` and compares, so a change to the policy in
+  either place fails until both move. The behavior drills pin the code
+  to the rows; the table drill pins the spec to the code.
+- Scheduling policy and admission are different authorities: the
+  ranking is read by the offer writer and never by a rule, so the
+  bridge for never-qualified workers (admission never judges an
+  offer's scope) survives a policy that sends work to the strongest,
+  and a first eval's offer stays the one unscoped door.
 ## The conformance report (os-83bc3d84)
 
 - A conformance claim is only as good as its provenance: keep the

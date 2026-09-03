@@ -152,7 +152,7 @@ func TestRebuildByteIdenticalAndStamped(t *testing.T) {
 	out := lockedTempOut(t, "projections")
 
 	results, err := project.Rebuild(dir, out, project.Default(), resolve)
-	if err != nil || len(results) != 9 {
+	if err != nil || len(results) != 10 {
 		t.Fatalf("rebuild: %+v %v", results, err)
 	}
 	if results[0].Name != "roster" || results[0].Position != 5 {

@@ -1462,6 +1462,16 @@ record's own position through one derivation, `curation.AuthenticPass`
   gives one corrupted chain, the D3 tripwire inverted on purpose, the
   envelope spec's null sentence sharpened to "before any position was
   read")
+- 13.3 a non-primary forge adapter (Forgejo) for the forge extras (III.N
+  row 2) — os-ad610334 — **draft in review** (draft PR #281 against plan
+  #275 per decisions/0003: internal/protections/forgejo.go over Forgejo's
+  Gitea-compatible branch/tag-protection API, held to the one Desired
+  table; the Observer filling merge.observed's sha from either forge;
+  admission.forge/api posture fields; seed protections/merge observe
+  --forge forgejo; doctor's declared forge; next/spec/forges.md; drilled
+  against a fake Forgejo. Reconciliation: the pull-request rule is
+  Unexpressible on Forgejo — reported manual, not half-applied. Awaits
+  #275 merge + a make-check window for the receipt)
 - 13.4 mirrors and dashboards propose, federation as uniform read
   remotes, cross-repo work as a proposal (III.J row 2, III.N row 4,
   §II.15) — os-48df10a2 — **in review** (task PR against plan #257,
@@ -1537,6 +1547,26 @@ record's own position through one derivation, `curation.AuthenticPass`
   the doctor's report; the CI matrix on Linux, macOS and Windows;
   `next/spec/platform.md` new, `protocol.md` and `envelope.md`
   following)
+- 13.7 tuple ranking as supervisor policy: eval results rank
+  qualified tuples and the planner lane's offers carry the strongest
+  (III.J row 3's policy clause, §II.9) — os-c7554f18 — **in review**
+  (task PR against plan #276: `internal/ranking`, the record-derived
+  policy table (score by qualifying evidence since the tuple last
+  held, ties by the latest pass then the canonical JSON, disqualified
+  and holder-less tuples absent, agreement refining the verdict
+  ranking only with the gold supplied), pinned to `next/spec/ranking.md`
+  by a drill that parses the table; `seed offer publish --strongest n
+  --capability c` filling the `tuples` scope from the ranking at the
+  offer's own instant and refusing `ranking_empty` (exit 4) rather
+  than widening; `eval.Due`'s offers by policy (the configuration
+  under re-test, else the strongest claim tuple, else unscoped with a
+  `ranking_empty` note, the bootstrap); the `ranking` projection
+  (version 1, both capabilities, byte-identical), `seed doctor
+  --ledger` naming the top tuple per capability, the report's
+  `lanes.planner.strongest` at version 16; drilled at the derivation,
+  the verbs and the projection, with the mutation evidence D4 names;
+  `ranking.md` new, `offers.md`, `qualification.md` (the deferral
+  closed), `evals.md`, `projections.md` and `envelope.md` following)
 - the conformance report (Phase 13's exit line: "the conformance report
   shows Part III complete at the enforced self-hosted posture"; the
   preamble's "the doctor reports which Phase 13 criteria remain open")

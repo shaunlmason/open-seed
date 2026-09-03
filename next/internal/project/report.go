@@ -23,6 +23,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/refusals"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 )
 
 // ReportFile is the report projection's one view file.
@@ -204,6 +205,12 @@ type ReportPlanner struct {
 	Edited       int     `json:"edited"`
 	Unmeasured   int     `json:"unmeasured"`
 	UneditedRate *string `json:"unedited_rate"`
+	// Strongest is the tuples scope of the latest applied
+	// offer.published that carries one (plans/os-c7554f18.md D3;
+	// next/spec/ranking.md): the input the planner lane last received
+	// by policy. Absent when no offer has carried a scope, and never
+	// split by kind.
+	Strongest []tuple.Tuple `json:"strongest,omitempty"`
 }
 
 // ReportReconciliation is the record-derivable half of divergence
@@ -253,7 +260,7 @@ type ReportReconciliation struct {
 // other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "15", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "16", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -326,7 +333,7 @@ func reportView(records []*event.Record) (*ReportView, error) {
 		view.Reconciliation = rec
 		metrics := flywheel.Derive(records, fold)
 		view.Flywheel = &metrics
-		view.Lanes = lanesSection(fold)
+		view.Lanes = lanesSection(records, fold)
 		view.Lanes.ByKind = lanesByKind(records, fold)
 	}
 	if curation.Fold(records).Any() {
@@ -383,7 +390,7 @@ func requestsSection(reqs []transition.IngressFact, records []*event.Record) *Re
 // lanesSection derives the lane-quality metrics from the fold
 // (plans/os-6bd9ffff.md D6): re-triage over subjects with a
 // specification, unedited approvals over the measured ones.
-func lanesSection(fold *transition.Fold) *ReportLanes {
+func lanesSection(records []*event.Record, fold *transition.Fold) *ReportLanes {
 	sec := &ReportLanes{}
 	for _, subject := range fold.Subjects() {
 		s, ok := fold.State(subject)
@@ -411,7 +418,44 @@ func lanesSection(fold *transition.Fold) *ReportLanes {
 	}
 	sec.Dispatcher.RetriageRate = reportRate(sec.Dispatcher.Respecified, sec.Dispatcher.Specified)
 	sec.Planner.UneditedRate = reportRate(sec.Planner.Unedited, sec.Planner.Unedited+sec.Planner.Edited)
+	sec.Planner.Strongest = strongestOffered(records, fold)
 	return sec
+}
+
+// strongestOffered is the tuples scope of the latest AUTHORIZED offer
+// that carries one, across every subject: the configurations the
+// planner lane last received by policy (next/spec/ranking.md). The
+// tolerant fold records a raw-pushed offer as a fact, so the signer's
+// supervise standing is replayed to the offer's own position before
+// it counts, the same check the list surface makes (review finding on
+// the task PR). Nil when no such offer exists.
+func strongestOffered(records []*event.Record, fold *transition.Fold) []tuple.Tuple {
+	latest := -1
+	var out []tuple.Tuple
+	for _, subject := range fold.Subjects() {
+		s, ok := fold.State(subject)
+		if !ok {
+			continue
+		}
+		for _, o := range s.Offers {
+			if len(o.Tuples) == 0 || o.Pos <= latest || !offerAuthorized(records, o) {
+				continue
+			}
+			latest = o.Pos
+			out = append([]tuple.Tuple(nil), o.Tuples...)
+		}
+	}
+	return out
+}
+
+// offerAuthorized replays the keyring to the offer's own position and
+// asks whether the signer held the supervise boundary there.
+func offerAuthorized(records []*event.Record, o transition.OfferFact) bool {
+	if o.Pos < 0 || o.Pos >= len(records) {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:o.Pos])
+	return err == nil && ring != nil && ring.HasAnyCapability(o.Signer, keyring.AcceptedCapabilities(transition.OfferPublishedVerb))
 }
 
 // reportRate is a ratio as a fixed three-decimal string, null at a

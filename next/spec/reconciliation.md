@@ -208,3 +208,10 @@ checked against the fold rather than named in the payload.
 Who signs which step is the keyring's: asking for the merge accepts
 `claim` or `operator` (the work lane's act), observing it accepts
 `observer` or `operator`.
+
+## Merge facts from the forge (Phase 13 item 3)
+
+`merge.observed`'s `{merged, pr}` is forge-neutral. `seed merge observe
+--forge github|forgejo|snapshot --pr <ref>` fills `merged` from the
+forge's pull-request state and refuses an unmerged PR; the ledger fact is
+unchanged. See [`forges.md`](forges.md).

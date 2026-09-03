@@ -3301,6 +3301,30 @@ declaration (its ledger ref under the forge-hosted posture, its
 proposer) to a foreign ledger. No key crosses, and the command has no
 key flag to cross with.
 
+## Phase 13 item 3 — the Forgejo forge adapter (os-ad610334, plan #275)
+
+**The pull-request rule is unexpressible on Forgejo, so the whole
+requirement is manual — not partially applied.** Forgejo's branch
+protection has no conversation-thread-resolution gate and no
+code-owner-review gate, and the reconciler reconciles by rule type
+against a parameter-exact `differences()`. There is no way to apply the
+approvals Forgejo *can* express while not-drifting on the resolution and
+owner gates it cannot, so rather than half-apply the rule and read the
+protection back as compliant on gates it does not enforce — a false
+compliance the mutation drill forbids — the whole pull-request rule lands
+in `State.Unexpressible` and `plan` reports it manual. Required approvals
+are still set best-effort through the API; the operator sets the review
+gates in Forgejo's settings and records that they did. `Desired` is
+untouched: one decision table, two forges held to it.
+
+**The `--forge` default stays `snapshot`, and the forge is declared, not
+defaulted from the flag.** Six existing protections drills rely on
+`--forge` defaulting to the credential-free `snapshot` arm, so that
+default is retained. The forge a deployment runs is named in
+`admission.forge` (default `github`, so every existing declaration keeps
+its meaning) with `admission.api` (required under `forgejo`, which has no
+public API); `seed doctor` reports it and `--forge github|forgejo`
+selects the live arm, reading `--api`/the token env per forge.
 ## Phase 13 item 5 — the A2A-shaped cross-organization boundary (os-40ed0ca0, plan #258)
 
 **The card's inputs live in the declaration.** The plan derives the
@@ -3341,6 +3365,49 @@ before it binds.
 the library against the clone, as the offer drills do, rather than
 loosening the CLI's online-only rule for a test.
 
+## Phase 13 item 7 — tuple ranking as supervisor policy (os-c7554f18, plan #276)
+
+**The bootstrap is the one place policy yields.** D2 says an unscoped
+offer is the supervisor's explicit choice and never a fallback, and
+`--strongest` refuses on an empty ranking. `eval.Due`'s offers cannot
+refuse: a first eval on a fresh chain is how any configuration
+qualifies, and a derivation that owed no offer would leave the ranking
+empty forever. So `Due` leaves that one offer unscoped and notes
+`ranking_empty` on it, the report saying in so many words that policy
+had nothing to say. The verb's refusal and the derivation's note are
+the same fact told to the two callers who can act on it.
+
+**A re-test names its own configuration.** D2's "the top of the claim
+ranking" would send a spot check of tuple T to whoever holds the
+strongest tuple, whose run would declare its own configuration and
+qualify that rather than re-testing T. The filing already names the
+tuple under test, so its offer carries exactly that tuple; the ranking
+scopes first evals only. The spec's table row says so.
+
+**The ranking reads records, not the keyring's list.** The keyring's
+`Qualifications` carry no chain position, and "latest fact" is a
+position question (two facts in one hour's `ts` still have an order),
+so the derivation reads the qualification verbs off the verified
+prefix by position and uses the keyring for standing and the
+admissible set alone. No accessor was added to the keyring.
+
+**`strongest` sits on the planner section, absent rather than null.**
+The by-kind split repeats the planner figures per roster kind; a
+`strongest` on every copy would say the same thing several times or
+nothing several times. The field is on `lanes.planner` with
+`omitempty`, so a chain that never carried a scoped offer builds a
+report without it, and the version bump (16) is what republishes.
+
+**The doctor takes `--ledger` for this one section.** The doctor read
+the declaration alone; naming the top tuple needs a chain. The flag
+is optional and the section absent without it, so every existing
+invocation and its output are unchanged.
+
+**`envelope.md` takes one row the plan's scope did not name.** D2's
+refusal needed a code; `ranking_empty` refines exit 4 `not_found`
+(the policy's answer does not exist), and the refinement table in
+`envelope.md` is where every such code is recorded, so the row went
+there beside `trust_undeclared`. No new exit number.
 ## The conformance report (os-83bc3d84, plan #287)
 
 **The table transcribes the records; it does not judge.** Every
