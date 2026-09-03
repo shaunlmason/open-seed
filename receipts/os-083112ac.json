@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-083112ac",
-  "merge_base": "d6c6133753b29060a9cc5580a5b6b32bd8c3d3a8",
-  "head": "ae0359cc33d6c122de1fc1db27a9e523a6895bca",
+  "merge_base": "70374b5fe329192a65693c3e8cf78ef4a2689aac",
+  "head": "810843cae23fd127793c8432381413c2e5abf34b",
   "plan_path": "plans/os-083112ac.md",
   "plan_sha256": "7424c3f1b7a72eb318f6bf2522ccc4b056fdfea8920cabdb4ca0629649054c79",
   "diff_files": [
@@ -31,7 +31,7 @@
     "next/spec/executors.md",
     "next/spec/projections.md"
   ],
-  "diff_sha256": "03cb2ee97c4360de307f9b70abe43deaf627e7d3953373e3ebf01b3c9ff45256",
+  "diff_sha256": "3ac7c564280b0f01f2ebf8f2e37abd642d98639dfbcd35878f91b34c251746e0",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./executor/... ./internal/posture/ ./internal/project/ ./cmd/seed/ -run 'Adapter|Container|Cloud|Remote|Disposab|Preempt|RunStart|Executors' -count=1",
