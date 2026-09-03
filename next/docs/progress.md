@@ -1462,6 +1462,16 @@ record's own position through one derivation, `curation.AuthenticPass`
   gives one corrupted chain, the D3 tripwire inverted on purpose, the
   envelope spec's null sentence sharpened to "before any position was
   read")
+- 13.3 a non-primary forge adapter (Forgejo) for the forge extras (III.N
+  row 2) — os-ad610334 — **draft in review** (draft PR #281 against plan
+  #275 per decisions/0003: internal/protections/forgejo.go over Forgejo's
+  Gitea-compatible branch/tag-protection API, held to the one Desired
+  table; the Observer filling merge.observed's sha from either forge;
+  admission.forge/api posture fields; seed protections/merge observe
+  --forge forgejo; doctor's declared forge; next/spec/forges.md; drilled
+  against a fake Forgejo. Reconciliation: the pull-request rule is
+  Unexpressible on Forgejo — reported manual, not half-applied. Awaits
+  #275 merge + a make-check window for the receipt)
 - 13.4 mirrors and dashboards propose, federation as uniform read
   remotes, cross-repo work as a proposal (III.J row 2, III.N row 4,
   §II.15) — os-48df10a2 — **in review** (task PR against plan #257,

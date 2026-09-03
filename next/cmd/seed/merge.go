@@ -20,8 +20,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"io"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
@@ -135,15 +138,34 @@ func runMergeObserve(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("merge observe", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	f := bindLoopFlags(fs)
-	merged := fs.String("merged", "", "the merge commit observed on the target")
+	merged := fs.String("merged", "", "the merge commit observed on the target (or filled from --forge)")
 	pr := fs.String("pr", "", "the pull request the merge landed through")
+	forgeKind := fs.String("forge", "", "fill --merged from the forge: snapshot | github | forgejo")
+	github := fs.String("github", "", "owner/name of the repository (github or forgejo forge)")
+	api := fs.String("api", "", "forge API base URL")
+	tokenEnv := fs.String("token-env", "GITHUB_TOKEN", "environment variable holding the forge token")
+	snapshot := fs.String("snapshot", "", "pull-request snapshot file (snapshot forge)")
 	parseErr := fs.Parse(args)
 	missing := ""
-	if *merged == "" || *pr == "" {
-		missing = "and --merged <sha> --pr <ref> (the forge fact, recorded as observed)"
+	if *pr == "" || (*merged == "" && *forgeKind == "") {
+		missing = "and --pr <ref> with either --merged <sha> or --forge <kind> (the forge fact, recorded as observed)"
 	}
 	if env := f.usage("merge observe", parseErr, fs.NArg(), missing); env != nil {
 		return render(env, stdout, stderr)
+	}
+	if *merged == "" && *forgeKind != "" {
+		obs, env := mergeObserver(*forgeKind, *github, *api, *tokenEnv, *snapshot)
+		if env != nil {
+			return render(env, stdout, stderr)
+		}
+		sha, isMerged, err := obs.Merged(*pr)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("reading %s from the %s forge: %v", *pr, *forgeKind, err)), stdout, stderr)
+		}
+		if !isMerged {
+			return render(envelope.Fail(envelope.ExitInvalidTransition, "not_merged", fmt.Sprintf("%s is not merged on the forge: merge.observed records a merge, not an intention", *pr)), stdout, stderr)
+		}
+		*merged = sha
 	}
 	signer, env := loopSigner(*f.keyPath, *f.as)
 	if env != nil {
@@ -160,4 +182,38 @@ func runMergeObserve(args []string, stdout, stderr io.Writer) int {
 	}
 	return ls.commit(f, loopAct{verb: transition.MergeObservedVerb, payload: payload,
 		resultAt: terse(*f.subject)}, signer, stdout, stderr)
+}
+
+// mergeObserver constructs the forge observer merge observe fills the
+// merge sha from (plans/os-ad610334.md D4), the same forge vocabulary as
+// protections reconcile.
+func mergeObserver(kind, github, api, tokenEnv, snapshot string) (protections.Observer, *envelope.Envelope) {
+	switch kind {
+	case "snapshot":
+		if snapshot == "" {
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", "the snapshot forge needs --snapshot <file>")
+		}
+		return protections.SnapshotObserver{Path: snapshot}, nil
+	case "github", "forgejo":
+		owner, name, ok := strings.Cut(github, "/")
+		if !ok || owner == "" || name == "" {
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", "the "+kind+" forge needs --github <owner/name>")
+		}
+		env := tokenEnv
+		if kind == "forgejo" && env == "GITHUB_TOKEN" {
+			env = "FORGEJO_TOKEN"
+		}
+		token := os.Getenv(env)
+		if token == "" {
+			return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the %s forge needs a token in $%s", kind, env))
+		}
+		if kind == "forgejo" {
+			if api == "" {
+				return nil, envelope.Fail(envelope.ExitUsage, "usage", "the forgejo forge needs its instance URL in --api")
+			}
+			return protections.NewForgejo(api, owner, name, token), nil
+		}
+		return protections.NewGitHub(api, owner, name, token), nil
+	}
+	return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown forge %q (snapshot | github | forgejo)", kind))
 }
