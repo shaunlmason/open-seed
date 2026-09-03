@@ -67,9 +67,10 @@ protocol versions up to `protocol` in order under the root key, and
 prints what it appended. A second run appends nothing and exits 0 with
 `unchanged: true`. A preseed that disagrees with the chain it meets —
 a different root, a lower protocol than the active one, a posture the
-chain's history contradicts — refuses with the refinement
-`preseed_drift` under exit 3, naming the field and both values; init
-never edits history to match a file. `seed preseed check --ledger <dir>
+chain's history contradicts — refuses `preseed_drift` — a refinement of exit 28 `drift`, the code
+#244 allocates for a declared state and an observed one that differ —
+naming the field and both values; init never edits history to match a
+file. `seed preseed check --ledger <dir>
 --config seed.json` is the same comparison with no writes, exit 0 or
 `preseed_drift`, and `make check-next` runs it against the fixture
 deployment so the file is CI-verified; the doctor reports the
@@ -111,21 +112,42 @@ a file that carried keys would be a roster nothing signed.
 
 **D5. The protected surface is enumerated in config, and the spec says
 what complete means.** `protected` (#241's list) stays the field; the
-spec lists the members the charter requires (`next/spec/transitions.json`,
-`next/internal/admit/**`, `next/lanes/**`, `next/internal/verdict/**`,
-`next/evals/**`, the sealed keyring's paths, `next/internal/curation/**`,
-the supervisor's policy paths, `Makefile`, `.github/workflows/**`,
-`scripts/**`, and `seed.json` itself), and `preseed check` refuses a
-declaration whose list omits any of them (`preseed_drift`, naming the
-missing member). `governance.root` must be the chain's genesis root or
+spec lists the members the charter requires, as concrete prefixes the
+check compares by string: `next/spec/` (the transition spec and every
+normative table), `next/internal/admit/`, `next/internal/transition/`,
+`next/internal/keyring/` (the standing and capability rules),
+`next/internal/verdict/`, `next/internal/seal/`, `next/internal/eval/`,
+`next/evals/` (verifier code, rubrics and the sealed-check machinery),
+`next/internal/curation/`, `next/knowledge/lessons/` (the curator's
+gates and the policy stage), `next/lanes/` (role definitions),
+`next/cmd/seed-admit/`, `next/cmd/covergate/`, `Makefile`,
+`.github/workflows/`, `scripts/` (the check pipeline's own
+definitions), and `seed.json` itself (the supervisor's policy lives in
+its `guardrails` block; the sealed keyring is a recipient set derived
+from ledger grants and has no path). `preseed check` refuses a
+declaration whose list omits any of them with `preseed_incomplete`, a
+refinement of exit 13 `posture_invalid` (a judgment on the
+declaration's content, distinct from drift against a chain), naming the
+missing member. `governance.root` must be the chain's genesis root or
 a later admitted root; `owners` render into the `CODEOWNERS` #244
 writes. **The capability audit in CI** is a drill that derives, from
-the shipped manifests and the keyring rules, that no lane grant reaches
-the protected surface — only `operator` standing may update the
-default branch under #241's rule, no manifest grants `operator`, and
-the two roles that hold it (`maintenance` through `operator`?) are
-named or refused: the drill reads the manifests, so a manifest that
-later grants what would write the surface fails by name. The
+the shipped manifests and the keyring rules, that no lane or role grant
+reaches the protected surface. The shipped set already breaks the
+naive form of that claim: `next/lanes/maintenance.json` grants
+`operator`, and #241's code-ref rule lets operator standing
+fast-forward the default branch — so a maintenance key, an agent's,
+could write the surface. The audit therefore requires, and this card
+lands, the refinement of #241's rule that the charter's sentence
+("changed only by the governance root") states: a default-branch
+update touching a `protected` prefix is admitted for **root standing**
+only (a genesis-named root or a key the keyring marks root), and
+operator standing suffices for the rest of the default branch. With
+that rule the audit's claim is derivable: no manifest grants root, the
+one manifest granting `operator` (maintenance) is named in the audit's
+output as the operator-holding role that the rule keeps off the
+surface, and a manifest that later grants root fails by name. If #241's
+implementation lands the refinement first, this card inherits it; the
+plan says so. The
 test-content residual (ordinary test content outside the surface stays
 in an implementer's write scope; diff-vs-plan review and sealed checks
 are the mitigations) is written in the spec in those words.
@@ -134,7 +156,8 @@ are the mitigations) is written in the spec in those words.
 gains `by_kind`: the re-triage and unedited-approval rates computed
 per signer kind from the roster the fold already folds, so an operator
 can see whether the agents or the humans are the ones re-triaging;
-report version bumps to 14 and the cache republishes under its rule.
+report version bumps (to 15: #240 took 14 for the `flywheel` section)
+and the cache republishes under its rule.
 The refusal-rate section is unchanged (an affordance-gap metric, not a
 lane one).
 
@@ -158,13 +181,14 @@ stay `budgets.md`'s table; the preseed does not redeclare them.
 4. `internal/plan` / `cmd/seed/plan.go`: the path floor at lint;
    `cmd/seed/verdict.go`: `under_tiered`.
 5. `internal/project`: `by_kind` in the report's `lanes` section
-   (version 14).
+   (version 15).
 6. The capability audit drill; the idempotence, drift, ceiling
    (agent refused, human admitted, service as agent), routing, path
    floor, and `by_kind` drills; mutation evidence.
 7. Specs (`postures.md` or `preseed.md`, `tiers.md`, `lanes.md`,
-   `plans.md`, `projections.md`, `envelope.md` for `preseed_drift`,
-   `tier_above_ceiling`, `under_tiered`), `next/docs/progress.md`,
+   `plans.md`, `projections.md`, `envelope.md` for `preseed_drift` under
+   exit 28, `preseed_incomplete` under 13, `tier_above_ceiling` under 3,
+   `under_tiered` under 18), `next/docs/progress.md`,
    `next/docs/decisions.md`, `memory/LEARNINGS.md`, the Makefile
    `check-next` line for `preseed check`; receipt; evidence; review.
 
@@ -214,10 +238,14 @@ files above. NOT `.seed/**`, NOT `scripts/**`, NOT
    floored prefix below its tier; the render refuses `under_tiered`
    on the same contract; both admit at or above the floor.
 6. **The protected surface is complete or refused.** `preseed check`
-   refuses a `protected` list missing a required member, naming it;
-   the capability audit drill passes on the shipped manifests and fails
-   on a planted manifest granting `operator`.
-7. **`by_kind` rates** appear in report version 14, null over nothing,
+   refuses a `protected` list missing a required member
+   (`preseed_incomplete`, naming it); a default-branch update touching
+   a protected prefix refuses at the hook for operator standing and
+   admits for root standing; the capability audit drill passes on the
+   shipped manifests, names `maintenance` as the operator-holding role
+   the rule keeps off the surface, and fails on a planted manifest
+   granting root.
+7. **`by_kind` rates** appear in report version 15, null over nothing,
    and split the existing totals exactly.
 8. **Mutation evidence.** Each fails a drill: a permissive default for
    an absent block; init editing history to match the file; the ceiling
@@ -251,7 +279,7 @@ files above. NOT `.seed/**`, NOT `scripts/**`, NOT
 New: `next/cmd/seed/preseed.go`, the fixture deployment's `seed.json`,
 possibly `next/spec/preseed.md`. Modified: `next/internal/posture/`,
 `next/internal/admit/` (two declaration-driven rules),
-`next/internal/plan/`, `next/internal/project/` (report version 14),
+`next/internal/plan/`, `next/internal/project/` (report version 15),
 `next/cmd/seed/main.go`, `doctor.go`, `plan.go`, `verdict.go`, one
 `Makefile` line, six specs, the three docs files, the receipt. No
 `.seed/`, `scripts/`, workflow or transition-table change.
