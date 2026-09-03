@@ -6,7 +6,7 @@ priority: P3
 squad: core
 author: seed-next-implementer
 created_at: "2026-09-01T08:55:24Z"
-updated_at: "2026-09-03T05:06:55Z"
+updated_at: "2026-09-03T06:09:54Z"
 ---
 
 Review finding on #183, deliberately not taken there because plans/os-fa69345e.md D3 decided the opposite in advance ('the drill pins it so a future consistency cleanup does not extend the stamp there'). This card is that cleanup, made deliberate.
@@ -36,3 +36,7 @@ receipts/os-37fcf7c6.json@2b6587c (three cold make check readings exit 0, covera
 ## Evidence ev-d33d55ce (receipt, seed-next-implementer, 2026-09-03T05:06:55Z)
 
 receipts/os-37fcf7c6.json
+
+## Evidence ev-34aee016 (receipt, seed-next-implementer, 2026-09-03T06:09:54Z)
+
+receipts/os-37fcf7c6.json@416c8a9
