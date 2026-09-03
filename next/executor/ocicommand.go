@@ -2,10 +2,10 @@ package executor
 
 // OCICommand is the real OCI runtime: it drives docker or podman on PATH
 // with fixed argument vectors — nothing is interpolated into a shell
-// (plans/os-083112ac.md D4). Where no runtime is on PATH the declared
-// `fake` runtime (executor/fakeoci) provisions instead, so CI runs
-// credential-free; a runtime absent in CI is a named reason, never a
-// silent skip.
+// (plans/os-083112ac.md D4). A declared docker or podman that is not on
+// PATH refuses by name; the credential-free arm declares the `fake`
+// runtime (executor/fakeoci) explicitly, so a runtime absent in CI is a
+// named reason, never a silent fallback.
 
 import (
 	"fmt"
@@ -20,6 +20,21 @@ type OCICommand struct{ Bin string }
 func (r OCICommand) Available() bool {
 	_, err := exec.LookPath(r.Bin)
 	return err == nil
+}
+
+// ResolveImage names the digest of an image already present locally,
+// the same id Start reports for a container over it. An image the
+// runtime has not pulled resolves to an error, and the static tuple
+// leaves the environment empty rather than guessing.
+func (r OCICommand) ResolveImage(image string) (string, error) {
+	if image == "" {
+		return "", fmt.Errorf("%s: an image reference is required", r.Bin)
+	}
+	out, err := exec.Command(r.Bin, "image", "inspect", "--format", "{{.Id}}", image).CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("%s image inspect: %v: %s", r.Bin, err, strings.TrimSpace(string(out)))
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 // Start runs a container over the workspace, bind-mounted at a fixed

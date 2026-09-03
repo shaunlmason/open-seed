@@ -135,21 +135,27 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 // through with their budget postures, from the declaration's executors
 // block.
 func doctorAdapters(cfg *posture.Config) []map[string]any {
-	list := []executor.Adapter{executor.LocalWorktree{}}
+	type named struct {
+		name    string
+		adapter executor.Adapter
+	}
+	list := []named{{localAdapterName, executor.LocalWorktree{}}}
 	if ex := cfg.Executors; ex != nil {
 		if ex.Container != nil {
-			list = append(list, executor.Container{})
+			list = append(list, named{"container", executor.Container{}})
 		}
 		if ex.Cloud != nil {
-			list = append(list, executor.CloudSession{})
+			list = append(list, named{"cloud-session", executor.CloudSession{}})
 		}
 		if ex.Remote != nil {
-			list = append(list, executor.RemoteWorker{})
+			list = append(list, named{"remote-worker", executor.RemoteWorker{}})
 		}
 	}
 	out := make([]map[string]any, 0, len(list))
-	for _, a := range list {
-		d := executor.DescribeOf(a.Tuple().Harness, a)
+	for _, n := range list {
+		// The name is the fallback for an adapter that does not describe
+		// itself; the described ones report their own.
+		d := executor.DescribeOf(n.name, n.adapter)
 		out = append(out, map[string]any{"name": d.Name, "harness": d.Harness, "budget": d.Budget, "reason": d.Reason})
 	}
 	return out

@@ -42,7 +42,24 @@ func (c CloudSession) client() *http.Client {
 }
 
 // Tuple reports the one field the adapter controls statically.
-func (CloudSession) Tuple() Tuple { return Tuple{Harness: CloudHarness} }
+// Tuple reports the harness and, when the provider answers the runtime
+// pre-flight (GET /runtime), the runtime a session will report, so the
+// static report carries the environment a provision resolves to. A
+// provider that does not answer leaves the field empty, and run start
+// refuses by naming it rather than inventing a value.
+func (c CloudSession) Tuple() Tuple {
+	t := Tuple{Harness: CloudHarness}
+	if c.Endpoint == "" {
+		return t
+	}
+	var out struct {
+		Runtime string `json:"runtime"`
+	}
+	if err := c.do(http.MethodGet, "/runtime", nil, &out); err == nil {
+		t.Environment = out.Runtime
+	}
+	return t
+}
 
 // Wake is the documented no-op.
 func (CloudSession) Wake(string) error { return nil }
@@ -65,7 +82,10 @@ type cloudUsage struct {
 func (c CloudSession) do(method, path string, body, out any) error {
 	var rdr io.Reader
 	if body != nil {
-		b, _ := json.Marshal(body)
+		b, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("cloud session %s %s: encoding the request: %w", method, path, err)
+		}
 		rdr = bytes.NewReader(b)
 	}
 	req, err := http.NewRequest(method, strings.TrimRight(c.Endpoint, "/")+path, rdr)

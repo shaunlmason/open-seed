@@ -32,6 +32,14 @@ type OCIRuntime interface {
 	Remove(id string) error
 }
 
+// ImageResolver is the optional runtime capability that names an image's
+// digest before any container starts, so the static tuple can report
+// the environment a provision will resolve to (next/spec/qualification.md:
+// run start fills environment from the adapter's static report).
+type ImageResolver interface {
+	ResolveImage(image string) (digest string, err error)
+}
+
 // Container provisions through an OCI runtime. Fake marks the in-process
 // runtime so the resolved environment names it.
 type Container struct {
@@ -40,8 +48,22 @@ type Container struct {
 	Fake    bool
 }
 
-// Tuple reports the one field the adapter controls statically.
-func (Container) Tuple() Tuple { return Tuple{Harness: ContainerHarness} }
+// Tuple reports the harness and, when the runtime can name the declared
+// image's digest ahead of a start, the environment a provision resolves
+// to. A runtime that cannot leaves the field empty, and run start
+// refuses by naming it rather than inventing a value.
+func (c Container) Tuple() Tuple {
+	t := Tuple{Harness: ContainerHarness}
+	if r, ok := c.Runtime.(ImageResolver); ok && c.Image != "" {
+		if digest, err := r.ResolveImage(c.Image); err == nil && digest != "" {
+			if c.Fake {
+				digest = "fake-oci:" + digest
+			}
+			t.Environment = digest
+		}
+	}
+	return t
+}
 
 // Wake is the documented no-op.
 func (Container) Wake(string) error { return nil }

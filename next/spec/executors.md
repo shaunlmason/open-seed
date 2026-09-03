@@ -187,9 +187,13 @@ the block; an undeclared adapter is refused by name.
 ### Credential-free CI
 
 The container adapter provisions through `executor/fakeoci` (an
-in-process OCI runtime) when the declared runtime is `fake` or none is on
-PATH, so the drills run with no runtime and no credentials; a runtime
-absent in CI is a named reason, never a silent skip. The cloud and
+in-process OCI runtime) when the declared runtime is `fake`, so the
+drills run with no runtime and no credentials. A declared `docker` or
+`podman` that is not on PATH refuses by name rather than falling back:
+a runtime absent in CI is a named reason, never a silent substitution.
+The cloud provider answers `GET /runtime` with the runtime its sessions
+report, so the adapter's static tuple carries the environment before a
+session opens. The cloud and
 remote adapters drill against an in-process fake provider and a fake
 worker. `merge.observed` and the spend-bracket verbs are unchanged; no
 executor takes inbound connectivity — the remote worker pulls.

@@ -32,7 +32,11 @@ type RemoteWorker struct {
 }
 
 // Tuple reports the one field the adapter controls statically.
-func (RemoteWorker) Tuple() Tuple { return Tuple{Harness: RemoteHarness} }
+// Tuple reports the harness and the enrolled worker's declared
+// environment, which is what a provision resolves to.
+func (c RemoteWorker) Tuple() Tuple {
+	return Tuple{Harness: RemoteHarness, Environment: c.Environment}
+}
 
 // Wake is the documented no-op: the worker pulls, so nothing is pushed.
 func (RemoteWorker) Wake(string) error { return nil }

@@ -76,6 +76,8 @@ func TestCloudAdapterFullBracket(t *testing.T) {
 	closed := false
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/runtime":
+			json.NewEncoder(w).Encode(map[string]string{"runtime": "provider-runtime/2"})
 		case r.Method == http.MethodPost && r.URL.Path == "/sessions":
 			json.NewEncoder(w).Encode(map[string]string{"id": "s1", "runtime": "provider-runtime/2"})
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/usage"):
@@ -89,7 +91,11 @@ func TestCloudAdapterFullBracket(t *testing.T) {
 	}))
 	defer srv.Close()
 	spec := admittedRunSpec(t)
-	run, err := executor.CloudSession{Endpoint: srv.URL, Credential: "X", Token: "tok"}.Provision(spec)
+	adapter := executor.CloudSession{Endpoint: srv.URL, Credential: "X", Token: "tok"}
+	if got := adapter.Tuple(); got.Environment != "provider-runtime/2" {
+		t.Fatalf("the static report carries the provider's runtime before a session opens: %+v", got)
+	}
+	run, err := adapter.Provision(spec)
 	if err != nil {
 		t.Fatalf("cloud Provision: %v", err)
 	}

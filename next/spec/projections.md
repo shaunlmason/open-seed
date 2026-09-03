@@ -389,7 +389,9 @@ on nothing but the chain. Consumers that care read it beside the stamp.
 The report gains an `adapters` section (version 16): per executor
 substrate, the runs started under its harness and its budget posture
 (`enforced` or `risk-limit`), derived from the `run.started` tuples the
-fold holds. Present only when the prefix carries a `run.started`, so
-chains that carry none stay byte-identical. A cloud or remote adapter
+fold holds. Present only when the prefix carries a `run.started` whose
+tuple names a harness (a `seed/2` or later start); a `seed/1` start
+carries no tuple and adds nothing, so chains without one stay
+byte-identical. A cloud or remote adapter
 never reads `enforced`, and an unknown harness defaults to a risk limit.
 See [`executors.md`](executors.md).

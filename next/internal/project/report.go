@@ -353,10 +353,11 @@ func reportView(records []*event.Record) (*ReportView, error) {
 	if err != nil {
 		return nil, err
 	}
-	if reqs := table.FoldRecords(records).Requests(); len(reqs) > 0 {
+	folded := table.FoldRecords(records)
+	if reqs := folded.Requests(); len(reqs) > 0 {
 		view.Requests = requestsSection(reqs, records)
 	}
-	if ads := adaptersSection(table.FoldRecords(records)); len(ads) > 0 {
+	if ads := adaptersSection(folded); len(ads) > 0 {
 		view.Adapters = ads
 	}
 	return &view, nil

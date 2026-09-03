@@ -37,6 +37,16 @@ func Digest(image string) string {
 
 // Start runs a container over the workspace and returns its id and the
 // image's digest.
+// ResolveImage names the digest Start will report for image, so the
+// container adapter's static tuple can carry the environment ahead of
+// the start.
+func (r *Runtime) ResolveImage(image string) (string, error) {
+	if image == "" {
+		return "", fmt.Errorf("fakeoci: an image reference is required")
+	}
+	return Digest(image), nil
+}
+
 func (r *Runtime) Start(image, workspace string) (id, digest string, err error) {
 	if image == "" {
 		return "", "", fmt.Errorf("fakeoci: an image reference is required")
