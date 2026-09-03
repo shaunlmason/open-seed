@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -45,7 +46,7 @@ func admitServiceBinary(t *testing.T) string {
 			admitBinErr = err
 			return
 		}
-		admitBinPath = filepath.Join(dir, "seed-admit")
+		admitBinPath = filepath.Join(dir, "seed-admit"+exeSuffix())
 		if out, err := exec.Command("go", "build", "-o", admitBinPath, "../seed-admit").CombinedOutput(); err != nil {
 			admitBinErr = errors.New(string(out))
 		}
@@ -230,4 +231,13 @@ func TestOtherPosturesIgnoreTheAdmissionBlock(t *testing.T) {
 			t.Fatalf("%s: the append must push as before: %d %+v", p, code, e)
 		}
 	}
+}
+
+// exeSuffix is the platform's executable suffix: a built binary
+// without it is not runnable on Windows (next/spec/platform.md).
+func exeSuffix() string {
+	if runtime.GOOS == "windows" {
+		return ".exe"
+	}
+	return ""
 }

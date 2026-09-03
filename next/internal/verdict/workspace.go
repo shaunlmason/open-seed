@@ -21,7 +21,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
@@ -156,18 +155,18 @@ func (r Runner) Run(ws *Workspace, command string) Transcript {
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Dir = ws.Repo
 	cmd.Env = []string{
-		"PATH=/usr/local/bin:/usr/bin:/bin",
+		"PATH=" + runnerPath(),
 		"HOME=" + ws.home,
 		"TMPDIR=" + ws.tmp,
 		"GIT_CONFIG_NOSYSTEM=1",
 		"LANG=C",
 	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error {
-		// Kill the whole process group so a hanging pipeline dies with
-		// its children, not just the shell.
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-	}
+	// The process group and its kill are platform code
+	// (workspace_unix.go, workspace_windows.go; next/spec/platform.md):
+	// a hanging pipeline dies with its children where the platform
+	// has process groups, and with its shell where it has not.
+	setProcessGroup(cmd)
+	cmd.Cancel = func() error { return killProcessTree(cmd) }
 	out, err := cmd.CombinedOutput()
 	t := Transcript{Cmd: command, OutputSHA256: artifact.Digest(out), OutputBytes: len(out)}
 	switch {
