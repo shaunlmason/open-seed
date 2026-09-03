@@ -95,14 +95,39 @@ type Admission struct {
 	Owners    []string `json:"owners"`
 }
 
+// Trust choices a fresh reader may declare for checkpoints
+// (next/spec/checkpoints.md; plans/os-7508ab9e.md D1).
+const (
+	TrustReplay  = "replay"  // every fresh reader verifies from genesis once
+	TrustSigners = "signers" // a fresh reader may start from a capable signer's checkpoint
+)
+
+// Checkpoints is the declaration's checkpoint-trust block: which of a
+// fresh clone's two verification obligations this deployment chose.
+// An absent block is undeclared — never a default — because the
+// charter says the choice is declared, not defaulted.
+type Checkpoints struct {
+	Trust string `json:"trust"`
+}
+
 // Config is the deployment declaration. Protected is the protected
 // surface as path prefixes (charter §II.14): what only the governance
 // root may change, which the hook's code-ref half refuses for every
 // other key and the reconciler renders into CODEOWNERS.
 type Config struct {
-	Posture   Posture    `json:"posture"`
-	Admission *Admission `json:"admission,omitempty"`
-	Protected []string   `json:"protected,omitempty"`
+	Posture     Posture      `json:"posture"`
+	Admission   *Admission   `json:"admission,omitempty"`
+	Protected   []string     `json:"protected,omitempty"`
+	Checkpoints *Checkpoints `json:"checkpoints,omitempty"`
+}
+
+// CheckpointTrust returns the declared trust choice, or "" when the
+// block is absent (undeclared).
+func (c *Config) CheckpointTrust() string {
+	if c == nil || c.Checkpoints == nil {
+		return ""
+	}
+	return c.Checkpoints.Trust
 }
 
 // LedgerRef is the ref the ledger rides under this declaration: the
@@ -148,6 +173,9 @@ func Parse(b []byte) (*Config, error) {
 	}
 	if err := c.validateAdmission(); err != nil {
 		return nil, err
+	}
+	if c.Checkpoints != nil && c.Checkpoints.Trust != TrustReplay && c.Checkpoints.Trust != TrustSigners {
+		return nil, fmt.Errorf("checkpoints.trust is %q or %q (a fresh reader's verification obligation is declared, not defaulted), got %q", TrustReplay, TrustSigners, c.Checkpoints.Trust)
 	}
 	for _, p := range c.Protected {
 		if !validProtectedEntry(p) {

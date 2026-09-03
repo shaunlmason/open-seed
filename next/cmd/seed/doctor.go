@@ -44,6 +44,14 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		"posture":  string(cfg.Posture),
 		"enforced": cfg.Posture.Enforced(),
 	}
+	// The checkpoint-trust choice is reported as declared or as
+	// undeclared, never filled in (next/spec/checkpoints.md).
+	if trust := cfg.CheckpointTrust(); trust != "" {
+		result["checkpoints"] = map[string]any{"trust": trust}
+	} else {
+		result["checkpoints"] = map[string]any{"trust": nil, "undeclared": true}
+		fmt.Fprintln(stderr, "checkpoints.trust is undeclared: a fresh reader replays from genesis until the deployment declares \"replay\" or \"signers\"")
+	}
 	switch cfg.Posture {
 	case posture.Cooperative:
 		result["consequence"] = posture.Consequence

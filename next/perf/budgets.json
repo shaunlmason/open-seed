@@ -1,0 +1,11 @@
+{
+  "history": 40,
+  "writers": 24,
+  "metrics": {
+    "admission_ms": {"ceiling": 50, "provenance": "placeholder until measured (plans/os-7508ab9e.md D6)"},
+    "replay_ms": {"ceiling": 2000, "provenance": "placeholder until measured (plans/os-7508ab9e.md D6)"},
+    "rebuild_ms": {"ceiling": 4000, "provenance": "placeholder until measured (plans/os-7508ab9e.md D6)"},
+    "contention_ms": {"ceiling": 60000, "provenance": "placeholder until measured (plans/os-7508ab9e.md D6)"},
+    "attempts_ratio": {"ceiling": 12, "provenance": "placeholder until measured (plans/os-7508ab9e.md D6)"}
+  }
+}
