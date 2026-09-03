@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "task": "os-7508ab9e",
+  "merge_base": "19cd92c952f2b617cfcd91a7f3827f0f096b49b4",
+  "head": "f007e930faa6f886fd4a141367002093a86fc067",
+  "plan_path": "plans/os-7508ab9e.md",
+  "plan_sha256": "5e4806f6c6d6c551a7a8dbee34eaa786da13e4226eaa1bcd8c896a34e6775932",
+  "diff_files": [
+    "Makefile",
+    "flavors/core-Makefile",
+    "memory/LEARNINGS.md",
+    "next/.gitignore",
+    "next/cmd/perfgate/main.go",
+    "next/cmd/seed/doctor.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/perf.go",
+    "next/cmd/seed/project.go",
+    "next/cmd/seed/start_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/checkpoint/checkpoint.go",
+    "next/internal/ledger/verify.go",
+    "next/internal/perfgate/measure.go",
+    "next/internal/perfgate/perfgate.go",
+    "next/internal/perfgate/perfgate_test.go",
+    "next/internal/perfgate/rebuild.go",
+    "next/internal/posture/posture.go",
+    "next/internal/project/start.go",
+    "next/internal/project/start_test.go",
+    "next/perf/budgets.json",
+    "next/spec/checkpoints.md",
+    "next/spec/envelope.md",
+    "next/spec/maintenance.md",
+    "next/spec/projections.md"
+  ],
+  "diff_sha256": "a46d829d5c2c12052fd553b4b0cfab32d18e69eb79d32a05cd03c95994da93aa",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/checkpoint/ ./internal/project/ ./internal/posture/ ./internal/history/ ./internal/perfgate/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
