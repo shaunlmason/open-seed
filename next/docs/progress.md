@@ -1423,6 +1423,33 @@ record's own position through one derivation, `curation.AuthenticPass`
 (`memory/LEARNINGS.md`). This exit record is card os-efb2a099's task PR
 (an administrative card, not a Phase 11 item).
 
+## Phase 13 — Conformance completion (docs/next-build-plan.md Phase 13; deps: 12)
+
+- 13.1 racing mode as the per-squad opt-in with first-verified
+  settlement (III.F row 7) — os-56bee171 — **in review** (task PR
+  against plan #256, stacked on Phase 12 item 5, a draft until the
+  Phase 12 exit record merges: the `racing` block on a squad's
+  guardrails (`racers` two or more, `cost` in the operator's words,
+  refused otherwise, absent is exclusivity); at `seed/6` a further
+  `claim.taken` admits on an `in_progress` racing contract below the
+  cap for a claimant holding none, its fence its own position,
+  `contention` naming every holder at the cap; the fold's plural
+  `Claims`, `Submissions` and `Verdicts` beside the singular facts;
+  claim-scoped exits (every racer's exit but the first submission and
+  the last departure moves no state, the table untouched); verdicts
+  binding to the submission they cite with the lockout per submission;
+  the merge chain citing the newest verdict on its submission;
+  settlement at `merge.observed` with the other claims settled-out
+  (`race_settled` on their next act, their own exit still admitted, the
+  maintenance pass reaping the silent ones with a packet naming the
+  settlement); the contracts view's `racing` object at version 14 and
+  the claim response's racing note; drilled at the boundary (the
+  opt-in, the cap, the fences, the exits, the settlement, the reap's
+  admission), in the maintenance pass and at the declaration;
+  `next/spec/lifecycle.md` "Racing" new, `postures.md`, `envelope.md`,
+  `maintenance.md`, `budgets.md`, `projections.md` and `protocol.md`
+  (`seed/6`) following)
+
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
 - 12.2 forge-hosted admission service (stateless, sole-writer) and the

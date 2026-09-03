@@ -83,6 +83,10 @@ func Envelope(err error) *envelope.Envelope {
 	// illegal steps at this position under this deployment's
 	// guardrails and teams, named so the caller knows which file
 	// refused.
+	var settled *admit.RaceSettledError
+	if errors.As(err, &settled) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "race_settled", err.Error())
+	}
 	var ceil *admit.CeilingError
 	if errors.As(err, &ceil) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "tier_above_ceiling", err.Error())

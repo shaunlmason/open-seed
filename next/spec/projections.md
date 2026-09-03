@@ -112,7 +112,12 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   (Version "4"; `lifecycle.md`).
   One file, not per-subject files (subjects are opaque strings; the
   cache is the lookup-throughput surface). An empty chain yields an
-  empty array, not a missing file.
+  empty array, not a missing file. Version 14 adds the
+  `racing` object on a subject that raced (plans/os-56bee171.md D4):
+  `racers` (the active claims by fence order), and after settlement
+  `settled_at` and `settled_out`; absent on every other subject, so
+  chains without a race are byte-identical.
+
 - **`queue`** (`queue.json`): the claimable-work surface —
   `{schema_version: "1", derivation, ready: […]}`, entries carrying
   `{subject, since_position}`. The derivation is

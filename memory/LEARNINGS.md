@@ -1419,3 +1419,7 @@ the assertions read, and there is no copy to go stale.
   predecessor later pruned simply have no match, and the entry itself
   is then the artifact. Do not loosen the match to make the count look
   better.
+- A table's self-validation is a design tool: when a new behavior
+  needs a state's exits to grow, ask whether it is an exit at all. A
+  racing claim is not, so it became a claim-scoped fact and the table
+  stayed the contract it was.

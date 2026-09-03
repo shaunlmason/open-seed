@@ -103,6 +103,18 @@ that did not cite the active window would be refused, which is how a
 reap aimed at a window that already closed cannot land on whatever
 claim stands now.
 
+**A settled race is the one reap the ledger itself corroborates.**
+On a racing squad's contract ([`lifecycle.md`](lifecycle.md),
+"Racing") the first verified success settles the contract while other
+racers may still hold claims; from that position every act of theirs
+but their own exit refuses at the boundary, so no observation is
+needed to know their work is over. The pass reaps each settled-out
+claim with `claim.reaped` citing its fence and a packet whose finding
+names the settling position (`RaceReapPacket`), and reports it as
+`settled`. On an `in_progress` racing contract each active claim is
+classified on its own stream, holder and fence, and reaped on its own
+corroboration.
+
 ## The lint set is closed
 
 The classes are `internal/reconcile`'s, in two halves that this pass
