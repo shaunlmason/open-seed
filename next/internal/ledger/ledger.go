@@ -280,6 +280,71 @@ func (s *Store) Append(rec *event.Record, resolve Resolver) (int, error) {
 // Interleaving stays safe under unique names: both racers write
 // forward-consistent heads, each rename is atomic over its own
 // file, and a momentarily stale HEAD self-heals on the next Open.
+// AppendAll appends a chain of records in one pass: each verified
+// against the resolver and chained to the one before it exactly as
+// Append checks, the store reconciled once rather than per record, one
+// segment written and synced, the head advanced once. The predecessor
+// import (internal/importer) writes a thousand admitted records and
+// Append's per-call rescan made that quadratic; nothing here is a
+// write that Append would refuse. It returns the position of the first
+// record appended.
+func (s *Store) AppendAll(records []*event.Record, resolve Resolver) (int, error) {
+	if len(records) == 0 {
+		return 0, ErrEmptyRecord
+	}
+	tip, count, lastSegment, err := s.reconcile()
+	if err != nil {
+		return 0, err
+	}
+	first := count
+	lines := make([][]byte, 0, len(records))
+	for i, rec := range records {
+		if rec == nil {
+			return 0, ErrEmptyRecord
+		}
+		pub, ok := resolve(rec.Event.Actor)
+		if !ok {
+			return 0, fmt.Errorf("record %d: %w: %s", i, ErrUnknownActor, rec.Event.Actor)
+		}
+		if err := rec.Verify(pub); err != nil {
+			return 0, fmt.Errorf("record %d: %w", i, err)
+		}
+		if rec.Event.Prev != tip {
+			return 0, fmt.Errorf("record %d: %w: prev %.12s, tip %.12s", i, ErrWrongPrev, rec.Event.Prev, tip)
+		}
+		line, err := rec.Marshal()
+		if err != nil {
+			return 0, err
+		}
+		if tip, err = rec.Event.Hash(); err != nil {
+			return 0, err
+		}
+		lines = append(lines, line)
+	}
+	segment := s.segmentForAppend(lastSegment)
+	f, err := os.OpenFile(filepath.Join(s.dir, segmentsDir, segment), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return 0, err
+	}
+	for _, line := range lines {
+		if _, err := f.Write(line); err != nil {
+			f.Close()
+			return 0, err
+		}
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return 0, err
+	}
+	if err := f.Close(); err != nil {
+		return 0, err
+	}
+	if err := s.writeHead(Head{Tip: tip, Count: count + len(records), Segment: segment}); err != nil {
+		return 0, err
+	}
+	return first, nil
+}
+
 func (s *Store) writeHead(h Head) error {
 	b, err := json.Marshal(h)
 	if err != nil {

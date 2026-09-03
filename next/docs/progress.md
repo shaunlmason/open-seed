@@ -1515,6 +1515,39 @@ record's own position through one derivation, `curation.AuthenticPass`
   "The preseed", `tiers.md`, `lanes.md`, `plans.md`, `projections.md`
   and `envelope.md` following)
 
+- 12.5 migration from open-seed, drilled against a real export of this
+  repository — os-cf13fb51 — **in review** (task PR against plan #248,
+  stacked on item 4: `seed import --from-open-seed <export> --source
+  <clone> --ledger --artifacts --key [--anchor] [--repo]`, the second
+  of the two commands; anchors first (`unanchored`, `export_mismatch`
+  under exit 29 `import_refused`, both before any write); the genesis
+  import (`ledger_not_empty`; genesis, the upgrades to `seed/5`,
+  `system.imported` citing the manifest, the enrollments, the replayed
+  history with every record admitted through `admit.Check` at the
+  position it holds, the suspensions); one generated key per v1 actor
+  name with grants derived from the run-log before replay, never
+  operator, the importing operator signing what only an operator may
+  and `import-verifier` rendering the verdict a claimant could not; the
+  transform as `next/spec/import-open-seed.json` embedded byte for
+  byte, drops as rows, `import_unmapped` for the rest; packets from the
+  handoff's mechanical sections; done cards through the pass verdict
+  over the stored receipt or an import note (D7's override path
+  declined: it overrules a fail nobody rendered); the mapping manifest
+  with one disposition per export record and exact positions from a
+  two-pass replay; `ledger.AppendAll`, the one-pass batch write; the
+  fixture `next/fixtures/import/open-seed/` (this repository's state at
+  `seed-anchor/20260903T014125Z`, 251 files, 1214 run-log entries,
+  imported as 1345 records in ~33 s) with `make fixture-import`; the
+  drills (the real fixture folding every contract to its card's state,
+  the synthetic predecessor, the four refusals, the CLI's envelopes, the
+  spec mirror); `next/spec/import.md` new, `protocol.md` (`seed/5`),
+  `envelope.md` (exit 29) and `actors.md` following)
+of this repository (os-cf13fb51, plan #248 merged); item 6, docs
+**Next action: implement Phase 12 in item order — item 1 (#250) is
+merged; items 2, 3, 4 and 5 are in review against their merged plans,
+stacked in that order; item 6 follows against #249** —
+
+
 ## Frontier
 
 

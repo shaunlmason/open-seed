@@ -1452,6 +1452,7 @@ the assertions read, and there is no copy to go stale.
   into `budget.settle` needs the additive-versus-inclusive cached-token
   distinction and token-boundary model lookup, or cache-heavy runs
   misprice by up to ten times.
+
 - Before asserting "no manifest grants X" in an audit, derive the set
   and print it: the shipped maintenance lane holds operator by design,
   and an audit written from the charter's sentence rather than the
@@ -1462,3 +1463,20 @@ the assertions read, and there is no copy to go stale.
 - A test helper's third return is not always what its name suggests:
   `writeKeys`'s `pub` is a second operator's key, not the signer's.
   Derive a fingerprint from the key you signed with.
+- Replaying a thousand records through a from-scratch admission
+  context is quadratic in JSON decoding, not in signatures: profile
+  before optimizing, and cut passes (derive grants from the source
+  before replay) rather than the boundary. A store whose append
+  rescans every segment is quadratic too; a one-pass batch append that
+  checks exactly what the single append checks is the fix, not a raw
+  segment write.
+- A verb that overrules a standing fail verdict (`merge.overridden`)
+  cannot stand in for a missing pass: when the predecessor recorded no
+  verdict, the honest record is a pass over an artifact that says no
+  receipt was recorded, with the disposition noted, never an override
+  of a failure nobody rendered.
+- Card evidence blocks and run-log entries share one clock in v1, so
+  matching by kind and instant within seconds works; blocks the
+  predecessor later pruned simply have no match, and the entry itself
+  is then the artifact. Do not loosen the match to make the count look
+  better.

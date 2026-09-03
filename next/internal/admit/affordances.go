@@ -481,6 +481,13 @@ var affordanceCatalog = []struct {
 	{"system.halt.declared", func(v *probeView) string { return `{"reason": "probe"}` }},
 	{"system.halt.lifted", func(v *probeView) string { return `{}` }},
 	{"system.protocol.upgraded", func(v *probeView) string { return `{"to": "seed/1"}` }},
+	{"system.imported", func(v *probeView) string {
+		// A shape-valid provenance record (next/spec/import.md): the
+		// source, a full export commit, an anchor tag and a manifest
+		// digest. Afforded only to an operator on a seed/5 chain that
+		// carries no import yet, which is what the rule judges.
+		return `{"source": "open-seed", "export_head": "` + strings.Repeat("0", 40) + `", "anchor": "seed-anchor/probe", "manifest": "` + strings.Repeat("0", 64) + `"}`
+	}},
 	{"system.checkpoint", func(v *probeView) string {
 		// A shape-valid snapshot citation (next/spec/maintenance.md):
 		// the versioned format, a well-formed digest, a fetchable
