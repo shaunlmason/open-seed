@@ -3269,3 +3269,9 @@ the declaration alone; naming the top tuple needs a chain. The flag
 is optional and the section absent without it, so every existing
 invocation and its output are unchanged.
 
+**`envelope.md` takes one row the plan's scope did not name.** D2's
+refusal needed a code; `ranking_empty` refines exit 4 `not_found`
+(the policy's answer does not exist), and the refinement table in
+`envelope.md` is where every such code is recorded, so the row went
+there beside `trust_undeclared`. No new exit number.
+

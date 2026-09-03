@@ -49,8 +49,8 @@ func TestRankingProjectionAndTheReportsStrongest(t *testing.T) {
 	out := rebuild()
 	var view ranking.Ranking
 	readView(t, out, "ranking", project.RankingFile, &view)
-	if len(view.Capabilities) != 2 || len(view.Capabilities["claim"]) != 0 || len(view.Capabilities["verdict"]) != 0 || view.Refined || view.AsOf == "" {
-		t.Fatalf("no qualification: both capabilities present and empty, unrefined, at the tip's ts: %+v", view)
+	if len(view.Capabilities) != 2 || len(view.Capabilities["claim"]) != 0 || len(view.Capabilities["verdict"]) != 0 || view.Refined || view.AsOf != "2026-09-01T01:00:00Z" {
+		t.Fatalf("no qualification: both capabilities present and empty, unrefined, at the tip record's own ts and never a clock: %+v", view)
 	}
 
 	// Two tuples qualified: the one with more evidence ranks first;
