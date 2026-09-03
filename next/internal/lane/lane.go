@@ -155,6 +155,11 @@ func situationFlags() []SituationFlag {
 		{Name: "key"},
 		{Name: "subject"},
 		{Name: "since"},
+		// The deployment declaration the remote path acts under
+		// (plans/os-5c8a312c.md D3): optional, because its absence is
+		// today's behavior and a lane names it only where the
+		// deployment has one.
+		{Name: "config"},
 	}
 }
 

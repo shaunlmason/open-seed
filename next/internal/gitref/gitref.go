@@ -17,6 +17,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/shaunlmason/open-seed/next/internal/event"
 )
 
 // Typed refusals: each is a distinct condition callers branch on.
@@ -36,7 +38,45 @@ type Client struct {
 	Ref      string
 	gitDir   string
 	cacheDir string
+	proposer Proposer
 }
+
+// Proposer lands signed records on the remote ref through a third
+// party instead of the client's own push: the admission service under
+// the enforced-forge-hosted posture (plans/os-5c8a312c.md D3). The
+// records arrive already linked and signed; a proposer relays, never
+// re-signs.
+type Proposer interface {
+	Propose(ref string, recs []*event.Record) (*Result, error)
+}
+
+// Refusal is a proposal the service refused with the boundary's own
+// envelope. Exit, Code and Message are the service's verbatim, so a
+// proposer renders exactly the code the hook posture would have
+// produced for the same record; it unwraps to ErrRemoteRejected for
+// callers that only ask whether the remote said no.
+type Refusal struct {
+	Exit     int
+	Code     string
+	Message  string
+	Position *string
+}
+
+func (r *Refusal) Error() string { return fmt.Sprintf("%s: %s", r.Code, r.Message) }
+func (r *Refusal) Unwrap() error { return ErrRemoteRejected }
+
+// WithProposer makes the append loop propose instead of push. Every
+// step before the last — fetch, materialize, verify, re-link, re-sign,
+// validate — is unchanged: the cooperative half is what every posture
+// keeps, and only the write moves to the service.
+func (c *Client) WithProposer(p Proposer) *Client {
+	c.proposer = p
+	return c
+}
+
+// GitDir is the client's private git dir: the objects it fetched and
+// the commits it built, which the admission service judges in place.
+func (c *Client) GitDir() string { return c.gitDir }
 
 // NewClient prepares the client's git dir under stateDir and uses
 // stateDir/heads as the persisted-head cache.
@@ -228,6 +268,21 @@ func (c *Client) Materialize(commit, dir string) error {
 // remote ref. A non-fast-forward rejection returns ErrNonFastForward;
 // other push failures return ErrUnavailable.
 func (c *Client) CommitAndPush(dir, parent, message string) (string, error) {
+	commit, err := c.Commit(dir, parent, message)
+	if err != nil {
+		return "", err
+	}
+	if err := c.Push(commit); err != nil {
+		return "", err
+	}
+	return commit, nil
+}
+
+// Commit writes dir's tree as a commit on top of parent in the client's
+// git dir and returns its id, pushing nothing: the admission service
+// judges a candidate this way before deciding whether it is pushed at
+// all (plans/os-5c8a312c.md D1).
+func (c *Client) Commit(dir, parent, message string) (string, error) {
 	if _, err := runGit(c.gitDir, "-c", "core.bare=false", "--work-tree", dir, "add", "-A"); err != nil {
 		return "", err
 	}
@@ -245,7 +300,13 @@ func (c *Client) CommitAndPush(dir, parent, message string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("commit-tree: %w: %s", err, out)
 	}
-	commit := strings.TrimSpace(string(out))
+	return strings.TrimSpace(string(out)), nil
+}
+
+// Push updates the remote ref to commit, fast-forward only. A lost race
+// returns ErrNonFastForward, a policy rejection ErrRemoteRejected, and
+// anything else ErrUnavailable.
+func (c *Client) Push(commit string) error {
 	pushOut, err := runGit(c.gitDir, "push", "--porcelain", c.Remote, commit+":"+c.Ref)
 	if err != nil {
 		combined := pushOut + " " + err.Error()
@@ -267,12 +328,12 @@ func (c *Client) CommitAndPush(dir, parent, message string) (string, error) {
 			strings.Contains(combined, "failed to update ref") ||
 			(strings.Contains(combined, "cannot lock ref") && strings.Contains(combined, "but expected"))
 		if race {
-			return "", ErrNonFastForward
+			return ErrNonFastForward
 		}
 		if strings.Contains(combined, "[remote rejected]") || strings.Contains(combined, "[rejected]") {
-			return "", fmt.Errorf("%w: %s", ErrRemoteRejected, strings.TrimSpace(pushOut))
+			return fmt.Errorf("%w: %s", ErrRemoteRejected, strings.TrimSpace(pushOut))
 		}
-		return "", fmt.Errorf("%w: %v", ErrUnavailable, err)
+		return fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
-	return commit, nil
+	return nil
 }
