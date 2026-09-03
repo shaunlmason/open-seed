@@ -163,7 +163,7 @@ Nothing else. NOT `next/spec/**`, NOT `next/internal/**`, NOT `.seed/**`.
 ## Validation Commands
 
 - Retention: `make check` (exit checked separately from any pipe)
-- Docs: `cd next && go test ./internal/loopverb/ -count=1` (the spec-parity drills that read `next/docs` and `next/spec`)
+- Docs: `cd next && go test ./internal/loopverb/ -count=1` (the spec-parity drills that read the docs and spec directories)
 
 ## Expected diff shape
 
