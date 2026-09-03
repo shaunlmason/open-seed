@@ -189,3 +189,30 @@ differ across a squash merge even when the content is identical.
   rate are tracked" — the `ready` origin, the plan digests and the
   report's `lanes` section, each drilled at the boundary, in the fold
   and in the projection.
+
+## The decider: the harness's second half (III.O row 5)
+
+`internal/decider` supplies the missing half of III.O row 5: a `Decider`
+re-runs at a recorded decision point and says which loop act it would
+choose there. `trajectory replay --decider scripted` re-runs the
+reference decider at every admitted loop-act point whose frame is
+unchanged and whose act the configuration still permits, and reports
+`choice_diverged` when the decider's definite choice differs from the
+recorded act — the behavioral regression the five frame/configuration
+classes cannot see (the configuration still presents the frame and
+permits the act; the choice moved).
+
+The reference decider is **partial by design**. The loop's per-iteration
+act is not a function of the `Frame` — identical frames recorded
+different acts, which is exactly why the harness records frames rather
+than deciders — so the reference decides only where the frame determines
+the act (a claimable contract in `ready` is taken) and abstains ("")
+elsewhere. Replay with the scripted decider therefore passes on the
+recorded corpus (agree where determinate, abstain where not) and catches
+a decider that would choose a different act at a determinate point. The
+five existing classes are unchanged.
+
+- III.O row 5 (second half) "a decider plugs into the harness; a
+  behavioral regression is caught" — `internal/decider`,
+  `trajectory.ChoiceDiverged`, `ReplayWithDecider`, drilled in
+  `internal/trajectory` and `internal/decider`.
