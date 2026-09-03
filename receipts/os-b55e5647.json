@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-b55e5647",
-  "merge_base": "42df80f246af3b367c084bc0f69e118925f0ed64",
-  "head": "5a1cf0881ed863e05e1f3f328c345916a0909212",
+  "merge_base": "35f444ef3eb8c363825fb15241000ee2d857b507",
+  "head": "0e2f8c56589f9de30852550304f0cf0cf612b274",
   "plan_path": "plans/os-b55e5647.md",
   "plan_sha256": "b9b434fdaa46e0c8bae3a17807a816ccfef527b1c33281714975c12b2ad9dc83",
   "diff_files": [
@@ -65,7 +65,7 @@
     "next/spec/platform.md",
     "next/spec/protocol.md"
   ],
-  "diff_sha256": "dd44166bc7a2a8bb8306ec790f4f4ede1ce772825d93982adde3a06184cfe9bc",
+  "diff_sha256": "0a3e3c4d06d7408a945c88de9f20b9d33331adf98452a090f7896f86d51cec4a",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ ./internal/platform/ -count=1",
