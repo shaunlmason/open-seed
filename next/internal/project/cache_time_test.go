@@ -113,7 +113,7 @@ func TestCacheIsQueryableByTime(t *testing.T) {
 		}
 	}
 	// The stamp names the generation that added the columns.
-	if v := one[string](t, db, `SELECT version FROM stamp`); v != "13" {
-		t.Fatalf("the cache generation is 13, got %s", v)
+	if v := one[string](t, db, `SELECT version FROM stamp`); v != "14" {
+		t.Fatalf("the cache generation is 14, got %s", v)
 	}
 }
