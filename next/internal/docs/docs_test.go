@@ -181,3 +181,34 @@ func TestWriteThenCheckClean(t *testing.T) {
 		t.Fatal("Write must remove a stale generated file")
 	}
 }
+
+func TestGenerateErrorsOnBadRoot(t *testing.T) {
+	// A root with no envelope source and no lanes: renderExitCodes and
+	// renderLanes take their error paths, and Generate/Check/Write
+	// surface them rather than writing a partial tree.
+	bad := filepath.Join(t.TempDir(), "empty")
+	if err := os.MkdirAll(bad, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Generate(bad); err == nil {
+		t.Error("Generate must fail when the envelope source is absent")
+	}
+	if _, err := Check(bad); err == nil {
+		t.Error("Check must fail when generation fails")
+	}
+	if _, err := Write(bad); err == nil {
+		t.Error("Write must fail when generation fails")
+	}
+}
+
+func TestRenderExitCodesErrorsOnMissingSource(t *testing.T) {
+	if _, err := renderExitCodes(filepath.Join(t.TempDir(), "nope")); err == nil {
+		t.Error("renderExitCodes must fail when the envelope source is unreadable")
+	}
+}
+
+func TestRenderLanesErrorsOnMissingDir(t *testing.T) {
+	if _, err := renderLanes(filepath.Join(t.TempDir(), "nope")); err == nil {
+		t.Error("renderLanes must fail when the lanes directory is absent")
+	}
+}
