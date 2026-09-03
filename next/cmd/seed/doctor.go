@@ -12,10 +12,15 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/shaunlmason/open-seed/next/executor"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/platform"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
+	"github.com/shaunlmason/open-seed/next/internal/project"
 	"github.com/shaunlmason/open-seed/next/internal/propose"
 	"github.com/shaunlmason/open-seed/next/internal/protections"
+	"github.com/shaunlmason/open-seed/next/internal/ranking"
 )
 
 func runDoctor(args []string, stdout, stderr io.Writer) int {
@@ -25,8 +30,9 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	probe := fs.Bool("probe", false, "probe the admission service's health (forge-hosted)")
 	current := fs.String("current", "", "the forge's state as a snapshot file: report protections drift (forge-hosted)")
 	repo := fs.String("repo", "", "working tree for the CODEOWNERS and workflow checks beside --current")
+	ledgerDir := fs.String("ledger", "", "ledger directory: name the strongest qualified tuple per capability (next/spec/ranking.md)")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes --config <path> [--probe] [--current <snapshot> [--repo <dir>]]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes --config <path> [--probe] [--current <snapshot> [--repo <dir>]] [--ledger <dir>]"), stdout, stderr)
 	}
 	cfg, err := posture.Load(*config)
 	if err != nil {
@@ -49,7 +55,16 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		// exactly what the remote will refuse.
 		"protected": cfg.ProtectedSurface(),
 	}
+	// The executor substrates this build provisions through, each with
+	// its budget posture (plans/os-083112ac.md D2): local worktree
+	// always; the container, cloud and remote adapters when declared.
+	result["adapters"] = doctorAdapters(cfg)
 	// The preseed's blocks, each declared or not (plans/os-0d4f2af3.md).
+	// The platform and the postures it can run
+	// (plans/os-b55e5647.md D4; next/spec/platform.md): the enforced
+	// self-hosted hook needs a server that executes it, so a bare
+	// Windows checkout names the postures it must run instead.
+	result["platform"] = platform.Report()
 	result["preseed"] = map[string]any{
 		"protocol":   cfg.Protocol,
 		"governance": cfg.Governance != nil,
@@ -87,8 +102,10 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 			"checks":     append([]string{}, a.Checks...),
 			"reviews":    a.Reviews,
 			"owners":     append([]string{}, a.Owners...),
+			"forge":      a.ForgeKind(),
+			"api":        a.Api,
 		}
-		fmt.Fprintf(stderr, "enforced-forge-hosted: proposals go to %s; the ledger rides %s, written by %s alone\n", a.Endpoint, cfg.LedgerRef(), a.Identity)
+		fmt.Fprintf(stderr, "enforced-forge-hosted: proposals go to %s; the ledger rides %s, written by %s alone; forge %s\n", a.Endpoint, cfg.LedgerRef(), a.Identity, a.ForgeKind())
 		if *probe {
 			h, err := propose.New(a.Endpoint).Probe()
 			if err != nil {
@@ -115,5 +132,63 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 			}
 		}
 	}
+	// The ranking's top per capability (plans/os-c7554f18.md D3): read
+	// at the ledger's tip, null where nothing ranks, absent without a
+	// ledger since the doctor otherwise reads the declaration alone.
+	if *ledgerDir != "" {
+		store, failEnv := openStore(*ledgerDir)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
+		}
+		var records []*event.Record
+		if err := store.Records(func(_ int, rec *event.Record) error {
+			records = append(records, rec)
+			return nil
+		}); err != nil {
+			return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		}
+		r, err := project.DeriveRanking(records)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		}
+		top := map[string]any{}
+		for _, capability := range ranking.Capabilities {
+			top[capability] = nil
+			if t := ranking.Top(r, capability, 1); len(t) == 1 {
+				top[capability] = t[0]
+			}
+		}
+		result["ranking"] = map[string]any{"as_of": r.AsOf, "strongest": top}
+	}
 	return render(envelope.OK(result), stdout, stderr)
+}
+
+// doctorAdapters lists the executor substrates this build provisions
+// through with their budget postures, from the declaration's executors
+// block.
+func doctorAdapters(cfg *posture.Config) []map[string]any {
+	type named struct {
+		name    string
+		adapter executor.Adapter
+	}
+	list := []named{{localAdapterName, executor.LocalWorktree{}}}
+	if ex := cfg.Executors; ex != nil {
+		if ex.Container != nil {
+			list = append(list, named{"container", executor.Container{}})
+		}
+		if ex.Cloud != nil {
+			list = append(list, named{"cloud-session", executor.CloudSession{}})
+		}
+		if ex.Remote != nil {
+			list = append(list, named{"remote-worker", executor.RemoteWorker{}})
+		}
+	}
+	out := make([]map[string]any, 0, len(list))
+	for _, n := range list {
+		// The name is the fallback for an adapter that does not describe
+		// itself; the described ones report their own.
+		d := executor.DescribeOf(n.name, n.adapter)
+		out = append(out, map[string]any{"name": d.Name, "harness": d.Harness, "budget": d.Budget, "reason": d.Reason})
+	}
+	return out
 }

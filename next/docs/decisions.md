@@ -3150,6 +3150,76 @@ lane's loop through loop.Driver" is imprecise: only those two declare
 `acts_through`. The simulation drives them through `internal/loop` and
 the other six lanes/roles through their ordinary CLI verbs, all through
 the one credential-free `loopVerbs` seam.
+
+## Phase 13 item 6 — the machine-protocol surface and platform parity (os-b55e5647, plan #261)
+
+**The transport is the one carve-out from "exists iff".** `serve` is a
+CLI verb and the protocol itself; a `serve` method would start a
+server on the stream that carries it. The registry marks it, the
+method set omits it, and the drill pins that it is the only such row.
+
+**The protocol runs the CLI's run function and forwards its stdout.**
+Identical semantics are a property of the call, not of a promise: the
+JSON-RPC layer builds an argv from the params, runs the registered
+function with buffers for its streams, and returns the envelope bytes
+it rendered. A verb that reads stdin (`plan`) gets an empty stream
+under the protocol, since stdin is the transport's; it takes a file.
+
+**Params map to flags by name.** An object's keys become `--key
+value` (booleans bare, arrays repeated, numbers as text), sorted, with
+`args` appended verbatim; an array is argv itself. Nothing is
+interpreted: the flag parser the CLI already has is the only parser.
+
+**The registry is held to the usage lines.** The drill parses each
+group's own "requires a subverb: …" text and compares it with the
+registered subverbs in both directions, and refuses a `case` branch in
+`run`: the table cannot drift from the dispatchers because the
+dispatchers' words are the reference.
+
+**The CRLF refusal lives in the reader.** The plan scoped the change
+to `cmd/seed` and a platform package, but a carriage return can only
+be refused where lines are read: the segment scanner (`internal/ledger`)
+now keeps a carriage return and the record parser (`internal/event`)
+refuses it. Two small edits outside the listed scope, each required by
+D4's "refuses rather than silently normalizes".
+
+**The Windows matrix is the only Windows run, so it owns two fixes
+from main.** The simulate gate drills used a path under `/proc` as a
+root nothing can be created under; Windows creates it, and the
+deployment reached genesis with no key and panicked. The drills now
+use a path beneath a regular file, which every platform refuses. The
+artifact store's concurrent-put drill raced eight renames onto one
+digest; Windows refuses a rename while a rival's is in flight, and the
+read that should have recognized the rival's identical bytes ran
+before those bytes landed. The read is now retried briefly. Two edits
+outside the listed scope, each visible only on this PR's platform
+matrix.
+
+**The path lint reads call sites.** Slash-joined strings are legitimate
+for refs, URLs and repository-relative names, so a lint over every
+concatenation would refuse the spec's own vocabulary; the lint flags
+an `os` file call whose argument is joined with a literal slash or
+`path.Join`, which is exactly what a platform would break.
+
+**The line-ending rule reaches git itself.** The first Windows run
+refused every committed fixture and every materialized ledger — git
+had converted them on checkout and archive, and the new LF-only rule
+did its job. So the repository root gained a `.gitattributes`
+declaring LF for text (outside the plan's file scope, the smallest
+change that makes the rule true on a checkout), the gitref client
+tells git `core.autocrlf=false` and `core.eol=lf` on every call, and
+every `hardenGitRepo` copy in the tests pins the same two keys.
+
+**Platform code is two files, not a build tag on a package.** The
+verdict runner's process group and its kill moved to
+`workspace_unix.go` and `workspace_windows.go`; the rest of the
+runner is shared, and the Windows file says what it cannot do.
+
+**Windows is a matrix leg, not a sentence.** The workflow runs the Go
+suites on the three platforms with `fail-fast: false`; the doctor
+names the postures each can run; the enforced self-hosted posture is
+unavailable on Windows with the reason, since no server executes the
+hook on a bare checkout.
 ## Phase 13 item 1 — racing mode (os-56bee171, plan #256)
 
 **A racing claim is a fact on an `in_progress` subject, never a table
@@ -3231,6 +3301,51 @@ declaration (its ledger ref under the forge-hosted posture, its
 proposer) to a foreign ledger. No key crosses, and the command has no
 key flag to cross with.
 
+## Phase 13 item 2 — the remaining executor adapters (os-083112ac, plan #274)
+
+**The budget posture is a per-adapter fact, and the safe default is a
+risk limit.** `executor.Described` is optional so the public `Adapter`
+interface is unchanged; an adapter that does not state its posture is
+treated as a risk limit, never enforced by default — the honest
+assumption when a substrate has not proven it can be stopped
+synchronously. Local worktree and container are `enforced` (the
+supervisor kills them); cloud session and remote worker are
+`risk-limit` (a provider or a remote process may spend past the
+reservation before the interrupt lands). `report.json` and `doctor`
+report the posture per adapter; neither averages the two.
+
+**A credential is an env-var name, never a value; the remote worker
+pulls.** The `executors` block names the container runtime/image, the
+cloud endpoint and a credential env-var NAME, and the enrolled workers;
+the lint refuses a token-shaped credential, so a secret never reaches
+the tree. The remote-worker adapter opens no connection — it puts the
+packet in the artifact store and appends the pickup line the enrolled
+service actor reads, keeping §II.9's no-inbound rule. The container
+adapter runs credential-free in CI through `executor/fakeoci`.
+## Phase 13 item 3 — the Forgejo forge adapter (os-ad610334, plan #275)
+
+**The pull-request rule is unexpressible on Forgejo, so the whole
+requirement is manual — not partially applied.** Forgejo's branch
+protection has no conversation-thread-resolution gate and no
+code-owner-review gate, and the reconciler reconciles by rule type
+against a parameter-exact `differences()`. There is no way to apply the
+approvals Forgejo *can* express while not-drifting on the resolution and
+owner gates it cannot, so rather than half-apply the rule and read the
+protection back as compliant on gates it does not enforce — a false
+compliance the mutation drill forbids — the whole pull-request rule lands
+in `State.Unexpressible` and `plan` reports it manual. Required approvals
+are still set best-effort through the API; the operator sets the review
+gates in Forgejo's settings and records that they did. `Desired` is
+untouched: one decision table, two forges held to it.
+
+**The `--forge` default stays `snapshot`, and the forge is declared, not
+defaulted from the flag.** Six existing protections drills rely on
+`--forge` defaulting to the credential-free `snapshot` arm, so that
+default is retained. The forge a deployment runs is named in
+`admission.forge` (default `github`, so every existing declaration keeps
+its meaning) with `admission.api` (required under `forgejo`, which has no
+public API); `seed doctor` reports it and `--forge github|forgejo`
+selects the live arm, reading `--api`/the token env per forge.
 ## Phase 13 item 5 — the A2A-shaped cross-organization boundary (os-40ed0ca0, plan #258)
 
 **The card's inputs live in the declaration.** The plan derives the
@@ -3270,3 +3385,48 @@ before it binds.
 **Claiming stays online-only.** The drill's target lanes claim through
 the library against the clone, as the offer drills do, rather than
 loosening the CLI's online-only rule for a test.
+
+## Phase 13 item 7 — tuple ranking as supervisor policy (os-c7554f18, plan #276)
+
+**The bootstrap is the one place policy yields.** D2 says an unscoped
+offer is the supervisor's explicit choice and never a fallback, and
+`--strongest` refuses on an empty ranking. `eval.Due`'s offers cannot
+refuse: a first eval on a fresh chain is how any configuration
+qualifies, and a derivation that owed no offer would leave the ranking
+empty forever. So `Due` leaves that one offer unscoped and notes
+`ranking_empty` on it, the report saying in so many words that policy
+had nothing to say. The verb's refusal and the derivation's note are
+the same fact told to the two callers who can act on it.
+
+**A re-test names its own configuration.** D2's "the top of the claim
+ranking" would send a spot check of tuple T to whoever holds the
+strongest tuple, whose run would declare its own configuration and
+qualify that rather than re-testing T. The filing already names the
+tuple under test, so its offer carries exactly that tuple; the ranking
+scopes first evals only. The spec's table row says so.
+
+**The ranking reads records, not the keyring's list.** The keyring's
+`Qualifications` carry no chain position, and "latest fact" is a
+position question (two facts in one hour's `ts` still have an order),
+so the derivation reads the qualification verbs off the verified
+prefix by position and uses the keyring for standing and the
+admissible set alone. No accessor was added to the keyring.
+
+**`strongest` sits on the planner section, absent rather than null.**
+The by-kind split repeats the planner figures per roster kind; a
+`strongest` on every copy would say the same thing several times or
+nothing several times. The field is on `lanes.planner` with
+`omitempty`, so a chain that never carried a scoped offer builds a
+report without it, and the version bump (16) is what republishes.
+
+**The doctor takes `--ledger` for this one section.** The doctor read
+the declaration alone; naming the top tuple needs a chain. The flag
+is optional and the section absent without it, so every existing
+invocation and its output are unchanged.
+
+**`envelope.md` takes one row the plan's scope did not name.** D2's
+refusal needed a code; `ranking_empty` refines exit 4 `not_found`
+(the policy's answer does not exist), and the refinement table in
+`envelope.md` is where every such code is recorded, so the row went
+there beside `trust_undeclared`. No new exit number.
+

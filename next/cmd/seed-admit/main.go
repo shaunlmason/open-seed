@@ -112,7 +112,7 @@ func admitUpdate(gitDir, oldID, newID string) error {
 		return fmt.Errorf("rule ref: deletion of the ledger ref is refused")
 	}
 	if oldID != zeroID {
-		if err := exec.Command("git", "--git-dir", gitDir, "merge-base", "--is-ancestor", oldID, newID).Run(); err != nil {
+		if err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "merge-base", "--is-ancestor", oldID, newID).Run(); err != nil {
 			return fmt.Errorf("rule ref: non-fast-forward update is refused (admitted history is append-only)")
 		}
 	}
@@ -237,7 +237,7 @@ func admissionRules(all []admit.Rule) []admit.Rule {
 // fast-forward push could ride arbitrary content on the authoritative
 // ref beside an unchanged record stream (#94 review).
 func validateTreeShape(gitDir, commit string) error {
-	out, err := exec.Command("git", "--git-dir", gitDir, "ls-tree", "-r", "--name-only", commit).Output()
+	out, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "ls-tree", "-r", "--name-only", commit).Output()
 	if err != nil {
 		return fmt.Errorf("rule ref: cannot list pushed tree %.12s: %v", commit, err)
 	}
@@ -262,7 +262,7 @@ func materialize(gitDir, commit string) (*ledger.Store, func(), error) {
 		return nil, nil, err
 	}
 	cleanup := func() { os.RemoveAll(dir) }
-	archive := exec.Command("git", "--git-dir", gitDir, "archive", commit)
+	archive := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "archive", commit)
 	untar := exec.Command("tar", "-x", "-C", dir)
 	pipe, err := archive.StdoutPipe()
 	if err != nil {

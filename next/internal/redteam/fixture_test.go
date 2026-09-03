@@ -130,7 +130,9 @@ func postureWhy(p posture.Posture) string {
 // guard, internal/gitref/fixture_guard_test.go, requires the call by
 // name at every creation site).
 func hardenGitRepo(repo string) error {
-	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"}} {
+	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"},
+		{"core.autocrlf", "false"}, // the ledger is LF-only on every platform (next/spec/platform.md)
+		{"core.eol", "lf"}} {
 		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
 			return fmt.Errorf("hardening %s: %v %s", kv[0], err, out)
 		}

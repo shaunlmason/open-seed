@@ -127,3 +127,27 @@ func TestDoctorProbesAndReportsDrift(t *testing.T) {
 		t.Fatalf("a reconciled forge is clean at the doctor, got %d %+v", code, e)
 	}
 }
+
+func TestProtectionsForgejoNeedsInstanceAndToken(t *testing.T) {
+	// A forgejo declaration name its instance; the CLI needs the api and
+	// a token, refusing clearly when either is absent.
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "seed.json")
+	if err := os.WriteFile(cfg, []byte(`{"posture": "enforced-forge-hosted", "admission": {"endpoint": "https://admit.example", "identity": "seed-bot", "checks": ["verify"], "reviews": 1, "forge": "forgejo", "api": "https://forge.example"}, "protected": ["Makefile"]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// No token in $FORGEJO_TOKEN → unavailable, naming the env var.
+	e, code, _ := runEnvErr(t, "protections", "plan", "--config", cfg, "--forge", "forgejo", "--github", "o/r", "--token-env", "SEED_TEST_NO_FORGEJO")
+	if code != 5 || e.Error == nil || e.Error.Code != "unavailable" || !strings.Contains(e.Error.Message, "SEED_TEST_NO_FORGEJO") {
+		t.Fatalf("forgejo without a token must be unavailable naming the env var, got %d %+v", code, e.Error)
+	}
+	// The doctor reports the declared forge.
+	d, code := runEnv(t, "doctor", "--config", cfg)
+	if code != 0 {
+		t.Fatalf("doctor must read a forgejo declaration, got %d", code)
+	}
+	adm, _ := d.Result["admission"].(map[string]any)
+	if adm["forge"] != "forgejo" || adm["api"] != "https://forge.example" {
+		t.Fatalf("doctor must report the declared forge and api, got %+v", adm)
+	}
+}

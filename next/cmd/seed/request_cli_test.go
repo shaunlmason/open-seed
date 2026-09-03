@@ -215,7 +215,7 @@ func TestFederationReportReadsRemotesReadOnly(t *testing.T) {
 	remoteB, resolveB, activeB := federated(t, rootB, version.Seed1)
 	libAppendAs(t, remoteB, resolveB, rootB, activeB, "intent.filed", "c-1", `{"intent": "b", "tier": "trivial", "budget": "small", "routing": "core"}`)
 	tipA, tipB := remoteTip(t, remoteA), remoteTip(t, remoteB)
-	cfg := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "federation": {"remotes": [{"name": "alpha", "remote": "`+remoteA+`", "ref": "refs/seed/ledger"}, {"name": "beta", "remote": "`+remoteB+`"}]}}`)
+	cfg := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "federation": {"remotes": [{"name": "alpha", "remote": `+jsonString(remoteA)+`, "ref": "refs/seed/ledger"}, {"name": "beta", "remote": `+jsonString(remoteB)+`}]}}`)
 	state := filepath.Join(t.TempDir(), "state")
 	if e, code := runEnv(t, "federation", "report", "--config", cfg, "--state", state, "--key", "anything"); code != 64 || e.Error == nil || e.Error.Code != "usage" {
 		t.Fatalf("a federation command takes no key: %d %+v", code, e)
@@ -337,7 +337,7 @@ func TestCrossRepoWorkEntersAsARequest(t *testing.T) {
 		t.Fatalf("the answer cites the intent: %d %+v", code, e)
 	}
 	// The source reads the answer through its own read remote.
-	cfg := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "federation": {"remotes": [{"name": "target", "remote": "`+target+`"}]}}`)
+	cfg := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "federation": {"remotes": [{"name": "target", "remote": `+jsonString(target)+`}]}}`)
 	state := filepath.Join(dir, "fed")
 	if e, code := runEnv(t, "federation", "report", "--config", cfg, "--state", state); code != 0 || !e.OK {
 		t.Fatalf("the source's read: %d %+v %+v", code, e, e.Error)

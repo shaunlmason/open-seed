@@ -17,7 +17,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/executor/fakeoci"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -45,16 +49,75 @@ func runRun(args []string, stdout, stderr io.Writer) int {
 const localAdapterName = "local-worktree"
 
 // startAdapter resolves --adapter to the adapter whose static report
-// fills the fields a caller cannot honestly supply by hand.
-func startAdapter(name string) (executor.Adapter, *envelope.Envelope) {
+// fills the fields a caller cannot honestly supply by hand. The three
+// non-local substrates read their configuration from the declaration's
+// executors block; an undeclared block refuses the adapter by name
+// (plans/os-083112ac.md D3).
+func startAdapter(name, configPath, stateDir string) (executor.Adapter, *envelope.Envelope) {
 	if name == localAdapterName {
 		return executor.LocalWorktree{}, nil
 	}
 	if name == executor.MockName {
 		return executor.Mock{}, nil
 	}
-	return nil, envelope.Fail(envelope.ExitUsage, "usage",
-		fmt.Sprintf("unknown adapter %q — %s is the one adapter this build provisions through (next/spec/executors.md)", name, localAdapterName))
+	known := map[string]bool{"container": true, "cloud-session": true, "remote-worker": true}
+	if !known[name] {
+		return nil, envelope.Fail(envelope.ExitUsage, "usage",
+			fmt.Sprintf("unknown adapter %q — %s, mock, container, cloud-session or remote-worker (next/spec/executors.md)", name, localAdapterName))
+	}
+	cfg, failEnv := loadDeclarationFor(resolveConfigPath(configPath))
+	if failEnv != nil {
+		return nil, failEnv
+	}
+	ex := cfg.Executors
+	if ex == nil {
+		return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("the %s adapter needs an executors block in the declaration", name))
+	}
+	switch name {
+	case "container":
+		if ex.Container == nil {
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", "the container adapter needs executors.container in the declaration")
+		}
+		if ex.Container.Runtime == "fake" {
+			return executor.Container{Runtime: fakeoci.New(), Image: ex.Container.Image, Fake: true}, nil
+		}
+		rt := executor.OCICommand{Bin: ex.Container.Runtime}
+		if !rt.Available() {
+			return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the container runtime %q is not on PATH; declare runtime \"fake\" for the credential-free arm", ex.Container.Runtime))
+		}
+		return executor.Container{Runtime: rt, Image: ex.Container.Image}, nil
+	case "cloud-session":
+		if ex.Cloud == nil {
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", "the cloud-session adapter needs executors.cloud in the declaration")
+		}
+		token := os.Getenv(ex.Cloud.Credential)
+		if token == "" {
+			return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the cloud-session adapter needs a token in $%s", ex.Cloud.Credential))
+		}
+		return executor.CloudSession{Endpoint: ex.Cloud.Endpoint, Credential: ex.Cloud.Credential, Token: token}, nil
+	case "remote-worker":
+		if ex.Remote == nil || len(ex.Remote.Workers) == 0 {
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", "the remote-worker adapter needs executors.remote.workers in the declaration")
+		}
+		if stateDir == "" {
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", "the remote-worker adapter needs --state for the artifact store")
+		}
+		w := ex.Remote.Workers[0]
+		return executor.RemoteWorker{ArtifactDir: filepath.Join(stateDir, "artifacts"), WorkerName: w.Name, Environment: w.Environment}, nil
+	}
+	return nil, envelope.Fail(envelope.ExitUsage, "usage", "unreachable")
+}
+
+// resolveConfigPath fills the declaration path default (the flag, then
+// $SEED_CONFIG, then ./seed.json).
+func resolveConfigPath(path string) string {
+	if path != "" {
+		return path
+	}
+	if env := os.Getenv("SEED_CONFIG"); env != "" {
+		return env
+	}
+	return posture.DeclarationPath
 }
 
 // declaredFlag names the flag that supplies a tuple field the adapter
@@ -78,7 +141,7 @@ func runRunStart(args []string, stdout, stderr io.Writer) int {
 	if env := f.usage("run start", parseErr, fs.NArg(), ""); env != nil {
 		return render(env, stdout, stderr)
 	}
-	adapter, env := startAdapter(*adapterName)
+	adapter, env := startAdapter(*adapterName, *f.config, *f.stateDir)
 	if env != nil {
 		return render(env, stdout, stderr)
 	}

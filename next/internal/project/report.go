@@ -23,6 +23,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/refusals"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 )
 
 // ReportFile is the report projection's one view file.
@@ -150,6 +151,20 @@ type ReportView struct {
 	// request, so builds of chains that carry none stay
 	// byte-identical.
 	Requests *ReportRequests `json:"requests,omitempty"`
+	// Adapters is the per-executor-substrate section (plans/os-083112ac.md
+	// D2): the runs started under each harness and its budget posture,
+	// derived from the run.started tuples the fold holds. Present only
+	// when the prefix carries a run.started, so chains that carry none
+	// stay byte-identical. A cloud or remote adapter never reads
+	// enforced; the safe default for an unknown harness is a risk limit.
+	Adapters []ReportAdapter `json:"adapters,omitempty"`
+}
+
+// ReportAdapter is one executor substrate's report row.
+type ReportAdapter struct {
+	Harness string `json:"harness"`
+	Runs    int    `json:"runs"`
+	Budget  string `json:"budget"`
 }
 
 // ReportRequests counts the inbound requests: total, by kind, by
@@ -204,6 +219,12 @@ type ReportPlanner struct {
 	Edited       int     `json:"edited"`
 	Unmeasured   int     `json:"unmeasured"`
 	UneditedRate *string `json:"unedited_rate"`
+	// Strongest is the tuples scope of the latest applied
+	// offer.published that carries one (plans/os-c7554f18.md D3;
+	// next/spec/ranking.md): the input the planner lane last received
+	// by policy. Absent when no offer has carried a scope, and never
+	// split by kind.
+	Strongest []tuple.Tuple `json:"strongest,omitempty"`
 }
 
 // ReportReconciliation is the record-derivable half of divergence
@@ -244,7 +265,11 @@ type ReportReconciliation struct {
 // republishes under a new build id rather than keeping a tree without
 // it (review finding on the item 3 PR). Version "12" moves with the
 // section again: the retired and stale counts, the latter judged at
-// the declared instant (plans/os-0d537fbd.md D4). Version "13" adds
+// the declared instant (plans/os-0d537fbd.md D4). Version "17" adds the
+// per-adapter section from the run.started tuples (plans/os-083112ac.md
+// D2), present only when a run.started with a harness is carried; "16"
+// was the planner's strongest (plans/os-c7554f18.md D3), which landed
+// first. Version "13" adds
 // the lanes section (plans/os-6bd9ffff.md D6) and version "14" the
 // flywheel section (plans/os-9075c308.md D5), both the same posture:
 // record-derivable from the fold, so an unchanged tip republishes
@@ -253,7 +278,7 @@ type ReportReconciliation struct {
 // other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "15", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "17", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -326,7 +351,7 @@ func reportView(records []*event.Record) (*ReportView, error) {
 		view.Reconciliation = rec
 		metrics := flywheel.Derive(records, fold)
 		view.Flywheel = &metrics
-		view.Lanes = lanesSection(fold)
+		view.Lanes = lanesSection(records, fold)
 		view.Lanes.ByKind = lanesByKind(records, fold)
 	}
 	if curation.Fold(records).Any() {
@@ -337,8 +362,12 @@ func reportView(records []*event.Record) (*ReportView, error) {
 	if err != nil {
 		return nil, err
 	}
-	if reqs := table.FoldRecords(records).Requests(); len(reqs) > 0 {
+	folded := table.FoldRecords(records)
+	if reqs := folded.Requests(); len(reqs) > 0 {
 		view.Requests = requestsSection(reqs, records)
+	}
+	if ads := adaptersSection(folded); len(ads) > 0 {
+		view.Adapters = ads
 	}
 	return &view, nil
 }
@@ -383,7 +412,7 @@ func requestsSection(reqs []transition.IngressFact, records []*event.Record) *Re
 // lanesSection derives the lane-quality metrics from the fold
 // (plans/os-6bd9ffff.md D6): re-triage over subjects with a
 // specification, unedited approvals over the measured ones.
-func lanesSection(fold *transition.Fold) *ReportLanes {
+func lanesSection(records []*event.Record, fold *transition.Fold) *ReportLanes {
 	sec := &ReportLanes{}
 	for _, subject := range fold.Subjects() {
 		s, ok := fold.State(subject)
@@ -411,7 +440,44 @@ func lanesSection(fold *transition.Fold) *ReportLanes {
 	}
 	sec.Dispatcher.RetriageRate = reportRate(sec.Dispatcher.Respecified, sec.Dispatcher.Specified)
 	sec.Planner.UneditedRate = reportRate(sec.Planner.Unedited, sec.Planner.Unedited+sec.Planner.Edited)
+	sec.Planner.Strongest = strongestOffered(records, fold)
 	return sec
+}
+
+// strongestOffered is the tuples scope of the latest AUTHORIZED offer
+// that carries one, across every subject: the configurations the
+// planner lane last received by policy (next/spec/ranking.md). The
+// tolerant fold records a raw-pushed offer as a fact, so the signer's
+// supervise standing is replayed to the offer's own position before
+// it counts, the same check the list surface makes (review finding on
+// the task PR). Nil when no such offer exists.
+func strongestOffered(records []*event.Record, fold *transition.Fold) []tuple.Tuple {
+	latest := -1
+	var out []tuple.Tuple
+	for _, subject := range fold.Subjects() {
+		s, ok := fold.State(subject)
+		if !ok {
+			continue
+		}
+		for _, o := range s.Offers {
+			if len(o.Tuples) == 0 || o.Pos <= latest || !offerAuthorized(records, o) {
+				continue
+			}
+			latest = o.Pos
+			out = append([]tuple.Tuple(nil), o.Tuples...)
+		}
+	}
+	return out
+}
+
+// offerAuthorized replays the keyring to the offer's own position and
+// asks whether the signer held the supervise boundary there.
+func offerAuthorized(records []*event.Record, o transition.OfferFact) bool {
+	if o.Pos < 0 || o.Pos >= len(records) {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:o.Pos])
+	return err == nil && ring != nil && ring.HasAnyCapability(o.Signer, keyring.AcceptedCapabilities(transition.OfferPublishedVerb))
 }
 
 // reportRate is a ratio as a fixed three-decimal string, null at a
@@ -639,6 +705,53 @@ func lanesByKind(records []*event.Record, fold *transition.Fold) map[string]*Rep
 	for _, k := range out {
 		k.Dispatcher.RetriageRate = reportRate(k.Dispatcher.Respecified, k.Dispatcher.Specified)
 		k.Planner.UneditedRate = reportRate(k.Planner.Unedited, k.Planner.Unedited+k.Planner.Edited)
+	}
+	return out
+}
+
+// adapterBudgets maps a harness to its budget posture; an unknown harness
+// is a risk limit, the safe default (plans/os-083112ac.md D2).
+var adapterBudgets = map[string]string{
+	"local-worktree/v0": "enforced",
+	"container/v0":      "enforced",
+	"cloud-session/v0":  "risk-limit",
+	"remote-worker/v0":  "risk-limit",
+}
+
+func adapterBudget(harness string) string {
+	if b, ok := adapterBudgets[harness]; ok {
+		return b
+	}
+	return "risk-limit"
+}
+
+// adaptersSection derives the per-adapter section from the run.started
+// tuples the fold holds: the runs under each harness and its posture.
+func adaptersSection(fold *transition.Fold) []ReportAdapter {
+	counts := map[string]int{}
+	for _, subject := range fold.Subjects() {
+		s, ok := fold.State(subject)
+		if !ok {
+			continue
+		}
+		for _, st := range s.RunStarts {
+			if st.Tuple == nil || st.Tuple.Harness == "" {
+				continue
+			}
+			counts[st.Tuple.Harness]++
+		}
+	}
+	if len(counts) == 0 {
+		return nil
+	}
+	harnesses := make([]string, 0, len(counts))
+	for h := range counts {
+		harnesses = append(harnesses, h)
+	}
+	sort.Strings(harnesses)
+	out := make([]ReportAdapter, 0, len(harnesses))
+	for _, h := range harnesses {
+		out = append(out, ReportAdapter{Harness: h, Runs: counts[h], Budget: adapterBudget(h)})
 	}
 	return out
 }

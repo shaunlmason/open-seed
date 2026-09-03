@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -93,6 +94,27 @@ type Admission struct {
 	Checks    []string `json:"checks"`
 	Reviews   int      `json:"reviews"`
 	Owners    []string `json:"owners"`
+	// Forge names which forge hosts the repository — "github" (the
+	// default when absent, so every existing declaration keeps its
+	// meaning) or "forgejo". Api is the forge's API base URL; GitHub's
+	// public API is the default when absent, and Forgejo has no public
+	// API, so a Forgejo declaration must name its instance.
+	Forge string `json:"forge"`
+	Api   string `json:"api"`
+}
+
+// Forge kinds a declaration may name.
+const (
+	ForgeGitHub  = "github"
+	ForgeForgejo = "forgejo"
+)
+
+// ForgeKind returns the declared forge, defaulting to GitHub when absent.
+func (a *Admission) ForgeKind() string {
+	if a == nil || a.Forge == "" {
+		return ForgeGitHub
+	}
+	return a.Forge
 }
 
 // Trust choices a fresh reader may declare for checkpoints
@@ -215,7 +237,49 @@ type Config struct {
 	Governance *Governance `json:"governance,omitempty"`
 	Guardrails *Guardrails `json:"guardrails,omitempty"`
 	Teams      *Teams      `json:"teams,omitempty"`
+	// The executor substrates a deployment provisions through
+	// (plans/os-083112ac.md D3): the container runtime and image, the
+	// cloud endpoint and credential env-var name, and the enrolled
+	// remote workers. A credential is the NAME of an environment
+	// variable, never a secret; the lint refuses a token-shaped value.
+	Executors *Executors `json:"executors,omitempty"`
 }
+
+// Executors declares the non-local substrate configuration.
+type Executors struct {
+	Container *ContainerConfig `json:"container,omitempty"`
+	Cloud     *CloudConfig     `json:"cloud,omitempty"`
+	Remote    *RemoteConfig    `json:"remote,omitempty"`
+}
+
+// ContainerConfig names the OCI runtime and image.
+type ContainerConfig struct {
+	Runtime string `json:"runtime"` // docker | podman | fake
+	Image   string `json:"image"`
+}
+
+// CloudConfig names the session endpoint and the env var holding the
+// bearer credential.
+type CloudConfig struct {
+	Endpoint   string `json:"endpoint"`
+	Credential string `json:"credential"` // an environment-variable NAME
+}
+
+// RemoteConfig names the enrolled workers.
+type RemoteConfig struct {
+	Workers []WorkerConfig `json:"workers"`
+}
+
+// WorkerConfig is one enrolled remote worker.
+type WorkerConfig struct {
+	Name        string `json:"name"`
+	Environment string `json:"environment"`
+}
+
+// envVarName is the shape a credential (an env-var name) must have: an
+// identifier, never a token. A token-shaped value fails it, so a secret
+// pasted where a name belongs is refused rather than stored.
+var envVarName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 // SquadNames lists the declared squads, sorted; nil when teams are
 // undeclared.
@@ -407,6 +471,9 @@ func (c *Config) validatePreseed() error {
 	if err := c.validateBoundary(); err != nil {
 		return err
 	}
+	if err := c.validateExecutors(); err != nil {
+		return err
+	}
 	if c.Governance != nil {
 		if strings.TrimSpace(c.Governance.Root) == "" {
 			return errors.New("governance.root names the governance root's key fingerprint")
@@ -484,6 +551,42 @@ func validProtectedEntry(p string) error {
 	return nil
 }
 
+// validateExecutors holds the executors block to its shapes and refuses
+// a secret where a name belongs (plans/os-083112ac.md D3).
+func (c *Config) validateExecutors() error {
+	e := c.Executors
+	if e == nil {
+		return nil
+	}
+	if e.Container != nil {
+		switch e.Container.Runtime {
+		case "docker", "podman", "fake":
+		default:
+			return fmt.Errorf("executors.container.runtime must be docker, podman or fake, got %q", e.Container.Runtime)
+		}
+		if strings.TrimSpace(e.Container.Image) == "" {
+			return errors.New("executors.container.image must name an image reference")
+		}
+	}
+	if e.Cloud != nil {
+		u, err := url.Parse(e.Cloud.Endpoint)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return fmt.Errorf("executors.cloud.endpoint must be an http(s) URL, got %q", e.Cloud.Endpoint)
+		}
+		if !envVarName.MatchString(e.Cloud.Credential) {
+			return fmt.Errorf("executors.cloud.credential must be an environment-variable NAME, never a secret, got %q — the token lives in the environment, not the tree", e.Cloud.Credential)
+		}
+	}
+	if e.Remote != nil {
+		for _, w := range e.Remote.Workers {
+			if strings.TrimSpace(w.Name) == "" || strings.TrimSpace(w.Environment) == "" {
+				return errors.New("executors.remote.workers each need a name and an environment")
+			}
+		}
+	}
+	return nil
+}
+
 // validateAdmission holds the admission block to its posture: required
 // and well-formed under enforced-forge-hosted (#244), refused elsewhere.
 func (c *Config) validateAdmission() error {
@@ -519,6 +622,20 @@ func (c *Config) validateAdmission() error {
 		if strings.TrimSpace(o) == "" {
 			return errors.New("admission.owners must not carry an empty identity")
 		}
+	}
+	switch a.Forge {
+	case "", ForgeGitHub, ForgeForgejo:
+	default:
+		return fmt.Errorf("admission.forge must be %q or %q (absent means %q), got %q", ForgeGitHub, ForgeForgejo, ForgeGitHub, a.Forge)
+	}
+	if a.Api != "" {
+		u, err := url.Parse(a.Api)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return fmt.Errorf("admission.api must be an http(s) URL naming the forge's API, got %q", a.Api)
+		}
+	}
+	if a.Forge == ForgeForgejo && a.Api == "" {
+		return errors.New("admission.api is required under forgejo: Forgejo has no public API, so the declaration must name its instance")
 	}
 	return nil
 }

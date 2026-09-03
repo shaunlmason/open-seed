@@ -140,7 +140,7 @@ const (
 // Default returns the registered projections. Later phases append
 // (standard projections 4.2, the cache 4.3); registration is data.
 func Default() []Projection {
-	return []Projection{Roster(), Contracts(), Queue(), Actors(), Report(), Obligations(), Knowledge(), Boundary(), Cache()}
+	return []Projection{Roster(), Contracts(), Queue(), Actors(), Report(), Obligations(), Knowledge(), Boundary(), Cache(), Ranking()}
 }
 
 // ErrOverlap refuses a ledger/output path overlap in either direction:
@@ -247,7 +247,7 @@ func RebuildWith(ledgerDir, outDir string, projections []Projection, resolve led
 		return nil, err
 	}
 	defer func() {
-		if cerr := os.Chmod(outDir, 0o555); err == nil && cerr != nil {
+		if cerr := setMode(outDir, 0o555); err == nil && cerr != nil {
 			err = cerr
 		}
 	}()
@@ -319,12 +319,12 @@ func openDirs(dirs ...string) error {
 	var opened []string
 	relock := func() {
 		for i := len(opened) - 1; i >= 0; i-- {
-			_ = os.Chmod(opened[i], 0o555)
+			_ = setMode(opened[i], 0o555)
 		}
 	}
 	for _, dir := range dirs {
 		if info, err := os.Stat(dir); err == nil && info.IsDir() {
-			if err := os.Chmod(dir, 0o755); err != nil {
+			if err := setMode(dir, 0o755); err != nil {
 				relock()
 				return err
 			}
@@ -335,7 +335,7 @@ func openDirs(dirs ...string) error {
 			relock()
 			return err
 		}
-		if err := os.Chmod(dir, 0o755); err != nil {
+		if err := setMode(dir, 0o755); err != nil {
 			relock()
 			return err
 		}
@@ -346,10 +346,10 @@ func openDirs(dirs ...string) error {
 
 // closeWindow relocks the swap directories.
 func closeWindow(root, builds string) error {
-	if err := os.Chmod(builds, 0o555); err != nil {
+	if err := setMode(builds, 0o555); err != nil {
 		return err
 	}
-	return os.Chmod(root, 0o555)
+	return setMode(root, 0o555)
 }
 
 // lockTree locks a completed build tree: files 0444, directories 0555,
@@ -364,13 +364,13 @@ func lockTree(path string) error {
 			dirs = append(dirs, p)
 			return nil
 		}
-		return os.Chmod(p, 0o444)
+		return setMode(p, 0o444)
 	})
 	if err != nil {
 		return err
 	}
 	for i := len(dirs) - 1; i >= 0; i-- {
-		if err := os.Chmod(dirs[i], 0o555); err != nil {
+		if err := setMode(dirs[i], 0o555); err != nil {
 			return err
 		}
 	}
@@ -388,7 +388,7 @@ func unlockDirs(path string) error {
 			return err
 		}
 		if d.IsDir() {
-			return os.Chmod(p, 0o755)
+			return setMode(p, 0o755)
 		}
 		return nil
 	})
@@ -477,15 +477,18 @@ func publish(root, buildID string, files map[string][]byte) (err error) {
 	if err := os.Remove(tmpCur); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if err := os.WriteFile(tmpCur, []byte(buildID+"\n"), 0o444); err != nil {
+	// Written writable, then locked by mode: a file created read-only
+	// on Windows carries the read-only attribute, which would block the
+	// next publication's replacement of the pointer.
+	if err := os.WriteFile(tmpCur, []byte(buildID+"\n"), 0o644); err != nil {
 		return err
 	}
 	// WriteFile's mode is weakened by the process umask; the published
 	// pointer must be exactly 0444 (review finding on #112).
-	if err := os.Chmod(tmpCur, 0o444); err != nil {
+	if err := setMode(tmpCur, 0o444); err != nil {
 		return err
 	}
-	if err := os.Rename(tmpCur, cur); err != nil {
+	if err := renameReplacing(tmpCur, cur); err != nil {
 		return err
 	}
 	entries, err := os.ReadDir(builds)
@@ -515,4 +518,19 @@ func Current(outDir, name string) (string, error) {
 		return "", fmt.Errorf("projection %s has an empty CURRENT pointer", name)
 	}
 	return filepath.Join(root, buildsDir, id), nil
+}
+
+// renameReplacing swaps a pointer file into place, retrying briefly
+// where the platform refuses to replace a file a concurrent reader
+// holds open (Windows; next/spec/platform.md). POSIX renames over the
+// open file on the first try.
+func renameReplacing(src, dst string) error {
+	var err error
+	for attempt := 0; attempt < 20; attempt++ {
+		if err = os.Rename(src, dst); err == nil {
+			return nil
+		}
+		time.Sleep(time.Duration(attempt+1) * 5 * time.Millisecond)
+	}
+	return err
 }

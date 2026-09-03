@@ -1462,6 +1462,27 @@ record's own position through one derivation, `curation.AuthenticPass`
   gives one corrupted chain, the D3 tripwire inverted on purpose, the
   envelope spec's null sentence sharpened to "before any position was
   read")
+- 13.2 the remaining executor adapters — container, cloud session,
+  enrolled remote worker (III.H) — os-083112ac — **draft in progress**
+  (draft PR #282 against plan #274 per decisions/0003: executor.Described
+  (optional; enforced|risk-limit), Container over an OCIRuntime with
+  executor/fakeoci (credential-free) and OCICommand (docker/podman),
+  CloudSession and RemoteWorker (risk-limit; the worker pulls, no
+  inbound), the executors declaration block with the secret lint, seed
+  run start --adapter wiring, the doctor's adapters list, spec/executors.md.
+  Still to land: report.json's adapters section, the per-adapter
+  disposability/preemption drills in cmd/seed, docs receipt. Awaits #274
+  merge + a make-check window)
+- 13.3 a non-primary forge adapter (Forgejo) for the forge extras (III.N
+  row 2) — os-ad610334 — **draft in review** (draft PR #281 against plan
+  #275 per decisions/0003: internal/protections/forgejo.go over Forgejo's
+  Gitea-compatible branch/tag-protection API, held to the one Desired
+  table; the Observer filling merge.observed's sha from either forge;
+  admission.forge/api posture fields; seed protections/merge observe
+  --forge forgejo; doctor's declared forge; next/spec/forges.md; drilled
+  against a fake Forgejo. Reconciliation: the pull-request rule is
+  Unexpressible on Forgejo — reported manual, not half-applied. Awaits
+  #275 merge + a make-check window for the receipt)
 - 13.4 mirrors and dashboards propose, federation as uniform read
   remotes, cross-repo work as a proposal (III.J row 2, III.N row 4,
   §II.15) — os-48df10a2 — **in review** (task PR against plan #257,
@@ -1515,6 +1536,48 @@ record's own position through one derivation, `curation.AuthenticPass`
   and cited in the source's chain, opacity swept route by route) and
   the refusals; `next/spec/boundary.md` new, `envelope.md`,
   `projections.md`, `postures.md`, `protocol.md` following)
+
+## Phase 13 — Conformance completion (docs/next-build-plan.md Phase 13; deps: 12)
+
+- 13.6 the machine-protocol surface and platform parity (III.I rows
+  3–4) — os-b55e5647 — **in review** (task PR against plan #261:
+  `cmd/seed/registry`, the one table both surfaces are drawn from, and
+  `catalog.go` registering every verb with its subverbs in the usage
+  line's own words, the CLI's `run` dispatching through it alone;
+  `seed serve`, JSON-RPC 2.0 over stdio framed as `machine-envelope/0`,
+  a method per verb, params as argv or as flags, the CLI's own run
+  function invoked and its envelope returned verbatim (a refusal a
+  result, never a transport error), `serve --list` printing the method
+  set, the transport the one named carve-out; `internal/platform` with
+  the honest posture table per OS and the doctor's `platform` report;
+  the LF-only ledger enforced (the segment scanner keeps a carriage
+  return and the record parser refuses it); the drills — the registry
+  against the usage vocabulary both ways, set equality of the
+  surfaces, byte-identical envelopes through both over a corpus, the
+  path lint at the call site, the skip-reason lint, the CRLF refusal,
+  the doctor's report; the CI matrix on Linux, macOS and Windows;
+  `next/spec/platform.md` new, `protocol.md` and `envelope.md`
+  following)
+- 13.7 tuple ranking as supervisor policy: eval results rank
+  qualified tuples and the planner lane's offers carry the strongest
+  (III.J row 3's policy clause, §II.9) — os-c7554f18 — **in review**
+  (task PR against plan #276: `internal/ranking`, the record-derived
+  policy table (score by qualifying evidence since the tuple last
+  held, ties by the latest pass then the canonical JSON, disqualified
+  and holder-less tuples absent, agreement refining the verdict
+  ranking only with the gold supplied), pinned to `next/spec/ranking.md`
+  by a drill that parses the table; `seed offer publish --strongest n
+  --capability c` filling the `tuples` scope from the ranking at the
+  offer's own instant and refusing `ranking_empty` (exit 4) rather
+  than widening; `eval.Due`'s offers by policy (the configuration
+  under re-test, else the strongest claim tuple, else unscoped with a
+  `ranking_empty` note, the bootstrap); the `ranking` projection
+  (version 1, both capabilities, byte-identical), `seed doctor
+  --ledger` naming the top tuple per capability, the report's
+  `lanes.planner.strongest` at version 16; drilled at the derivation,
+  the verbs and the projection, with the mutation evidence D4 names;
+  `ranking.md` new, `offers.md`, `qualification.md` (the deferral
+  closed), `evals.md`, `projections.md` and `envelope.md` following)
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 

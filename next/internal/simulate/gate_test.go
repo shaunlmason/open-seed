@@ -16,8 +16,18 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/loop"
 )
 
-// badRoot is a path nothing can be created under.
-const badRoot = "/proc/nonexistent-seed-sim"
+// blockedRoot returns a path beneath a regular file: no platform can
+// create a directory under it, so MkdirAll and MkdirTemp both refuse
+// (a path under /proc is ordinary on Windows, where it once let the
+// deployment reach genesis with no key).
+func blockedRoot(t *testing.T) string {
+	t.Helper()
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return filepath.Join(file, "nonexistent-seed-sim")
+}
 
 func TestRunDefaultsIntentsThenSurfacesBuildFailure(t *testing.T) {
 	// A non-positive intent count is defaulted to one before the build,
@@ -28,7 +38,7 @@ func TestRunDefaultsIntentsThenSurfacesBuildFailure(t *testing.T) {
 }
 
 func TestBuildFailsWhenTheWorkRootCannotHoldATempDir(t *testing.T) {
-	if _, err := build(Config{LanesDir: lanesRel, Verbs: refuse{}, WorkDir: badRoot, Now: time.Now()}); err == nil {
+	if _, err := build(Config{LanesDir: lanesRel, Verbs: refuse{}, WorkDir: blockedRoot(t), Now: time.Now()}); err == nil {
 		t.Error("build must fail when its temp dir cannot be created under the work root")
 	}
 }
@@ -37,7 +47,7 @@ func TestClientStateDirFailuresSurface(t *testing.T) {
 	// The read-work and genesis-work state dirs live under the
 	// deployment dir; when that cannot be created, materialize and
 	// seedGenesis surface the client's error.
-	d := &deployment{dir: badRoot, remote: "r"}
+	d := &deployment{dir: blockedRoot(t), remote: "r"}
 	if _, err := d.materialize(); err == nil {
 		t.Error("materialize must fail when the read-work dir cannot be created")
 	}

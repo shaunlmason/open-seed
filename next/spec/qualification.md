@@ -79,9 +79,9 @@ the first `seed/2` record, by version (`version_unsupported`, in the
   released ([`executors.md`](executors.md)).
 - **Offers may name it.** `offer.published`'s eligibility gains an
   optional `tuples` list ([`offers.md`](offers.md)): the supervisor
-  writes the configurations it wants into the offer, which is the whole
-  of "strongest tuples by policy" the tree can honestly hold until item
-  2's eval results exist to rank them.
+  writes the configurations it wants into the offer by hand, or fills
+  it by policy from the ranking those eval results derive
+  ([`ranking.md`](ranking.md), Phase 13 item 7).
 
 ## The set rule, and the bridge
 
@@ -252,5 +252,6 @@ spot-checks, the supervisor's acts and the dispatcher's filings are
   real ledger and at the admission boundary; the resolved-versus-
   admitted check in `Provision`.
 - III.J row 3's "strongest tuples by policy": the offer's `tuples`
-  scope as the scheduling input; the metrics half of the row is Phase
+  scope as the scheduling input, filled by policy from the ranking
+  ([`ranking.md`](ranking.md)); the metrics half of the row is Phase
   10 item 5's.

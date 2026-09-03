@@ -142,6 +142,14 @@ func (r *Record) Marshal() ([]byte, error) {
 // plus unsigned extra material that survives in storage while escaping
 // canonicalization, schema checks, and the classification lint.
 func ParseRecord(line []byte) (*Record, error) {
+	// The ledger is LF-only (next/spec/platform.md): a carriage return
+	// in a line is CRLF mangling (core.autocrlf, an editor, a transfer)
+	// or an injection, and either is refused rather than normalized,
+	// since the canonical bytes a signature covers must be the bytes
+	// on disk.
+	if bytes.IndexByte(line, '\r') >= 0 {
+		return nil, errors.New("ledger record does not parse: a carriage return in a ledger line — the ledger is LF-only, and a CRLF conversion is refused rather than normalized")
+	}
 	if err := rejectDuplicateKeys(line); err != nil {
 		return nil, fmt.Errorf("ledger record does not parse: %w", err)
 	}

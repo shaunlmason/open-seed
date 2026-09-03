@@ -21,6 +21,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/ranking"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
 )
@@ -61,7 +62,8 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	fs.Var(&capabilities, "capability", "capability the taking worker must hold (repeatable; none = any active worker)")
 	fs.Var(&tiers, "tier", "contract tier the offer covers (repeatable; none = any tier)")
 	fs.Var(&tuples, "tuple", "runtime tuple a qualified taker's claim grant must cite, as the strict JSON object (repeatable; none = any configuration)")
-	if err := fs.Parse(args); err != nil || *dir == "" || *subject == "" || *keyPath == "" || *expires == "" || fs.NArg() != 0 {
+	strongest := fs.Int("strongest", 0, "fill the tuples scope with the top n of the ranking for the one --capability (next/spec/ranking.md); refuses when nothing ranks")
+	if err := fs.Parse(args); err != nil || *dir == "" || *subject == "" || *keyPath == "" || *expires == "" || fs.NArg() != 0 || *strongest < 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer publish requires --ledger <dir> --subject <id> --key <path> --expires <RFC3339> [--capability c]... [--tier t]... [--tuple <json>]..."), stdout, stderr)
 	}
 	// Each --tuple is parsed at the door with the same strict parser
@@ -74,6 +76,19 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--tuple %s: %v", raw, err)), stdout, stderr)
 		}
 		scoped = append(scoped, t)
+	}
+	// --strongest is policy filling the same scope --tuple writes by
+	// hand (plans/os-c7554f18.md D2): the two refuse together, and the
+	// ranking read is the one --capability's.
+	if *strongest > 0 && (len(scoped) > 0 || len(capabilities) != 1) {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "--strongest fills the tuples scope from the ranking of exactly one --capability, and is not combined with --tuple"), stdout, stderr)
+	}
+	// The tuples scope is matched against the taker's CLAIM grants
+	// (offers.md), so only the claim ranking can fill it (review
+	// finding on the task PR): a verdict tuple named here would be one
+	// no claimer cites, an offer nobody but an operator could see.
+	if *strongest > 0 && capabilities[0] != keyring.CapClaim {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--strongest reads the claim ranking: an offer's tuples scope is matched against claim grants, so --capability %s cannot fill it (next/spec/ranking.md)", capabilities[0])), stdout, stderr)
 	}
 	keyBytes, err := os.ReadFile(*keyPath)
 	if err != nil {
@@ -95,6 +110,21 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
+	// The offer's own instant is the record's ts: the ranking derives
+	// at it, never at a second clock read.
+	ts := time.Now().UTC().Format(time.RFC3339)
+	if *strongest > 0 {
+		r, err := ranking.Derive(ranking.Inputs{Records: ctx.Records, Ring: ctx.Keyring, AsOf: ts})
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		}
+		scoped = ranking.Top(r, capabilities[0], *strongest)
+		if len(scoped) == 0 {
+			// An unscoped offer is the supervisor's explicit choice,
+			// never policy running out (D2).
+			return render(envelope.Fail(envelope.ExitNotFound, "ranking_empty", fmt.Sprintf("no qualified %s tuple ranks at %s: publish without --strongest to offer unscoped, or qualify a configuration first (next/spec/ranking.md)", capabilities[0], ts)), stdout, stderr)
+		}
+	}
 	payload, err := json.Marshal(struct {
 		Eligibility offerEligibility `json:"eligibility"`
 		Expires     string           `json:"expires"`
@@ -108,7 +138,7 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	}
 	rec, err := event.Sign(event.Event{
 		V:       ctx.Active,
-		TS:      time.Now().UTC().Format(time.RFC3339),
+		TS:      ts,
 		Actor:   fp,
 		Verb:    transition.OfferPublishedVerb,
 		Subject: *subject,

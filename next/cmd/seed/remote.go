@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
@@ -303,24 +302,14 @@ func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, su
 	return render(stampTip(env, res.Position+1), stdout, stderr)
 }
 
-// lockStateDir takes the exclusive advisory lock guarding one client
-// state dir, blocking until it is free, and returns the release.
+// lockStateDir takes the exclusive lock guarding one client state
+// dir, blocking until it is free, and returns the release. The lock
+// is platform code (lock_unix.go, lock_windows.go; next/spec/platform.md).
 func lockStateDir(stateDir string) (func(), error) {
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		return nil, err
 	}
-	f, err := os.OpenFile(filepath.Join(stateDir, ".lock"), os.O_CREATE|os.O_RDWR, 0o644)
-	if err != nil {
-		return nil, err
-	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		f.Close()
-		return nil, err
-	}
-	return func() {
-		syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-		f.Close()
-	}, nil
+	return lockFile(filepath.Join(stateDir, ".lock"))
 }
 
 // refusalAt carries the view a refusal was computed at: the position,
