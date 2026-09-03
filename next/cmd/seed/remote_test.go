@@ -319,6 +319,9 @@ func buildRivals(t *testing.T, remote string, resolve ledger.Resolver, n int) []
 }
 
 func TestRemoteAppendRaceRetriesAndLands(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the rival lands through a pre-receive hook, which needs a POSIX git server (next/spec/platform.md)")
+	}
 	dir, priv, _ := writeKeys(t)
 	remote := bareRemote(t)
 	resolve := seedRemoteGenesis(t, remote)
@@ -338,6 +341,9 @@ func TestRemoteAppendRaceRetriesAndLands(t *testing.T) {
 }
 
 func TestRemoteAppendExhaustsAtContention(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the rival lands through a pre-receive hook, which needs a POSIX git server (next/spec/platform.md)")
+	}
 	dir, priv, _ := writeKeys(t)
 	remote := bareRemote(t)
 	resolve := seedRemoteGenesis(t, remote)
@@ -400,6 +406,9 @@ func TestRemoteAppendVanishedRefRegression(t *testing.T) {
 // exit 12 via the recorded verified head; nothing appends over the
 // regression (#91 review).
 func TestRemoteAppendMidInvocationRollbackRefuses(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the rival lands through a pre-receive hook, which needs a POSIX git server (next/spec/platform.md)")
+	}
 	dir, priv, _ := writeKeys(t)
 	remote := bareRemote(t)
 	resolve := seedRemoteGenesis(t, remote)

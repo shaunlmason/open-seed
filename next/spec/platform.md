@@ -105,6 +105,10 @@ than papered over:
   converts by default; the matrix sets it globally before the suites,
   and the mode and umask drills (`internal/project/boundary_test.go`)
   are Unix-only by build constraint, since Windows has neither.
+- **The CURRENT pointer is written writable.** POSIX locks it to
+  `0444` after the write; Windows keeps it writable, since a file
+  created read-only there carries the read-only attribute that would
+  block the next publication's replacement.
 - **The published projection tree is not write-locked.** POSIX
   publishes a tree read-only; on Windows the read-only attribute
   would block the tree's own replacement and enforces nothing
@@ -123,6 +127,10 @@ than papered over:
   mirror as locally modified in the drill's clone; the cause is not
   yet understood, the drill skips there naming this, and the row
   stays open until it runs green.
+- The sealed-check drill (`TestSealEndToEndCLI`) does not observe the
+  flipped sealed outcome on Windows (the recompute reports the sealed
+  check green after the marker flip); the drill skips there naming
+  this, and the row stays open until it runs green.
 - The `cmd/seed` suite runs about three times slower on the Windows
   runner; the matrix gives it forty minutes.
 

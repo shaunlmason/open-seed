@@ -477,7 +477,10 @@ func publish(root, buildID string, files map[string][]byte) (err error) {
 	if err := os.Remove(tmpCur); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if err := os.WriteFile(tmpCur, []byte(buildID+"\n"), 0o444); err != nil {
+	// Written writable, then locked by mode: a file created read-only
+	// on Windows carries the read-only attribute, which would block the
+	// next publication's replacement of the pointer.
+	if err := os.WriteFile(tmpCur, []byte(buildID+"\n"), 0o644); err != nil {
 		return err
 	}
 	// WriteFile's mode is weakened by the process umask; the published
