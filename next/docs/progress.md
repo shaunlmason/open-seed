@@ -1423,6 +1423,41 @@ record's own position through one derivation, `curation.AuthenticPass`
 (`memory/LEARNINGS.md`). This exit record is card os-efb2a099's task PR
 (an administrative card, not a Phase 11 item).
 
+## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
+
+- 12.2 forge-hosted admission service (stateless, sole-writer) and the
+  protections desired-state reconciler — os-5c8a312c — **in review**
+  (task PR against plan #244: `seed-admit serve` as the service form of
+  the one judgment — a proposal's records appended onto the
+  materialized tip, the candidate committed in the service's own git
+  dir, judged with the hook's `admitUpdate` (its typed refusals now
+  surviving the wrap), pushed fast-forward under the service's identity,
+  a stale `prev` answered as the race it is (409) before anything is
+  appended, genesis admitted onto an empty branch; the proposal
+  protocol speaking the envelope with the status as transport;
+  `gitref.Proposer` and the `Commit`/`Push` split, the loop proposing
+  instead of pushing in its last step only; `internal/refusal` as the
+  one mapping from typed refusals to envelope codes, shared by the CLI
+  and the service; `internal/propose` as the HTTP client; the
+  `admission` block on the declaration (required under
+  enforced-forge-hosted, refused elsewhere, the ledger ref a branch
+  because forges protect branches and tags), `Protected` and the
+  surface helpers in #241's shape, `Parse`; the remote verbs reading
+  the declaration (`--config`, `$SEED_CONFIG`, `./seed.json`) and
+  proposing under the third posture; `internal/protections` deriving
+  the four rulesets, CODEOWNERS and the CI-identity lint from the
+  declaration, `Diff` by name with manual rules for what a forge cannot
+  express, the `snapshot` and `github` (REST rulesets) adapters; `seed
+  protections plan | apply` with exit 28 `drift` refined
+  `protections_drift`; the doctor's report, `--probe` and `--current`,
+  the gap sentence retired; drilled at the service (admit, refuse with
+  the boundary's code, the forge refusing the actor, the race and the
+  loop's retry, the strict proposal, one derivation across service,
+  boundary and hook, kill-and-replace, the entry point), at the terminal
+  (the remote verbs under each posture, protections plan and apply, the
+  doctor's probe and drift) and in the packages; `next/spec/postures.md`
+  new, `envelope.md` and `modes.md` following)
+
 ## Frontier
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,

@@ -1357,3 +1357,50 @@ the assertions read, and there is no copy to go stale.
 - `loop.go`'s `gitOut` treats empty output as an error; git verbs that
   succeed silently (`add`, `commit --quiet`, `worktree remove`) need a
   runner that reads the exit status alone.
+
+- In one test process "who is pushing" is an environment fact. A
+  fixture that models a forge's sole-writer rule with an environment
+  variable must set it around the service's pushes and clear it around
+  the actor's, or the actor's raw push and the service's proposal look
+  like the same writer and the drill proves nothing about either.
+- A hook that wraps refusals with `%v` prints the same text as one
+  that wraps with `%w`, and only the second lets a service built on the
+  same judgment answer with the boundary's typed code. Wrap with `%w`
+  where a second caller might ever need `errors.As`.
+- Forges protect branches and tags, not custom ref namespaces: a
+  ledger that a forge must guard lives under `refs/heads/`. The ref
+  name is one parameter of every seam, so this is a declaration, not a
+  code path — but only if nobody hard-codes the default a second time.
+- A client that lands a write through a third party must not persist
+  a commit it does not hold: the monotonic-head rule compares by
+  ancestry in the client's own git dir, and an object that is not
+  there reads as a regression on the next fetch.
+- Copying a mapping into a second binary is how two postures come to
+  disagree on a code. When the second caller appears, move the mapping
+  to a package both can import before writing the second caller.
+- 2026-09-03 (no card; from Can Bölük, "The Harness Playbook", Stencil,
+  2026-09-02): the machine-protocol surface (build plan Phase 13 item
+  6) should stay tiny. Every permanent tool taxes every turn and a
+  changing tool roster invalidates provider caches, so expose one
+  passthrough over the CLI plus at most a situation read, with the
+  affordance envelope as the schema the model inspects, never one
+  protocol tool per verb. The CLI is already the complete interface
+  (charter II.15); a second surface adds no second semantics.
+- 2026-09-03 (no card; same source): when planning the container, cloud
+  session and remote worker executor adapters (Phase 13 item 2), use the
+  playbook's design questions as an adapter checklist: a kill boundary
+  the adapter can terminate rather than cooperative cancellation (the
+  force-kill fallback in charter II.9 assumes one exists), every stream
+  leaving the executor bounded before it reaches host memory or the
+  ledger, and workspace isolation as "child gets a view, parent receives
+  a diff", which is how packets already anchor artifacts. The playbook
+  trusts the harness host and distrusts only the sandbox; Seed trusts
+  neither, so its host-side policy is defense in depth the ledger never
+  relies on. Keep that distinction out of the handbook.
+- 2026-09-03 (no card; same source): nothing under `next/spec` or the
+  build plan carries a formal model of admission. Ordering, fences, the
+  monotonic-head rule and halt are proven by drills (claim race storms,
+  rollback, raw-git writers), which are examples rather than proofs. A
+  TLA+ model of admission over concurrent proposers is a backlog item
+  (build plan §3, non-conformance-blocking, filed after Phase 13), not
+  a charter change.
