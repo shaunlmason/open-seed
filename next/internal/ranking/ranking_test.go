@@ -227,6 +227,13 @@ func TestDisqualifiedAndSuspendedNeverRank(t *testing.T) {
 	if got := order(s.derive(nil), keyring.CapClaim); got != "m/2:1" {
 		t.Fatalf("a disqualified tuple is absent, not last: %s", got)
 	}
+	// A hand grant re-admits the tuple for a holder, so the holder
+	// rule alone would rank it again; the latest fact is still the
+	// disqualification, so it stays absent until a pass re-qualifies it.
+	s.next("root", keyring.VerbGranted, s.fps["c"], `{"capability": "claim", "tuple": `+one+`}`)
+	if got := order(s.derive(nil), keyring.CapClaim); got != "m/2:1" {
+		t.Fatalf("a re-granted tuple whose latest fact is a disqualification is absent, not ranked at zero: %s", got)
+	}
 	// Re-qualified: only the evidence since it last held scores.
 	s.qualify("a", keyring.CapClaim, one, "e5", 14)
 	r := s.derive(nil)
