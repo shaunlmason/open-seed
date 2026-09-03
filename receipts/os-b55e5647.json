@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-b55e5647",
-  "merge_base": "d6c6133753b29060a9cc5580a5b6b32bd8c3d3a8",
-  "head": "d777bbc3a2597bdb9630f40b7c5f3bea8ddd188f",
+  "merge_base": "70374b5fe329192a65693c3e8cf78ef4a2689aac",
+  "head": "fe118e41f65114e09e840b176e9627f35b12f71f",
   "plan_path": "plans/os-b55e5647.md",
   "plan_sha256": "b9b434fdaa46e0c8bae3a17807a816ccfef527b1c33281714975c12b2ad9dc83",
   "diff_files": [
@@ -13,6 +13,7 @@
     "next/cmd/seed-admit/drill_test.go",
     "next/cmd/seed-admit/main.go",
     "next/cmd/seed-admit/main_test.go",
+    "next/cmd/seed/boundary_cli_test.go",
     "next/cmd/seed/catalog.go",
     "next/cmd/seed/doctor.go",
     "next/cmd/seed/forge_cli_test.go",
@@ -66,7 +67,7 @@
     "next/spec/platform.md",
     "next/spec/protocol.md"
   ],
-  "diff_sha256": "02fb183d370ab2f36c950d846f5c62bf08602b3f6cdc3ffe8436b95ba7dfa4fb",
+  "diff_sha256": "cba94e504b7304bbe5d8f0b9db79a6090138829b6e77c435d2c34b8cf37c966c",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ ./internal/platform/ -count=1",
