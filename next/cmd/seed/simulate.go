@@ -65,7 +65,7 @@ func runSimulate(args []string, stdout, stderr io.Writer) int {
 		WorkDir:  *workDir,
 	})
 	if err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "simulate_failed", err.Error()), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
 	results := make([]any, len(rep.Results))
 	for i, r := range rep.Results {
