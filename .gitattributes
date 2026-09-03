@@ -1,3 +1,17 @@
 # merge=union ONLY on decisions/** (append-only ADRs, R5). Never widen this:
 # union merges silently interleave on any file that is ever rewritten.
 decisions/** merge=union
+
+# Seed's ledgers, fixtures and specs are LF-only on every platform
+# (next/spec/platform.md): a checkout that converted line endings would
+# hand the verifier bytes the signatures do not cover, which it refuses.
+* text=auto eol=lf
+*.jsonl -text
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.gz binary
+*.zip binary

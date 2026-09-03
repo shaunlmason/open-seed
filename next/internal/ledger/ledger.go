@@ -10,6 +10,7 @@ package ledger
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
@@ -160,9 +161,13 @@ func (s *Store) scan(fn func(pos int, segment string, line []byte) error) error 
 			return err
 		}
 		sc := bufio.NewScanner(f)
+		sc.Split(scanLinesKeepCR)
 		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 		for sc.Scan() {
-			line := strings.TrimSpace(sc.Text())
+			// Blank lines and stray spaces are tolerated; a carriage
+			// return is not trimmed, so a CRLF-mangled segment is
+			// refused by the parser rather than normalized here.
+			line := strings.Trim(sc.Text(), " \t")
 			if line == "" {
 				continue
 			}
@@ -379,7 +384,7 @@ func (s *Store) writeHead(h Head) error {
 		os.Remove(tmp)
 		return err
 	}
-	if err := os.Rename(tmp, filepath.Join(s.dir, headFile)); err != nil {
+	if err := renameRetrying(tmp, filepath.Join(s.dir, headFile)); err != nil {
 		os.Remove(tmp)
 		return err
 	}
@@ -413,4 +418,36 @@ func (s *Store) Records(fn func(pos int, rec *event.Record) error) error {
 		}
 		return fn(pos, rec)
 	})
+}
+
+// scanLinesKeepCR splits on LF alone and keeps any carriage return in
+// the line, so a CRLF-mangled segment reaches the record parser and is
+// refused there (next/spec/platform.md): bufio.ScanLines would strip
+// the CR and silently normalize the bytes a signature covers.
+func scanLinesKeepCR(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		return i + 1, data[:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
+}
+
+// renameRetrying replaces dst with src, retrying briefly when the
+// platform refuses to replace a file a concurrent reader holds open
+// (Windows reports a sharing violation where POSIX renames over the
+// open file); the last error stands after the retries.
+func renameRetrying(src, dst string) error {
+	var err error
+	for attempt := 0; attempt < 20; attempt++ {
+		if err = os.Rename(src, dst); err == nil {
+			return nil
+		}
+		time.Sleep(time.Duration(attempt+1) * 5 * time.Millisecond)
+	}
+	return err
 }

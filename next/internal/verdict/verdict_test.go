@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -39,6 +40,8 @@ func hardenGitRepo(t testing.TB, repo string) {
 		{"gc.auto", "0"},            // the heuristic itself
 		{"gc.autoDetach", "false"},  // any gc that runs stays in the foreground
 		{"receive.autoGC", "false"}, // the push path, which is the one that bit
+		{"core.autocrlf", "false"},  // the ledger is LF-only on every platform (next/spec/platform.md)
+		{"core.eol", "lf"},
 	} {
 		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
 			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
@@ -344,6 +347,9 @@ func TestWorkspaceCannotReachParentRefs(t *testing.T) {
 }
 
 func TestRunnerTimeoutKillsProcessGroup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows has no process groups: the runner kills the shell alone and its children may hold the pipes (next/spec/platform.md)")
+	}
 	dir, _, _, head := repo(t)
 	ws, err := NewWorkspace(dir, head)
 	if err != nil {

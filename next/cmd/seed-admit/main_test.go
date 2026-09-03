@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -44,6 +45,8 @@ func hardenGitRepo(t testing.TB, repo string) {
 		{"gc.auto", "0"},            // the heuristic itself
 		{"gc.autoDetach", "false"},  // any gc that runs stays in the foreground
 		{"receive.autoGC", "false"}, // the push path, which is the one that bit
+		{"core.autocrlf", "false"},  // the ledger is LF-only on every platform (next/spec/platform.md)
+		{"core.eol", "lf"},
 	} {
 		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
 			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
@@ -96,7 +99,7 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	hookBin = filepath.Join(dir, "seed-admit")
+	hookBin = filepath.Join(dir, "seed-admit"+exeSuffix())
 	if out, err := exec.Command("go", "build", "-o", hookBin, ".").CombinedOutput(); err != nil {
 		fmt.Fprintf(os.Stderr, "building hook: %v %s\n", err, out)
 		os.Exit(1)
@@ -119,6 +122,9 @@ func fixtureKey(t testing.TB) ed25519.PrivateKey {
 // guardedRemote is a bare repository with seed-admit installed.
 func guardedRemote(t *testing.T) string {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the pre-receive hook needs a POSIX git server; a bare Windows checkout runs the cooperative or forge-hosted posture (next/spec/platform.md)")
+	}
 	dir := filepath.Join(t.TempDir(), "remote.git")
 	if out, err := exec.Command("git", "init", "-q", "--bare", dir).CombinedOutput(); err != nil {
 		t.Fatalf("bare init: %v %s", err, out)
@@ -592,4 +598,13 @@ func TestAdmissionRulesSelectByExclusion(t *testing.T) {
 			t.Errorf("replay-owned rule %q must not re-run at the boundary", dropped)
 		}
 	}
+}
+
+// exeSuffix is the platform's executable suffix: a built binary
+// without it is not runnable on Windows (next/spec/platform.md).
+func exeSuffix() string {
+	if runtime.GOOS == "windows" {
+		return ".exe"
+	}
+	return ""
 }

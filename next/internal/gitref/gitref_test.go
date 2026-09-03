@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -40,6 +41,8 @@ func hardenGitRepo(t testing.TB, repo string) {
 		{"gc.auto", "0"},            // the heuristic itself
 		{"gc.autoDetach", "false"},  // any gc that runs stays in the foreground
 		{"receive.autoGC", "false"}, // the push path, which is the one that bit
+		{"core.autocrlf", "false"},  // the ledger is LF-only on every platform (next/spec/platform.md)
+		{"core.eol", "lf"},
 	} {
 		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
 			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
@@ -69,7 +72,7 @@ func hardenGitEnv() (func(), error) {
 		return nil, err
 	}
 	path := filepath.Join(dir, "config")
-	body := "[gc]\n\tauto = 0\n\tautoDetach = false\n[receive]\n\tautoGC = false\n"
+	body := "[gc]\n\tauto = 0\n\tautoDetach = false\n[receive]\n\tautoGC = false\n[core]\n\tautocrlf = false\n\teol = lf\n"
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		os.RemoveAll(dir)
 		return nil, err
@@ -301,6 +304,9 @@ func TestVanishedRefIsHeadRegression(t *testing.T) {
 // must surface as ErrRemoteRejected on the first attempt, never loop into
 // ErrRetriesSpent (#86 review).
 func TestPolicyRejectionSurfacesWithoutRetry(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the pre-receive hook needs a POSIX git server; a bare Windows checkout runs the cooperative or forge-hosted posture (next/spec/platform.md)")
+	}
 	remote := bareRemote(t)
 	signer := fixtureKey(t, 1)
 	resolve := seedGenesis(t, remote, signer)

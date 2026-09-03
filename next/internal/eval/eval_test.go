@@ -57,7 +57,9 @@ func git(t *testing.T, repo string, args ...string) string {
 // gc outlives the test that made it (plans/os-c4e8b57a.md D1, D5).
 func hardenGitRepo(t testing.TB, repo string) {
 	t.Helper()
-	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"}} {
+	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"},
+		{"core.autocrlf", "false"}, // the ledger is LF-only on every platform (next/spec/platform.md)
+		{"core.eol", "lf"}} {
 		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
 			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
 		}

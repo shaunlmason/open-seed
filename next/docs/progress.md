@@ -1516,6 +1516,27 @@ record's own position through one derivation, `curation.AuthenticPass`
   the refusals; `next/spec/boundary.md` new, `envelope.md`,
   `projections.md`, `postures.md`, `protocol.md` following)
 
+## Phase 13 — Conformance completion (docs/next-build-plan.md Phase 13; deps: 12)
+
+- 13.6 the machine-protocol surface and platform parity (III.I rows
+  3–4) — os-b55e5647 — **in review** (task PR against plan #261:
+  `cmd/seed/registry`, the one table both surfaces are drawn from, and
+  `catalog.go` registering every verb with its subverbs in the usage
+  line's own words, the CLI's `run` dispatching through it alone;
+  `seed serve`, JSON-RPC 2.0 over stdio framed as `machine-envelope/0`,
+  a method per verb, params as argv or as flags, the CLI's own run
+  function invoked and its envelope returned verbatim (a refusal a
+  result, never a transport error), `serve --list` printing the method
+  set, the transport the one named carve-out; `internal/platform` with
+  the honest posture table per OS and the doctor's `platform` report;
+  the LF-only ledger enforced (the segment scanner keeps a carriage
+  return and the record parser refuses it); the drills — the registry
+  against the usage vocabulary both ways, set equality of the
+  surfaces, byte-identical envelopes through both over a corpus, the
+  path lint at the call site, the skip-reason lint, the CRLF refusal,
+  the doctor's report; the CI matrix on Linux, macOS and Windows;
+  `next/spec/platform.md` new, `protocol.md` and `envelope.md`
+  following)
 - 13.7 tuple ranking as supervisor policy: eval results rank
   qualified tuples and the planner lane's offers carry the strongest
   (III.J row 3's policy clause, §II.9) — os-c7554f18 — **in review**

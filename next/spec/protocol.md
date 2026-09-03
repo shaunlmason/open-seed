@@ -132,6 +132,16 @@
     unknown-and-refused under a `seed/7` validator too, no table row
     changes, and every existing chain verifies byte for byte.
 
+## The machine surface
+
+`seed serve` ([`platform.md`](platform.md)) is the machine protocol:
+JSON-RPC 2.0 over stdio, framed as `machine-envelope/0`, a method per
+CLI verb drawn from the one registry the CLI dispatches, each
+invocation running the CLI's own run function and returning its
+`seed-envelope/0` verbatim as the result. It adds no verb, no
+semantics and no path to the ledger; the framing is versioned apart
+from the envelope so the verb semantics never fork.
+
 ## The cross-organization boundary
 
 The boundary ([`boundary.md`](boundary.md)) is not a protocol version:

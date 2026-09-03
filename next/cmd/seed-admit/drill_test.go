@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -55,6 +56,9 @@ func newDeployment(t *testing.T, p posture.Posture) deployment {
 
 func installHook(t *testing.T, remote string) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the pre-receive hook needs a POSIX git server; a bare Windows checkout runs the cooperative or forge-hosted posture (next/spec/platform.md)")
+	}
 	shim := "#!/bin/sh\nexec " + hookBin + "\n"
 	if err := os.WriteFile(filepath.Join(remote, "hooks", "pre-receive"), []byte(shim), 0o755); err != nil {
 		t.Fatal(err)
