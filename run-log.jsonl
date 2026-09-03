@@ -1170,3 +1170,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-0d4f2af3","ts":"2026-09-03T00:24:58Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-cf13fb51","ts":"2026-09-03T00:29:31Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-16e55c11","ts":"2026-09-03T00:30:02Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:242","to":"ready"},"task":"os-a026f5ea","ts":"2026-09-03T00:32:42Z","verb":"plan-unblock"}
