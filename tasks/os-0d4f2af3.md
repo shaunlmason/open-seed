@@ -1,11 +1,16 @@
 ---
 id: os-0d4f2af3
 title: 'next: Phase 12 item 4 — the preseed file (config, guardrails, teams, protections, posture), idempotent and CI-verified; agent-only guardrails and the protected surface in config'
-state: ready
+state: in_progress
 priority: P1
 squad: core
+claim:
+    actor: seed-next-implementer
+    token: c-e67c7c0690956738
+    claimed_at: "2026-09-03T01:29:17Z"
+    lease_expires: "2026-09-03T02:29:17Z"
 created_at: "2026-09-03T00:10:17Z"
-updated_at: "2026-09-03T00:53:54Z"
+updated_at: "2026-09-03T01:29:17Z"
 ---
 
 Build plan Phase 12 item 4 (docs/next-build-plan.md): the preseed file — config, guardrails, teams, protections desired-state and the declared admission posture — bootstrapping a new adoption idempotently and CI-verifiably; plus the clauses the Phase 10 exit record routes here: the guardrails include agent-only ones read off the roster's `kind` and the report's lane rates split by kind (III.E row 9), and the config enumerates the protected surface and names the governance root and its change process (III.G row 9, III.L row 2).
