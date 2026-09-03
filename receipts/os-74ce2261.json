@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-74ce2261",
-  "merge_base": "160bed4c627d768424cde5a6d6e5df5ed14cc3a1",
-  "head": "cf07f0838cf9a11d82781ced1fe17ea108bf342e",
+  "merge_base": "c5e9ffb1fa0d87044087956f2f764b006a426f11",
+  "head": "f48efc174608a1506f9c0e903e492827500d0897",
   "plan_path": "plans/os-74ce2261.md",
   "plan_sha256": "44dadc6dc63d6e541c30de8be1cdbb4fa95e3454c49590b561c1127d66512337",
   "diff_files": [
@@ -14,7 +14,7 @@
     "next/internal/project/lifecycle_views_test.go",
     "next/spec/projections.md"
   ],
-  "diff_sha256": "b9c9dec135f21a74875978d9a75894039b35906b7c52dc4b3c064310b6d585fe",
+  "diff_sha256": "0e047e272f0f56262f81142b81249b3a099bbd120d27606f08a3efdb534a34a3",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/project/ ./cmd/seed/ -run 'Cache|Lifecycle|Projection' -count=1",
