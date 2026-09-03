@@ -1,11 +1,16 @@
 ---
 id: os-40ed0ca0
 title: 'next: Phase 13 item 5 — the A2A-shaped cross-organization boundary (III.N)'
-state: ready
+state: in_progress
 priority: P2
 squad: core
+claim:
+    actor: seed-next-implementer
+    token: c-be946d2d101bd361
+    claimed_at: "2026-09-03T05:32:33Z"
+    lease_expires: "2026-09-03T06:32:33Z"
 created_at: "2026-09-03T02:39:57Z"
-updated_at: "2026-09-03T04:04:44Z"
+updated_at: "2026-09-03T05:32:33Z"
 ---
 
 Build plan Phase 13 item 5 (docs/next-build-plan.md): the A2A-shaped cross-organization boundary.
