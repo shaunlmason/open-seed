@@ -41,7 +41,7 @@ var specCatalogVerbs = []string{
 	"run.started", "run.settled", "run.interrupted",
 	"verdict.rendered", "verdict.deferred", "check.sealed",
 	"merge.requested", "merge.observed", "merge.overridden",
-	"message.sent",
+	"message.sent", "request.filed", "request.answered",
 	"curation.deadend.recorded", "curation.hypothesis.proposed", "curation.hypothesis.contested", "curation.lesson.promoted",
 	"curation.lesson.retired", "curation.deadend.retired", "curation.deadend.unretired",
 	"workflow.proposed", "workflow.merged",
@@ -226,6 +226,22 @@ func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
 		walkStep{"root", version.Seed3, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed4 + `"}`), ""},
 		walkStep{"root", version.Seed4, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed5 + `"}`), "seed5"},
 		walkStep{"root", version.Seed5, "system.imported", "system", static(`{"source": "open-seed", "export_head": "` + strings.Repeat("0", 40) + `", "anchor": "seed-anchor/walk", "manifest": "` + zeros64 + `"}`), "imported"},
+		// seed/7: the request ingress is afforded to any standing key
+		// on system and on a contract, and the answer to a dispatch
+		// or operator key while a request is pending, to nobody after
+		// (next/spec/requests.md).
+		walkStep{"root", version.Seed5, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed6 + `"}`), ""},
+		walkStep{"root", version.Seed6, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed7 + `"}`), "seed7"},
+		walkStep{"root", version.Seed7, "request.filed", "system", static(`{"origin": "walk", "kind": "dashboard-action", "reference": "walk @ 0123456", "summary": "walk"}`), "requested"},
+		walkStep{"root", version.Seed7, "request.answered", "system", func(t *testing.T, ctx *Context) string {
+			for _, r := range ctx.Lifecycle.Requests() {
+				if r.Answered == nil {
+					return fmt.Sprintf(`{"request": "%d", "outcome": "declined", "reason": "walk"}`, r.Pos)
+				}
+			}
+			t.Fatal("no pending request to answer")
+			return ""
+		}, "answered"},
 	)
 }
 
@@ -314,6 +330,24 @@ func TestAffordancesWalk(t *testing.T) {
 		"imported": func() {
 			if l := list(signer, "system"); has(l, "system.imported") {
 				t.Fatalf("an imported chain lists no second import: %v", l)
+			}
+		},
+		"seed7": func() {
+			if l := list(signer, "system"); !has(l, "request.filed") || has(l, "request.answered") {
+				t.Fatalf("at seed/7 a standing key lists the filing on system and nothing to answer: %v", l)
+			}
+			if l := list(signer, "c-1"); !has(l, "request.filed") {
+				t.Fatalf("the filing lists on a contract: %v", l)
+			}
+		},
+		"requested": func() {
+			if l := list(signer, "system"); !has(l, "request.answered") {
+				t.Fatalf("a pending request lists the answer for the operator: %v", l)
+			}
+		},
+		"answered": func() {
+			if l := list(signer, "system"); has(l, "request.answered") {
+				t.Fatalf("an answered request lists no second answer: %v", l)
 			}
 		},
 		"filed-c1": func() {

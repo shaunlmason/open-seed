@@ -43,9 +43,21 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 		verdict:     "0",
 		packet:      probePacket,
 		position:    fmt.Sprintf("%d", ctx.Count),
+		request:     "0",
 	}
 	if ctx.Lifecycle != nil {
+		// The request probes' citations, as the production view
+		// carries them (next/spec/requests.md): the queried contract
+		// as the filing's `about`, the first unanswered request on
+		// the queried subject as the answer's citation.
+		for _, r := range ctx.Lifecycle.Requests() {
+			if r.Subject == subject && r.Answered == nil {
+				v.request = fmt.Sprintf("%d", r.Pos)
+				break
+			}
+		}
 		if s, ok := ctx.Lifecycle.State(subject); ok {
+			v.requestAbout = subject
 			if s.Claim != nil {
 				v.fence = fmt.Sprintf("%d", s.Claim.Fence)
 				v.active = true

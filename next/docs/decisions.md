@@ -2986,6 +2986,15 @@ never edited to match a declaration.
 in the result says which blocks are declared; nothing new is printed to
 stderr, which stays for the consequences the charter wants in front of
 an operator.
+- 2026-09-03 — the reap arm (os-32d06c65) threads revocation through the
+  maintenance loop's corroboration, not an admission gate. Implementing
+  surfaced that claim.reaped admission never consulted
+  InterruptValid/WedgeDeclared — the corroboration is Corroborate +
+  Reapable, filled from internal/admit. So admit.RevokedHolder feeds a
+  new Corroboration.Revoked, Reapable reaps a revoked holder in every
+  classification state (no_data included, because a revocation is a
+  ledger fact not silence), and no admission rule on claim.reaped
+  changes. The plan (#262) was amended to match before implementation.
 ## The cache carries the event's ts (os-74ce2261, plan #260)
 
 **Verbatim beside parsed.** The envelope's `ts` string is the record
@@ -3086,6 +3095,86 @@ the rest have no block of their kind left on the card (pruned or
 rewritten) and become the entry as an artifact, noted. The match is
 not loosened to raise the number.
 
+## Phase 13 item 1 — racing mode (os-56bee171, plan #256)
+
+**A racing claim is a fact on an `in_progress` subject, never a table
+row.** The first cut widened `claim.taken`'s origin to `in_progress`
+and `submission.made`'s to `review`; the table's self-validation
+refused it at once — the in_progress exits are exactly the four
+deliberate exits, and a claim from in_progress is not an exit. The
+charter's invariant was right: racing changes who may hold, not what
+a state may become. So the fold applies a second claim as a claim
+fact and a racer's exit as a claim-scoped fact, the table is untouched,
+and the widened judgment lives in the lifecycle rule beside contention,
+gated by `seed/6` so a `seed/5` validator refuses by version.
+
+**Two exits move the state, the rest move a claim.** The first
+submission enters review (the other racers keep working there), and
+the last racer's departure with no submission yet re-readies or blocks
+the subject as the table says; every other exit closes its own claim.
+After settlement every exit is claim-scoped, which is what lets a
+settled-out racer leave with its packet and the reaper reap on a done
+subject.
+
+**The lockout is per submission.** A fail on one racer's submission
+locks that racer's pass out and touches no other; the merge chain
+cites the newest verdict on its own submission, so a racer's later
+fail cannot shadow another's earlier pass.
+
+**The reaper's third corroboration is the ledger.** A settled race
+needs no observation stream to reap: nothing a settled-out racer does
+can land but its exit, so the maintenance pass reaps each remaining
+claim with a packet naming the settlement, reported as `settled`.
+
+## Phase 13 item 4 — the request ingress, federation and cross-repo work (os-48df10a2, plan #257)
+
+**`seed/7`, not the plan's `seed/6`.** The plan was written before
+racing landed and named `seed/6` for the request verbs; racing took
+`seed/6` first (13.1), and a version is a named list a validator
+either registers or not, so the ingress is `seed/7` and the register
+says why. Nothing else in the plan moved.
+
+**A request is a fact beside the lifecycle, not a row.** Both verbs
+change no state, so `transitions.json` gained nothing and the fold
+keeps request facts the way it keeps the verdict and the escalation:
+position, signer, subject, origin, kind, and the answer. The rule
+holds the shapes and the citations; standing is the keyring's and
+dispatch is the grant rule's, as everywhere.
+
+**The subject is derived, never chosen.** `about` names the contract
+the proposal concerns and the record's subject must agree with it, or
+be `system` when it names none; a subject that resolves to nothing
+refuses. That is what keeps hostile text off the notice's subject
+field without a second oracle: the situation read carries a subject
+only because admission already held it to a contract or to `system`.
+
+**One obligation row per subject.** Obligation identity is
+(subject, kind), so two pending requests on `system` are one
+`request.pending` row carrying the oldest; the situation read lists
+every request as its own notice. Splitting the identity for one kind
+would have made the delta's removal names ambiguous for every other.
+
+**`request answer` is a lane act, not a loop act.** The loop is seven
+acts by spec and by test, and the dispatcher runs no worker loop; the
+lane validator gained a closed set of lane acts held to the same
+grant intersection, and a lane declaring only those owes no liveness
+source. The dispatcher's manifest names it, the trajectory corpus was
+re-recorded on purpose, and the frame's act check is unchanged.
+
+**The report's version did not move.** The `requests` section is
+present only when the prefix carries a request, and no chain before
+`seed/7` can carry one, so every existing build is byte-identical
+without a republish; the projections spec records the section under
+version 15 with that reasoning.
+
+**The federation read has no declaration in the loop.** `seed
+federation report` opens each remote with the gitref client alone —
+fetch, materialize, verify from the remote's own genesis with the
+resolver that genesis bootstraps — rather than through the loop's
+session opener, which would have applied this deployment's
+declaration (its ledger ref under the forge-hosted posture, its
+proposer) to a foreign ledger. No key crosses, and the command has no
+key flag to cross with.
 ## Phase 13 item 6 — the machine-protocol surface and platform parity (os-b55e5647, plan #261)
 
 **The transport is the one carve-out from "exists iff".** `serve` is a

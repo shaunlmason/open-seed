@@ -44,6 +44,9 @@ func TestObligationsAreDischargeable(t *testing.T) {
 		obligation.LaneObserver:   lanes["observer"],
 		obligation.LaneSupervisor: lanes["supervisor"],
 		obligation.LaneOperator:   signer,
+		// The dispatch lane's debts (request.pending) are payable by
+		// operator standing too, which the root holds.
+		obligation.LaneDispatcher: signer,
 	}
 	byFingerprint := map[string]ed25519.PrivateKey{}
 	for _, key := range keys {

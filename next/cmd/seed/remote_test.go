@@ -120,7 +120,13 @@ func bareRemote(t *testing.T) string {
 // returns the resolver for library-side appends.
 func seedRemoteGenesis(t *testing.T, remote string) ledger.Resolver {
 	t.Helper()
-	priv := fixturePriv(t)
+	return seedRemoteGenesisAs(t, remote, fixturePriv(t))
+}
+
+// seedRemoteGenesisAs lands a genesis rooted at the given key: the
+// federation drills need remotes with distinct roots.
+func seedRemoteGenesisAs(t *testing.T, remote string, priv ed25519.PrivateKey) ledger.Resolver {
+	t.Helper()
 	c, err := gitref.NewClient(t.TempDir(), remote, remoteRef)
 	if err != nil {
 		t.Fatal(err)
@@ -150,7 +156,12 @@ func seedRemoteGenesis(t *testing.T, remote string) ledger.Resolver {
 // libAppend lands one signed event on the remote through the loop.
 func libAppend(t *testing.T, remote string, resolve ledger.Resolver, v, verb, subject, payload string, vopts ...ledger.VerifyOption) {
 	t.Helper()
-	priv := fixturePriv(t)
+	libAppendAs(t, remote, resolve, fixturePriv(t), v, verb, subject, payload, vopts...)
+}
+
+// libAppendAs lands one signed event under the given key.
+func libAppendAs(t *testing.T, remote string, resolve ledger.Resolver, priv ed25519.PrivateKey, v, verb, subject, payload string, vopts ...ledger.VerifyOption) {
+	t.Helper()
 	fp, err := event.Fingerprint(priv.Public().(ed25519.PublicKey))
 	if err != nil {
 		t.Fatal(err)

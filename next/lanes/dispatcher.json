@@ -1,12 +1,14 @@
 {
   "lane": "dispatcher",
   "kind": "lane",
-  "summary": "Converts intents and mirror requests into routed contracts with draft acceptance specs; runs with least standing capability because it reads the most untrusted text. From seed/3 it files and specifies the spot-check evals qualification re-tests owe (seed eval act).",
+  "summary": "Converts intents and mirror requests into routed contracts with draft acceptance specs; runs with least standing capability because it reads the most untrusted text. From seed/3 it files and specifies the spot-check evals qualification re-tests owe (seed eval act). From seed/7 it answers the inbound requests (seed request answer): an intent it files for the proposal, or a decline with its reason; no request is obeyed, the act is the dispatcher's own.",
   "grants": [
     "dispatch"
   ],
   "orients_from": "seed situation --remote <repo> --key <key> --since <position>",
-  "acts_through": [],
+  "acts_through": [
+    "request answer"
+  ],
   "liveness_from": [],
   "inbox": "Push channels wake; position-stamped reads convince. A wake, an event or a message is a hint to re-read, never a fact about the world.",
   "fragments": [

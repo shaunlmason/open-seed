@@ -420,6 +420,31 @@ type SubjectState struct {
 	// Claim is the active claim while the subject is in_progress,
 	// cleared by every deliberate exit; nil otherwise.
 	Claim *Claim
+	// Claims is every active claim on the subject in fence order
+	// (plans/os-56bee171.md D2): one for the exclusive case, several
+	// on a racing squad's contract. Claim is always the first of them
+	// or nil, so every reader of the singular fact reads what it
+	// read before racing existed.
+	Claims []Claim
+	// Racing marks a subject that has held two claims at once: a
+	// second claim.taken applied while in_progress, which only a
+	// racing squad's contract admits (seed/6). Its later exits are
+	// claim-scoped facts rather than the table's transitions, except
+	// the first submission and the last racer's departure.
+	Racing bool
+	// Submissions is every submission of the current review window by
+	// fence order; Submission is the first. Verdicts bind to one of
+	// them by position.
+	Submissions []SubmissionFact
+	// Verdicts is every verdict rendered in the current window, in
+	// order; Verdict is the latest. The merge chain cites one of them.
+	Verdicts []VerdictFact
+	// RaceSettled is the position of the merge.observed that closed a
+	// race while other claims were still active: those claims are
+	// settled-out from then on (their next act refuses race_settled,
+	// their own deliberate exit still admits, the reaper reaps the
+	// silent ones).
+	RaceSettled *int
 	// Tier is the contract's filed tier (presence-only data whose one
 	// distinguished value, "trivial", exempts the plan gate;
 	// plans/os-16c1d142.md).
@@ -883,9 +908,29 @@ type milestoneFact struct {
 
 // Fold is the folded lifecycle state of every subject in a record
 // prefix, in first-appearance order.
+// IngressFact is one inbound proposal (request.filed) as the fold
+// keeps it (plans/os-48df10a2.md D2): who filed it, from where, what
+// kind, on which subject, and its answer when the dispatcher closed it.
+type IngressFact struct {
+	Pos      int
+	TS       string
+	Signer   string
+	Subject  string
+	Origin   string
+	Kind     string
+	Answered *int
+	Outcome  string
+	Intent   int
+	Answerer string
+}
+
 type Fold struct {
 	states map[string]*SubjectState
 	order  []string
+	// requests is every request.filed applied, in order, with its
+	// answer; RequestAnomalies counts the malformed ones.
+	requests         []IngressFact
+	RequestAnomalies int
 	// planned maps subject -> the last admitted plan.approved's plan
 	// anchor. plan.* events are facts, not transitions
 	// (plans/os-16c1d142.md): they change no lifecycle state and the
@@ -952,6 +997,12 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}, proposed: map[string]string{}, approved: map[string]string{}, milestones: map[string]milestoneFact{}}
 	for pos, rec := range records {
 		e := &rec.Event
+		// The request ingress (plans/os-48df10a2.md): facts beside the
+		// lifecycle, read at seed/7 positions only.
+		if e.Verb == "request.filed" || e.Verb == "request.answered" {
+			f.foldRequest(pos, e)
+			continue
+		}
 		if !version.Activated(e.V) {
 			// Lifecycle semantics activate at seed/1 and stay on at
 			// every later registered version (version.Activated, the
@@ -1039,6 +1090,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 						}
 					}
 					s.Verdict = &fact
+					s.Verdicts = append(s.Verdicts, fact)
 					// The lockout scans the whole submission window, so
 					// a later raw verdict can never bury an authentic
 					// fail (plans/os-d2497eb7.md).
@@ -1333,6 +1385,49 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		if ok {
 			current = s.State
 		}
+		// Racing (plans/os-56bee171.md D2, D3; seed/6): a second
+		// claim.taken while in_progress is a claim-scoped fact, never
+		// a transition, and a racer's exit closes that racer's claim
+		// alone except the first submission and the last departure.
+		// Before seed/6 both fall through to the table, which refuses
+		// them as it always did; the tolerant fold counts them.
+		if ok && version.RacingApplies(e.V) {
+			if e.Verb == "claim.taken" && current == "in_progress" && len(s.Claims) > 0 {
+				if _, held := s.HolderFence(e.Actor); held {
+					s.Anomalies++
+					continue
+				}
+				s.Claims = append(s.Claims, Claim{Holder: e.Actor, Fence: pos})
+				s.Claim = &s.Claims[0]
+				s.Racing = true
+				if s.PriorClaimants == nil {
+					s.PriorClaimants = map[string]bool{}
+				}
+				s.PriorClaimants[e.Actor] = true
+				s.LastClaim = pos
+				if s.ClaimFences == nil {
+					s.ClaimFences = map[int]bool{}
+				}
+				s.ClaimFences[pos] = true
+				continue
+			}
+			if IsExit(e.Verb) {
+				if cited, has := fenceCited(e.Payload); has {
+					if fence, ferr := strconv.Atoi(cited); ferr == nil && s.ClaimScopedExit(e.Verb, fence) {
+						if packet.Required(e.Verb) {
+							if _, perr := packet.FromPayload(e.Subject, e.Payload); perr != nil {
+								s.Anomalies++
+							}
+						}
+						if e.Verb == "submission.made" {
+							s.Submissions = append(s.Submissions, SubmissionFact{Pos: pos, Signer: e.Actor})
+						}
+						s.dropClaim(fence)
+						continue
+					}
+				}
+			}
+		}
 		to, err := t.Check(e.Subject, current, e.Verb)
 		if err == nil && e.Verb == "contract.specified" && current == "ready" && !version.LevelsApply(e.V) {
 			// The ready origin is a seed/4 row (plans/os-6bd9ffff.md
@@ -1364,7 +1459,14 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		// counts the violation visibly, never silently
 		// (plans/os-5dc16a7c.md, plans/os-b07b0f59.md).
 		if s.Claim != nil && t.Allows(current, e.Verb) {
-			if cited, _ := fenceCited(e.Payload); cited != fmt.Sprintf("%d", s.Claim.Fence) {
+			cited, _ := fenceCited(e.Payload)
+			citedOK := false
+			for _, c := range s.Claims {
+				if cited == fmt.Sprintf("%d", c.Fence) {
+					citedOK = true
+				}
+			}
+			if !citedOK {
 				s.Anomalies++
 			}
 		}
@@ -1427,6 +1529,8 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		s.State, s.Since = to, pos
 		if e.Verb == "submission.made" {
 			s.Submission = &SubmissionFact{Pos: pos, Signer: e.Actor}
+			s.Submissions = []SubmissionFact{*s.Submission}
+			s.Verdicts = nil
 			// A new submission opens a new judgment window: the lockout
 			// and the override both bind to the submission they judged
 			// (plans/os-d2497eb7.md).
@@ -1447,6 +1551,10 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 			_ = json.Unmarshal(e.Payload, &m)
 			s.Merged = &MergeFact{Pos: pos, SHA: strings.TrimSpace(m.Merged)}
+			if s.Racing && len(s.Claims) > 0 {
+				settled := pos
+				s.RaceSettled = &settled
+			}
 			passChain := s.Verdict != nil && s.Verdict.Verdict == "pass" &&
 				s.Requested != nil && s.Requested.CitedVerdict == s.Verdict.Pos
 			overrideChain := s.Override != nil && s.Requested != nil &&
@@ -1483,7 +1591,8 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			s.Escalation = nil
 		}
 		if t.exclusive[e.Verb] {
-			s.Claim = &Claim{Holder: e.Actor, Fence: pos}
+			s.Claims = []Claim{{Holder: e.Actor, Fence: pos}}
+			s.Claim = &s.Claims[0]
 			if s.PriorClaimants == nil {
 				s.PriorClaimants = map[string]bool{}
 			}
@@ -1499,8 +1608,27 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			s.ClaimFences[pos] = true
 		} else if s.Claim != nil && s.State != "in_progress" {
 			// Every deliberate exit ends the claim window; the fence
-			// dies with it.
-			s.Claim = nil
+			// dies with it. A racing subject's other claims outlive
+			// the state change (the first submission enters review
+			// while the other racers work), so only the exiting
+			// racer's claim is dropped there.
+			kept := false
+			if s.Racing && IsExit(e.Verb) {
+				if cited, has := fenceCited(e.Payload); has {
+					if fence, ferr := strconv.Atoi(cited); ferr == nil {
+						s.dropClaim(fence)
+						kept = true
+					}
+				}
+			} else if s.Racing && e.Verb == MergeObservedVerb {
+				// Settlement: the other racers' claims outlive done as
+				// settled-out claims, closed by their own exits or the
+				// reaper (RaceSettled is set above).
+				kept = true
+			}
+			if !kept {
+				s.Claims, s.Claim = nil, nil
+			}
 		}
 	}
 	return f
@@ -2140,4 +2268,163 @@ func TierAbove(a, b string) bool {
 	ra, _ := TierRank(a)
 	rb, _ := TierRank(b)
 	return ra > rb
+}
+
+// ActiveFences is every active claim's fence, in order.
+func (s SubjectState) ActiveFences() []int {
+	out := make([]int, 0, len(s.Claims))
+	for _, c := range s.Claims {
+		out = append(out, c.Fence)
+	}
+	return out
+}
+
+// ClaimByFence finds the active claim at a fence.
+func (s SubjectState) ClaimByFence(fence int) (Claim, bool) {
+	for _, c := range s.Claims {
+		if c.Fence == fence {
+			return c, true
+		}
+	}
+	return Claim{}, false
+}
+
+// HolderFence is the fence of the active claim an actor holds.
+func (s SubjectState) HolderFence(actor string) (int, bool) {
+	for _, c := range s.Claims {
+		if c.Holder == actor {
+			return c.Fence, true
+		}
+	}
+	return 0, false
+}
+
+// SubmissionAt finds a current-window submission by position.
+func (s SubjectState) SubmissionAt(pos int) (SubmissionFact, bool) {
+	for _, sub := range s.Submissions {
+		if sub.Pos == pos {
+			return sub, true
+		}
+	}
+	if s.Submission != nil && s.Submission.Pos == pos {
+		return *s.Submission, true
+	}
+	return SubmissionFact{}, false
+}
+
+// VerdictAt finds a current-window verdict by position.
+func (s SubjectState) VerdictAt(pos int) (VerdictFact, bool) {
+	for _, v := range s.Verdicts {
+		if v.Pos == pos {
+			return v, true
+		}
+	}
+	if s.Verdict != nil && s.Verdict.Pos == pos {
+		return *s.Verdict, true
+	}
+	return VerdictFact{}, false
+}
+
+// ClaimScopedExit reports whether a deliberate exit citing a fence
+// closes that racer's claim alone, leaving the subject's state where it
+// is (plans/os-56bee171.md D3): on a racing subject every exit is
+// claim-scoped except the first submission, which enters review, and
+// the last racer's departure with no submission yet, which the table
+// moves; after the race is settled every exit is claim-scoped. A
+// subject that never raced has no claim-scoped exit.
+func (s SubjectState) ClaimScopedExit(verb string, fence int) bool {
+	if !s.Racing {
+		return false
+	}
+	if _, active := s.ClaimByFence(fence); !active {
+		return false
+	}
+	if s.RaceSettled != nil {
+		return true
+	}
+	if verb == "submission.made" {
+		return s.Submission != nil
+	}
+	return len(s.Claims) > 1 || s.Submission != nil
+}
+
+// IsExit reports the four deliberate exits from a claim.
+func IsExit(verb string) bool {
+	return verb == "claim.released" || verb == "claim.parked" || verb == "claim.reaped" || verb == "submission.made"
+}
+
+func (s *SubjectState) dropClaim(fence int) {
+	kept := s.Claims[:0]
+	for _, c := range s.Claims {
+		if c.Fence != fence {
+			kept = append(kept, c)
+		}
+	}
+	s.Claims = kept
+	if len(s.Claims) > 0 {
+		s.Claim = &s.Claims[0]
+	} else {
+		s.Claim = nil
+	}
+}
+
+// Requests is every request the fold applied, in chain order.
+func (f *Fold) Requests() []IngressFact { return append([]IngressFact(nil), f.requests...) }
+
+// RequestAt finds a request by its position.
+func (f *Fold) RequestAt(pos int) (IngressFact, bool) {
+	for _, r := range f.requests {
+		if r.Pos == pos {
+			return r, true
+		}
+	}
+	return IngressFact{}, false
+}
+
+func (f *Fold) foldRequest(pos int, e *event.Event) {
+	if !version.RequestsApply(e.V) {
+		f.RequestAnomalies++
+		return
+	}
+	switch e.Verb {
+	case "request.filed":
+		var p struct {
+			Origin string `json:"origin"`
+			Kind   string `json:"kind"`
+		}
+		if json.Unmarshal(e.Payload, &p) != nil || p.Origin == "" || p.Kind == "" {
+			f.RequestAnomalies++
+			return
+		}
+		f.requests = append(f.requests, IngressFact{Pos: pos, TS: e.TS, Signer: e.Actor, Subject: e.Subject, Origin: p.Origin, Kind: p.Kind})
+	case "request.answered":
+		var p struct {
+			Request string `json:"request"`
+			Outcome string `json:"outcome"`
+			Intent  string `json:"intent"`
+		}
+		if json.Unmarshal(e.Payload, &p) != nil {
+			f.RequestAnomalies++
+			return
+		}
+		cited, err := strconv.Atoi(strings.TrimSpace(p.Request))
+		if err != nil {
+			f.RequestAnomalies++
+			return
+		}
+		for i := range f.requests {
+			r := &f.requests[i]
+			if r.Pos == cited && r.Answered == nil && r.Subject == e.Subject {
+				at := pos
+				r.Answered, r.Outcome, r.Answerer = &at, p.Outcome, e.Actor
+				if n, ierr := strconv.Atoi(strings.TrimSpace(p.Intent)); ierr == nil {
+					r.Intent = n
+				} else {
+					r.Intent = -1
+				}
+				return
+			}
+		}
+		f.RequestAnomalies++
+	}
 }
