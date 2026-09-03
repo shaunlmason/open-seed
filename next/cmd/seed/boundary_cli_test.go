@@ -103,12 +103,73 @@ func TestTwoOrganizationsAcrossTheBoundary(t *testing.T) {
 		}
 		return out
 	}
+	// Opacity is checked at EVERY state, not only at the end: a claim
+	// holder rides the view only while the claim stands, so a sweep
+	// taken after settlement alone would miss it (a mutation that
+	// appended the claimant to the artifacts survived exactly that).
+	// The taboo list is recomputed from the chain as it grows.
+	get := func(path string) ([]byte, int) {
+		t.Helper()
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var buf strings.Builder
+		b := make([]byte, 1<<16)
+		for {
+			n, err := resp.Body.Read(b)
+			buf.Write(b[:n])
+			if err != nil {
+				break
+			}
+		}
+		return []byte(buf.String()), resp.StatusCode
+	}
+	opaque := func() {
+		t.Helper()
+		st, env := loadVerdictState(ldA)
+		if env != nil {
+			t.Fatal(env)
+		}
+		taboo := []string{ldA}
+		for _, r := range st.records {
+			taboo = append(taboo, r.Event.Actor)
+			if len(r.Event.Payload) > 4 {
+				taboo = append(taboo, string(r.Event.Payload))
+			}
+		}
+		for _, path := range []string{"/tasks", "/tasks/" + reqPos} {
+			body, status := get(path)
+			if status != 200 {
+				t.Fatalf("%s: %d %s", path, status, body)
+			}
+			var objects []json.RawMessage
+			if path == "/tasks" {
+				if err := json.Unmarshal(body, &objects); err != nil {
+					t.Fatalf("%s is a list: %v", path, err)
+				}
+			} else {
+				objects = []json.RawMessage{body}
+			}
+			for _, o := range objects {
+				fields, err := boundary.FieldsOf(o)
+				if err != nil || strings.Join(fields, ",") != strings.Join(boundary.TaskFields, ",") {
+					t.Fatalf("%s carries the pinned fields only: %v %v", path, fields, err)
+				}
+			}
+			if err := boundary.Sweep(body, taboo); err != nil {
+				t.Fatalf("%s: %v", path, err)
+			}
+		}
+	}
 	state := func(want string) {
 		t.Helper()
 		rows := tasks()
 		if len(rows) != 1 || rows[0]["state"] != want {
 			t.Fatalf("the task is %s: %+v", want, rows)
 		}
+		opaque()
 	}
 	state("requested")
 	// acme's lanes drive the contract; beta watches the state alone.
@@ -162,8 +223,9 @@ func TestTwoOrganizationsAcrossTheBoundary(t *testing.T) {
 	if e, code := runEnv(t, "request", "file", "--ledger", ldB, "--key", ingressA, "--subject", "system", "--origin", "acme", "--kind", "cross-repo", "--reference", digest, "--summary", "acme's receipt for the shared work"); code != 0 || !e.OK {
 		t.Fatalf("beta cites the receipt by digest in its own chain: %d %+v", code, e)
 	}
-	// Opacity, route by route: the pinned fields and nothing from the
-	// ledger — no fingerprint, no payload, no packet, no path.
+	// The card and the rest of the surface, route by route: the pinned
+	// fields and nothing from the ledger — no fingerprint, no payload,
+	// no packet, no path.
 	st, env := loadVerdictState(ldA)
 	if env != nil {
 		t.Fatal(env)
@@ -174,24 +236,6 @@ func TestTwoOrganizationsAcrossTheBoundary(t *testing.T) {
 		if len(r.Event.Payload) > 4 {
 			taboo = append(taboo, string(r.Event.Payload))
 		}
-	}
-	get := func(path string) ([]byte, int) {
-		t.Helper()
-		resp, err := http.Get(srv.URL + path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer resp.Body.Close()
-		var buf strings.Builder
-		b := make([]byte, 1<<16)
-		for {
-			n, err := resp.Body.Read(b)
-			buf.Write(b[:n])
-			if err != nil {
-				break
-			}
-		}
-		return []byte(buf.String()), resp.StatusCode
 	}
 	for _, route := range []struct {
 		path   string
