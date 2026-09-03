@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-b55e5647",
-  "merge_base": "35f444ef3eb8c363825fb15241000ee2d857b507",
-  "head": "0e2f8c56589f9de30852550304f0cf0cf612b274",
+  "merge_base": "d6c6133753b29060a9cc5580a5b6b32bd8c3d3a8",
+  "head": "d777bbc3a2597bdb9630f40b7c5f3bea8ddd188f",
   "plan_path": "plans/os-b55e5647.md",
   "plan_sha256": "b9b434fdaa46e0c8bae3a17807a816ccfef527b1c33281714975c12b2ad9dc83",
   "diff_files": [
@@ -57,6 +57,7 @@
     "next/internal/project/start.go",
     "next/internal/redteam/fixture_test.go",
     "next/internal/redteam/redteam_test.go",
+    "next/internal/simulate/gate_test.go",
     "next/internal/verdict/verdict_test.go",
     "next/internal/verdict/workspace.go",
     "next/internal/verdict/workspace_unix.go",
@@ -65,7 +66,7 @@
     "next/spec/platform.md",
     "next/spec/protocol.md"
   ],
-  "diff_sha256": "0a3e3c4d06d7408a945c88de9f20b9d33331adf98452a090f7896f86d51cec4a",
+  "diff_sha256": "02fb183d370ab2f36c950d846f5c62bf08602b3f6cdc3ffe8436b95ba7dfa4fb",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ ./internal/platform/ -count=1",
