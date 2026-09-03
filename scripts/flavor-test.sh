@@ -226,7 +226,11 @@ integration_tests() {
   rm -rf "$b/flavors" "$b/scripts/seed-flavor"
   # The two gates run concurrently. Each is a full `make check` and they
   # share nothing but Go's build cache, which is safe under concurrent use;
-  # run back to back they were most of this script's wall clock.
+  # run back to back they were most of this script's wall clock. Either
+  # gate may fail: a bare `wait` exits 0 whatever the children returned
+  # (POSIX: with no operands it reports nothing about them), so `set -e`
+  # cannot fire here, and the two outputs are compared below exactly as
+  # the sequential `|| true` form compared them.
   (cd "$a" && make check >"$work/out-a" 2>&1) &
   (cd "$b" && make check >"$work/out-b" 2>&1) &
   wait

@@ -85,6 +85,10 @@ fi
 # script's wall clock. Each suite's output is captured and reported in the
 # fixed order below, so `check` output stays byte-stable run to run.
 if command -v jq >/dev/null 2>&1; then
+  # A bare `wait` exits 0 whatever the children returned (POSIX: with no
+  # operands it reports nothing about them), so `set -e` cannot fire here
+  # and every suite's verdict reaches the loop below through its .ok
+  # marker; the exit status of a failing suite is never what is checked.
   bt=$(mktemp -d)
   for b in beads paperclip linear jira; do
     ( sh "$root/.seed/backends/$b/test.sh" > "$bt/$b.out" 2>&1 && : > "$bt/$b.ok" ) &
