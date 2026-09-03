@@ -67,8 +67,13 @@ const (
 	// keep chain_invalid, because a caller that retried with a smaller
 	// amount against a malformed payload would retry forever.
 	ExitBudgetExhausted = 27
-	ExitUsage           = 64
-	ExitUnreadable      = 66
+	// ExitDrift: a declared desired state and an observed state differ
+	// (plans/os-5c8a312c.md D6): the forge's protections against the
+	// declaration first, and every later declared-versus-observed
+	// comparison as a refinement, the message naming each difference.
+	ExitDrift      = 28
+	ExitUsage      = 64
+	ExitUnreadable = 66
 )
 
 // Error is the machine-branchable half of a refusal: a stable code to

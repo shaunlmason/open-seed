@@ -14,14 +14,19 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
+	"github.com/shaunlmason/open-seed/next/internal/propose"
+	"github.com/shaunlmason/open-seed/next/internal/protections"
 )
 
 func runDoctor(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	config := fs.String("config", "seed.json", "deployment declaration file")
+	config := fs.String("config", posture.DeclarationPath, "deployment declaration file")
+	probe := fs.Bool("probe", false, "probe the admission service's health (forge-hosted)")
+	current := fs.String("current", "", "the forge's state as a snapshot file: report protections drift (forge-hosted)")
+	repo := fs.String("repo", "", "working tree for the CODEOWNERS and workflow checks beside --current")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes only --config <path>"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "doctor takes --config <path> [--probe] [--current <snapshot> [--repo <dir>]]"), stdout, stderr)
 	}
 	cfg, err := posture.Load(*config)
 	if err != nil {
@@ -61,6 +66,31 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 			"owners":     append([]string{}, a.Owners...),
 		}
 		fmt.Fprintf(stderr, "enforced-forge-hosted: proposals go to %s; the ledger rides %s, written by %s alone\n", a.Endpoint, cfg.LedgerRef(), a.Identity)
+		if *probe {
+			h, err := propose.New(a.Endpoint).Probe()
+			if err != nil {
+				return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the admission service at %s did not answer the probe: %v", a.Endpoint, err)), stdout, stderr)
+			}
+			service := map[string]any{"remote": h.Remote, "ref": h.Ref, "tip": h.Tip, "position": nil}
+			if h.Position != nil {
+				service["position"] = *h.Position
+			}
+			result["service"] = service
+			if h.Ref != cfg.LedgerRef() {
+				fmt.Fprintf(stderr, "warning: the service serves %s while the declaration names %s\n", h.Ref, cfg.LedgerRef())
+			}
+		}
+		if *current != "" {
+			rep, _, err := protections.Plan(cfg, protections.Snapshot{Path: *current}, *repo)
+			if err != nil {
+				return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+			}
+			result["protections"] = reportResult(rep)
+			if rep.DriftCount > 0 {
+				fmt.Fprintf(stderr, "protections: %d drift(s) against the declaration; run `seed protections plan` for each\n", rep.DriftCount)
+				return render(envelope.Fail(envelope.ExitDrift, "protections_drift", fmt.Sprintf("%d drift(s) against the declaration", rep.DriftCount)), stdout, stderr)
+			}
+		}
 	}
 	return render(envelope.OK(result), stdout, stderr)
 }

@@ -62,6 +62,7 @@ type loopFlags struct {
 	remote    *string
 	refName   *string
 	stateDir  *string
+	config    *string
 	keyPath   *string
 	subject   *string
 	supported *string
@@ -72,11 +73,12 @@ func bindLoopFlags(fs *flag.FlagSet) *loopFlags {
 	return &loopFlags{
 		dir:       fs.String("ledger", "", "ledger directory"),
 		remote:    fs.String("remote", "", "remote ledger repository: the posture a lane works in"),
-		refName:   fs.String("ref", "refs/seed/ledger", "remote ledger ref"),
+		refName:   fs.String("ref", DefaultRemoteRef, "remote ledger ref"),
 		stateDir:  fs.String("state", "", "client state dir for the persisted verified head (default: user cache)"),
 		keyPath:   fs.String("key", "", "OpenSSH ed25519 private key of the acting lane"),
 		subject:   fs.String("subject", "", "the contract acted on"),
 		supported: fs.String("supported", "", "comma-separated supported protocol versions (default: this build's)"),
+		config:    fs.String("config", "", "deployment declaration (default: $SEED_CONFIG, else ./seed.json when present)"),
 		// The identity the caller DECLARES it is acting as. Checked
 		// against the key at the signing site, so a key replaced after
 		// the caller last looked cannot sign in its place
@@ -115,7 +117,7 @@ type loopSession struct {
 
 func openLoopSession(f *loopFlags) (*loopSession, *envelope.Envelope) {
 	if *f.remote != "" {
-		rs, failEnv := openRemoteSession(*f.remote, *f.refName, *f.stateDir, *f.supported)
+		rs, failEnv := openRemoteSessionUnder(*f.remote, *f.refName, *f.stateDir, *f.supported, *f.config)
 		if failEnv != nil {
 			return nil, failEnv
 		}

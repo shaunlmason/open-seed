@@ -25,6 +25,8 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
+	"github.com/shaunlmason/open-seed/next/internal/propose"
 	"github.com/shaunlmason/open-seed/next/internal/refusal"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -53,6 +55,61 @@ type remoteSession struct {
 // from a stale local copy would be wrong under exactly the contention
 // that makes claiming online-only (plans/os-7e197768.md D3).
 func openRemoteSession(remote, refName, stateDir, supported string) (*remoteSession, *envelope.Envelope) {
+	return openRemoteSessionUnder(remote, refName, stateDir, supported, "")
+}
+
+// DefaultRemoteRef is the ledger ref a remote verb names when the
+// caller gives none; under the forge-hosted posture the declaration's
+// branch replaces it (posture.Config.LedgerRef), because forges protect
+// branches, not refs/seed/*.
+const DefaultRemoteRef = "refs/seed/ledger"
+
+// deploymentDeclaration reads the declaration the remote path acts
+// under (plans/os-5c8a312c.md D3): the --config path when given, else
+// $SEED_CONFIG, else ./seed.json when it exists, else no declaration —
+// which is exactly today's behavior, so a deployment that never wrote
+// one sees no change. A declaration that exists and does not parse is
+// a refusal, never a silent fallback to pushing.
+func deploymentDeclaration(path string) (*posture.Config, *envelope.Envelope) {
+	explicit := path != ""
+	if path == "" {
+		path = os.Getenv("SEED_CONFIG")
+	}
+	if path == "" {
+		path = "seed.json"
+	}
+	cfg, err := posture.Load(path)
+	if err != nil {
+		if errors.Is(err, posture.ErrUndeclared) && !explicit {
+			return nil, nil
+		}
+		if errors.Is(err, posture.ErrUndeclared) {
+			return nil, envelope.Fail(envelope.ExitNotFound, "posture_undeclared", err.Error())
+		}
+		if errors.Is(err, posture.ErrUnreadable) {
+			return nil, envelope.Fail(envelope.ExitUnreadable, "posture_unreadable", err.Error())
+		}
+		return nil, envelope.Fail(envelope.ExitPostureInvalid, "posture_invalid", err.Error())
+	}
+	return cfg, nil
+}
+
+// openRemoteSessionUnder is openRemoteSession under a declaration:
+// when it names the forge-hosted posture the session's last step
+// proposes to the admission service instead of pushing, and the ledger
+// ref is the declaration's branch unless the caller named another.
+func openRemoteSessionUnder(remote, refName, stateDir, supported, config string) (*remoteSession, *envelope.Envelope) {
+	cfg, failEnv := deploymentDeclaration(config)
+	if failEnv != nil {
+		return nil, failEnv
+	}
+	var proposer gitref.Proposer
+	if cfg != nil && cfg.Posture == posture.EnforcedForgeHosted {
+		if refName == DefaultRemoteRef {
+			refName = cfg.LedgerRef()
+		}
+		proposer = propose.New(cfg.Admission.Endpoint)
+	}
 	if stateDir == "" {
 		cache, err := os.UserCacheDir()
 		if err != nil {
@@ -74,6 +131,9 @@ func openRemoteSession(remote, refName, stateDir, supported string) (*remoteSess
 	client, err := gitref.NewClient(stateDir, remote, refName)
 	if err != nil {
 		return fail(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot prepare client state: %v", err)))
+	}
+	if proposer != nil {
+		client.WithProposer(proposer)
 	}
 	tip, err := client.Fetch()
 	if err != nil {
@@ -185,8 +245,8 @@ func (s *remoteSession) pushDraft(verb, subject, payload string, signer ed25519.
 	return lastRec, res, err
 }
 
-func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, supported string, signer ed25519.PrivateKey, stdout, stderr io.Writer) int {
-	session, failEnv := openRemoteSession(remote, refName, stateDir, supported)
+func runLedgerAppendRemote(remote, refName, stateDir, verb, subject, payload, supported, config string, signer ed25519.PrivateKey, stdout, stderr io.Writer) int {
+	session, failEnv := openRemoteSessionUnder(remote, refName, stateDir, supported, config)
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
@@ -286,15 +346,17 @@ type readPosture struct {
 	refName   *string
 	stateDir  *string
 	supported *string
+	config    *string
 }
 
 func bindReadPosture(fs *flag.FlagSet) *readPosture {
 	return &readPosture{
 		dir:       fs.String("ledger", "", "ledger directory"),
 		remote:    fs.String("remote", "", "remote ledger repository: the posture a lane works in"),
-		refName:   fs.String("ref", "refs/seed/ledger", "remote ledger ref"),
+		refName:   fs.String("ref", DefaultRemoteRef, "remote ledger ref"),
 		stateDir:  fs.String("state", "", "client state dir for the persisted verified head (default: user cache)"),
 		supported: fs.String("supported", "", "comma-separated supported protocol versions (default: this build's)"),
+		config:    fs.String("config", "", "deployment declaration (default: $SEED_CONFIG, else ./seed.json when present)"),
 	}
 }
 
@@ -344,7 +406,7 @@ func (r *readPosture) open() (*verdictState, *admit.Context, func(), *envelope.E
 		}
 		return st, ctx, noop, nil
 	}
-	rs, failEnv := openRemoteSession(*r.remote, *r.refName, *r.stateDir, *r.supported)
+	rs, failEnv := openRemoteSessionUnder(*r.remote, *r.refName, *r.stateDir, *r.supported, *r.config)
 	if failEnv != nil {
 		return nil, nil, noop, failEnv
 	}

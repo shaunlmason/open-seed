@@ -130,8 +130,9 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 	payload := fs.String("payload", "", "event payload (JSON object)")
 	supported := fs.String("supported", "", "comma-separated supported protocol versions (default: this build's)")
 	remote := fs.String("remote", "", "remote ledger repository (cooperative posture: validate locally, then push)")
-	refName := fs.String("ref", "refs/seed/ledger", "remote ledger ref")
+	refName := fs.String("ref", DefaultRemoteRef, "remote ledger ref")
 	stateDir := fs.String("state", "", "client state dir for the persisted verified head (default: user cache)")
+	config := fs.String("config", "", "deployment declaration (default: $SEED_CONFIG, else ./seed.json when present)")
 	if err := fs.Parse(args); err != nil || (*dir == "") == (*remote == "") || *keyPath == "" || *verb == "" || *subject == "" || *payload == "" || fs.NArg() != 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
 			"ledger append (dev tool) requires --ledger or --remote (not both), --key, --verb, --subject, --payload"), stdout, stderr)
@@ -153,7 +154,7 @@ func runLedgerAppend(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--key: %v", err)), stdout, stderr)
 	}
 	if *remote != "" {
-		return runLedgerAppendRemote(*remote, *refName, *stateDir, *verb, *subject, *payload, *supported, signer, stdout, stderr)
+		return runLedgerAppendRemote(*remote, *refName, *stateDir, *verb, *subject, *payload, *supported, *config, signer, stdout, stderr)
 	}
 	// Claiming is online-only (plans/os-5dc16a7c.md): exclusivity is a
 	// property granted at admission, and only the push round-trip can

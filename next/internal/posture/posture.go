@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
+	"sort"
 	"strings"
 )
 
@@ -37,6 +39,12 @@ const (
 // charter's own words. One copy: the doctor and any future README
 // generator quote it, never re-derive it.
 const Consequence = "cooperative posture: no server-side enforcement — every writer self-validates; the security invariant (SEED-NEXT.md §I.2) does not hold, and protocol rules are advisory against a hostile credential"
+
+// DeclarationPath is where the declaration lives: the repository
+// root, read by the doctor and the remote verbs from the working tree
+// and by the hook from the default branch's tip. It is on the
+// protected surface by construction.
+const DeclarationPath = "seed.json"
 
 // DefaultLedgerRef is the ledger ref a forge-hosted deployment rides
 // when its declaration names none: a branch, because forges protect
@@ -87,10 +95,14 @@ type Admission struct {
 	Owners    []string `json:"owners"`
 }
 
-// Config is the deployment declaration.
+// Config is the deployment declaration. Protected is the protected
+// surface as path prefixes (charter §II.14): what only the governance
+// root may change, which the hook's code-ref half refuses for every
+// other key and the reconciler renders into CODEOWNERS.
 type Config struct {
 	Posture   Posture    `json:"posture"`
 	Admission *Admission `json:"admission,omitempty"`
+	Protected []string   `json:"protected,omitempty"`
 }
 
 // LedgerRef is the ref the ledger rides under this declaration: the
@@ -137,7 +149,56 @@ func Parse(b []byte) (*Config, error) {
 	if err := c.validateAdmission(); err != nil {
 		return nil, err
 	}
+	for _, p := range c.Protected {
+		if !validProtectedEntry(p) {
+			return nil, fmt.Errorf("protected entries are clean repository-relative path prefixes, got %q", p)
+		}
+	}
 	return &c, nil
+}
+
+// validProtectedEntry admits a clean, relative, forward-slash path: no
+// empty or whitespace entry, no leading slash, no backslash, and
+// nothing path.Clean would rewrite (".", "..", "../x", doubled
+// separators), so the surface is compared by string with no surprises.
+func validProtectedEntry(p string) bool {
+	if strings.TrimSpace(p) == "" || strings.HasPrefix(p, "/") || strings.Contains(p, "\\") {
+		return false
+	}
+	trimmed := strings.TrimSuffix(p, "/")
+	if trimmed == "" || trimmed == "." || trimmed == ".." || strings.HasPrefix(trimmed, "../") {
+		return false
+	}
+	return path.Clean(trimmed) == trimmed
+}
+
+// ProtectedSurface is the declared entries plus the declaration itself,
+// deduplicated and sorted: the surface the hook refuses for every key
+// without root standing and the reconciler renders into CODEOWNERS.
+func (c *Config) ProtectedSurface() []string {
+	seen := map[string]bool{DeclarationPath: true}
+	out := []string{DeclarationPath}
+	for _, p := range c.Protected {
+		p = strings.TrimSuffix(p, "/")
+		if p != "" && !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// Protects reports whether p is on the protected surface: exactly an
+// entry, or under one as a directory.
+func (c *Config) Protects(p string) bool {
+	p = strings.TrimSuffix(p, "/")
+	for _, entry := range c.ProtectedSurface() {
+		if p == entry || strings.HasPrefix(p, entry+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // validateAdmission holds the block to its posture: required under

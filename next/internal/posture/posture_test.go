@@ -107,6 +107,10 @@ func TestAdmissionBlockIsPostureGated(t *testing.T) {
 		"empty check":       `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": "bot", "checks": [""]}}`,
 		"empty owner":       `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": "bot", "owners": [" "]}}`,
 		"unknown sub-field": `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": "bot", "token": "secret"}}`,
+		"protected slash":   `{"posture": "cooperative", "protected": ["/Makefile"]}`,
+		"protected dotdot":  `{"posture": "cooperative", "protected": ["../x"]}`,
+		"protected unclean": `{"posture": "cooperative", "protected": ["next//spec"]}`,
+		"protected empty":   `{"posture": "cooperative", "protected": [" "]}`,
 	} {
 		_, err := Load(write(t, content))
 		if err == nil || errors.Is(err, ErrUndeclared) || errors.Is(err, ErrUnreadable) {
