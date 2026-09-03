@@ -15,6 +15,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -102,17 +103,19 @@ func lintPreseed(cfg *posture.Config, lanesDir string) error {
 				return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.paths %s names tier %q, not in the vocabulary", f.Prefix, f.Min)}
 			}
 		}
-		if cfg.Teams != nil {
-			for name := range cfg.Guardrails.Squads {
-				found := false
+		// A guardrail squad is a declared team, and an absent teams
+		// block declares none.
+		for name := range cfg.Guardrails.Squads {
+			found := false
+			if cfg.Teams != nil {
 				for _, s := range cfg.Teams.Squads {
 					if s.Name == name {
 						found = true
 					}
 				}
-				if !found {
-					return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.squads.%s is not a declared team", name)}
-				}
+			}
+			if !found {
+				return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.squads.%s is not a declared team", name)}
 			}
 		}
 	}
@@ -133,7 +136,9 @@ func lintPreseed(cfg *posture.Config, lanesDir string) error {
 			}
 		}
 	}
-	if cfg.Governance != nil || len(cfg.Protected) > 0 {
+	// A declared surface, empty included, is held to the required
+	// members; only an absent block is undeclared.
+	if cfg.Governance != nil || cfg.Protected != nil {
 		for _, req := range RequiredProtected {
 			if !cfg.Protects(req) {
 				return &preseedIncomplete{Detail: fmt.Sprintf("protected omits %s, a member the charter requires on the surface (next/spec/postures.md)", req)}
@@ -148,7 +153,10 @@ func lintPreseed(cfg *posture.Config, lanesDir string) error {
 // when the chain is at or past the declared protocol), or drift.
 func comparePreseed(cfg *posture.Config, records []*event.Record) ([]string, error) {
 	if len(records) == 0 {
-		return nil, nil
+		// The no-write comparison of an empty chain: nothing the
+		// declaration names has been written, which is drift, not a
+		// match; `seed init --preseed` is what writes it.
+		return nil, &preseedDrift{Field: "genesis", Declared: "a chain at " + cfg.Protocol + " under " + describeRoot(cfg), Observed: "an empty chain"}
 	}
 	payload, err := genesis.Parse(records[0])
 	if err != nil {
@@ -170,9 +178,21 @@ func comparePreseed(cfg *posture.Config, records []*event.Record) ([]string, err
 			return nil, &preseedDrift{Field: "governance.root", Declared: cfg.Governance.Root, Observed: strings.Join(roots, ",")}
 		}
 	}
-	_, active, err := keyring.StateAt(records)
+	ring, active, err := keyring.StateAt(records)
 	if err != nil {
 		return nil, err
+	}
+	// The posture the chain's history contradicts (D2): under the
+	// forge-hosted posture the declared admission identity is the
+	// ledger ref's sole writer, and a chain that has suspended or
+	// revoked that key cannot hold the posture. A key the chain has
+	// not enrolled yet is not a contradiction: enrollment follows the
+	// preseed init that writes genesis.
+	if cfg.Posture == posture.EnforcedForgeHosted && cfg.Admission != nil && cfg.Admission.Identity != "" {
+		if entry, ok := ring.Get(cfg.Admission.Identity); ok && entry.Standing != keyring.StandingActive {
+			return nil, &preseedDrift{Field: "posture", Declared: string(cfg.Posture) + " with admission identity " + cfg.Admission.Identity + " active",
+				Observed: "the chain holds that identity " + string(entry.Standing)}
+		}
 	}
 	if cfg.Protocol == "" {
 		return nil, nil
@@ -206,9 +226,9 @@ func comparePreseed(cfg *posture.Config, records []*event.Record) ([]string, err
 // is written.
 func applyPreseed(store *ledger.Store, cfg *posture.Config, signer ed25519.PrivateKey, extras []ed25519.PublicKey, now time.Time) ([]string, error) {
 	var appended []string
-	var records []*event.Record
-	if err := store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil }); err != nil {
-		return nil, err
+	records, err := verifiedRecords(store)
+	if err != nil {
+		return nil, &preseedChain{Err: err}
 	}
 	fp, err := event.Fingerprint(signer.Public().(ed25519.PublicKey))
 	if err != nil {
@@ -274,7 +294,44 @@ func applyPreseed(store *ledger.Store, cfg *posture.Config, signer ed25519.Priva
 	return appended, nil
 }
 
+// verifiedRecords is the chain verified from genesis, not merely
+// parsed: a declaration is compared against, and extended over, a
+// chain whose signatures, links and versions hold, or the comparison
+// would bless a tampered chain and init would extend it. An empty
+// store is an empty chain.
+func verifiedRecords(store *ledger.Store) ([]*event.Record, error) {
+	if _, count, err := store.Tip(); err != nil {
+		return nil, err
+	} else if count == 0 {
+		return nil, nil
+	}
+	resolve, _, err := genesis.Bootstrap(store)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := store.VerifyFromGenesis(resolve); err != nil {
+		return nil, err
+	}
+	var records []*event.Record
+	if err := store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil }); err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+// preseedChain is a chain that does not verify from genesis, met by
+// init --preseed: chain trouble, never drift.
+type preseedChain struct{ Err error }
+
+func (e *preseedChain) Error() string {
+	return "the chain does not verify from genesis: " + e.Err.Error()
+}
+
 func preseedFailEnvelope(err error) *envelope.Envelope {
+	var chain *preseedChain
+	if errors.As(err, &chain) {
+		return envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
+	}
 	var drift *preseedDrift
 	if errors.As(err, &drift) {
 		return envelope.Fail(envelope.ExitDrift, "preseed_drift", err.Error())
@@ -320,13 +377,20 @@ func runPreseed(args []string, stdout, stderr io.Writer) int {
 		result["ledger"] = nil
 		return render(envelope.OK(result), stdout, stderr)
 	}
-	store, failEnv := openStoreReadOnly(*dir)
-	if failEnv != nil {
-		return render(failEnv, stdout, stderr)
-	}
 	var records []*event.Record
-	if err := store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil }); err != nil {
-		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+	var err error
+	if entries, derr := os.ReadDir(*dir); derr == nil && len(entries) == 0 {
+		// A directory with nothing in it is an empty chain, compared
+		// as one rather than refused as unopenable.
+		records = nil
+	} else {
+		store, failEnv := openStoreReadOnly(*dir)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
+		}
+		if records, err = verifiedRecords(store); err != nil {
+			return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		}
 	}
 	todo, err := comparePreseed(cfg, records)
 	if err != nil {
@@ -339,4 +403,11 @@ func runPreseed(args []string, stdout, stderr io.Writer) int {
 		return render(stampTip(env, len(records)), stdout, stderr)
 	}
 	return render(stampTip(envelope.OK(result), len(records)), stdout, stderr)
+}
+
+func describeRoot(cfg *posture.Config) string {
+	if cfg.Governance != nil && cfg.Governance.Root != "" {
+		return cfg.Governance.Root
+	}
+	return "an undeclared root"
 }

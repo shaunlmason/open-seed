@@ -113,16 +113,12 @@ func admitOptions(config string, extra ...admit.Option) ([]admit.Option, *envelo
 }
 
 // declaredAdmitOptions is admitOptions for verbs with no --config of
-// their own: the declaration by its defaults, and none when none
-// exists or it does not parse — a read surface reports what it can,
-// and the verbs that must refuse an invalid declaration are the ones
-// that take --config.
-func declaredAdmitOptions() []admit.Option {
-	opts, failEnv := admitOptions("")
-	if failEnv != nil {
-		return nil
-	}
-	return opts
+// their own: the declaration by its defaults (`$SEED_CONFIG`, then
+// `./seed.json`), none when none exists, and the failure envelope when
+// one exists and does not parse — the strict lookup the declaration
+// documents, so no verb continues past a malformed seed.json.
+func declaredAdmitOptions() ([]admit.Option, *envelope.Envelope) {
+	return admitOptions("")
 }
 
 // openRemoteSessionUnder is openRemoteSession under a declaration:

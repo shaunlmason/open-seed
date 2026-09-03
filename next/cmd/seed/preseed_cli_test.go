@@ -8,6 +8,7 @@ package main
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -179,4 +180,116 @@ func TestDoctorReportsThePreseedBlocks(t *testing.T) {
 	}
 	var probe map[string]any
 	_ = json.Unmarshal([]byte(`{}`), &probe)
+}
+
+// conformance: plans/os-0d4f2af3.md D2 and AC2, the review findings on
+// the task PR — the no-write comparison reports an empty chain as
+// drift; an explicitly empty protected surface is held to the required
+// members; a guardrail squad with no teams block is undeclared; a
+// forge-hosted declaration whose admission identity the chain has
+// suspended is the posture the chain contradicts; and the comparison
+// reads a chain verified from genesis, never a merely parsed one.
+func TestPreseedCheckHoldsTheChainAndTheFile(t *testing.T) {
+	_, priv, _ := writeKeys(t)
+	fp := signerFingerprint(t, priv)
+	cfg := preseedFile(t, fp, "seed/4", "")
+	empty := filepath.Join(t.TempDir(), "ledger")
+	if err := os.MkdirAll(empty, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if e, code := runEnv(t, "preseed", "check", "--config", cfg, "--ledger", empty, "--lanes", "../../lanes"); code != 28 || e.Error == nil || e.Error.Code != "preseed_drift" || !strings.Contains(e.Error.Message, "empty") {
+		t.Fatalf("an empty chain is drift, not a match: %d %+v", code, e)
+	}
+	for name, body := range map[string]string{
+		"an explicitly empty surface":     `{"posture": "cooperative", "governance": {"root": "` + fp + `", "owners": ["@root"], "change_process": "pr+owner-review"}, "protected": []}`,
+		"a guardrail squad with no teams": `{"posture": "cooperative", "guardrails": {"squads": {"core": {"default": "standard", "max_agent": "standard"}}}}`,
+	} {
+		e, code := runEnv(t, "preseed", "check", "--config", writeDeclaration(t, body), "--lanes", "../../lanes")
+		if code != 13 || e.Error == nil || e.Error.Code != "preseed_incomplete" {
+			t.Fatalf("%s refuses preseed_incomplete: %d %+v", name, code, e)
+		}
+	}
+	// The contradicted posture: a chain that suspended the declared
+	// admission identity.
+	ledgerDir := filepath.Join(t.TempDir(), "ledger")
+	if e, code := runEnv(t, "init", "--ledger", ledgerDir, "--key", priv, "--preseed", cfg, "--lanes", "../../lanes"); code != 0 {
+		t.Fatalf("init: %d %+v", code, e)
+	}
+	_, servicePub, serviceFP := writeWorkerKey(t, 41)
+	for _, step := range [][3]string{
+		{"actor.enrolled", serviceFP, fmt.Sprintf(`{"key": %q, "kind": "service", "name": "admission"}`, servicePub)},
+		{"actor.suspended", serviceFP, `{"reason": "rotated"}`},
+	} {
+		if e, code := runEnv(t, "ledger", "append", "--ledger", ledgerDir, "--key", priv, "--verb", step[0], "--subject", step[1], "--payload", step[2]); code != 0 {
+			t.Fatalf("%s: %d %+v", step[0], code, e)
+		}
+	}
+	forge := writeDeclaration(t, `{"posture": "enforced-forge-hosted", "protocol": "seed/4", "admission": {"endpoint": "http://127.0.0.1:1", "identity": "`+serviceFP+`"}}`)
+	e, code := runEnv(t, "preseed", "check", "--config", forge, "--ledger", ledgerDir, "--lanes", "../../lanes")
+	if code != 28 || e.Error == nil || e.Error.Code != "preseed_drift" || !strings.Contains(e.Error.Message, "posture") || !strings.Contains(e.Error.Message, "suspended") {
+		t.Fatalf("a suspended admission identity contradicts the forge-hosted posture: %d %+v", code, e)
+	}
+	// A tampered chain is chain trouble before any comparison.
+	segments, err := filepath.Glob(filepath.Join(ledgerDir, "segments", "*.jsonl"))
+	if err != nil || len(segments) == 0 {
+		t.Fatal("no segment")
+	}
+	b, err := os.ReadFile(segments[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(segments[0], []byte(strings.Replace(string(b), `"rotated"`, `"rotatex"`, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if e, code := runEnv(t, "preseed", "check", "--config", cfg, "--ledger", ledgerDir, "--lanes", "../../lanes"); code != 8 || e.Error == nil || e.Error.Code != "chain_invalid" {
+		t.Fatalf("a chain that does not verify is chain_invalid, never compared: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "init", "--ledger", ledgerDir, "--key", priv, "--preseed", cfg, "--lanes", "../../lanes"); code != 8 || e.Error == nil || e.Error.Code != "chain_invalid" {
+		t.Fatalf("init --preseed never extends a chain that does not verify: %d %+v", code, e)
+	}
+}
+
+// conformance: plans/os-0d4f2af3.md D3, the review findings — the
+// floor reads a tier in the vocabulary (an unknown or absent tier
+// would rank above every floor), scope tokens compare in canonical
+// form, and a token that is not repository-relative fails closed.
+func TestPlanLintTierAndScopeAreHeldToTheFloors(t *testing.T) {
+	_, priv, _ := writeKeys(t)
+	fp := signerFingerprint(t, priv)
+	cfg := preseedFile(t, fp, "seed/4", "")
+	plan := func(scope string) string {
+		p := filepath.Join(t.TempDir(), "plan.md")
+		body := "# plan\n\n## Boundary set\n\n- `TestX` (new, shown working)\n\n## Retention set\n\n- `TestY` (existing, shown unharmed)\n\n## Validation Commands\n\n- Boundary: `go test ./...`\n- Retention: `go test ./...`\n\n## Expected diff shape\n\n- one file\n\n## File Scope\n\n- " + scope + "\n"
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	if e, code := runEnv(t, "plan", "lint", plan("`next/internal/admit/admit.go`"), "--config", cfg); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("--config without --tier is usage, not a bypass: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "plan", "lint", plan("`next/internal/admit/admit.go`"), "--config", cfg, "--tier", "anything"); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("an unknown tier is usage, not a bypass: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "plan", "lint", plan("`./next/internal/admit/admit.go`"), "--config", cfg, "--tier", "standard"); code != 18 || e.Error == nil || e.Error.Code != "under_tiered" {
+		t.Fatalf("a ./-prefixed token is the same path and stays floored: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "plan", "lint", plan("`../elsewhere/admit.go`"), "--config", cfg, "--tier", "critical"); code != 18 || e.Error == nil || e.Error.Code != "under_tiered" || !strings.Contains(e.Error.Message, "not a repository-relative path") {
+		t.Fatalf("a parent token fails closed: %d %+v", code, e)
+	}
+}
+
+// conformance: the review finding on the task PR — a verb with no
+// --config of its own still refuses a malformed default declaration
+// rather than continuing without one.
+func TestMalformedDefaultDeclarationRefusesEveryVerb(t *testing.T) {
+	_, priv, _ := writeKeys(t)
+	ledgerDir := filepath.Join(t.TempDir(), "ledger")
+	if e, code := runEnv(t, "init", "--ledger", ledgerDir, "--key", priv); code != 0 {
+		t.Fatalf("init: %d %+v", code, e)
+	}
+	t.Setenv("SEED_CONFIG", writeDeclaration(t, `{"posture": "anarchy"}`))
+	if e, code := runEnv(t, "offer", "publish", "--ledger", ledgerDir, "--key", priv, "--subject", "c-1", "--expires", "2027-01-01T00:00:00Z"); code != 13 || e.Error == nil || e.Error.Code != "posture_invalid" {
+		t.Fatalf("offer publish honors the strict lookup: %d %+v", code, e)
+	}
 }

@@ -87,7 +87,11 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	if failEnv != nil {
 		return render(failEnv, stdout, stderr)
 	}
-	ctx, err := admit.ContextAt(store, declaredAdmitOptions()...)
+	opts, failEnv := declaredAdmitOptions()
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	ctx, err := admit.ContextAt(store, opts...)
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}

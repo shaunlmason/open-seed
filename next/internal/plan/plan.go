@@ -9,6 +9,7 @@ package plan
 
 import (
 	"fmt"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -302,7 +303,15 @@ func Scope(doc []byte) []string {
 			tok = strings.TrimSuffix(strings.TrimSpace(tok), "/**")
 			tok = strings.TrimSuffix(tok, "/*")
 			tok = strings.TrimSuffix(tok, "/")
-			if tok == "" || strings.ContainsAny(tok, " \t") || seen[tok] {
+			if tok == "" || strings.ContainsAny(tok, " \t") {
+				continue
+			}
+			// Canonical form, so `./next/x` and `next/x` are one token
+			// and a floor's prefix compares against what the path is;
+			// a parent or absolute token stays visible for the floor
+			// check to refuse.
+			tok = path.Clean(tok)
+			if tok == "." || seen[tok] {
 				continue
 			}
 			seen[tok] = true

@@ -1,8 +1,9 @@
 // Package perfgate budgets and tracks the ledger's performance
 // (SEED-NEXT.md III.A row 12, III.C row 4; plans/os-7508ab9e.md D6):
-// admission latency, replay time, projection rebuild time and a
-// contention storm, each measured against a representative generated
-// history and held to a ceiling from a checked-in budget file. A miss
+// admission latency, replay time, projection rebuild time, and a
+// contention storm's wall time and its attempts ratio — five metrics,
+// each measured against a representative generated history and held
+// to a ceiling from a checked-in budget file. A miss
 // is re-measured cold once before it fails, the coverage gate's rule
 // for the same reason: one noisy reading must not fail a healthy tree,
 // and a real regression fails twice.

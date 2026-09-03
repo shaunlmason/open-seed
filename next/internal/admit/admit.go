@@ -538,9 +538,15 @@ func Default() []Rule {
 // reading the roster's kind, refused at admission as policy.
 type CeilingError struct {
 	Actor, Kind, Squad, Tier, Ceiling string
+	// Unknown marks a ceiling outside the tier vocabulary: the claim
+	// fails closed until the declaration is fixed.
+	Unknown bool
 }
 
 func (e *CeilingError) Error() string {
+	if e.Unknown {
+		return fmt.Sprintf("claim on a %s contract refused: the %s squad's agent ceiling %q is not a tier in the vocabulary (%s), so agent claims fail closed until seed.json is fixed (seed preseed check)", e.Tier, e.Squad, e.Ceiling, strings.Join(transition.TierOrder(), ", "))
+	}
 	return fmt.Sprintf("claim on a %s contract refused: %s is enrolled as %s and the %s squad's agent ceiling is %s (a human key is not ceilinged; seed.json guardrails)", e.Tier, e.Actor, e.Kind, e.Squad, e.Ceiling)
 }
 
@@ -577,6 +583,12 @@ func policyRules() []Rule {
 			ceiling, declared := c.Declaration.AgentCeiling(s.Routing)
 			if !declared {
 				return nil
+			}
+			if _, ok := transition.Tier(ceiling); !ok {
+				// A ceiling outside the vocabulary ranks above every
+				// tier, which would let every agent claim pass on a
+				// typo; the rule fails closed instead.
+				return &CeilingError{Actor: rec.Event.Actor, Kind: entry.Kind, Squad: s.Routing, Tier: s.Tier, Ceiling: ceiling, Unknown: true}
 			}
 			if transition.TierAbove(s.Tier, ceiling) {
 				return &CeilingError{Actor: rec.Event.Actor, Kind: entry.Kind, Squad: s.Routing, Tier: s.Tier, Ceiling: ceiling}

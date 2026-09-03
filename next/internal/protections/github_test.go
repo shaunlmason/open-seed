@@ -157,8 +157,7 @@ func TestGitHubAdapterReconciles(t *testing.T) {
 	if _, err := NewGitHub(srv.URL, "o", "r", "").Read(); err == nil || !strings.Contains(err.Error(), "401") {
 		t.Fatalf("no token, no read: %v", err)
 	}
-	bad, _ := toGitHub(Ruleset{Name: "x", Target: "branch", Bypass: []string{"alice"}})
-	if _, err := toGitHub(Ruleset{Name: "x", Target: "branch", Bypass: []string{"alice"}}); err == nil || !strings.Contains(err.Error(), "app:<id>") {
+	if bad, err := toGitHub(Ruleset{Name: "x", Target: "branch", Bypass: []string{"alice"}}); err == nil || !strings.Contains(err.Error(), "app:<id>") {
 		t.Fatalf("a login is not an actor form the API takes, got %v %+v", err, bad)
 	}
 }

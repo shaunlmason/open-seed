@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "task": "os-465e356e",
+  "merge_base": "0a9debe6481c9a29e1dfbd8d1495079430b8c254",
+  "head": "fe4351807847330a832f352b51ff526c9941ae35",
+  "plan_path": "plans/os-465e356e.md",
+  "plan_sha256": "1322406d677cd5739cb3d35a5d41363cc9a1a53939bc903f31d17ba5fa5dd824",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed-admit/coderef.go",
+    "next/cmd/seed-admit/coderef_test.go",
+    "next/cmd/seed-admit/main.go",
+    "next/cmd/seed-admit/main_test.go",
+    "next/cmd/seed-admit/mutation_test.go",
+    "next/cmd/seed/doctor.go",
+    "next/docs/decisions.md",
+    "next/internal/posture/posture.go",
+    "next/internal/posture/posture_test.go",
+    "next/internal/redteam/adversary_test.go",
+    "next/internal/redteam/ceiling.go",
+    "next/internal/redteam/ceiling_unit_test.go",
+    "next/internal/redteam/corpus_test.go",
+    "next/internal/redteam/fixture_test.go",
+    "next/internal/redteam/redteam_test.go",
+    "next/internal/redteam/testdata/ceiling.json",
+    "next/internal/redteam/testdata/residuals.json",
+    "next/spec/admission.md",
+    "next/spec/lanes.md",
+    "next/spec/redteam.md"
+  ],
+  "diff_sha256": "75dee6cd858964d74c6b5e683a1abf33a7e524472ebbae75435f003f07664624",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/redteam/ ./cmd/seed-admit/ ./internal/posture/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"sort"
 	"strconv"
 	"time"
 
@@ -503,6 +504,7 @@ func lanesByKind(records []*event.Record, fold *transition.Fold) map[string]*Rep
 	active := ""
 	specifiedBy := map[string]string{}
 	respecCounted := map[string]bool{}
+	approvedBy := map[string]string{}
 	for i, rec := range records {
 		if active == "" {
 			active = rec.Event.V
@@ -535,18 +537,11 @@ func lanesByKind(records []*event.Record, fold *transition.Fold) map[string]*Rep
 				}
 			}
 		case "plan.approved":
+			// The fold keeps the last approval per subject, so the
+			// subject is attributed once, to the kind that signed the
+			// approval the fold kept (the last one), after the walk.
 			if _, approved := fold.PlanApproved(rec.Event.Subject); approved {
-				k := get(kind)
-				k.Planner.Approvals++
-				unedited, measured := fold.PlanDigests(rec.Event.Subject).Unedited()
-				switch {
-				case !measured:
-					k.Planner.Unmeasured++
-				case unedited:
-					k.Planner.Unedited++
-				default:
-					k.Planner.Edited++
-				}
+				approvedBy[rec.Event.Subject] = kind
 			}
 		}
 		if keyring.Applies(active) {
@@ -559,6 +554,24 @@ func lanesByKind(records []*event.Record, fold *transition.Fold) map[string]*Rep
 			if json.Unmarshal(rec.Event.Payload, &up) == nil {
 				active = up.To
 			}
+		}
+	}
+	subjects := make([]string, 0, len(approvedBy))
+	for subject := range approvedBy {
+		subjects = append(subjects, subject)
+	}
+	sort.Strings(subjects)
+	for _, subject := range subjects {
+		k := get(approvedBy[subject])
+		k.Planner.Approvals++
+		unedited, measured := fold.PlanDigests(subject).Unedited()
+		switch {
+		case !measured:
+			k.Planner.Unmeasured++
+		case unedited:
+			k.Planner.Unedited++
+		default:
+			k.Planner.Edited++
 		}
 	}
 	for _, k := range out {

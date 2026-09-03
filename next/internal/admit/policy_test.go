@@ -115,3 +115,20 @@ func TestRoutingIsHeldToTheDeclaredSquads(t *testing.T) {
 		t.Fatalf("a declaration never makes a chain fail to build a context, and rides it: %v", err)
 	}
 }
+
+// conformance: the review finding on the task PR — a ceiling outside
+// the tier vocabulary fails closed for agent keys rather than ranking
+// above every tier and admitting every claim.
+func TestUnknownCeilingFailsClosed(t *testing.T) {
+	ctx, signer, worker, _, step := grantFixture(t)
+	ctx = step(signer, version.Seed1, keyring.VerbGranted, fpOf(t, worker), `{"capability": "`+keyring.CapClaim+`"}`)
+	ctx = step(signer, version.Seed1, "intent.filed", "c-1", filedBody)
+	ctx = step(signer, version.Seed1, "contract.specified", "c-1", specBody)
+	with := *ctx
+	with.Declaration = declared(t, `{"posture": "cooperative", "guardrails": {"squads": {"core": {"default": "standard", "max_agent": "standrad"}}}, "teams": {"squads": [{"name": "core", "lanes": ["implementer"]}]}}`)
+	err := Check(&with, draftV(t, worker, version.Seed1, "claim.taken", "c-1", `{}`, ctx.Tip))
+	var ce *CeilingError
+	if !errors.As(err, &ce) || !ce.Unknown || ce.Ceiling != "standrad" {
+		t.Fatalf("a misspelled ceiling refuses the agent's claim, naming the ceiling, got %v", err)
+	}
+}

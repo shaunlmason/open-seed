@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "task": "os-5c8a312c",
+  "merge_base": "97c60b6a53a4d67291dd4ee3e2b5e6b79668a711",
+  "head": "47136acc9a77a1374d730a441a8efae50058ae73",
+  "plan_path": "plans/os-5c8a312c.md",
+  "plan_sha256": "2f077d654dd31d1bdc22d83cb01576dd047b703ad008553478cc91f4ce7abd98",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed-admit/history_test.go",
+    "next/cmd/seed-admit/main.go",
+    "next/cmd/seed-admit/serve.go",
+    "next/cmd/seed-admit/serve_test.go",
+    "next/cmd/seed/doctor.go",
+    "next/cmd/seed/doctor_test.go",
+    "next/cmd/seed/forge_cli_test.go",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/loop.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/protections.go",
+    "next/cmd/seed/protections_cli_test.go",
+    "next/cmd/seed/remote.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/envelope/envelope.go",
+    "next/internal/gitref/gitref.go",
+    "next/internal/gitref/loop.go",
+    "next/internal/history/history.go",
+    "next/internal/history/history_test.go",
+    "next/internal/lane/lane.go",
+    "next/internal/posture/posture.go",
+    "next/internal/posture/posture_test.go",
+    "next/internal/propose/propose.go",
+    "next/internal/propose/propose_test.go",
+    "next/internal/protections/github.go",
+    "next/internal/protections/github_test.go",
+    "next/internal/protections/protections.go",
+    "next/internal/protections/protections_test.go",
+    "next/internal/refusal/refusal.go",
+    "next/internal/refusal/refusal_test.go",
+    "next/spec/envelope.md",
+    "next/spec/modes.md",
+    "next/spec/postures.md"
+  ],
+  "diff_sha256": "e4aa8519c035c2b5a42a6b465f8f342e31ba614b231169f71abe0f9a9ebd2cfa",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed-admit/ ./internal/propose/ ./internal/protections/ ./internal/gitref/ ./internal/posture/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}

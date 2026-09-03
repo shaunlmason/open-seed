@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
@@ -151,6 +152,13 @@ func runPlanLint(args []string, stdout, stderr io.Writer) int {
 	}
 	result := map[string]any{"plan": path, "falsifiable": true}
 	if *config != "" {
+		// The floor compares the card's tier; an unknown or absent
+		// tier would rank above every floor and bypass them, so it
+		// is refused before anything is compared.
+		if _, ok := transition.Tier(*tier); !ok {
+			return render(envelope.Fail(envelope.ExitUsage, "usage",
+				fmt.Sprintf("--tier %q is not a tier in the vocabulary (%s); --config needs the card's tier", *tier, strings.Join(transition.TierOrder(), ", "))), stdout, stderr)
+		}
 		cfg, failEnv := loadDeclarationFor(*config)
 		if failEnv != nil {
 			return render(failEnv, stdout, stderr)
@@ -172,6 +180,13 @@ func runPlanLint(args []string, stdout, stderr io.Writer) int {
 func floorShortfalls(cfg *posture.Config, tier string, paths []string) []string {
 	var out []string
 	for _, p := range paths {
+		// A token that is not a clean repository-relative path can
+		// match no floor, so it fails closed rather than slipping
+		// under one.
+		if path.IsAbs(p) || p == ".." || strings.HasPrefix(p, "../") {
+			out = append(out, fmt.Sprintf("%s is not a repository-relative path", p))
+			continue
+		}
 		floor, ok := cfg.Floor(p, transition.TierAbove)
 		if !ok {
 			continue
