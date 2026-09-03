@@ -2083,8 +2083,10 @@ func coreRules() []Rule {
 				// position.
 				if version.RacingApplies(c.Active) && c.Declaration != nil && current == "in_progress" {
 					if racers, _, races := c.Declaration.RacingFor(s.Routing); races {
-						if _, holds := s.HolderFence(rec.Event.Actor); holds {
-							return &ContentionError{Subject: rec.Event.Subject, Holder: rec.Event.Actor, Fence: claim.Fence}
+						if own, holds := s.HolderFence(rec.Event.Actor); holds {
+							// A racer that already holds a claim is refused
+							// naming its own fence, not the first holder's.
+							return &ContentionError{Subject: rec.Event.Subject, Holder: rec.Event.Actor, Fence: own}
 						}
 						if len(s.Claims) >= racers {
 							return &ContentionError{Subject: rec.Event.Subject, Holder: claim.Holder, Fence: claim.Fence, Racers: s.Claims, Cap: racers}

@@ -62,6 +62,16 @@ func TestContractsViewCarriesTheRace(t *testing.T) {
 	if race["settled_at"] != "8" || len(out) != 1 || len(race["racers"].([]any)) != 0 {
 		t.Fatalf("after settlement the view names the position and the settled-out claim: %+v", race)
 	}
+	// A subject that raced and whose racers all left keeps its racing
+	// object, empty, so a reader can tell it raced; one that never
+	// raced carries none (above).
+	left := append(records,
+		rec("claim.released", "c-1", "alice", `{"fence": "2", "packet": `+packet+`}`),
+		rec("claim.released", "c-1", "bob", `{"fence": "3", "packet": `+packet+`}`),
+	)
+	if race, _ := view(left)["c-1"].(map[string]any); race == nil || len(race["racers"].([]any)) != 0 || race["settled_at"] != nil {
+		t.Fatalf("after every racer left the object stands, empty and unsettled: %+v", race)
+	}
 	if project.Contracts().Version != "14" {
 		t.Fatalf("the contracts view is version 14 with the racing object, got %s", project.Contracts().Version)
 	}

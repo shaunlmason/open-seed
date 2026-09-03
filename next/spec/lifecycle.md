@@ -137,7 +137,9 @@ append (exit 2, quoting this posture); the boundary enforces
 exclusivity regardless — the client rule prevents drafting doomed
 work. Reading, planning, and continuing an admitted claim stay fully
 offline. **Racing mode** lifts the exclusivity per squad, by declaration; see
-"Racing" below `progress.milestone` and `wedge.declared` are
+"Racing" below.
+
+`progress.milestone` and `wedge.declared` are
 **facts, not transitions** (`observations.md`): a milestone is the
 claim lane's coarse, monotonic, position-throttled summary and a
 declared wedge records the visible condition durably; neither
