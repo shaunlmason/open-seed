@@ -1427,7 +1427,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   queryable by time (charter III.G row 10, recorded UNMET at the Phase
   10 exit) — os-74ce2261 — **in review** (task PR against plan #260:
   `ts` verbatim and `ts_unix` parsed on every per-event table at cache
-  generation 13, ranges over the integer since RFC 3339 mixes
+  generation 14, ranges over the integer since RFC 3339 mixes
   fractional precision, an unparseable `ts` NULL and counted, the
   time-range drill with the four names of the row in one query)
 
@@ -1490,7 +1490,33 @@ record's own position through one derivation, `curation.AuthenticPass`
   perf run`; the doctor's trust report; `next/spec/checkpoints.md` new,
   `maintenance.md`, `projections.md` and `envelope.md` following)
 
+- 12.4 preseed (config, guardrails, teams, protections, posture)
+  idempotent and CI-verified; agent-only guardrails and human/agent
+  metrics reading `kind` (III.E row 9); the protected surface and the
+  root's change process in config (III.G row 9, III.L row 2); tiers per
+  squad and per path (III.L row 1) — os-0d4f2af3 — **in review** (task
+  PR against plan #247, stacked on items 2 and 3: `seed.json` completed
+  with `protocol`, `governance`, `guardrails` and `teams`, strict, each
+  block undeclared when absent; `seed init --preseed` writing genesis
+  and the declared activations idempotently and refusing
+  `preseed_drift` on a root or protocol the chain contradicts, the
+  chain untouched; `seed preseed check` linting the file alone
+  (`preseed_incomplete` for a tier outside the vocabulary, a lane that
+  is no manifest, an undeclared squad, a protected surface missing a
+  required member) and comparing against a ledger; the agent claim
+  ceiling and the routing rule as declaration-driven admission policy
+  (`tier_above_ceiling`, `routing_unknown`; a human key not ceilinged;
+  no declaration, no change), the declaration wired into every
+  admission context the CLI builds; the path floor at the plan lint
+  and the render (`under_tiered`, one derivation); `by_kind` lane rates
+  (report 15, cache generation 13); the capability audit deriving the
+  operator-holding manifests from the shipped set; the fixture
+  deployment's declaration under `make check-next`; `postures.md`
+  "The preseed", `tiers.md`, `lanes.md`, `plans.md`, `projections.md`
+  and `envelope.md` following)
+
 ## Frontier
+
 
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,

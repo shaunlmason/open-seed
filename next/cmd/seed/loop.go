@@ -142,6 +142,13 @@ func openLoopSession(f *loopFlags) (*loopSession, *envelope.Envelope) {
 	if *f.supported != "" {
 		aopts = append(aopts, admit.WithSupportedVersions(strings.Split(*f.supported, ",")...))
 	}
+	if f.config != nil {
+		declared, failEnv := admitOptions(*f.config, aopts...)
+		if failEnv != nil {
+			return nil, failEnv
+		}
+		aopts = declared
+	}
 	ctx, err := admit.ContextAt(store, aopts...)
 	if err != nil {
 		return nil, contextEnvelope(err)

@@ -49,10 +49,11 @@ const cacheSchemaVersion = 12
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-// Generation 13 adds `ts` and `ts_unix` to every per-event table
-// (plans/os-74ce2261.md; charter III.G row 10), so evidence is
-// queryable by time.
-const cacheVersion = "13"
+// Generation 13 split the report's lanes by kind (plans/os-0d4f2af3.md
+// D6) and landed first; generation 14 adds `ts` and `ts_unix` to every
+// per-event table (plans/os-74ce2261.md; charter III.G row 10), so
+// evidence is queryable by time.
+const cacheVersion = "14"
 
 // Cache returns the cache projection.
 func Cache() Projection {
