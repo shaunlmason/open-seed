@@ -3231,6 +3231,46 @@ declaration (its ledger ref under the forge-hosted posture, its
 proposer) to a foreign ledger. No key crosses, and the command has no
 key flag to cross with.
 
+## Phase 13 item 5 — the A2A-shaped cross-organization boundary (os-40ed0ca0, plan #258)
+
+**The card's inputs live in the declaration.** The plan derives the
+card from `teams` and `guardrails` and names an ingress; the
+declaration had no ingress to name, so it gained a strict `boundary`
+block (`accepts`, `ingress`), and the same block binds admission: a
+kind the card does not accept the `boundary` rule refuses at
+`request.filed`. One source of truth for what is offered, read by the
+render and by the boundary.
+
+**CI diffs content, not signatures.** The checked-in card is signed
+by an operator key CI does not hold, so `seed boundary check`
+re-renders the content from the declaration and compares canonical
+bytes without the signature; the signature is verified only when a
+public key is given. The fixture deployment's card is signed by a
+throwaway key kept out of the tree — the gate is that the card says
+what the declaration says.
+
+**Canonical bytes without a JCS library.** The card's value domain is
+strings and arrays, so a compact encoding with sorted members and no
+HTML escaping is JCS-canonical for it; the event canonicalizer stays
+the events' own.
+
+**The task view carries no contract id.** The plan's field list is
+the request's position, its answer's, the state and the artifact
+digests; a contract id would be a position into the target's
+internals dressed as a name, so the view derives the state through
+the answer's intent and never says which contract.
+
+**Serve is a handler, tested as one.** The surface is an
+`http.Handler` over a re-read clone, an artifact store and the card
+bytes, so the drill mounts it on `httptest` and drives the lifecycle
+through the same reads a stranger's `boundary tasks` makes; the
+listening command wraps the handler and refuses an unsigned card
+before it binds.
+
+**Claiming stays online-only.** The drill's target lanes claim through
+the library against the clone, as the offer drills do, rather than
+loosening the CLI's online-only rule for a test.
+
 ## Phase 13 item 7 — tuple ranking as supervisor policy (os-c7554f18, plan #276)
 
 **The bootstrap is the one place policy yields.** D2 says an unscoped

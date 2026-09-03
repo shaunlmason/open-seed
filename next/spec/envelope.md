@@ -151,6 +151,10 @@ rule above forbids:
 | 3 | `race_settled` | an act on a contract by a racer whose claim outlived the race's settlement (`lifecycle.md`, "Racing"): the first verified success closed the contract at the named position, so an illegal step by construction, naming the settlement, the actor and its fence; the racer's own deliberate exit still admits, and `contention` at a racing squad's cap names every holder |
 | 3 | `routing_unknown` | `intent.filed` whose `routing` names no declared squad: the residual `tiers.md` named, closed by the declaration's teams (`postures.md`) |
 | 3 | `request_refused` | a request verb whose shape, subject or citation is wrong ([`requests.md`](requests.md)): an unknown kind, a reference that is not one, a summary over 200 bytes or a body in the payload, an `about` no contract resolves, an answer to no request or to an answered one, `filed` without its intent or `declined` without its reason, an intent not admitted after the request |
+| 3 | `card_refused` | a capability card that is unsigned, carries a field outside the pin, names an internal, or names a kind that is not one ([`boundary.md`](boundary.md)) |
+| 28 | `card_drift` | the checked-in card does not say what the declaration renders, or is absent: re-render it with `seed boundary card` ([`boundary.md`](boundary.md)) |
+| 3 | `boundary_unpinned` | a task view read across the boundary carrying a field the pin does not list ([`boundary.md`](boundary.md)) |
+| 3 | `artifact_mismatch` | bytes fetched across the boundary that hash to something other than the digest they were fetched as ([`boundary.md`](boundary.md)) |
 | 18 | `under_tiered` | `seed plan lint --config --tier` on a file scope, or `seed verdict render --config` on a receipt's changed files, touching a floored prefix at a tier below its floor: content whose gate is short, the family's answer, with the path and the two tiers named (`postures.md`, `plans.md`) |
 
 A refinement is not a way around the allocation rule. A condition a caller

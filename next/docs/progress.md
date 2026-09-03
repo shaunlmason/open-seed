@@ -1491,6 +1491,30 @@ record's own position through one derivation, `curation.AuthenticPass`
   moving); `next/spec/requests.md` new, `protocol.md` (`seed/7`),
   `lanes.md`, `obligations.md`, `projections.md`, `postures.md`,
   `envelope.md`, `actors.md` following)
+- 13.5 the A2A-shaped cross-organization boundary (III.N) —
+  os-40ed0ca0 — **in review** (task PR against plan #258, stacked on
+  13.4: `internal/boundary` — the capability card rendered from the
+  declaration's new `boundary` block (the kinds accepted and the
+  ingress), the squads and tiers by name, the artifact kinds, signed
+  by the operator key over JCS-canonical bytes and verified against
+  it, strict on parse, refusing an unsigned card or one naming an
+  internal; the five-state task lifecycle derived from the target
+  chain (`requested`, `declined`, `accepted`, `working`, `done`) with
+  the pinned fields alone; the `boundary` projection (`tasks.json`,
+  `tasks/<request>.json`, version 1, empty on chains without a
+  cross-repo request); `artifact.PutVerified`; the `boundary`
+  admission rule holding `request.filed` to the card's kinds; `seed
+  boundary card | check | serve | tasks | fetch` — the read-only
+  surface of exactly four routes, the card and the states
+  credential-free, artifacts optionally behind a bearer, everything
+  else `not_found`; the checked-in `next/boundary/card.json` for the
+  fixture deployment, re-rendered and diffed by `make check`
+  (`card_drift`); the two-organization drill with distinct roots
+  (card verified, the request through the ingress, the states as the
+  target's lanes drive the contract, the receipt fetched by digest
+  and cited in the source's chain, opacity swept route by route) and
+  the refusals; `next/spec/boundary.md` new, `envelope.md`,
+  `projections.md`, `postures.md`, `protocol.md` following)
 
 - 13.7 tuple ranking as supervisor policy: eval results rank
   qualified tuples and the planner lane's offers carry the strongest
