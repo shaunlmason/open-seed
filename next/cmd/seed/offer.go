@@ -83,6 +83,13 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	if *strongest > 0 && (len(scoped) > 0 || len(capabilities) != 1) {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "--strongest fills the tuples scope from the ranking of exactly one --capability, and is not combined with --tuple"), stdout, stderr)
 	}
+	// The tuples scope is matched against the taker's CLAIM grants
+	// (offers.md), so only the claim ranking can fill it (review
+	// finding on the task PR): a verdict tuple named here would be one
+	// no claimer cites, an offer nobody but an operator could see.
+	if *strongest > 0 && capabilities[0] != keyring.CapClaim {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--strongest reads the claim ranking: an offer's tuples scope is matched against claim grants, so --capability %s cannot fill it (next/spec/ranking.md)", capabilities[0])), stdout, stderr)
+	}
 	keyBytes, err := os.ReadFile(*keyPath)
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --key: %v", err)), stdout, stderr)

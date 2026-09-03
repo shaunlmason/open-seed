@@ -23,17 +23,22 @@ func Ranking() Projection {
 }
 
 // DeriveRanking is the shared derivation: the projection builds from
-// it and the doctor reads it at a ledger's tip. The instant is the tip
-// record's ts, never a clock, so the same prefix derives the same
-// bytes; an empty prefix derives at no instant.
+// it and the doctor reads it at a ledger's tip. The instant is the ts
+// of the latest qualification fact, never a clock and never the tip's
+// own ts (review finding on the task PR: an unrelated append would
+// move the tip's instant and change the bytes of a ranking whose
+// evidence did not change), so the same evidence derives the same
+// bytes; a prefix carrying no qualification derives at no instant.
 func DeriveRanking(records []*event.Record) (ranking.Ranking, error) {
 	ring, _, err := keyring.StateAt(records)
 	if err != nil {
 		return ranking.Ranking{}, err
 	}
 	asOf := ""
-	if n := len(records); n > 0 && records[n-1] != nil {
-		asOf = records[n-1].Event.TS
+	for _, rec := range records {
+		if rec != nil && (rec.Event.Verb == keyring.VerbQualified || rec.Event.Verb == keyring.VerbDisqualified) {
+			asOf = rec.Event.TS
+		}
 	}
 	return ranking.Derive(ranking.Inputs{Records: records, Ring: ring, AsOf: asOf})
 }

@@ -49,7 +49,7 @@ var Rules = []Rule{
 	{"tie", "the latest pass's ts, newer first, then the tuple's canonical JSON, lower first"},
 	{"excluded", "a tuple whose latest fact is a disqualification, or whose every holder is suspended or revoked: absent, not last"},
 	{"agreement", "with the gold supplied, verdict tuples of equal score order by their mean calibration agreement, higher first, unrefined entries after; without it the field is null and the ranking says so"},
-	{"instant", "the declared instant, never a clock: the projection derives at the tip record's ts, the verbs at --as-of or the offer's own instant"},
+	{"instant", "the declared instant, never a clock: the projection derives at the latest qualification fact's ts, the verbs at --as-of or the offer's own instant"},
 }
 
 // Evidence is one qualifying fact behind a ranked tuple: the

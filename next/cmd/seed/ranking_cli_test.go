@@ -66,9 +66,10 @@ func TestOfferStrongestFillsTheScopeByPolicy(t *testing.T) {
 	if got := listOffers(t, ld, fps["workerB"], ""); len(got) != 0 {
 		t.Fatalf("a worker citing no tuple does not see a policy-scoped offer: %+v", got)
 	}
-	// The verdict ranking is empty: --capability verdict refuses.
-	if e, code := publish("--strongest", "1", "--capability", "verdict"); code != 4 || e.Error.Code != "ranking_empty" {
-		t.Fatalf("an empty verdict ranking refuses: %d %+v", code, e)
+	// The scope is matched against claim grants, so the verdict
+	// ranking can never fill it: usage, not a lookup.
+	if e, code := publish("--strongest", "1", "--capability", "verdict"); code != 64 || !strings.Contains(e.Error.Message, "claim ranking") {
+		t.Fatalf("--strongest reads the claim ranking alone: %d %+v", code, e)
 	}
 }
 
@@ -92,15 +93,15 @@ func TestDoctorNamesTheStrongestPerCapability(t *testing.T) {
 	}
 	section, _ := e.Result["ranking"].(map[string]any)
 	strongest, _ := section["strongest"].(map[string]any)
-	if section["as_of"] == "" || strongest["claim"] != nil || strongest["verdict"] != nil {
-		t.Fatalf("nothing ranks yet: both null at the tip's instant: %+v", section)
+	if section["as_of"] != "" || strongest["claim"] != nil || strongest["verdict"] != nil {
+		t.Fatalf("nothing ranks yet: both null, and no instant until a qualification exists: %+v", section)
 	}
 	rootAppend(t, ld, priv, "actor.qualified", fps["workerA"], `{"capability": "claim", "tuple": `+drillTuple(nil)+`, "contract": "e-1", "verdict": "3"}`)
 	e, _, _ = runDoctorEnv(t, "--config", cfg, "--ledger", ld)
 	section, _ = e.Result["ranking"].(map[string]any)
 	strongest, _ = section["strongest"].(map[string]any)
 	top, _ := strongest["claim"].(map[string]any)
-	if top["environment"] != "detached-git-worktree" || strongest["verdict"] != nil {
-		t.Fatalf("the doctor names the top claim tuple and null for verdict: %+v", strongest)
+	if top["environment"] != "detached-git-worktree" || strongest["verdict"] != nil || section["as_of"] == "" {
+		t.Fatalf("the doctor names the top claim tuple and null for verdict, at the qualification's own instant: %+v", section)
 	}
 }

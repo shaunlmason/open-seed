@@ -9,15 +9,39 @@ package project_test
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/project"
 	"github.com/shaunlmason/open-seed/next/internal/ranking"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
+
+// appendAt signs and appends one record at a chosen ts, the one thing
+// the fixture's add cannot do: an unrelated record at a later instant.
+func appendAt(t *testing.T, dir string, resolve ledger.Resolver, priv ed25519.PrivateKey, v, ts, verb, subject, payload string) {
+	t.Helper()
+	store, err := ledger.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tip, _, err := store.Tip()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec, err := event.Sign(event.Event{V: v, TS: ts, Actor: pFP(t, priv), Verb: verb, Subject: subject, Payload: json.RawMessage(payload), Prev: tip}, priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Append(rec, resolve); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func rankTuple(model string) string {
 	return fmt.Sprintf(`{"principal": "acme", "harness": "local-worktree/v0", "model": %q, "tool_policy": "default", "environment": "detached-git-worktree"}`, model)
@@ -49,8 +73,8 @@ func TestRankingProjectionAndTheReportsStrongest(t *testing.T) {
 	out := rebuild()
 	var view ranking.Ranking
 	readView(t, out, "ranking", project.RankingFile, &view)
-	if len(view.Capabilities) != 2 || len(view.Capabilities["claim"]) != 0 || len(view.Capabilities["verdict"]) != 0 || view.Refined || view.AsOf != "2026-09-01T01:00:00Z" {
-		t.Fatalf("no qualification: both capabilities present and empty, unrefined, at the tip record's own ts and never a clock: %+v", view)
+	if len(view.Capabilities) != 2 || len(view.Capabilities["claim"]) != 0 || len(view.Capabilities["verdict"]) != 0 || view.Refined || view.AsOf != "" {
+		t.Fatalf("no qualification: both capabilities present and empty, unrefined, at no instant: %+v", view)
 	}
 
 	// Two tuples qualified: the one with more evidence ranks first;
@@ -64,6 +88,9 @@ func TestRankingProjectionAndTheReportsStrongest(t *testing.T) {
 	claim := view.Capabilities["claim"]
 	if len(claim) != 2 || claim[0].Tuple.Model != "m/2" || claim[0].Score != 2 || claim[1].Tuple.Model != "m/1" || claim[1].Score != 1 {
 		t.Fatalf("the ranking orders by evidence: %+v", claim)
+	}
+	if view.AsOf != "2026-09-01T01:00:00Z" {
+		t.Fatalf("the instant is the latest qualification fact's ts, never a clock: %q", view.AsOf)
 	}
 	if claim[0].Evidence[0].Kind != ranking.KindMint || claim[0].Evidence[1].Kind != ranking.KindSpotCheck || claim[0].Holders[0] != pFP(t, other) {
 		t.Fatalf("the evidence and holders are the chain's: %+v", claim[0])
@@ -81,9 +108,11 @@ func TestRankingProjectionAndTheReportsStrongest(t *testing.T) {
 	before := readRaw(t, out3, "ranking", project.RankingFile)
 	add(root, version.Seed3, "intent.filed", "c-1", `{"intent": "drill", "tier": "trivial", "budget": "small", "routing": "core"}`)
 	add(root, version.Seed3, "contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`)
+	// An unrelated record at a LATER instant (review finding on the
+	// task PR): the tip's ts moves, the ranking's bytes do not.
+	appendAt(t, dir, resolve, root, version.Seed3, "2026-09-02T09:30:00Z", "intent.filed", "c-2", `{"intent": "later work", "tier": "trivial", "budget": "small", "routing": "core"}`)
 	out4 := rebuild()
 	after := readRaw(t, out4, "ranking", project.RankingFile)
-	// The tip's ts is the same fixture instant, so the bytes are equal.
 	if !bytes.Equal(before, after) {
 		t.Fatalf("an unrelated append changed the ranking:\n%s\n%s", before, after)
 	}

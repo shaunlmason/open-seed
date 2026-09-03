@@ -214,8 +214,9 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   stay byte-identical.
 
 - **`ranking`** (`ranking.json`, version 1): the strongest qualified
-  tuples per capability ([`ranking.md`](ranking.md)): `as_of` (the tip
-  record's `ts`), `agreement_refined` (always `false`: the gold is
+  tuples per capability ([`ranking.md`](ranking.md)): `as_of` (the
+  latest qualification fact's `ts`, empty until one exists, never the
+  tip's, so an unrelated append changes nothing), `agreement_refined` (always `false`: the gold is
   outside the tree), and `capabilities` with `claim` and `verdict`
   each an ordered list of entries (tuple, score, latest, holders,
   evidence, agreement). Input-free and byte-identical on the same

@@ -39,7 +39,7 @@ cannot change in the code without this table or here without the code.
 | `tie` | the latest pass's ts, newer first, then the tuple's canonical JSON, lower first |
 | `excluded` | a tuple whose latest fact is a disqualification, or whose every holder is suspended or revoked: absent, not last |
 | `agreement` | with the gold supplied, verdict tuples of equal score order by their mean calibration agreement, higher first, unrefined entries after; without it the field is null and the ranking says so |
-| `instant` | the declared instant, never a clock: the projection derives at the tip record's ts, the verbs at --as-of or the offer's own instant |
+| `instant` | the declared instant, never a clock: the projection derives at the latest qualification fact's ts, the verbs at --as-of or the offer's own instant |
 
 Read plainly: a tuple's evidence is every `actor.qualified` citing it
 since its latest `actor.disqualified` (a disqualification resets the
@@ -74,7 +74,11 @@ ranks: an unscoped offer is the supervisor's explicit choice, never a
 fallback, so widening happens by omitting the flag, not by policy
 running out. `--strongest` and `--tuple` are two ways to write the
 same scope and refuse together; `--strongest` takes exactly one
-`--capability`, the one whose ranking it reads. The payload is
+`--capability`, and that capability is `claim`: the scope is matched
+against the taker's claim grants ([`offers.md`](offers.md)), so a
+verdict tuple named there would be one no claimer cites, and the verb
+refuses it as usage. The verdict ranking is read by the projection and
+the doctor, for the verifier a supervisor calibrates next. The payload is
 unchanged from [`offers.md`](offers.md): the scope is the input Phase
 10 item 1 defined, now filled by policy, and admission judges it by the
 existing scope rule.
@@ -90,18 +94,20 @@ owes changes.
 
 ## The projection, the doctor, the report
 
-- **`ranking`** (`ranking.json`, version 1): the derivation at the tip
-  record's `ts` — `as_of`, `agreement_refined` (always `false`: the
-  projection reads no gold, which is outside the tree), and
-  `capabilities` with both capabilities present, each an ordered list
-  of entries. Byte-identical on the same chain; a chain carrying no
+- **`ranking`** (`ranking.json`, version 1): the derivation at the
+  latest qualification fact's `ts` (never the tip's: an unrelated
+  append changes nothing) — `as_of` (empty until a qualification
+  exists), `agreement_refined` (always `false`: the projection reads
+  no gold, which is outside the tree), and `capabilities` with both
+  capabilities present, each an ordered list of entries.
+  Byte-identical on the same evidence; a chain carrying no
   qualification builds two empty lists.
 - **`seed doctor --ledger <dir>`** names the top tuple per capability
   under `ranking` (`null` where nothing ranks); without `--ledger` the
   section is absent, since the doctor otherwise reads the declaration
   alone.
 - The report's `lanes.planner` gains `strongest`: the `tuples` scope of
-  the latest applied `offer.published` that carries one, `null` when no
+  the latest applied `offer.published` that carries one, absent when no
   offer has (the input the planner lane last received by policy).
 
 ## Conformance mapping
