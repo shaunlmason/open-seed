@@ -185,6 +185,16 @@ names what `seed federation report` fetches and verifies under each
 remote's own keyring; nothing in the declaration lets a remote write
 here or this deployment write there. Held at load (`posture_invalid`).
 
+**The boundary block.** `boundary` is `{"accepts": [kinds],
+"ingress": "<remote or endpoint>"}` ([`boundary.md`](boundary.md)):
+the request kinds this deployment takes through its ingress and what
+a request is filed through — what the capability card publishes and
+what the `boundary` admission rule holds `request.filed` to. Strict:
+at least one distinct kind, a non-empty ingress; held at load
+(`posture_invalid`). Absent, the deployment publishes no card and
+every request kind admits as before. The card itself is checked in at
+`next/boundary/card.json` and `make check` re-renders and diffs it.
+
 ## The proposal protocol
 
 Under the forge-hosted posture an actor's credential can fetch the
