@@ -908,9 +908,29 @@ type milestoneFact struct {
 
 // Fold is the folded lifecycle state of every subject in a record
 // prefix, in first-appearance order.
+// IngressFact is one inbound proposal (request.filed) as the fold
+// keeps it (plans/os-48df10a2.md D2): who filed it, from where, what
+// kind, on which subject, and its answer when the dispatcher closed it.
+type IngressFact struct {
+	Pos      int
+	TS       string
+	Signer   string
+	Subject  string
+	Origin   string
+	Kind     string
+	Answered *int
+	Outcome  string
+	Intent   int
+	Answerer string
+}
+
 type Fold struct {
 	states map[string]*SubjectState
 	order  []string
+	// requests is every request.filed applied, in order, with its
+	// answer; RequestAnomalies counts the malformed ones.
+	requests         []IngressFact
+	RequestAnomalies int
 	// planned maps subject -> the last admitted plan.approved's plan
 	// anchor. plan.* events are facts, not transitions
 	// (plans/os-16c1d142.md): they change no lifecycle state and the
@@ -977,6 +997,12 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 	f := &Fold{states: map[string]*SubjectState{}, planned: map[string]string{}, proposed: map[string]string{}, approved: map[string]string{}, milestones: map[string]milestoneFact{}}
 	for pos, rec := range records {
 		e := &rec.Event
+		// The request ingress (plans/os-48df10a2.md): facts beside the
+		// lifecycle, read at seed/7 positions only.
+		if e.Verb == "request.filed" || e.Verb == "request.answered" {
+			f.foldRequest(pos, e)
+			continue
+		}
 		if !version.Activated(e.V) {
 			// Lifecycle semantics activate at seed/1 and stay on at
 			// every later registered version (version.Activated, the
@@ -2339,5 +2365,66 @@ func (s *SubjectState) dropClaim(fence int) {
 		s.Claim = &s.Claims[0]
 	} else {
 		s.Claim = nil
+	}
+}
+
+// Requests is every request the fold applied, in chain order.
+func (f *Fold) Requests() []IngressFact { return append([]IngressFact(nil), f.requests...) }
+
+// RequestAt finds a request by its position.
+func (f *Fold) RequestAt(pos int) (IngressFact, bool) {
+	for _, r := range f.requests {
+		if r.Pos == pos {
+			return r, true
+		}
+	}
+	return IngressFact{}, false
+}
+
+func (f *Fold) foldRequest(pos int, e *event.Event) {
+	if !version.RequestsApply(e.V) {
+		f.RequestAnomalies++
+		return
+	}
+	switch e.Verb {
+	case "request.filed":
+		var p struct {
+			Origin string `json:"origin"`
+			Kind   string `json:"kind"`
+		}
+		if json.Unmarshal(e.Payload, &p) != nil || p.Origin == "" || p.Kind == "" {
+			f.RequestAnomalies++
+			return
+		}
+		f.requests = append(f.requests, IngressFact{Pos: pos, TS: e.TS, Signer: e.Actor, Subject: e.Subject, Origin: p.Origin, Kind: p.Kind})
+	case "request.answered":
+		var p struct {
+			Request string `json:"request"`
+			Outcome string `json:"outcome"`
+			Intent  string `json:"intent"`
+		}
+		if json.Unmarshal(e.Payload, &p) != nil {
+			f.RequestAnomalies++
+			return
+		}
+		cited, err := strconv.Atoi(strings.TrimSpace(p.Request))
+		if err != nil {
+			f.RequestAnomalies++
+			return
+		}
+		for i := range f.requests {
+			r := &f.requests[i]
+			if r.Pos == cited && r.Answered == nil && r.Subject == e.Subject {
+				at := pos
+				r.Answered, r.Outcome, r.Answerer = &at, p.Outcome, e.Actor
+				if n, ierr := strconv.Atoi(strings.TrimSpace(p.Intent)); ierr == nil {
+					r.Intent = n
+				} else {
+					r.Intent = -1
+				}
+				return
+			}
+		}
+		f.RequestAnomalies++
 	}
 }

@@ -34,6 +34,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
+	"github.com/shaunlmason/open-seed/next/internal/request"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -895,6 +896,65 @@ func coreRules() []Rule {
 			for i, prior := range c.Records {
 				if prior.Event.Verb == imported.Verb {
 					return &Refusal{Rule: "imported", Err: fmt.Errorf("the ledger already carries an import at position %d: a genesis import refuses a ledger that is not empty", i)}
+				}
+			}
+			return nil
+		}},
+		{Name: "request", Check: func(c *Context, rec *event.Record) error {
+			// The request ingress (plans/os-48df10a2.md D1, D2;
+			// next/spec/requests.md): request.filed is a fact that
+			// changes no state and grants nothing, admitted from
+			// seed/7 with its strict shape, on the contract `about`
+			// names (which must be on the chain) or on system;
+			// request.answered is the dispatcher's close of one
+			// request not yet answered, citing the intent it filed
+			// (an intent.filed admitted after the request) or the
+			// reason it declined. Standing for the filing is the
+			// keyring rule's; dispatch for the answer is the grant
+			// rule's; this rule holds the shapes and the citations.
+			verb := rec.Event.Verb
+			if verb != request.FiledVerb && verb != request.AnsweredVerb {
+				return nil
+			}
+			if !version.RequestsApply(c.Active) {
+				return &Refusal{Rule: "request", Err: fmt.Errorf("%s is not defined at %s: the request ingress needs a chain at %s", verb, c.Active, version.Seed7)}
+			}
+			if verb == request.FiledVerb {
+				p, err := request.ParseFiled(rec.Event.Subject, rec.Event.Payload)
+				if err != nil {
+					return err
+				}
+				if p.About != "" {
+					if c.Lifecycle == nil {
+						return &request.Error{Verb: verb, Subject: rec.Event.Subject, Reason: fmt.Sprintf("about names %q, and no lifecycle is known to resolve it", p.About)}
+					}
+					if _, ok := c.Lifecycle.State(p.About); !ok {
+						return &request.Error{Verb: verb, Subject: rec.Event.Subject, Reason: fmt.Sprintf("about names %q, which is no contract on this chain: a request is about a contract the chain knows or about nothing", p.About)}
+					}
+				}
+				return nil
+			}
+			p, pos, err := request.ParseAnswered(rec.Event.Subject, rec.Event.Payload)
+			if err != nil {
+				return err
+			}
+			if c.Lifecycle == nil {
+				return &request.Error{Verb: verb, Subject: rec.Event.Subject, Reason: "no lifecycle is known to resolve the request"}
+			}
+			fact, ok := c.Lifecycle.RequestAt(pos)
+			if !ok {
+				return &request.Error{Verb: verb, Subject: rec.Event.Subject, Reason: fmt.Sprintf("request %d is no %s on this chain", pos, request.FiledVerb)}
+			}
+			if fact.Subject != rec.Event.Subject {
+				return &request.Error{Verb: verb, Subject: rec.Event.Subject, Reason: fmt.Sprintf("request %d is on %s: the answer's subject is the request's", pos, fact.Subject)}
+			}
+			if fact.Answered != nil {
+				return &request.Error{Verb: verb, Subject: rec.Event.Subject, Reason: fmt.Sprintf("request %d was answered at position %d (%s): a request is answered once", pos, *fact.Answered, fact.Outcome)}
+			}
+			if p.Outcome == "filed" {
+				n, _ := strconv.Atoi(strings.TrimSpace(p.Intent))
+				if n <= pos || n >= len(c.Records) || c.Records[n].Event.Verb != "intent.filed" {
+					return &request.Error{Verb: verb, Subject: rec.Event.Subject, Reason: fmt.Sprintf("intent %d is not an intent.filed admitted after request %d: filed cites the intent the dispatcher appended for it", n, pos)}
 				}
 			}
 			return nil

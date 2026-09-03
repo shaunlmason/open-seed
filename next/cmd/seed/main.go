@@ -81,6 +81,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runLane(args[1:], stdout, stderr)
 	case "message":
 		return runMessage(args[1:], stdout, stderr)
+	case "request":
+		return runRequest(args[1:], stdout, stderr)
+	case "federation":
+		return runFederation(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
 	case "protections":

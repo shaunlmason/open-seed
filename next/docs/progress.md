@@ -1462,6 +1462,35 @@ record's own position through one derivation, `curation.AuthenticPass`
   gives one corrupted chain, the D3 tripwire inverted on purpose, the
   envelope spec's null sentence sharpened to "before any position was
   read")
+- 13.4 mirrors and dashboards propose, federation as uniform read
+  remotes, cross-repo work as a proposal (III.J row 2, III.N row 4,
+  §II.15) — os-48df10a2 — **in review** (task PR against plan #257,
+  stacked on 13.1: `request.filed`, the one door a surface's proposal
+  enters by, strict `{origin, kind, reference, summary ≤ 200 bytes,
+  about?}` on the contract `about` names or on `system`, a fact that
+  changes no state and needs standing only; `request.answered`, the
+  dispatcher's close citing the intent it filed or the reason it
+  declined, once per request; both at `seed/7` (the plan said
+  `seed/6`, which racing took first); the fold's request facts, the
+  `request` rule, `request_refused` (exit 3); `request.pending` owed
+  to `lane:dispatch` with its age; the situation read's `requests`
+  notices (origin, kind, size, position, age, never the summary) and
+  the report's `requests` section (present only when a request
+  exists, so every existing build is byte-identical); the affordance
+  catalog's two probes and the walk's seed/7 station; the dispatcher
+  manifest's `request answer` as a lane act beside the loop acts, the
+  corpus re-recorded on purpose; the injection corpus's request arm
+  at the boundary and the terminal (III.J row 2 met in full, the lanes
+  spec saying so); the declaration's `federation` block and `seed
+  federation report` (fetch, verify under each remote's own keyring,
+  fold, `federation.json` byte-identical on the same tips, a tampered
+  remote reported and not folded, no key, nothing appended); the
+  cross-repo drill (a source contract proposed into a target by an
+  ingress key with standing only, answered with a citing intent,
+  read back through the source's read remote, the source's tip never
+  moving); `next/spec/requests.md` new, `protocol.md` (`seed/7`),
+  `lanes.md`, `obligations.md`, `projections.md`, `postures.md`,
+  `envelope.md`, `actors.md` following)
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 

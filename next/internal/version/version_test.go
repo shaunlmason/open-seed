@@ -29,10 +29,10 @@ func TestSeed4GatesAreNamedLists(t *testing.T) {
 	for _, v := range Supported() {
 		supported[v] = true
 	}
-	if !supported[Seed3] || !supported[Seed4] || !supported[Seed5] || !supported[Seed6] {
+	if !supported[Seed3] || !supported[Seed4] || !supported[Seed5] || !supported[Seed6] || !supported[Seed7] {
 		t.Fatalf("Supported must carry seed/3, seed/4 and seed/5: %v", Supported())
 	}
-	for _, v := range []string{Seed1, Seed2, Seed3, Seed4, Seed5, Seed6} {
+	for _, v := range []string{Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7} {
 		if !Activated(v) {
 			t.Fatalf("Activated(%s) must hold", v)
 		}
@@ -40,16 +40,19 @@ func TestSeed4GatesAreNamedLists(t *testing.T) {
 	if Activated(Protocol) || Activated("seed/9") {
 		t.Fatal("Activated is a named list: the genesis default and an unregistered version activate nothing")
 	}
-	if EvalApplies(Seed2) || !EvalApplies(Seed3) || !EvalApplies(Seed4) || !EvalApplies(Seed5) || !EvalApplies(Seed6) || EvalApplies("seed/9") {
+	if EvalApplies(Seed2) || !EvalApplies(Seed3) || !EvalApplies(Seed4) || !EvalApplies(Seed5) || !EvalApplies(Seed6) || !EvalApplies(Seed7) || EvalApplies("seed/9") {
 		t.Fatal("EvalApplies is the named list {seed/3, seed/4, seed/5}: the equality that was right while seed/3 was newest closes on every later version")
 	}
-	if LevelsApply(Seed3) || !LevelsApply(Seed4) || !LevelsApply(Seed5) || !LevelsApply(Seed6) || LevelsApply("seed/9") {
+	if LevelsApply(Seed3) || !LevelsApply(Seed4) || !LevelsApply(Seed5) || !LevelsApply(Seed6) || !LevelsApply(Seed7) || LevelsApply("seed/9") {
 		t.Fatal("LevelsApply is the named list {seed/4, seed/5}")
 	}
-	if ImportApplies(Seed4) || !ImportApplies(Seed5) || !ImportApplies(Seed6) || ImportApplies("seed/9") {
+	if ImportApplies(Seed4) || !ImportApplies(Seed5) || !ImportApplies(Seed6) || !ImportApplies(Seed7) || ImportApplies("seed/9") {
 		t.Fatal("ImportApplies is seed/5 exactly, a named list of one")
 	}
-	if RacingApplies(Seed5) || !RacingApplies(Seed6) || RacingApplies("seed/9") {
-		t.Fatal("racing's widened origins are defined at seed/6 alone, as a named list")
+	if RacingApplies(Seed5) || !RacingApplies(Seed6) || !RacingApplies(Seed7) || RacingApplies("seed/9") {
+		t.Fatal("racing's widened origins are defined from seed/6, as a named list")
+	}
+	if RequestsApply(Seed6) || !RequestsApply(Seed7) || RequestsApply("seed/9") {
+		t.Fatal("the request ingress is defined at seed/7 alone, as a named list")
 	}
 }

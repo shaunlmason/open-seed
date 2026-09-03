@@ -87,6 +87,14 @@ type probeView struct {
 	// the list says "you may mint this now" only when it is true.
 	qualify    string
 	disqualify string
+	// requestAbout is the queried subject when it is a contract on
+	// the chain, the `about` a request.filed probe on it must name;
+	// request is the position of the first unanswered request on the
+	// queried subject, "0" (the genesis position, never a request)
+	// when none stands, so the answer probe is refused by the rule
+	// rather than by a guess (plans/os-48df10a2.md).
+	requestAbout string
+	request      string
 }
 
 // qualificationProbes derives the qualification verbs' payloads for
@@ -488,6 +496,24 @@ var affordanceCatalog = []struct {
 		// carries no import yet, which is what the rule judges.
 		return `{"source": "open-seed", "export_head": "` + strings.Repeat("0", 40) + `", "anchor": "seed-anchor/probe", "manifest": "` + strings.Repeat("0", 64) + `"}`
 	}},
+	{"request.filed", func(v *probeView) string {
+		// A shape-valid inbound proposal (next/spec/requests.md): a
+		// surface name, a kind, an anchored reference and a bounded
+		// summary, about the queried contract when it is one. Afforded
+		// to any standing key on a seed/7 chain, which is what the
+		// rule and the keyring judge.
+		about := ""
+		if v.requestAbout != "" {
+			about = `, "about": "` + v.requestAbout + `"`
+		}
+		return `{"origin": "probe", "kind": "dashboard-action", "reference": "probe @ ` + strings.Repeat("0", 7) + `", "summary": "probe"` + about + `}`
+	}},
+	{"request.answered", func(v *probeView) string {
+		// The dispatcher's close of the first unanswered request on
+		// the queried subject, declined with a reason: filed would
+		// need an intent the probe cannot have appended.
+		return `{"request": "` + v.request + `", "outcome": "declined", "reason": "probe"}`
+	}},
 	{"system.checkpoint", func(v *probeView) string {
 		// A shape-valid snapshot citation (next/spec/maintenance.md):
 		// the versioned format, a well-formed digest, a fetchable
@@ -683,13 +709,21 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		packet:      probePacket,
 		escalation:  "0",
 		position:    fmt.Sprintf("%d", ctx.Count),
+		request:     "0",
 	}
 	v.version = ctx.Active
 	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
 	curationProbes(ctx, subject, v)
 	v.flywheelShape, v.flywheelOccurrences, v.flywheelStanding, v.flywheelPath, v.flywheelRepair = flywheelProbes(ctx)
 	if ctx.Lifecycle != nil {
+		for _, r := range ctx.Lifecycle.Requests() {
+			if r.Subject == subject && r.Answered == nil {
+				v.request = fmt.Sprintf("%d", r.Pos)
+				break
+			}
+		}
 		if s, ok := ctx.Lifecycle.State(subject); ok {
+			v.requestAbout = subject
 			if s.Claim != nil {
 				v.fence = fmt.Sprintf("%d", s.Claim.Fence)
 				v.active = true

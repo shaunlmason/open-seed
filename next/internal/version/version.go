@@ -67,12 +67,20 @@ const Seed5 = "seed/5"
 // misjudging a race.
 const Seed6 = "seed/6"
 
+// Seed7 is the protocol version that activates the request ingress
+// (plans/os-48df10a2.md; next/spec/requests.md): request.filed, the
+// one verb a proposal from outside the trust boundary enters by, and
+// request.answered, the dispatcher's close. Both are undefined before
+// it, so a seed/6 validator refuses an upgraded chain at the first
+// request record by version.
+const Seed7 = "seed/7"
+
 // Supported lists the protocol versions this build verifies and appends:
 // the genesis default plus every later version it implements. Verifiers
 // and admission points seed their default supported sets from it, so a
 // chain that upgrades to a version this build implements keeps verifying
 // without per-caller configuration.
-func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6} }
+func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7} }
 
 // Activated reports whether the semantics seed/1 introduced (the actor
 // keyring, the lifecycle fold, budgets, offers) are active at a record
@@ -82,7 +90,7 @@ func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3, Seed4
 // (plans/os-8e53ffd9.md D8). tuple.Applies is the narrower gate for
 // what seed/2 added on top.
 func Activated(v string) bool {
-	return v == Seed1 || v == Seed2 || v == Seed3 || v == Seed4 || v == Seed5 || v == Seed6
+	return v == Seed1 || v == Seed2 || v == Seed3 || v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7
 }
 
 // EvalApplies reports whether the qualification verbs and the eval
@@ -94,7 +102,9 @@ func Activated(v string) bool {
 // registered activates nothing however it would sort. It lives here
 // rather than beside the eval package because the keyring and the fold
 // gate on it and the eval derivation reads both.
-func EvalApplies(v string) bool { return v == Seed3 || v == Seed4 || v == Seed5 || v == Seed6 }
+func EvalApplies(v string) bool {
+	return v == Seed3 || v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7
+}
 
 // LevelsApply reports whether the independence levels and the verdict's
 // declared tuple are defined at a record carrying version v: seed/4
@@ -105,15 +115,19 @@ func EvalApplies(v string) bool { return v == Seed3 || v == Seed4 || v == Seed5 
 // contract.specified ready origin (re-specification) and the plan
 // verbs' content digest (plans/os-6bd9ffff.md D4, D5, D7), each a
 // row or field a seed/3 validator judges differently.
-func LevelsApply(v string) bool { return v == Seed4 || v == Seed5 || v == Seed6 }
+func LevelsApply(v string) bool { return v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7 }
 
 // ImportApplies reports whether system.imported is defined at a record
 // carrying version v: seed/5 exactly today, a named list of one
 // (plans/os-cf13fb51.md D2), so a version this build has not registered
 // activates nothing however it would sort.
-func ImportApplies(v string) bool { return v == Seed5 || v == Seed6 }
+func ImportApplies(v string) bool { return v == Seed5 || v == Seed6 || v == Seed7 }
 
 // RacingApplies reports whether racing mode's widened origins
 // (claim.taken from in_progress, submission.made from review) are
 // defined at a record carrying version v: seed/6, as a named list.
-func RacingApplies(v string) bool { return v == Seed6 }
+func RacingApplies(v string) bool { return v == Seed6 || v == Seed7 }
+
+// RequestsApply reports whether the request ingress verbs are defined
+// at a record carrying version v: seed/7, as a named list.
+func RequestsApply(v string) bool { return v == Seed7 }
