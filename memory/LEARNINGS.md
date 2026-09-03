@@ -1426,10 +1426,11 @@ the assertions read, and there is no copy to go stale.
   on a different provider falls out of that for free, and it fits the
   artifact store. (2) One backend-agnostic contract test suite that
   every substrate implementation runs, behind a feature, rather than
-  per-adapter tests. (3) The kill boundary as exo's firecracker guest
-  does it: every command a process-group leader killed as a group on
-  timeout, the in-VM supervisor refusing any vsock peer that is not
-  the host, and size-capped, fuzzed wire frames. Exo's own agent-facing
+  per-adapter tests. (3) The kill boundary as Exo's firecracker guest
+  implements it: every command runs as a process-group leader and is
+  killed as a group on timeout, the in-VM supervisor refuses any vsock
+  peer that is not the host, and wire frames are size-capped and
+  fuzzed. Exo's own agent-facing
   shell tool has no timeout and no output cap, so the checklist is
   easy to skip. Two smaller notes for later specs: recurring schedules
   should carry a missed-fire policy (skip, once, all with a cap) and
