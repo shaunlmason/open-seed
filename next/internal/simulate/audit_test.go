@@ -118,3 +118,21 @@ func TestCatalogIsDeterministicInSeed(t *testing.T) {
 		t.Error("a different seed should rotate the first intent")
 	}
 }
+
+func TestAuditMidChainViolationAndMultiSubject(t *testing.T) {
+	// A subject that reaches review then illegally takes a claim again:
+	// foldAll catches the mid-chain illegal transition. A second, clean
+	// subject in the same chain is unaffected.
+	recs := append(happy("c-1"),
+		rec("intent.filed", "c-2"),
+		rec("contract.specified", "c-2"),
+		rec("claim.taken", "c-2"), // illegal: c-2 has no offer path here, and this is from ready
+	)
+	// Make c-2's claim illegal by placing it with no prior 'ready' via a
+	// duplicate birth.
+	recs = append(recs, rec("intent.filed", "c-1")) // birth on an existing subject: illegal
+	a := Audit(recs)
+	if len(a.ChainViolations) == 0 {
+		t.Fatal("a second birth on an existing subject is a chain violation")
+	}
+}

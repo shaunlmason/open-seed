@@ -5,6 +5,7 @@ package simulate
 // deployment, so the simulation's refusal handling is covered.
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -102,4 +103,43 @@ func TestCurateAndMaintainToleranteRefusal(t *testing.T) {
 	}
 	d.curate()
 	d.maintain(time.Now())
+}
+
+// okThenFail admits the first n acts, then refuses — so build reaches
+// its enroll loop before failing.
+type okThenFail struct {
+	n int
+	c int
+}
+
+func (s *okThenFail) Run(args ...string) loop.Result {
+	s.c++
+	if s.c <= s.n {
+		return loop.Result{Exit: 0, OK: true}
+	}
+	return loop.Result{Exit: 5, OK: false, Code: "unavailable", Message: "injected"}
+}
+
+func TestBuildFailsInTheEnrollLoop(t *testing.T) {
+	// The upgrade admits, the first enrollment refuses: build surfaces it
+	// from inside the enroll loop.
+	_, err := build(Config{LanesDir: lanesRel, Verbs: &okThenFail{n: 1}, WorkDir: t.TempDir(), Now: time.Now()})
+	if err == nil {
+		t.Fatal("build must fail when an enrollment is refused")
+	}
+}
+
+func TestInstallHookFailsWithoutSource(t *testing.T) {
+	// The hook cannot build without the module source: installHook
+	// surfaces the build failure.
+	if err := installHook(t.TempDir(), filepath.Join(t.TempDir(), "no-such-next")); err == nil {
+		t.Error("installHook must fail when seed-admit cannot be built")
+	}
+}
+
+func TestBuildRepoFailsOnBadDir(t *testing.T) {
+	d := &deployment{dir: filepath.Join("/proc", "nonexistent-xyz")}
+	if _, err := d.buildRepo("c-1", shipped[0]); err == nil {
+		t.Error("buildRepo must fail when its working directory cannot be created")
+	}
 }
