@@ -485,7 +485,7 @@ func publish(root, buildID string, files map[string][]byte) (err error) {
 	if err := setMode(tmpCur, 0o444); err != nil {
 		return err
 	}
-	if err := os.Rename(tmpCur, cur); err != nil {
+	if err := renameReplacing(tmpCur, cur); err != nil {
 		return err
 	}
 	entries, err := os.ReadDir(builds)
@@ -515,4 +515,19 @@ func Current(outDir, name string) (string, error) {
 		return "", fmt.Errorf("projection %s has an empty CURRENT pointer", name)
 	}
 	return filepath.Join(root, buildsDir, id), nil
+}
+
+// renameReplacing swaps a pointer file into place, retrying briefly
+// where the platform refuses to replace a file a concurrent reader
+// holds open (Windows; next/spec/platform.md). POSIX renames over the
+// open file on the first try.
+func renameReplacing(src, dst string) error {
+	var err error
+	for attempt := 0; attempt < 20; attempt++ {
+		if err = os.Rename(src, dst); err == nil {
+			return nil
+		}
+		time.Sleep(time.Duration(attempt+1) * 5 * time.Millisecond)
+	}
+	return err
 }

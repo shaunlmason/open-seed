@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -583,6 +584,9 @@ func loopRemote(t *testing.T) (remote, state, wkey string, resolve ledger.Resolv
 // value is never silently replaced, because a different value is a
 // different decision (plans/os-9b3f3ef3.md D1).
 func TestRemoteDerivationDivergenceRefuses(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the rival lands through a pre-receive hook, which needs a POSIX git server (next/spec/platform.md)")
+	}
 	remote, state, wkey, resolve := loopRemote(t)
 
 	// One open reservation: the value `budget settle` will derive.

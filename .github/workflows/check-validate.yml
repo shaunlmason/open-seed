@@ -54,7 +54,7 @@ jobs:
         if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
       - name: go test (the Seed suites on ${{ matrix.os }})
-        run: go test ./... -count=1
+        run: go test ./... -count=1 -timeout 40m
         working-directory: next
       - name: seed doctor reports the platform
         run: go run ./cmd/seed doctor --config fixtures/deployment/seed.json

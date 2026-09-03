@@ -116,6 +116,16 @@ than papered over:
   every call, every test repository is configured the same, and the
   verifier refuses a carriage return regardless.
 
+## Open Windows residuals (normative: named, not hidden)
+
+- The small-team lessons drill (`TestSmallTeamPromotionDeliversLessonsAtClaimTime`)
+  fails on Windows at a `git checkout -B` that reports the lesson
+  mirror as locally modified in the drill's clone; the cause is not
+  yet understood, the drill skips there naming this, and the row
+  stays open until it runs green.
+- The `cmd/seed` suite runs about three times slower on the Windows
+  runner; the matrix gives it forty minutes.
+
 ## Tested, not asserted (normative)
 
 CI runs the Go suites on Linux, macOS and Windows (`platform` in
