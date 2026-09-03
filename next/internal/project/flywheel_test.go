@@ -58,7 +58,7 @@ func TestReportFlywheelSectionDerivesFromTheRecord(t *testing.T) {
 	if report := currentView(t, out, "report"); !strings.Contains(report, `"flywheel": null`) {
 		t.Fatalf("no work subject, a null flywheel section: %s", report)
 	}
-		if project.Report().Version != "15" {
+	if project.Report().Version != "15" {
 		t.Fatalf("the report's version moves with its sections (15: the lanes section's by_kind split, plans/os-0d4f2af3.md D6): %s", project.Report().Version)
 	}
 

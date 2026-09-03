@@ -114,3 +114,15 @@ production lane can walk — worse than the mislabel it was fixing.
 Instead: name the worker's real exhaustion point, `budget.reserve`
 refusing on capacity, and assert the refusal by its own message so it
 cannot silently become a different one.
+
+## os-cf13fb51 — a discovery pass to learn grants
+
+Tried: replay the history once with every non-operator capability
+granted, record which verbs each identity signed, then replay again
+with the minimal set. It worked and cost a third of the import's
+wall-clock (the full fixture took 110 s, most of it re-folding the
+chain per append), and it added a "needed" flag whose reset between
+passes silently skipped the verifier's enrollment. The run-log already
+says which verbs a name performs, which is what the plan's D3 asks the
+grants to derive from; deriving them statically before replay dropped
+the pass and the flag.

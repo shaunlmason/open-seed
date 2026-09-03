@@ -1418,6 +1418,34 @@ Phase 10 item).
   "The preseed", `tiers.md`, `lanes.md`, `plans.md`, `projections.md`
   and `envelope.md` following)
 
+- 12.5 migration from open-seed, drilled against a real export of this
+  repository — os-cf13fb51 — **in review** (task PR against plan #248,
+  stacked on item 4: `seed import --from-open-seed <export> --source
+  <clone> --ledger --artifacts --key [--anchor] [--repo]`, the second
+  of the two commands; anchors first (`unanchored`, `export_mismatch`
+  under exit 29 `import_refused`, both before any write); the genesis
+  import (`ledger_not_empty`; genesis, the upgrades to `seed/5`,
+  `system.imported` citing the manifest, the enrollments, the replayed
+  history with every record admitted through `admit.Check` at the
+  position it holds, the suspensions); one generated key per v1 actor
+  name with grants derived from the run-log before replay, never
+  operator, the importing operator signing what only an operator may
+  and `import-verifier` rendering the verdict a claimant could not; the
+  transform as `next/spec/import-open-seed.json` embedded byte for
+  byte, drops as rows, `import_unmapped` for the rest; packets from the
+  handoff's mechanical sections; done cards through the pass verdict
+  over the stored receipt or an import note (D7's override path
+  declined: it overrules a fail nobody rendered); the mapping manifest
+  with one disposition per export record and exact positions from a
+  two-pass replay; `ledger.AppendAll`, the one-pass batch write; the
+  fixture `next/fixtures/import/open-seed/` (this repository's state at
+  `seed-anchor/20260903T014125Z`, 251 files, 1214 run-log entries,
+  imported as 1345 records in ~33 s) with `make fixture-import`; the
+  drills (the real fixture folding every contract to its card's state,
+  the synthetic predecessor, the four refusals, the CLI's envelopes, the
+  spec mirror); `next/spec/import.md` new, `protocol.md` (`seed/5`),
+  `envelope.md` (exit 29) and `actors.md` following)
+
 ## Frontier
 
 
@@ -1472,15 +1500,15 @@ proof and performance budgets, III.C row 4's contention benchmark
 taken there (os-7508ab9e, plan #246 merged); item 4, the preseed with
 agent-only guardrails and the protected surface in config
 (os-0d4f2af3, plan #247 merged); item 5, migration from a real export
-of this repository (os-cf13fb51, plan #248 in review); item 6, docs
+of this repository (os-cf13fb51, plan #248 merged); item 6, docs
 generation, the handbook and simulation mode, which also takes the
 exit line's week-long accelerated backlog (os-16e55c11, plan #249
 merged). All six extend one declaration, `seed.json`; whichever lands
 later merges the struct.
 
 **Next action: implement Phase 12 in item order — item 1 against
-#241 and item 2 against #244 are in progress; items 3, 4 and 6 follow
-against their merged plans, and item 5 once #248 merges** —
+#241 is in progress; items 2, 3, 4 and 5 are in review against their
+merged plans, stacked in that order; item 6 follows against #249** —
 implementation PRs as drafts until the Phase 11 exit record
 (os-efb2a099) merges and the phase gate opens (decisions/0003). The derivation, stated rather than read off a
 summary: every Phase 10 item has a merged PR and the exit record above

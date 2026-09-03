@@ -87,6 +87,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runProtections(args[1:], stdout, stderr)
 	case "perf":
 		return runPerf(args[1:], stdout, stderr)
+	case "import":
+		return runImport(args[1:], stdout, stderr)
 	case "preseed":
 		return runPreseed(args[1:], stdout, stderr)
 

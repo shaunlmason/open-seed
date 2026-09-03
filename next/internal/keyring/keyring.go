@@ -53,6 +53,7 @@ const (
 	haltDeclaredVerb = "system.halt.declared"
 	haltLiftedVerb   = "system.halt.lifted"
 	checkpointVerb   = "system.checkpoint"
+	importedVerb     = "system.imported"
 )
 
 // The capability vocabulary (plans/os-3979d48b.md; SEED-NEXT.md Part II
@@ -143,7 +144,9 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapOperator}
 	}
 	switch verb {
-	case haltDeclaredVerb, haltLiftedVerb, upgradeVerb:
+	case haltDeclaredVerb, haltLiftedVerb, upgradeVerb, importedVerb:
+		// The import's provenance record (plans/os-cf13fb51.md D2) is
+		// the importing operator's, once, before the replayed history.
 		return []string{CapOperator}
 	case checkpointVerb:
 		// The charter names checkpoints as signed by the maintenance

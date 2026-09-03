@@ -3,7 +3,7 @@
 # multiplies at scale (R12). Wire your project's real lint/test/typecheck
 # here when instantiating the template.
 
-.PHONY: check validate smoke flavor-test check-next
+.PHONY: check validate smoke flavor-test check-next fixture-import
 
 check: validate check-next
 	@echo "check: add your project's lint/test/typecheck here (keep it fast)"
@@ -61,3 +61,11 @@ smoke:
 # (exit 0, explicit message) when the toolchain or registry is unavailable.
 flavor-test:
 	@sh scripts/flavor-test.sh
+
+# Regenerates the open-seed import fixture (next/fixtures/import/open-seed)
+# from the live repository at the newest seed-anchor tag, so the migration
+# gate stays real as the v1 history grows (plans/os-cf13fb51.md D6). Anchor
+# first (scripts/seed state anchor); --at-anchor derives the export from the
+# anchored tree when the state head has moved on since.
+fixture-import:
+	@next/fixtures/import/open-seed/regenerate.sh $(FIXTURE_IMPORT_FLAGS)

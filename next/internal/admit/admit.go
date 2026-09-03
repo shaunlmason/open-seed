@@ -29,6 +29,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/flywheel"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
+	"github.com/shaunlmason/open-seed/next/internal/imported"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
@@ -798,6 +799,29 @@ func coreRules() []Rule {
 			}
 			_, err := checkpoint.Parse(rec.Event.Subject, rec.Event.Payload)
 			return err
+		}},
+		{Name: "imported", Check: func(c *Context, rec *event.Record) error {
+			// The import's provenance record (plans/os-cf13fb51.md D2;
+			// next/spec/import.md): defined from seed/5, the strict
+			// payload naming the predecessor, the export's head, the
+			// anchor and the manifest, and admitted once per ledger —
+			// a second import is a second history, which is not a
+			// thing a genesis ledger can hold.
+			if rec.Event.Verb != imported.Verb {
+				return nil
+			}
+			if !version.ImportApplies(c.Active) {
+				return &Refusal{Rule: "imported", Err: fmt.Errorf("%s is not defined at %s: the import needs a chain at %s", imported.Verb, c.Active, version.Seed5)}
+			}
+			if _, err := imported.Parse(rec.Event.Subject, rec.Event.Payload); err != nil {
+				return err
+			}
+			for i, prior := range c.Records {
+				if prior.Event.Verb == imported.Verb {
+					return &Refusal{Rule: "imported", Err: fmt.Errorf("the ledger already carries an import at position %d: a genesis import refuses a ledger that is not empty", i)}
+				}
+			}
+			return nil
 		}},
 		{Name: "plan", Check: func(c *Context, rec *event.Record) error {
 			// The plan gate (plans/os-16c1d142.md): plan.* payloads
