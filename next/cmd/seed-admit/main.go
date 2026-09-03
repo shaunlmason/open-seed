@@ -28,7 +28,6 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
-	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
@@ -158,27 +157,22 @@ func admitUpdate(gitDir, oldID, newID string) error {
 		prev = h
 	}
 	for i := oldCount; i < len(records); i++ {
-		// The keyring projection over the prefix supplies the standing
-		// context for record i: the resolver (from seed/1) and the state
-		// the standing rule previews against. The full replay above
-		// already proved the prefix, so StateAt cannot fail.
-		ring, ringActive, err := keyring.StateAt(records[:i])
-		if err != nil {
-			return fmt.Errorf("rule ref: %v", err)
-		}
-		res := resolve
-		if keyring.Applies(ringActive) && ring.Seeded() {
-			res = ring.Resolver()
-		}
-		ctx := &admit.Context{
-			Count:     i,
-			Tip:       prev,
-			Active:    ringActive,
-			Halt:      halt.StateAt(records[:i]),
-			Resolve:   res,
-			Keyring:   ring,
-			Table:     table,
-			Lifecycle: table.FoldRecords(records[:i]),
+		// The context for record i is the CLI's own over the verified
+		// prefix (admit.ContextOver): the resolver from seed/1, the
+		// keyring, the halt state, the fold, the supported set and the
+		// record list the budget rule's validity replays read. A hook
+		// that built a narrower context by hand refused a run.started
+		// the cooperative client admitted — found by the Phase 12
+		// item 3 storm — so the two now share one constructor. The
+		// genesis record has no prefix and keeps the empty context.
+		var ctx *admit.Context
+		if i == 0 {
+			ctx = &admit.Context{Count: 0, Tip: prev, Resolve: resolve, Keyring: keyring.New(), Table: table, Lifecycle: table.FoldRecords(nil)}
+		} else {
+			ctx, err = admit.ContextOver(records[:i])
+			if err != nil {
+				return fmt.Errorf("rule ref: %v", err)
+			}
 		}
 		if err := admit.Run(ctx, records[i], rules); err != nil {
 			return fmt.Errorf("position %d: %w", i, err)
