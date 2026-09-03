@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-c7554f18",
-  "merge_base": "ef1fa0ed3e17deb6a0a6cdaeacb99e66afce0021",
-  "head": "c64f97db6af577718caf37a97d73595d6f897c4c",
+  "merge_base": "aa686c5a5ad2a4fd0fcff8f6f49d7be0837209f5",
+  "head": "103c986a1fc726c902caef4911a8981400713930",
   "plan_path": "plans/os-c7554f18.md",
   "plan_sha256": "3e99674fa4e3cafa5cbc4769b39b30ad3da2c890a18c22b71a3c79c8d5e29a20",
   "diff_files": [
@@ -33,7 +33,7 @@
     "next/spec/qualification.md",
     "next/spec/ranking.md"
   ],
-  "diff_sha256": "56fc5e8824ab4d231dd4c1858d520c79ac583ba3481ef665dbab4ce29449f031",
+  "diff_sha256": "de7aab49cc6913ec7947456eae302d47f8f7ef18b7f05de6f7666f82d04b0c9e",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/ranking/ ./internal/eval/ ./internal/project/ ./cmd/seed/ -run 'Rank|Strongest|Offer|Eval|Doctor' -count=1",
@@ -45,7 +45,7 @@
     },
     {
       "cmd": "make check",
-      "exit": 0
+      "exit": 2
     }
   ],
   "generated_by": "local"
