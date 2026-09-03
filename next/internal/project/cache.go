@@ -46,7 +46,7 @@ const cacheSchemaVersion = 11
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
-const cacheVersion = "12"
+const cacheVersion = "13"
 
 // Cache returns the cache projection.
 func Cache() Projection {

@@ -9,6 +9,7 @@ package plan
 
 import (
 	"fmt"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -277,4 +278,62 @@ func Rubric(doc []byte) ([]Item, error) {
 		items = append(items, Item{ID: id, Criterion: criterion})
 	}
 	return items, nil
+}
+
+// Scope lists the paths a plan's "File Scope" section names: every
+// backticked path or prefix in that section, deduplicated, in order of
+// appearance. A plan with no such section scopes nothing, which the
+// lint already refuses. The path floor (plans/os-0d4f2af3.md D3)
+// compares these against the declaration's guardrails.
+func Scope(doc []byte) []string {
+	lines := strings.Split(string(doc), "\n")
+	in := false
+	var out []string
+	seen := map[string]bool{}
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "## ") {
+			in = strings.EqualFold(strings.TrimSpace(strings.TrimPrefix(trimmed, "## ")), "file scope")
+			continue
+		}
+		if !in {
+			continue
+		}
+		for _, tok := range backticked(trimmed) {
+			tok = strings.TrimSuffix(strings.TrimSpace(tok), "/**")
+			tok = strings.TrimSuffix(tok, "/*")
+			tok = strings.TrimSuffix(tok, "/")
+			if tok == "" || strings.ContainsAny(tok, " \t") {
+				continue
+			}
+			// Canonical form, so `./next/x` and `next/x` are one token
+			// and a floor's prefix compares against what the path is;
+			// a parent or absolute token stays visible for the floor
+			// check to refuse.
+			tok = path.Clean(tok)
+			if tok == "." || seen[tok] {
+				continue
+			}
+			seen[tok] = true
+			out = append(out, tok)
+		}
+	}
+	return out
+}
+
+func backticked(line string) []string {
+	var out []string
+	for {
+		i := strings.Index(line, "`")
+		if i < 0 {
+			return out
+		}
+		rest := line[i+1:]
+		j := strings.Index(rest, "`")
+		if j < 0 {
+			return out
+		}
+		out = append(out, rest[:j])
+		line = rest[j+1:]
+	}
 }

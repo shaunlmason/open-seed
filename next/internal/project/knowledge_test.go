@@ -97,8 +97,8 @@ func TestKnowledgeProjectionPublishesTheStages(t *testing.T) {
 	// The report's derivation version moved with the section, so an
 	// already-published prefix republishes with it rather than keeping
 	// a same-id tree without it (review finding on the item 3 PR).
-	if v := project.Report().Version; v != "14" {
-		t.Fatalf("the report's version names the knowledge section (11, its retired and stale counts at 12) and the lanes section after them (13): %s", v)
+	if v := project.Report().Version; v != "15" {
+		t.Fatalf("the report's version names the knowledge section (11, its retired and stale counts at 12) and the lanes section after them (13) and by_kind (15): %s", v)
 	}
 	report := currentView(t, out2, "report")
 	if !strings.Contains(report, `"knowledge"`) || !strings.Contains(report, `"hypotheses": 2`) || !strings.Contains(report, `"contested": 1`) {

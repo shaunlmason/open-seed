@@ -418,6 +418,21 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 			return render(stampTip(verdictFailEnvelope(err), st.count), stdout, stderr)
 		}
 		r = computed
+		// The path floor (plans/os-0d4f2af3.md D3): a submission whose
+		// changed files touch a floored prefix while the contract sits
+		// below the floor is content whose gate is short, refused
+		// before any verdict is rendered, with the same words the plan
+		// lint would have used.
+		if f.config != nil {
+			if cfg, failEnv := deploymentDeclaration(*f.config); failEnv != nil {
+				return render(stampTip(failEnv, st.count), stdout, stderr)
+			} else if cfg != nil {
+				if short := floorShortfalls(cfg, s.Tier, r.Files); len(short) > 0 {
+					return render(stampTip(envelope.Fail(envelope.ExitUngated, "under_tiered",
+						fmt.Sprintf("the submission touches a floored prefix at a tier below its floor (seed.json guardrails.paths): %s", strings.Join(short, "; "))), st.count), stdout, stderr)
+				}
+			}
+		}
 	}
 	// Render derives the permissible verdict from the transcripts it
 	// just executed: pass over any red check refuses, naming the

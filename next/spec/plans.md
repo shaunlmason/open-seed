@@ -101,3 +101,17 @@ classifier in the verify workflow.
   disjoint" — the lint (missing-retention distinct), the classifier
   and its refusing entrypoint, the plan verbs, and the submission
   gate; the ancestry half explicitly Phase 6's receipt.
+
+## The path floor
+
+A deployment's declaration may floor prefixes at a tier
+(`guardrails.paths`, [`postures.md`](postures.md)): a contract whose
+work touches `next/internal/admit` files at `critical` or not at all.
+`seed plan lint <file> --config seed.json --tier <tier>` reads the
+plan's "File Scope" section (`plan.Scope`: every backticked path or
+prefix in it) and refuses `under_tiered` (exit 18) when any is under a
+floor the tier falls short of, naming the path and both tiers; the
+verifier's render applies the same check to the receipt's changed
+files with the same words, so a plan that passed lint is never refused
+at the verdict for the same reason differently phrased. Without
+`--config` the lint is what it was.

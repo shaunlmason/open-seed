@@ -435,3 +435,13 @@ maintenance lane reaches either, through `operator`, which is not its
 job. Carded as `os-d6a52784`; [`modes.md`](modes.md) records how the
 fixtures work around it and why that is a fixture's licence rather than
 a posture.
+
+## Routing is declared
+
+`routing` names a squad, and squads are the deployment's — a residual
+this document carried since the tier vocabulary landed. The preseed's
+`teams` block ([`postures.md`](postures.md)) closes it: `intent.filed`
+under a declaration refuses a squad the deployment did not declare
+(`routing_unknown`), as admission policy rather than chain validity,
+and each declared squad names the manifests it runs, checked against
+the shipped set by `seed preseed check`.

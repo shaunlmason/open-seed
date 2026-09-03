@@ -110,6 +110,53 @@ type Checkpoints struct {
 	Trust string `json:"trust"`
 }
 
+// Governance names the governance root and how the protected surface
+// changes (charter §II.14; plans/os-0d4f2af3.md D1, D5). Root is the
+// root key's fingerprint; Owners are the forge identities that review
+// the protected surface; ChangeProcess is the one process the charter
+// names.
+type Governance struct {
+	Root          string   `json:"root"`
+	Owners        []string `json:"owners,omitempty"`
+	ChangeProcess string   `json:"change_process"`
+}
+
+// ChangeProcessPROwnerReview is the only change process the charter
+// names for the protected surface.
+const ChangeProcessPROwnerReview = "pr+owner-review"
+
+// SquadGuardrail is a squad's tier posture: the tier work files at by
+// default and the highest tier an agent-kind key may claim.
+type SquadGuardrail struct {
+	Default  string `json:"default"`
+	MaxAgent string `json:"max_agent"`
+}
+
+// PathFloor is the minimum tier a contract touching a prefix files at.
+type PathFloor struct {
+	Prefix string `json:"prefix"`
+	Min    string `json:"min"`
+}
+
+// Guardrails is the declaration's guardrails block: tiers per squad and
+// per path (charter III.L row 1), the agent ceiling reading the
+// roster's kind (III.E row 9).
+type Guardrails struct {
+	Squads map[string]SquadGuardrail `json:"squads,omitempty"`
+	Paths  []PathFloor               `json:"paths,omitempty"`
+}
+
+// Squad is one declared squad and the lane manifests it runs.
+type Squad struct {
+	Name  string   `json:"name"`
+	Lanes []string `json:"lanes"`
+}
+
+// Teams is the declaration's teams block: the squads `routing` names.
+type Teams struct {
+	Squads []Squad `json:"squads"`
+}
+
 // Config is the deployment declaration.
 type Config struct {
 	Posture   Posture    `json:"posture"`
@@ -121,6 +168,61 @@ type Config struct {
 	// path is always protected whether or not it is listed.
 	Protected   []string     `json:"protected,omitempty"`
 	Checkpoints *Checkpoints `json:"checkpoints,omitempty"`
+	// The preseed's blocks (plans/os-0d4f2af3.md D1): the protocol
+	// version the deployment activates through, the governance root
+	// and change process, the guardrails and the teams. Each is
+	// undeclared when absent, never defaulted.
+	Protocol   string      `json:"protocol,omitempty"`
+	Governance *Governance `json:"governance,omitempty"`
+	Guardrails *Guardrails `json:"guardrails,omitempty"`
+	Teams      *Teams      `json:"teams,omitempty"`
+}
+
+// SquadNames lists the declared squads, sorted; nil when teams are
+// undeclared.
+func (c *Config) SquadNames() []string {
+	if c == nil || c.Teams == nil {
+		return nil
+	}
+	out := make([]string, 0, len(c.Teams.Squads))
+	for _, s := range c.Teams.Squads {
+		out = append(out, s.Name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// AgentCeiling is the highest tier an agent-kind key may claim in the
+// squad; ok is false when the guardrails or the squad are undeclared.
+func (c *Config) AgentCeiling(squad string) (string, bool) {
+	if c == nil || c.Guardrails == nil {
+		return "", false
+	}
+	g, ok := c.Guardrails.Squads[squad]
+	if !ok || g.MaxAgent == "" {
+		return "", false
+	}
+	return g.MaxAgent, true
+}
+
+// Floor is the minimum tier a contract touching path files at: the
+// strictest floor among the declared prefixes the path is under; ok is
+// false when none applies.
+func (c *Config) Floor(path string, above func(a, b string) bool) (string, bool) {
+	if c == nil || c.Guardrails == nil {
+		return "", false
+	}
+	path = strings.TrimSuffix(path, "/")
+	floor, found := "", false
+	for _, f := range c.Guardrails.Paths {
+		prefix := strings.TrimSuffix(f.Prefix, "/")
+		if path == prefix || strings.HasPrefix(path, prefix+"/") {
+			if !found || above(f.Min, floor) {
+				floor, found = f.Min, true
+			}
+		}
+	}
+	return floor, found
 }
 
 // CheckpointTrust returns the declared trust choice, or "" when the
@@ -186,7 +288,67 @@ func Parse(b []byte) (*Config, error) {
 			return nil, fmt.Errorf("protected[%d] %q: %v (valid postures: %s)", i, p, err, validList())
 		}
 	}
+	if err := c.validatePreseed(); err != nil {
+		return nil, err
+	}
 	return &c, nil
+}
+
+// validatePreseed holds the preseed blocks to their shapes: names
+// non-empty and unique, tiers non-empty (the vocabulary is the tier
+// table's and is checked where the table is, at admission and at
+// `seed preseed check`), prefixes clean, the change process the one
+// the charter names.
+func (c *Config) validatePreseed() error {
+	if c.Governance != nil {
+		if strings.TrimSpace(c.Governance.Root) == "" {
+			return errors.New("governance.root names the governance root's key fingerprint")
+		}
+		if c.Governance.ChangeProcess != ChangeProcessPROwnerReview {
+			return fmt.Errorf("governance.change_process is %q, the one process the charter names for the protected surface, got %q", ChangeProcessPROwnerReview, c.Governance.ChangeProcess)
+		}
+		for _, o := range c.Governance.Owners {
+			if strings.TrimSpace(o) == "" {
+				return errors.New("governance.owners must not carry an empty identity")
+			}
+		}
+	}
+	if c.Guardrails != nil {
+		for name, g := range c.Guardrails.Squads {
+			if strings.TrimSpace(name) == "" {
+				return errors.New("guardrails.squads must not carry an empty squad name")
+			}
+			if strings.TrimSpace(g.Default) == "" || strings.TrimSpace(g.MaxAgent) == "" {
+				return fmt.Errorf("guardrails.squads.%s declares both default and max_agent tiers", name)
+			}
+		}
+		for _, f := range c.Guardrails.Paths {
+			if validProtectedEntry(f.Prefix) != nil || strings.TrimSpace(f.Min) == "" {
+				return fmt.Errorf("guardrails.paths entries are clean repository-relative prefixes with a min tier, got %+v", f)
+			}
+		}
+	}
+	if c.Teams != nil {
+		seen := map[string]bool{}
+		for _, s := range c.Teams.Squads {
+			if strings.TrimSpace(s.Name) == "" {
+				return errors.New("teams.squads must not carry an empty squad name")
+			}
+			if seen[s.Name] {
+				return fmt.Errorf("teams.squads names %q twice", s.Name)
+			}
+			seen[s.Name] = true
+			if len(s.Lanes) == 0 {
+				return fmt.Errorf("teams.squads.%s runs at least one lane manifest", s.Name)
+			}
+			for _, l := range s.Lanes {
+				if strings.TrimSpace(l) == "" {
+					return fmt.Errorf("teams.squads.%s names an empty lane", s.Name)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // validProtectedEntry admits a clean repository-relative path prefix:
