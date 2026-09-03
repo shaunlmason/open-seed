@@ -1239,3 +1239,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T04:11:54Z"},"task":"os-0d4f2af3","ts":"2026-09-03T03:11:54Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T04:11:57Z"},"task":"os-cf13fb51","ts":"2026-09-03T03:11:57Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T04:18:17Z"},"task":"os-40ed0ca0","ts":"2026-09-03T03:18:17Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-40ed0ca0","ts":"2026-09-03T03:19:50Z","verb":"transition"}
