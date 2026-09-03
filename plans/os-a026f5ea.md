@@ -108,26 +108,34 @@ never glossed, and never given as a fraction.
 | O.2 verifier calibration scheduled against a human gold set; automatic authority suspension | **met** | #238 |
 | O.3 the compromised-actor drill in CI | not this phase's | Phase 12 item 1, planned as #241 |
 | O.4 standing drills in CI | **met** | projection rebuild #109; checkpoint verification #205; packet-resume with dead-end assertions #124/#127; claim race storms #123; halt including the raw-git bypass under enforced #84/#99; key revocation with keyring rotation #104/#139; verdict/merge divergence #137; the hostile classification corpus #80; budget reservation races #149; curator poisoning #236 — all under `make check` |
-| O.5 trajectory-prefix regression covers lane decision points; simulation mode runs the whole system credential-free | **UNMET, not claimed** | the recorded half: #239. Simulation mode is **Phase 12 item 6's** by the build plan; `trajectories.md` says "Phase 13's" three times, which is wrong and is corrected here (D6). Routed: D2(c) |
-| J.3 dispatcher re-triage rate and planner unedited-approval rate tracked; the planner receives the strongest tuples by policy | **UNMET, not claimed** | the metrics half: #239 (`trajectories.md`, the report's `lanes` section). The policy clause: #216 landed the offer's `tuples` scope as the scheduling input, `qualification.md` calls that "the whole of 'strongest tuples by policy' the tree can honestly hold until item 2's eval results exist to rank them", and #221 then deferred ranking by name (`evals.md`, "Deferred, by name"); no later Phase 10 item picked it up, so nothing ranks. Routed: D2(d) |
+| O.5 trajectory-prefix regression covers lane decision points; simulation mode runs the whole system credential-free | **UNMET, not claimed** | the recorded half: #239. Simulation mode is **Phase 12 item 6's** by the build plan; `trajectories.md` says "Phase 13's" three times and numbers this row 3 (the compromised-actor drill's), both corrected here (D6). Routed: D2(c) |
+| J.3 dispatcher re-triage rate and planner unedited-approval rate tracked; the planner receives the strongest tuples by policy | **UNMET, not claimed** | the metrics half: #239 (`trajectories.md`, the report's `lanes` section). The policy clause: #216 landed the offer's `tuples` scope as the scheduling input, `qualification.md` calls that "the whole of 'strongest tuples by policy' the tree can honestly hold until item 2's eval results exist to rank them", and #221 then deferred ranking by name (`evals.md`, "Deferred, by name"); no later Phase 10 item picked it up, so nothing ranks. Routed: D2(d), with the Phase 10 criterion revised to match: D2(f) |
 
 ## Design decisions (binding for this task)
 
-- **D1 — the record follows the Phase 9 shape exactly.** One bold
-  "Phase 10 exit: met" opening that names the exit line's four terms
-  and the drills backing each, **with the carve-out in the first
-  sentence, not the last**: III.J row 3's policy clause is the one
-  term the phase's own items deferred by name and never re-homed, the
-  scoped-exit posture of the Phase 2, 3, 5, 6 and 7 records (Phase 5's
-  named sealed-checks carve-out is the precedent). Then III.E and III.G
-  walked row by row with "met by" citations, then III.O and III.J row
-  3, then the unmet rows with their routing, then the closing sentence
-  naming this card as the record's task PR.
+- **D1 — the record follows the Phase 9 shape exactly, and claims the
+  exit line as this record revises it, never a contradiction.** One
+  bold "Phase 10 exit: met" opening that names the exit line's four
+  terms as revised by D2(f) — III.E tuples, III.G levels and
+  calibration, III.O eval items, III.J row 3's metrics half — and the
+  drills backing each, **with the revision in the first sentence, not
+  the last**: the exit line as written named III.J row 3 whole, the
+  row's policy clause was deferred by name in item 2's `evals.md` and
+  never re-homed by any Phase 10 item, and the record says which of
+  the two honest courses it took and why. Refused: the scoped-exit
+  posture of the Phase 2, 3, 5, 6 and 7 records as a cover for this —
+  those exit lines carved their subsets out in their own words
+  ("except sealed checks", "minus L2/L3 levels"), and Phase 10's does
+  not, so a record that said "met" over a criterion it classifies
+  UNMET would be the contradiction the review of #242 named. Then
+  III.E and III.G walked row by row with "met by" citations, then
+  III.O and III.J row 3, then the unmet rows with their routing, then
+  the closing sentence naming this card as the record's task PR.
 
 - **D2 — every unmet row is routed in the build plan's own text, and
   each joins its landing phase's exit line.** The Phase 8 and 9 move,
   for the same reason: an unmet row nobody is assigned stays unmet.
-  Five edits to `docs/next-build-plan.md`, and nothing else in it:
+  Seven hunks in `docs/next-build-plan.md`, and nothing else in it:
 
   *(a) III.E row 8's reap arm → Phase 12 item 1.* The compromised-actor
   consequence has two halves: the ceiling the drill asserts, and
@@ -177,6 +185,21 @@ never glossed, and never given as a fraction.
   all`, so its exit line gains one sentence: those four pillars are
   walked at that exit, each row met by citation or routed to Phase 13.
 
+  *(f) The Phase 10 criterion is revised to match.* Two honest courses
+  exist once a row on an exit line is found unmet: hold the phase open
+  until it lands, or revise the criterion in the plan's own text and
+  say so (review finding on #242: routing alone neither satisfies nor
+  removes a criterion). The first is refused here: it would block
+  Phase 12 — the release gate, the migration promotion needs — on a
+  quality policy that §5's reasoning for what must precede cutover
+  does not reach. So Phase 10 item 1's clause "the planner lane
+  receives the strongest tuples by policy" is revised to what landed
+  (the offer's `tuples` scope as the scheduling input, the ranking
+  policy Phase 13 item 7's), and Phase 10's exit line reads "+ III.J
+  row 3's metrics half (its policy clause is Phase 13 item 7's)". The
+  record states this revision as its one act of judgment, in its
+  opening sentence, and the row itself stays recorded UNMET.
+
   Refused: routing III.E row 8's reap to a new maintenance card
   outside the plan. The reap is the response half of the very
   invariant Phase 12 item 1 drills, and a card the plan does not name
@@ -222,26 +245,35 @@ never glossed, and never given as a fraction.
   phases that did not land them, so they are build-plan routing (D2),
   not new cards.
 
-- **D6 — one spec edit, and only a correction.** `trajectories.md`
-  says simulation mode is Phase 13's in three places; the build plan
-  puts it in Phase 12 item 6. A deferral that names the wrong phase is
-  misinformation the next reader acts on, so the three occurrences are
-  corrected to "Phase 12 item 6's". No other spec changes; no code, no
-  test.
+- **D6 — spec edits are corrections only, of numbers the walk reads.**
+  `trajectories.md` says simulation mode is Phase 13's in three places
+  (the build plan puts it in Phase 12 item 6) and calls the trajectory
+  row "III.O row 3" in the same three places, where row 3 is the
+  compromised-actor drill and the trajectory-and-simulation row is 5
+  (review finding on #242). Walking III.G by number found the same
+  class twice more: `verdicts.md` maps the levels to "III.G row 1"
+  (row 6) and the rubric to "III.G row 7" (row 8), and `lanes.md`
+  repeats "III.G row 7" and "III.O row 3" for the same two rows. A
+  conformance mapping that points at the wrong normative row is
+  misinformation the next reader acts on, so every one of these is
+  corrected — phase and row numbers only, no sentence otherwise
+  touched. No other spec changes; no code, no test.
 
 - **D7 — scope guard.** The files are `next/docs/progress.md`,
-  `docs/next-build-plan.md` (the D2 edits only), `next/spec/trajectories.md`
-  (the D6 correction only) and the receipt. If confirming a row turns
-  up anything else, it is a card.
+  `docs/next-build-plan.md` (the D2 edits only), `next/spec/trajectories.md`,
+  `next/spec/lanes.md` and `next/spec/verdicts.md` (the D6 number
+  corrections only) and the receipt. If confirming a row turns up
+  anything else, it is a card.
 
 ## Steps
 
-1. `docs/next-build-plan.md` — the five D2 edits: Phase 12 item 1's
-   reap clause; Phase 12 item 4's two clauses; Phase 12 item 6's
-   parenthetical; Phase 12's exit line (III.E rows 8–9, III.G row 9,
-   III.O row 5, and the four-pillar sentence); Phase 13 item 7 and its
-   exit line.
-2. `next/spec/trajectories.md` — the D6 correction, three occurrences.
+1. `docs/next-build-plan.md` — the seven D2 hunks: Phase 10 item 1's
+   clause and Phase 10's exit line (f); Phase 12 item 1's reap clause;
+   Phase 12 item 4's two clauses; Phase 12 item 6's parenthetical;
+   Phase 12's exit line (III.E rows 8–9, III.G row 9, III.O row 5, and
+   the four-pillar sentence); Phase 13 item 7 and its exit line.
+2. `next/spec/trajectories.md`, `next/spec/lanes.md`,
+   `next/spec/verdicts.md` — the D6 number corrections.
 3. `next/docs/progress.md` — the Phase 10 ledger corrections (D4), the
    Phase 11 state words (D4), the exit paragraph (D1, D2, D5) inserted
    after the Phase 10 ledger where the Phase 9 record sits relative to
@@ -252,7 +284,8 @@ never glossed, and never given as a fraction.
 
 - `next/docs/progress.md`
 - `docs/next-build-plan.md` (the D2 edits only)
-- `next/spec/trajectories.md` (the D6 correction only)
+- `next/spec/trajectories.md`, `next/spec/lanes.md`,
+  `next/spec/verdicts.md` (the D6 number corrections only)
 - `receipts/os-a026f5ea.json`
 
 Nothing else. No Go file, no test, no other spec.
@@ -261,21 +294,26 @@ Nothing else. No Go file, no test, no other spec.
 
 **Boundary set (new, shown working):**
 
-1. The record opens with the exit line's four terms, names the
-   carve-out (III.J row 3's policy clause) in its first sentence, and
-   names for each term the drills on `main` that back it; every drill
-   named exists under that name (`grep -n "^func <name>"`).
+1. The record opens with the exit line's four terms as D2(f) revises
+   them, states the revision and the refused alternative in its first
+   sentences, and names for each term the drills on `main` that back
+   it; every drill named exists under that name
+   (`grep -n "^func <name>"`).
 2. All nine III.E rows, all ten III.G rows, all five III.O rows and
    III.J row 3 appear, each with a status and a citation; III.E rows 8
    and 9, III.G rows 9 and 10, III.O row 5 and III.J row 3 say
    **UNMET** in those letters, each with its routing (D2) or its card
    (D5). No row's status is a fraction.
-3. `docs/next-build-plan.md` carries exactly the five D2 edits: Phase
-   12 items 1, 4 and 6, Phase 12's exit line, Phase 13 item 7 with
-   its exit line — and changes nowhere else (`git diff --stat` shows
-   only those hunks).
-4. `next/spec/trajectories.md` changes only the three "Phase 13"
-   occurrences to "Phase 12 item 6".
+3. `docs/next-build-plan.md` carries exactly the seven D2 hunks: Phase
+   10 item 1 and its exit line, Phase 12 items 1, 4 and 6, Phase 12's
+   exit line, Phase 13 item 7 with its exit line — and changes nowhere
+   else. After the edit no Phase 10 text names III.J row 3 whole.
+4. The three spec files change only phase and row numbers:
+   `trajectories.md`'s three "Phase 13" → "Phase 12 item 6" and three
+   "III.O row 3" → "row 5"; `lanes.md`'s "III.G row 7" → "row 8" and
+   "III.O row 3" → "row 5"; `verdicts.md`'s "III.G row 1" → "row 6"
+   and "III.G row 7" → "row 8". `git diff --word-diff` on each shows
+   numbers only.
 5. The Phase 10 ledger reads done with a PR number on every line;
    item 3's line is one clean line; Phase 11's lines carry the merged
    numbers; the Frontier section names the next action (Phase 12
@@ -289,7 +327,7 @@ Nothing else. No Go file, no test, no other spec.
 
 - `make check` green; `scripts/seed validate` green; the scope check
   below passes on exactly the four files.
-- No Go file, no test, no spec other than `trajectories.md` in the
+- No Go file, no test, no spec other than the three named in the
   diff; every drill named in the record still exists on `main`.
 - The Phase 5 through 9 exit records are byte-for-byte unchanged.
 
@@ -299,13 +337,14 @@ Nothing else. No Go file, no test, no other spec.
 export PATH=/home/shaun/go-toolchain/go/bin:$PATH
 make check
 scripts/seed validate
-git diff --name-only origin/main | grep -vE '^next/docs/progress.md$|^docs/next-build-plan.md$|^next/spec/trajectories.md$|^receipts/os-a026f5ea.json$' | grep -q . && echo SCOPE-VIOLATION || echo scope ok
+git diff --name-only origin/main | grep -vE '^next/docs/progress.md$|^docs/next-build-plan.md$|^next/spec/(trajectories|lanes|verdicts).md$|^receipts/os-a026f5ea.json$' | grep -q . && echo SCOPE-VIOLATION || echo scope ok
 ```
 
 ## Expected diff shape
 
 Modified: `next/docs/progress.md` (the Phase 10 ledger and exit
 record, the Phase 11 state words, the Frontier section),
-`docs/next-build-plan.md` (five hunks in Phases 12 and 13),
-`next/spec/trajectories.md` (three one-word corrections). New:
+`docs/next-build-plan.md` (seven hunks in Phases 10, 12 and 13),
+`next/spec/trajectories.md`, `next/spec/lanes.md`,
+`next/spec/verdicts.md` (number-only corrections). New:
 `receipts/os-a026f5ea.json`. Nothing else.
