@@ -1361,3 +1361,4 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-16e55c11","ts":"2026-09-03T12:14:13Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"title":"next: the Phase 12 exit record (III.B, III.O, III.P, with III.C, III.L, III.M, III.Q walked)"},"task":"os-9e9ae30c","ts":"2026-09-03T12:16:59Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-9e9ae30c","ts":"2026-09-03T12:17:01Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T13:17:05Z"},"task":"os-9e9ae30c","ts":"2026-09-03T12:17:05Z","verb":"claim"}
