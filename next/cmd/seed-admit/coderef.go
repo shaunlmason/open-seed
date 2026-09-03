@@ -102,16 +102,16 @@ type codeRefContext struct {
 // admits the genesis push whoever carries it.
 func loadCodeRefContext(gitDir, guarded, pusher string) (*codeRefContext, error) {
 	ctx := &codeRefContext{guarded: guarded, pusher: pusher}
-	out, err := exec.Command("git", "--git-dir", gitDir, "symbolic-ref", "HEAD").Output()
+	out, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "symbolic-ref", "HEAD").Output()
 	if err != nil {
 		return nil, fmt.Errorf("rule ref: cannot determine the default branch (HEAD is not a symbolic ref): %v", err)
 	}
 	ctx.defaultBranch = strings.TrimSpace(string(out))
-	if tip, err := exec.Command("git", "--git-dir", gitDir, "rev-parse", "--verify", "--quiet", ctx.defaultBranch+"^{commit}").Output(); err == nil {
+	if tip, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "rev-parse", "--verify", "--quiet", ctx.defaultBranch+"^{commit}").Output(); err == nil {
 		ctx.defaultTip = strings.TrimSpace(string(tip))
 	}
 
-	tipOut, err := exec.Command("git", "--git-dir", gitDir, "rev-parse", "--verify", "--quiet", guarded+"^{commit}").Output()
+	tipOut, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "rev-parse", "--verify", "--quiet", guarded+"^{commit}").Output()
 	if err != nil {
 		// No ledger yet: the context judges every code ref refused.
 		return ctx, nil
@@ -145,7 +145,7 @@ func loadCodeRefContext(gitDir, guarded, pusher string) (*codeRefContext, error)
 	ctx.root = pusher != "" && ring.IsActiveRoot(pusher)
 
 	if ctx.defaultTip != "" {
-		body, err := exec.Command("git", "--git-dir", gitDir, "show", ctx.defaultTip+":"+posture.DeclarationPath).Output()
+		body, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "show", ctx.defaultTip+":"+posture.DeclarationPath).Output()
 		if err == nil {
 			cfg, perr := posture.Parse(body)
 			if perr != nil {
@@ -181,7 +181,7 @@ func (c *codeRefContext) authorize(gitDir, oldID, newID, ref string) error {
 		if create {
 			return true
 		}
-		return exec.Command("git", "--git-dir", gitDir, "merge-base", "--is-ancestor", oldID, newID).Run() == nil
+		return exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "merge-base", "--is-ancestor", oldID, newID).Run() == nil
 	}
 	switch {
 	case ref == c.defaultBranch:
@@ -259,12 +259,12 @@ func (c *codeRefContext) checkProtected(gitDir, oldID, newID, ref string) error 
 	if c.defaultTip != "" {
 		args = append(args, "^"+c.defaultTip)
 	}
-	out, err := exec.Command("git", args...).Output()
+	out, err := exec.Command("git", append([]string{"-c", "core.autocrlf=false", "-c", "core.eol=lf"}, args...)...).Output()
 	if err != nil {
 		return fmt.Errorf("rule protected: %s: cannot enumerate the pushed commits: %v", ref, err)
 	}
 	for _, commit := range strings.Fields(string(out)) {
-		paths, err := exec.Command("git", "--git-dir", gitDir, "diff-tree", "--no-commit-id", "--name-only", "-r", "-c", "--root", commit).Output()
+		paths, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "diff-tree", "--no-commit-id", "--name-only", "-r", "-c", "--root", commit).Output()
 		if err != nil {
 			return fmt.Errorf("rule protected: %s: cannot read commit %.12s: %v", ref, commit, err)
 		}

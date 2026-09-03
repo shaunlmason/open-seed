@@ -1462,6 +1462,16 @@ record's own position through one derivation, `curation.AuthenticPass`
   gives one corrupted chain, the D3 tripwire inverted on purpose, the
   envelope spec's null sentence sharpened to "before any position was
   read")
+- 13.3 a non-primary forge adapter (Forgejo) for the forge extras (III.N
+  row 2) — os-ad610334 — **draft in review** (draft PR #281 against plan
+  #275 per decisions/0003: internal/protections/forgejo.go over Forgejo's
+  Gitea-compatible branch/tag-protection API, held to the one Desired
+  table; the Observer filling merge.observed's sha from either forge;
+  admission.forge/api posture fields; seed protections/merge observe
+  --forge forgejo; doctor's declared forge; next/spec/forges.md; drilled
+  against a fake Forgejo. Reconciliation: the pull-request rule is
+  Unexpressible on Forgejo — reported manual, not half-applied. Awaits
+  #275 merge + a make-check window for the receipt)
 - 13.4 mirrors and dashboards propose, federation as uniform read
   remotes, cross-repo work as a proposal (III.J row 2, III.N row 4,
   §II.15) — os-48df10a2 — **in review** (task PR against plan #257,
@@ -1516,11 +1526,61 @@ record's own position through one derivation, `curation.AuthenticPass`
   the refusals; `next/spec/boundary.md` new, `envelope.md`,
   `projections.md`, `postures.md`, `protocol.md` following)
 
+## Phase 13 — Conformance completion (docs/next-build-plan.md Phase 13; deps: 12)
+
+- 13.6 the machine-protocol surface and platform parity (III.I rows
+  3–4) — os-b55e5647 — **in review** (task PR against plan #261:
+  `cmd/seed/registry`, the one table both surfaces are drawn from, and
+  `catalog.go` registering every verb with its subverbs in the usage
+  line's own words, the CLI's `run` dispatching through it alone;
+  `seed serve`, JSON-RPC 2.0 over stdio framed as `machine-envelope/0`,
+  a method per verb, params as argv or as flags, the CLI's own run
+  function invoked and its envelope returned verbatim (a refusal a
+  result, never a transport error), `serve --list` printing the method
+  set, the transport the one named carve-out; `internal/platform` with
+  the honest posture table per OS and the doctor's `platform` report;
+  the LF-only ledger enforced (the segment scanner keeps a carriage
+  return and the record parser refuses it); the drills — the registry
+  against the usage vocabulary both ways, set equality of the
+  surfaces, byte-identical envelopes through both over a corpus, the
+  path lint at the call site, the skip-reason lint, the CRLF refusal,
+  the doctor's report; the CI matrix on Linux, macOS and Windows;
+  `next/spec/platform.md` new, `protocol.md` and `envelope.md`
+  following)
+- 13.7 tuple ranking as supervisor policy: eval results rank
+  qualified tuples and the planner lane's offers carry the strongest
+  (III.J row 3's policy clause, §II.9) — os-c7554f18 — **in review**
+  (task PR against plan #276: `internal/ranking`, the record-derived
+  policy table (score by qualifying evidence since the tuple last
+  held, ties by the latest pass then the canonical JSON, disqualified
+  and holder-less tuples absent, agreement refining the verdict
+  ranking only with the gold supplied), pinned to `next/spec/ranking.md`
+  by a drill that parses the table; `seed offer publish --strongest n
+  --capability c` filling the `tuples` scope from the ranking at the
+  offer's own instant and refusing `ranking_empty` (exit 4) rather
+  than widening; `eval.Due`'s offers by policy (the configuration
+  under re-test, else the strongest claim tuple, else unscoped with a
+  `ranking_empty` note, the bootstrap); the `ranking` projection
+  (version 1, both capabilities, byte-identical), `seed doctor
+  --ledger` naming the top tuple per capability, the report's
+  `lanes.planner.strongest` at version 16; drilled at the derivation,
+  the verbs and the projection, with the mutation evidence D4 names;
+  `ranking.md` new, `offers.md`, `qualification.md` (the deferral
+  closed), `evals.md`, `projections.md` and `envelope.md` following)
+
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
+- 12.1 the compromised-actor drill and the release gate — os-465e356e
+  — **merged** (#250 against plan #241: `internal/redteam` with the
+  ceiling and residual tables asserted both ways, the hook's code-ref
+  half, the protected surface restricted to the governance root, `make
+  check` as the release gate; its follow-up os-32d06c65, revocation
+  reaping the revoked holder's open claims, merged in #267; the two gap
+  cards the phase filed, `ledger show` stamping the position its
+  `chain_invalid` was computed at (os-37fcf7c6, #265) and the cache
+  carrying the event's `ts` (os-74ce2261, #266), merged)
 - 12.2 forge-hosted admission service (stateless, sole-writer) and the
-  protections desired-state reconciler — os-5c8a312c — **in review**
-  (task PR against plan #244: `seed-admit serve` as the service form of
+  protections desired-state reconciler — os-5c8a312c — **merged** (#252 against plan #244: `seed-admit serve` as the service form of
   the one judgment — a proposal's records appended onto the
   materialized tip, the candidate committed in the service's own git
   dir, judged with the hook's `admitUpdate` (its typed refusals now
@@ -1553,7 +1613,7 @@ record's own position through one derivation, `curation.AuthenticPass`
 
 - 12.3 checkpoint trust docs with the replay-equals-genesis CI proof;
   performance budgets tracked in CI; III.C row 4's contention benchmark
-  — os-7508ab9e — **in review** (task PR against plan #246, stacked on
+  — os-7508ab9e — **merged** (#253 against plan #246, stacked on
   item 2: `checkpoints.trust` on the declaration, `replay` or `signers`,
   an absent block undeclared and `seed project start` refusing
   `trust_undeclared` rather than choosing; `ledger.WithTrustedPrefix`
@@ -1579,8 +1639,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   idempotent and CI-verified; agent-only guardrails and human/agent
   metrics reading `kind` (III.E row 9); the protected surface and the
   root's change process in config (III.G row 9, III.L row 2); tiers per
-  squad and per path (III.L row 1) — os-0d4f2af3 — **in review** (task
-  PR against plan #247, stacked on items 2 and 3: `seed.json` completed
+  squad and per path (III.L row 1) — os-0d4f2af3 — **merged** (#254 against plan #247, stacked on items 2 and 3: `seed.json` completed
   with `protocol`, `governance`, `guardrails` and `teams`, strict, each
   block undeclared when absent; `seed init --preseed` writing genesis
   and the declared activations idempotently and refusing
@@ -1601,7 +1660,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   and `envelope.md` following)
 
 - 12.5 migration from open-seed, drilled against a real export of this
-  repository — os-cf13fb51 — **in review** (task PR against plan #248,
+  repository — os-cf13fb51 — **merged** (#255 against plan #248,
   stacked on item 4: `seed import --from-open-seed <export> --source
   <clone> --ledger --artifacts --key [--anchor] [--repo]`, the second
   of the two commands; anchors first (`unanchored`, `export_mismatch`
@@ -1629,7 +1688,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   `envelope.md` (exit 29) and `actors.md` following)
 - 12.6 docs generation (lifecycle/capabilities/exit-codes/per-lane from
   the tables, drift-checked), the operator handbook, and simulation mode
-  — os-16e55c11 — **in review** (task PR against plan #249:
+  — os-16e55c11 — **merged** (#272 against plan #249:
   `admit.CatalogVerbs()`, `internal/docs` + `seed docs generate/check`
   (`docs_drift` refining exit 28) + `make check-next`; `internal/decider`
   + `trajectory.ChoiceDiverged` + `trajectory replay --decider scripted`;
@@ -1640,10 +1699,181 @@ record's own position through one derivation, `curation.AuthenticPass`
   decisions.md: the reference decider is partial because the frame does
   not determine the loop's per-iteration act; `claim take` is remote-only
   so both postures run on a bare remote)
-of this repository (os-cf13fb51, plan #248 merged); item 6, docs
-**Next action: implement Phase 12 in item order — item 1 (#250) is
-merged; items 2, 3, 4 and 5 are in review against their merged plans,
-stacked in that order; item 6 follows against #249** —
+**Phase 12 exit (charter III.B, III.O and III.P as
+docs/next-build-plan.md's exit line scopes it, with III.C, III.L, III.M
+and III.Q walked as the Phase 10 record routed them): met.** Met means
+the three pillars the plan's own exit line names, the scoped-exit
+posture of the Phase 2 through 11 records, each row backed by a drill
+on `main` that a reader can find by name; the four pillars the Phase 10
+record put on this line because no other exit line owned them are
+walked the same way, and the rows they leave PARTIAL or UNMET are
+routed by name, never glossed. Every numbered item has a merged PR: 1
+in #250 (with the reap arm #267 it named), 2 in #252, 3 in #253, 4 in
+#254, 5 in #255, 6 in #272, and the two gap cards the phase found (#265,
+the `chain_invalid` position on `ledger show`; #266, the cache carrying
+the event's `ts`) are merged. *III.B, the service posture.* Row 1 (the
+stateless validator as the only writer): met by Phase 2's hook and
+#252's service running one rule set, `TestServiceAgreesWithTheBoundaryAndTheHook`
+and `TestServiceAdmitsRefusesAndTheForgeRefusesTheActor`
+(`cmd/seed-admit/serve_test.go`) beside the hook's
+`TestDrillRawAdversaryPerPosture` (`cmd/seed-admit/drill_test.go`).
+Row 2 (no unique durable state; kill-and-replace): met by
+`TestDrillKillAndReplace` and `TestServiceKillAndReplace`, the hook
+and the service each rebuilt from a clone and judging the same
+proposal the same way. Row 3 (three postures declared, the
+cooperative posture's consequence stated, no default): met by
+`next/spec/postures.md` and `posture.Load` refusing `ErrUndeclared`
+where no posture is declared. Row 4 (actor credentials cannot write
+the ledger ref): met by #250's code-ref arm
+(`TestCodeRefProtectedSurface`, `TestCodeRefNoLedgerAndNoDeclaration`,
+`cmd/seed-admit/coderef_test.go`) and #252's derived sole-writer
+ruleset (`TestDesiredDerivesFromTheDeclaration`,
+`internal/protections/protections_test.go`). Row 5 (the
+compromised-actor drill in CI): met by #250, the exit line's first
+criterion, `TestCeilingHoldsAtThePush`, `TestOneDerivationLedgerAgrees`,
+`TestCoverageBothWays`, `TestResidualsArePinned` and
+`TestTablesValidate` (`internal/redteam/redteam_test.go`), the ceiling
+and the residuals pinned as tables and the code-ref rules proven
+load-bearing by `TestCodeRefRulesAreLoadBearing`. Row 6 (sharding,
+MAY): not claimed; the backlog names sharded intake as a true extra.
+*III.O, the drill in CI.* Rows 1 and 2 were met at Phase 10 (#221,
+#238) and are unchanged. Row 3 (the compromised-actor drill on every
+release): met by #250 with the release gate being `make check` itself
+(`plans/os-465e356e.md` D8, `next/spec/redteam.md`), which CI runs on
+every push to `main`, every pull request and every merge group, so no
+release exists that the drill has not gated. Row 4 (the standing
+drills in CI): met, each drill a test under `make check` (`covergate`
+runs every package with no short mode): projection rebuild
+(`TestRebuildByteIdenticalAndStamped`, `internal/project`), checkpoint
+verification (`TestMaintainCheckpointIsStartableByAFreshReader`,
+`cmd/seed/maintain_cli_test.go`, and #253's cross-checked start),
+packet-resume with dead-end assertions (`TestPacketResumeDrill`,
+`internal/packet/resume_test.go`), claim race storms
+(`TestClaimRaceStorm`, `internal/gitref`, and the perf gate's storm),
+halt including the raw-git bypass (`TestHaltRefusesEverythingButLift`,
+`internal/halt`; `TestDrillRawAdversaryPerPosture`), key revocation
+with keyring rotation (`TestDrillKeyRotation`,
+`TestDrillCompromisedKeyCutPerPosture`,
+`cmd/seed-admit/rotation_test.go`), verdict/merge divergence
+(`TestSubjectClassifiesInducedDivergences`, `internal/reconcile`), the
+data-classification hostile corpus (`TestHostileCorpusRefuses`,
+`internal/classify`; `TestNoHostileTextWidensTheDispatcherSet`,
+`internal/admit/injection_test.go`), budget reservation races
+(`TestReservationRaceAndStatus`, `cmd/seed/budget_cli_test.go`) and
+curator poisoning (`TestEveryPoisonFailsAtBothEnds`,
+`internal/admit/poisoning_test.go`). Row 5 (trajectory-prefix
+regression and simulation mode): met by #239's recorded half and
+#272's simulation, `TestSimulateReachesDoneCooperative`,
+`TestSimulateReachesDoneEnforced` and `TestSimulateAcceleratedBacklog`
+(`cmd/seed/simulate_cli_test.go`) driving every lane to done
+credential-free under both postures with the ledger audit
+(`TestAuditCatchesSilentAbandonment`, `TestAuditCatchesUnofferedClaim`,
+`internal/simulate/audit_test.go`). *III.P, distribution and
+migration.* Row 1 (tagged releases, three-way template upgrades with
+rollback, the pinned checksum-verified engine never committed,
+air-gap paths, hash-pinning throughout): met by the distribution Seed
+ships inside, `scripts/seed` fetching the engine pinned in
+`.seed/engine.lock` and verifying its checksum, `seed engine upgrade`
+with rollback and the protocol preflight, `seed template upgrade`'s
+three-way merge from recorded provenance, the vendored engine for
+air-gapped machines, and `checksums.txt` with provenance on every
+release; one residual named and not claimed: Seed's own binary is
+built from source and is not yet a released artifact, which is §5
+step 2's cutover (what new users clone) and belongs to promotion. Row
+2 (hook and service, both stateless and rebuildable): met, the two
+kill-and-replace drills above. Row 3 (the preseed in one idempotent,
+CI-verified file): met by #254, `TestInitPreseedIsIdempotentAndDriftRefuses`
+(`cmd/seed/preseed_cli_test.go`) and `seed preseed check` on the
+fixture deployment under `make check-next`. Row 4 (the predecessor
+import, two commands, drilled against a real fixture): met by #255,
+`TestRealFixtureImports` (`internal/importer/fixture_test.go`) folding
+this repository's own export to its cards' states,
+`TestAnchorRefusalsPrecedeEveryWrite`, `TestNonEmptyLedgerRefuses` and
+`TestUnmappedVerbRefuses` (`internal/importer/drills_test.go`), and
+`TestImportCommandEnvelopes` (`cmd/seed/import_cli_test.go`). Row 5
+(install is one command, no telemetry, no account): met; `scripts/seed`
+bootstraps and `seed init --preseed` seeds a deployment from one file,
+and the tree makes no network call outside git and the forge: exactly
+three non-test files under `next/` import `net/http`, the admission
+service, the proposal client and the GitHub protections adapter.
+*III.C, walked.* Rows 1, 2, 3 and 5 are met: Phase 4's observation
+channels classified and lossy by declaration
+(`next/spec/observations.md`), liveness by monotonic counts and
+material transitions only (`TestMilestoneSummarizationBoundary`,
+`TestWedgeDeclaredOperatorFact`, `internal/admit/observation_test.go`;
+`TestLivenessRidesTheWorkAndIsKeyedToActorAndFence`,
+`internal/loop/loop_test.go`), expiry and wedging distinct and drilled
+(`TestMaintainRefusesAWedgeCitingTheWrongFence`,
+`TestMaintainReapsOnAWedgeCitingTheActiveFence`,
+`cmd/seed/maintain_cli_test.go`). Row 4 (the contention benchmark at
+target scale, tracked in CI): PARTIAL. #253's perf gate measures the
+storm's wall time and attempts ratio against `next/perf/budgets.json`
+with provenance, re-measuring cold once (`TestRunReMeasuresColdOnce`,
+`internal/perfgate`), and the storm runs 24 writers through the hook
+on every `make check-next`; hundreds of concurrent actors are not
+demonstrated per PR, because a storm at that scale costs minutes a
+run. Routed: a scheduled run at the target scale, in the build plan's
+backlog, walked again at Phase 13's exit. *III.L, walked.* Row 1
+(tiers per squad and per path): met by #254,
+`TestAgentCeilingReadsTheRosterKind`,
+`TestRoutingIsHeldToTheDeclaredSquads` and
+`TestUnknownCeilingFailsClosed` (`internal/admit/policy_test.go`),
+`TestPlanLintHoldsTheScopeToThePathFloors` and
+`TestVerdictRenderHoldsTheReceiptToThePathFloors` (`cmd/seed`). Row 2
+(the protected surface in config, root-only, write-denied to every
+agent key, audited in CI, the test-content residual documented): met
+by #250's `TestCodeRefProtectedSurfaceIsRootOnly` and #254's
+`governance` block with `TestCapabilityAuditOfTheShippedManifests`
+(`cmd/seed/audit_test.go`), the residual named in `postures.md`. Row 3
+(data/instruction defense layered, documented with limits, the corpus
+on every release): met, the injection suite of Phase 9 and the
+classification corpus both under the release gate. Row 4 (per-verb
+policy governing the machine-protocol surface with attributable
+approvals): UNMET, and routed unchanged to Phase 13 item 6
+(os-b55e5647), where the machine-protocol surface lands; the Phase 13
+record says whether that item meets the row or it stays routed. Row 5
+(forge protections declared and reconciled, admission-only ledger
+writes, immutable tags, least-privilege CI identities): met by #252,
+`TestPlanAndApplyThroughTheSnapshot`,
+`TestLintWorkflowsFindsScheduledWriters` and
+`TestGitHubAdapterReconciles` (`internal/protections`), with
+`TestCodeRefTagsAreImmutable` at the hook. Row 6 (process changes pass
+boundary and retention, lint-checked): met by Phase 5's plan lint
+(`TestPlanGateAboveTrivialTier`, `internal/admit/plan_test.go`;
+`TestPlanLintTierAndScopeAreHeldToTheFloors`). *III.M, walked.* Row 1
+(the DAG engine): met by the v1 engine Seed's flywheel drafts into
+(#240), `scripts/seed workflow validate|run` with its typed edges,
+gates, waves, budgets and the mock run, the drafted definitions
+landing as PRs against a protected registry; two residuals named:
+vault-indirect secrets are not implemented (the handbook resolves no
+secret at run time), and which engine new users clone is §5 step 2's
+decision. *III.Q, walked.* Row 1: met, `make check` green on `main` at
+every merge. Row 2: met, `covergate` at a stated 90% floor over every
+package, the v1 smoke targets under the same command, the backend
+conformance suites and the forge adapter's reconciliation drill. Row
+3 (docs governed): met by #272, the operator handbook and the
+generated worker docs rendered from the tables admission reads
+(`TestGeneratedContentIsFromTheTables`, `TestCheckCatchesHandEdit`,
+`TestGeneratedDocsAreCommitted`, `internal/docs/docs_test.go`),
+drift-gated under `make check-next`. Row 4: met, Appendix C,
+`next/docs/decisions.md` and `design-options.md`. Row 5: met, the
+authority order in `docs/CONTRIBUTING-AGENTS.md`, the decisions under
+`decisions/`, the build plan's rubric. Row 6 (fork-friendly
+governance): met, the MIT license, no contributor license agreement,
+no open-core split, stated here as the repository's standing. Row 7
+(self-hosting total once bootstrapped): PARTIAL; Seed coordinates
+this repository's `next:` cards through v1's queue today, and total
+self-hosting is §5 step 1's shadow run and the promotion criteria,
+where it is routed, not claimed. The Phase 9 record's routing of III.J row 2 (the dispatcher with least standing capability, passing the injection conformance suite: embedded instructions in intents, mirrors and tool output quoted as data, never obeyed) to Phase 13 item 4 closes here, met: the dispatcher holds the dispatch grant alone, the suite on `main` pins that hostile text in intents, projections and tool output is carried verbatim and never widens the dispatcher's reachable set (`TestNoHostileTextWidensTheDispatcherSet`, `TestDispatcherReachableSetIsNamed`, `internal/admit/injection_test.go`; `TestHostileCorpusRefuses`, `internal/classify`; `TestProjectionsCarryPayloadsVerbatimIncludingHostileText`, `cmd/seed/injection_cli_test.go`), and #270 extended the corpus to the cross-repository ingress vector, `TestNoHostileRequestWidensTheDispatcherSet` (`internal/admit/injection_request_test.go`) proving a hostile `request.filed` from another repository is quoted as data and grants nothing; the same PR meets III.N row 4 (federation projection-only: uniform read remotes, request-event ingress, no cross-ledger write path, proven by its absence), which Phase 13's record walks in full. The Phase 8 record's routing of III.I row 3 (the CLI as the complete interface; the machine-protocol surface with identical semantics; platform parity including Windows, documented and tested) to Phase 13 item 6 stays open, the row PARTIAL: the first clause holds and is reinforced by #272, `seed docs generate` rendering the lifecycle, capability, exit-code and per-lane worker documents from the sources the machinery reads (the transition table, `admit.CatalogVerbs()` over the affordance catalog the boundary drafts from, the envelope package's exit constants, `lane.Resolve`), so the documented interface cannot drift from the enforced one, `seed docs check` failing `docs_drift` under `make check-next` (`TestGeneratedDocsAreCommitted`, `TestCheckCatchesHandEdit`, `internal/docs`; `TestDocsCheckCleanOnCommitted`, `TestDocsGenerateThenCheck`, `cmd/seed`); the second and third clauses, `seed serve` with identical semantics and the tested Linux/macOS/Windows matrix, are Phase 13 item 6's (os-b55e5647, #273, in review at this record's writing) to close.
+The Phase 10 record's routing of III.C, III.L, III.M and III.Q to
+this line closes here except the three rows named above, which carry
+their own routings. One thing this phase learned is worth one
+sentence: a stacked task PR costs a merge-forward and a fresh receipt
+at every parent's merge, and a child merged into a stale base never
+reaches `main`, so the rule is to retarget or re-land the moment a
+parent merges (`memory/LEARNINGS.md`). This exit record is card
+os-9e9ae30c's task PR (an administrative card, not a Phase 12 item),
+written by the two implementing sessions, one voice.
 
 
 ## Frontier
@@ -1684,40 +1914,37 @@ plans #226, #228, #229, #230, #231), so its exit criteria are met by
 their items; the Phase 11 exit record above is card os-efb2a099's task
 PR (this card), which closes the phase.
 
-Phase 12 declares `deps: all`, so its gate opens when the Phase 11
-exit record merges; until then its cards are filed and planned, and
-any implementation opens as a draft PR that CI's plan-at-merge-base
-rule keeps structurally ordered (decisions/0003). Item 1, the
-compromised-actor drill (os-465e356e), is planned in #241 (merged: the
-drill builds on the shipped `seed-admit` hook rather than a second one,
-and unauthorized pushes to code refs are exercised, not exempted) and
-implemented in #250 (in review: the hook's code-ref half, the
-`internal/redteam` ceiling asserted both ways, the protected surface
-restricted to the governance root); it names its follow-up card
-os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are carded
-and planned: item 2, the forge-hosted admission service and the
-protections reconciler (os-5c8a312c, plan #244 merged, implementation
-in progress); item 3, checkpoint trust with the replay-equals-genesis
-proof and performance budgets, III.C row 4's contention benchmark
-taken there (os-7508ab9e, plan #246 merged); item 4, the preseed with
-agent-only guardrails and the protected surface in config
-(os-0d4f2af3, plan #247 merged); item 5, migration from a real export
-of this repository (os-cf13fb51, plan #248 in review); item 6, docs
-generation, the handbook and simulation mode, which also takes the
-exit line's week-long accelerated backlog (os-16e55c11, plan #249
-merged). All six extend one declaration, `seed.json`; whichever lands
-later merges the struct.
+Phase 12's six items are merged (#250, #252, #253, #254, #255, #272
+against plans #241, #244, #246, #247, #248, #249), with the reap arm
+#267 and the two gap cards #265 and #266, so its exit criteria are met
+by their items; the Phase 12 exit record above is card os-9e9ae30c's
+task PR (this card), which closes the phase.
 
-**Next action: implement Phase 12 in item order — item 1 (#250,
-in review) and item 2 against #244 are in progress; items 3, 4 and 6 follow
-against their merged plans, and item 5 once #248 merges** —
-implementation PRs as drafts until the Phase 11 exit record
-(os-efb2a099) merges and the phase gate opens (decisions/0003). The derivation, stated rather than read off a
-summary: every Phase 10 item has a merged PR and the exit record above
-walks III.E, III.G, III.O and III.J row 3 and routes what it found
-unmet, so nothing in Phase 10 remains to claim; every Phase 11 item is
-merged and this card is its exit record; every Phase 12 item is carded
-and planned, and item 1 is implemented (#250).
+Phase 13 declares `deps: 12`, so its gate opens when this record
+merges; its items stand as their cards do. Item 1, racing mode
+(os-56bee171), is merged in #269 against plan #256. Item 4, request
+ingress and federation as read remotes (os-48df10a2), is merged in
+#270 against plan #257, closing III.J row 2. Item 5, the A2A-shaped
+cross-organization boundary (os-40ed0ca0), is in review in #279
+against plan #258. Item 6, the machine-protocol surface and platform
+parity (os-b55e5647), is in review in #273 against plan #261 and its
+amendment #278, the three-platform matrix green. Item 2, the
+remaining executor adapters (os-083112ac), is planned in #274 with a
+draft implementation in #282; item 3, the non-primary forge adapter
+(os-ad610334), is planned in #275 with a draft implementation in
+#281; item 7, tuple ranking as supervisor policy (os-c7554f18), is
+planned in #276. The two routed gaps (#265, #266) are merged.
+
+**Next action: land Phase 13 — merge #279 and #273 as they clear
+review, then implement items 2, 3 and 7 as their plans merge (#274,
+#275, #276), the drafts un-drafted and receipted at that point** —
+and write the Phase 13 exit record when every item has a merged PR.
+The derivation, stated rather than read off a summary: every Phase 12
+item has a merged PR and the exit record above walks III.B, III.O and
+III.P with III.C, III.L, III.M and III.Q and routes what it found
+unmet (III.C row 4, III.L row 4, III.Q row 7), so nothing in Phase 12
+remains to claim; Phase 13's items 1 and 4 are merged, 5 and 6 are in
+review, and 2, 3 and 7 are planned.
 
 **The destination is promotion (spin-out)**, defined in
 `docs/next-build-plan.md` §5 (merged #169, card os-768361cc) as two

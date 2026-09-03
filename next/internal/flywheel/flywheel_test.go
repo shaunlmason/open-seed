@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -758,6 +759,9 @@ func TestValidationRunsThroughTheEngineFromAStagingWorktree(t *testing.T) {
 // SEED_ENGINE names an executable or the shim's cache holds the
 // pinned release; otherwise the reason is named for the skip.
 func TestEngineAvailabilityIsDetected(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("executability is by existence on Windows, so a non-executable engine file is not observable there (next/spec/platform.md)")
+	}
 	bare := t.TempDir()
 	t.Setenv("SEED_ENGINE", "")
 	if reason, ok := EngineAvailable(bare); ok || !strings.Contains(reason, "scripts/seed") {

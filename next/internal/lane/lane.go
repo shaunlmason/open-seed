@@ -529,6 +529,7 @@ func orphanFindings(dir string, used map[string]bool) []Finding {
 			return nil
 		}
 		rel, rerr := filepath.Rel(root, path)
+		rel = filepath.ToSlash(rel) // manifests name fragments with slashes on every platform
 		if rerr != nil || used[rel] {
 			return nil
 		}

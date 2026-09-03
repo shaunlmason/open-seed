@@ -47,9 +47,12 @@ contention refusal), not at offer time.
   whose `claim` grants cite one of them, per field. A worker with no
   cited tuple, or with only others, is not among them, and operator
   standing satisfies this scope as it satisfies the rest. This is
-  III.J row 3's "strongest tuples by policy" as a scheduling INPUT
-  the supervisor writes, not a scheduler: ranking configurations is
-  Phase 10 item 2's eval results turned into offers. The field's
+  III.J row 3's "strongest tuples by policy" as a scheduling INPUT:
+  the supervisor writes it by hand (`--tuple`) or by policy
+  (`--strongest <n> --capability <c>`, the top `n` of the ranking
+  [`ranking.md`](ranking.md) derives from the eval results at the
+  offer's own instant, refusing `ranking_empty` when nothing ranks),
+  and `seed eval act`'s offers carry it the same way. The field's
   PRESENCE is what the version gate reads: an explicit `"tuples": []`
   or `null` before `seed/2` refuses exactly as a populated list does,
   because a `seed/1` validator strictly decodes eligibility as

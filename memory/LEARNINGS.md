@@ -1484,16 +1484,6 @@ the assertions read, and there is no copy to go stale.
   distinction and token-boundary model lookup, or cache-heavy runs
   misprice by up to ten times.
 
-- Before asserting "no manifest grants X" in an audit, derive the set
-  and print it: the shipped maintenance lane holds operator by design,
-  and an audit written from the charter's sentence rather than the
-  tree fails on its first run. Hold the derived set to a named list.
-- Go's flag package stops at the first positional: a verb taking a
-  file then flags must parse twice, or every flag after the file lands
-  in NArg as a usage error the drill reads as "refused".
-- A test helper's third return is not always what its name suggests:
-  `writeKeys`'s `pub` is a second operator's key, not the signer's.
-  Derive a fingerprint from the key you signed with.
 - claim.reaped admission never gated on reap corroboration — that
   discipline (InterruptValid/WedgeDeclared) is the maintenance loop's
   (the Corroborate closure + Reapable), not an admission rule. A card
@@ -1535,6 +1525,12 @@ the assertions read, and there is no copy to go stale.
   spawn git, so sys time halves), and one live run per pull request. No
   gate, ceiling, or command changed.
 
+- When two surfaces must expose the same verbs, draw both from one
+  table and hold the table to the dispatchers' own usage text in a
+  drill; a hand-kept second list drifts the day someone adds a verb.
+- bufio.ScanLines strips a trailing carriage return and TrimSpace
+  strips another: a "refuse CRLF" rule needs a split function and a
+  trim that keep the CR, or the parser never sees what it must refuse.
 ## Docs generation and simulation mode (os-16e55c11, Phase 12 item 6)
 
 - **Go constants are not runtime-enumerable.** To generate a doc from a
@@ -1571,6 +1567,35 @@ the assertions read, and there is no copy to go stale.
   the opener applies the local declaration (ledger ref, proposer) to
   whatever remote it opens, which is wrong for a foreign ledger. Open
   with the gitref client and the remote's own genesis instead.
+
+## The GitHub↔Gitea protection impedance (os-ad610334, Phase 13 item 3)
+
+- **Gitea/Forgejo has no unified "ruleset" model.** Protection splits
+  across `branch_protections` (keyed by `rule_name`, which IS the branch
+  glob — no separate name) and `tag_protections` (keyed by id). A branch
+  protection's existence carries deletion + non-fast-forward; the push
+  whitelist carries "only the identity may update"; so an adapter maps
+  the four Desired rulesets onto those two resources and remembers each
+  protection's key (like the GitHub adapter's `ids`) for update/delete.
+- **`Unexpressible` is rule-TYPE level, and `differences()` is
+  param-exact.** A forge that expresses a rule partially (Forgejo:
+  approvals yes, thread-resolution/code-owner no) cannot both apply the
+  expressible part and avoid drift on the rest. The honest resolution is
+  to mark the WHOLE rule unexpressible (manual) rather than half-apply it
+  and read back as falsely compliant — the mutation drill forbids the
+  silent drop.
+- **A forge field defaulting keeps old declarations valid.**
+  `admission.forge` absent = github; the CLI `--forge` default must stay
+  the credential-free `snapshot` arm the existing drills rely on.
+- **A refinement code emitted as a string literal needs a row in
+  `next/spec/envelope.md`.** `merge observe`'s `not_merged` on exit 3
+  (invalid_transition) is a refinement; `TestEmittedCodesAppearInTheTable`
+  parses the refinements table and rejects any emitted code that is
+  neither the exit's canonical code nor a listed refinement. Only codes
+  promoted to `Code*` constants render into generated `exit-codes.md`;
+  literals live solely in the table. The strict test arrived via the
+  item-6 merge, so a pre-merge draft receipt passed and the
+  merge-forward surfaced it — regenerate after merging main.
 - A published statement across a trust boundary should be a strict
   object with a pinned field list on both sides: the writer refuses
   to add a field without moving the pin, and the reader refuses a
@@ -1578,3 +1603,18 @@ the assertions read, and there is no copy to go stale.
 - Sign over canonical bytes computed from the struct itself, and
   verify by recomputing; never store the canonical bytes beside the
   signature, or the two can disagree without anyone noticing.
+
+
+## Tuple ranking as supervisor policy (os-c7554f18, Phase 13 item 7)
+
+- A policy table belongs in one place with a mirror the tests hold to
+  it: `ranking.Rules` states the rows in the spec's own words and a
+  drill parses `ranking.md` and compares, so a change to the policy in
+  either place fails until both move. The behavior drills pin the code
+  to the rows; the table drill pins the spec to the code.
+- Scheduling policy and admission are different authorities: the
+  ranking is read by the offer writer and never by a rule, so the
+  bridge for never-qualified workers (admission never judges an
+  offer's scope) survives a policy that sends work to the strongest,
+  and a first eval's offer stays the one unscoped door.
+
