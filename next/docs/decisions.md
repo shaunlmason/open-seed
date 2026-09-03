@@ -3124,6 +3124,20 @@ concatenation would refuse the spec's own vocabulary; the lint flags
 an `os` file call whose argument is joined with a literal slash or
 `path.Join`, which is exactly what a platform would break.
 
+**The line-ending rule reaches git itself.** The first Windows run
+refused every committed fixture and every materialized ledger — git
+had converted them on checkout and archive, and the new LF-only rule
+did its job. So the repository root gained a `.gitattributes`
+declaring LF for text (outside the plan's file scope, the smallest
+change that makes the rule true on a checkout), the gitref client
+tells git `core.autocrlf=false` and `core.eol=lf` on every call, and
+every `hardenGitRepo` copy in the tests pins the same two keys.
+
+**Platform code is two files, not a build tag on a package.** The
+verdict runner's process group and its kill moved to
+`workspace_unix.go` and `workspace_windows.go`; the rest of the
+runner is shared, and the Windows file says what it cannot do.
+
 **Windows is a matrix leg, not a sentence.** The workflow runs the Go
 suites on the three platforms with `fail-fast: false`; the doctor
 names the postures each can run; the enforced self-hosted posture is

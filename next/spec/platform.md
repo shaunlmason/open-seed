@@ -76,6 +76,33 @@ the two rules above. A platform the drills have not run on lists the
 enforced self-hosted posture as unavailable with that reason — never
 by assertion.
 
+## What Windows cannot do, by name (normative)
+
+The Windows leg's first contact named these, each stated here rather
+than papered over:
+
+- **No pre-receive hook.** Git on a bare Windows checkout does not
+  execute the hook the enforced self-hosted posture is built on, so
+  every hook drill skips there with that reason, and the posture is
+  listed unavailable.
+- **No process groups.** The verdict runner kills the check's shell
+  on timeout; children the shell spawned may outlive it. On POSIX the
+  whole process group dies. The runner's `PATH` is the process's own
+  there (a POSIX `sh` such as Git Bash is found on it or nowhere),
+  where POSIX runs under a fixed minimal `PATH`.
+- **File modes are not enforced.** Drills that observe a preserved or
+  a refused mode skip with that reason; the ledger's HEAD is written
+  with the same mode request everywhere.
+- **Replacing an open file.** Windows refuses to rename over a file a
+  concurrent reader holds. HEAD replacement retries briefly; an
+  artifact put that lost a rename race to a rival that landed the
+  same bytes is complete (the content is addressed by its digest).
+- **Line endings.** Git on Windows converts by default; the
+  repository's `.gitattributes` declares LF for every text file, the
+  gitref client tells git `core.autocrlf=false` and `core.eol=lf` on
+  every call, every test repository is configured the same, and the
+  verifier refuses a carriage return regardless.
+
 ## Tested, not asserted (normative)
 
 CI runs the Go suites on Linux, macOS and Windows (`platform` in
