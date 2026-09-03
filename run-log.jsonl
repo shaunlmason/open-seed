@@ -1190,3 +1190,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-53eb70a1","kind":"pr"},"task":"os-465e356e","ts":"2026-09-03T01:14:11Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-f0fb57fb","kind":"receipt"},"task":"os-465e356e","ts":"2026-09-03T01:14:13Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-465e356e","ts":"2026-09-03T01:14:16Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-efb2a099","ts":"2026-09-03T01:14:27Z","verb":"promote"}
