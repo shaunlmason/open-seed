@@ -30,7 +30,7 @@ func runSimulate(args []string, stdout, stderr io.Writer) int {
 	seed := fs.Int64("seed", 0, "deterministic draw seed")
 	days := fs.Int("days", 0, "accelerated-clock days over which the backlog arrives (0: a single instant)")
 	postureName := fs.String("posture", string(posture.Cooperative), "cooperative or enforced-self-hosted")
-	nowFlag := fs.String("now", "", "RFC3339 base instant expiry and the report read (default: a fixed simulation epoch); admission reads no clock")
+	nowFlag := fs.String("now", "", "RFC3339 base instant expiry and the report read (default: the current wall clock); admission reads no clock")
 	workDir := fs.String("work", "", "directory the throwaway deployment is built under (default: OS temp)")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage",

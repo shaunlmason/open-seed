@@ -93,7 +93,7 @@ func TestRunSurfacesBuildFailure(t *testing.T) {
 	}
 }
 
-func TestCurateAndMaintainToleranteRefusal(t *testing.T) {
+func TestCurateAndMaintainTolerateRefusal(t *testing.T) {
 	// curate and maintain ignore a refusal (there may be nothing to
 	// propose or reap): they run without returning it.
 	d := &deployment{

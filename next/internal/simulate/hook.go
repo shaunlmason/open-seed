@@ -22,7 +22,7 @@ func installHook(remote, nextDir string) error {
 	if err := os.MkdirAll(hookDir, 0o755); err != nil {
 		return err
 	}
-	script := "#!/bin/sh\nexec " + bin + " pre-receive\n"
+	script := "#!/bin/sh\nexec \"" + bin + "\" pre-receive\n"
 	hook := filepath.Join(hookDir, "pre-receive")
 	if err := os.WriteFile(hook, []byte(script), 0o755); err != nil {
 		return err
