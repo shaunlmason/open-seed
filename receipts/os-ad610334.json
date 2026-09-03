@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "task": "os-ad610334",
+  "merge_base": "70374b5fe329192a65693c3e8cf78ef4a2689aac",
+  "head": "ba37d1ce98e651476dff2819e2de327513ca14f2",
+  "plan_path": "plans/os-ad610334.md",
+  "plan_sha256": "aaded74fc7cba0df2d86dbbab2a2f83ee03cd162bbf0a695e23889a93b92d685",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/doctor.go",
+    "next/cmd/seed/merge.go",
+    "next/cmd/seed/protections.go",
+    "next/cmd/seed/protections_cli_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/posture/forge_test.go",
+    "next/internal/posture/posture.go",
+    "next/internal/protections/coverage_extra_test.go",
+    "next/internal/protections/forgejo.go",
+    "next/internal/protections/forgejo_test.go",
+    "next/internal/protections/observer.go",
+    "next/internal/protections/observer_test.go",
+    "next/spec/envelope.md",
+    "next/spec/forges.md",
+    "next/spec/postures.md",
+    "next/spec/reconciliation.md"
+  ],
+  "diff_sha256": "5e63af73d5c1f8e3a046e5f0503eecd58601aa8e0e5b68a601c2e1ffd70581d5",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/protections/ ./internal/posture/ ./cmd/seed/ -run 'Forge|Forgejo|Protections|Observer|MergeObserve|Doctor' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
