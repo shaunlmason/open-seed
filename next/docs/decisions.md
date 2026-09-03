@@ -2998,6 +2998,17 @@ finding: the lifecycle fold's anomaly count is the lifecycle's, and the
 cache does not borrow it). Phase 12 item 4 (#254) took generation 13 for `by_kind` and landed
 first, so this card re-bumps to generation 14 with its pins and its
 migration, as both PRs said whichever landed second would.
+## `ledger show` stamps its failing position (os-37fcf7c6, plan #259)
+
+**The stamp is where the response was computed, not the chain's
+length.** `plans/os-fa69345e.md` D3 left `show`'s `chain_invalid`
+unstamped and pinned it as a tripwire so the change would be a
+decision. The decision: the envelope spec defines the stamp as the
+position the response was computed at, a scan that read records
+`0..p-1` and failed at `p` was computed at `p`, and `verify` already
+stamps that position on the same chain; `show` now does the same, the
+tripwire is inverted, and null keeps its one meaning — a refusal
+raised before any position was read.
 
 ## Phase 12 item 5 — migration from open-seed, drilled against a real export (os-cf13fb51, plan #248)
 
