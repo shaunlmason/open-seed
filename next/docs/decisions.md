@@ -3073,3 +3073,12 @@ from one clock; 98 of 155 evidence entries match within ten seconds,
 the rest have no block of their kind left on the card (pruned or
 rewritten) and become the entry as an artifact, noted. The match is
 not loosened to raise the number.
+- 2026-09-03: covergate's first reading runs package test binaries in
+  parallel (go's default); only the cold re-collection a low reading
+  triggers keeps `-p 1`. The 2026-08-31 serialization was measured
+  against lossy parallel merges, and the re-collection rule since made
+  a low first reading harmless: it is re-read serially before it can
+  fail the gate. The parallel pass can therefore only decide pass,
+  never fail, and it takes the coverage collection from 5m21s to about
+  2m30s on a 4-core host, which was most of every `make check` in CI.
+  (CI/CD performance PR)
