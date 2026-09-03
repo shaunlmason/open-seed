@@ -34,8 +34,16 @@ func main() {
 	dir := flag.String("dir", ".", "module directory the suite runs in")
 	flag.Parse()
 
+	// The first reading runs package test binaries in parallel; the cold
+	// re-collection, which only a low reading triggers, serializes them
+	// (-p 1), so the reading that decides a failure is collected exactly
+	// as the gate's behavior was established. See collect.
+	attempt := 0
 	verdict, msg, err := covergate.Run(*gate, covergate.Deps{
-		Collect:    func() (covergate.Reading, error) { return collect(*dir) },
+		Collect: func() (covergate.Reading, error) {
+			attempt++
+			return collect(*dir, attempt > 1)
+		},
 		CleanCache: func() error { return run(*dir, "go", "clean", "-testcache") },
 	})
 	if msg != "" {
@@ -52,15 +60,20 @@ func main() {
 
 // collect runs the suite and reads the merged total.
 //
-// -p 1 serializes package test binaries. The Makefile's original
-// comment blamed counter-file collisions between concurrent binaries
-// "at the same pid and second"; that theory is refuted (the names
-// carry nanoseconds, and a re-exec'd helper child gets its OWN temp
-// directory from testing's coverTearDown, so it cannot collide with
-// its parent at all). The flag is kept because serialized runs are
-// what the measured behavior was established against, not because the
-// stated mechanism was real.
-func collect(dir string) (covergate.Reading, error) {
+// serial passes -p 1, which serializes package test binaries. The
+// Makefile's original comment blamed counter-file collisions between
+// concurrent binaries "at the same pid and second"; that theory is
+// refuted (the names carry nanoseconds, and a re-exec'd helper child
+// gets its OWN temp directory from testing's coverTearDown, so it
+// cannot collide with its parent at all). Serialized runs are what
+// the measured behavior was established against, so the cold
+// re-collection keeps them; the first reading runs packages in
+// parallel (go's default, one per CPU), which halves the suite's wall
+// clock. A first reading that lost a fragment reads low and is
+// re-collected serially, so the parallel pass cannot produce a
+// verdict the serialized one would not: it only decides pass, never
+// fail.
+func collect(dir string, serial bool) (covergate.Reading, error) {
 	// A FRESH profile per collection, never a fixed path. Two
 	// collections sharing one file - or one run inheriting a truncated
 	// file a killed predecessor left behind - can be read as this
@@ -76,8 +89,13 @@ func collect(dir string) (covergate.Reading, error) {
 	defer os.RemoveAll(tmp)
 	profile := filepath.Join(tmp, "coverage.out")
 
-	out, err := output(dir, "go", "test", "-p", "1", "./...",
+	args := []string{"test"}
+	if serial {
+		args = append(args, "-p", "1")
+	}
+	args = append(args, "./...",
 		"-coverprofile="+profile, "-covermode=atomic", "-coverpkg=./internal/...")
+	out, err := output(dir, "go", args...)
 	if err != nil {
 		return covergate.Reading{Output: out}, fmt.Errorf("%w: %v", covergate.ErrSuiteFailed, err)
 	}

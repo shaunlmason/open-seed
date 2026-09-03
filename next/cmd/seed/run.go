@@ -57,10 +57,13 @@ func startAdapter(name, configPath, stateDir string) (executor.Adapter, *envelop
 	if name == localAdapterName {
 		return executor.LocalWorktree{}, nil
 	}
+	if name == executor.MockName {
+		return executor.Mock{}, nil
+	}
 	known := map[string]bool{"container": true, "cloud-session": true, "remote-worker": true}
 	if !known[name] {
 		return nil, envelope.Fail(envelope.ExitUsage, "usage",
-			fmt.Sprintf("unknown adapter %q — %s, container, cloud-session or remote-worker (next/spec/executors.md)", name, localAdapterName))
+			fmt.Sprintf("unknown adapter %q — %s, mock, container, cloud-session or remote-worker (next/spec/executors.md)", name, localAdapterName))
 	}
 	cfg, failEnv := loadDeclarationFor(resolveConfigPath(configPath))
 	if failEnv != nil {
