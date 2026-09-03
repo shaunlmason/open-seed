@@ -138,6 +138,8 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 	fp, _ := event.Fingerprint(res.Keys.Root.Public().(ed25519.PublicKey))
 	var attempts int64
 	var failed int64
+	var errMu sync.Mutex
+	var firstErr error
 	var wg sync.WaitGroup
 	start := time.Now()
 	for w := 0; w < writers; w++ {
@@ -147,6 +149,11 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 			c, err := gitref.NewClient(filepath.Join(work, fmt.Sprintf("writer-%03d", w)), remote, "refs/seed/ledger")
 			if err != nil {
 				atomic.AddInt64(&failed, 1)
+				errMu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf("writer %d: %w", w, err)
+				}
+				errMu.Unlock()
 				return
 			}
 			out, err := c.AppendLoop(gitref.Draft{
@@ -156,6 +163,11 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 			}, func(e event.Event) (*event.Record, error) { return event.Sign(e, res.Keys.Root) }, res.Resolve, admit.Validate(), writers*4)
 			if err != nil {
 				atomic.AddInt64(&failed, 1)
+				errMu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf("writer %d: %w", w, err)
+				}
+				errMu.Unlock()
 				return
 			}
 			atomic.AddInt64(&attempts, int64(out.Attempts))
@@ -164,7 +176,10 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 	wg.Wait()
 	wall := time.Since(start)
 	if failed > 0 {
-		return 0, 0, fmt.Errorf("%d of %d writers failed to land: a lost update in the storm", failed, writers)
+		// A writer fails for more reasons than a lost update (a hook
+		// refusal, a git error); the first failure is named so the
+		// storm's verdict is a diagnosis, not a guess.
+		return 0, 0, fmt.Errorf("%d of %d writers failed to land; the first: %v", failed, writers, firstErr)
 	}
 	// Every append landed exactly once: the chain grew by writers.
 	c, err := gitref.NewClient(filepath.Join(work, "reader"), remote, "refs/seed/ledger")

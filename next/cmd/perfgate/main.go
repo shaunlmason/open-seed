@@ -1,5 +1,5 @@
 // perfgate runs the performance half of `make check-next`
-// (plans/os-7508ab9e.md D6, D7): the four metrics against the
+// (plans/os-7508ab9e.md D6, D7): the five metrics against the
 // representative history at the budget file's size, each held to its
 // ceiling, a miss re-measured cold once before it fails. The last
 // reading is written to next/perf/last.json (gitignored) so an
@@ -50,11 +50,16 @@ func main() {
 			_ = os.WriteFile(filepath.Join(*dir, *last), append(out, '\n'), 0o644)
 		}
 	}
+	if verdict == perfgate.Pass {
+		// The passing line carries no readings: `make check` is held
+		// to be deterministic (the flavor drill compares two runs of
+		// it), and a timing differs every run. The readings are in the
+		// last-reading file beside the budgets.
+		fmt.Printf("check-next: perf ok; %d metrics under their ceilings (history %d, writers %d), the readings in %s\n", len(b.Metrics), b.History, b.Writers, *last)
+		return
+	}
 	if msg != "" {
 		fmt.Println(msg)
-	}
-	if verdict == perfgate.Pass {
-		return
 	}
 	if err != nil {
 		fmt.Printf("check-next: %v\n", err)

@@ -7,7 +7,6 @@ package main
 // one push is admitted, and the same history through the service too.
 
 import (
-	"errors"
 	"path/filepath"
 	"testing"
 
@@ -61,7 +60,4 @@ func TestHookAndServiceAdmitTheRepresentativeHistory(t *testing.T) {
 			}
 		}
 	})
-	if errors.Is(err, gitref.ErrRemoteRejected) {
-		t.Fatal("unreachable")
-	}
 }

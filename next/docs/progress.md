@@ -1334,6 +1334,95 @@ Phase 10 item).
   `protocol.md`, `projections.md`, `lanes.md`, `curation.md`,
   `actors.md` and `envelope.md` following)
 
+**Phase 11 exit (charter III.K as docs/next-build-plan.md's exit line
+scopes it): met.** Met means the two criteria the plan's own exit line
+names, the scoped-exit posture of the Phase 2 through 10 records, each
+backed by a drill on `main` that a reader can find by name. *The
+poisoning drill green*: `TestPoisonCorpusCoversEveryRegisteredGate`,
+`TestEveryPoisonFailsAtBothEnds` and `TestPoisonResidualsArePinned`
+(`internal/admit/poisoning_test.go`), the corpus derived from
+`curation.Gates()` and pinned against the spec table both ways, every
+poison scripted to a promotion attempt and asserted to fail at both
+ends, five residuals pinned by characterization, plus the CLI arm
+`TestPoisonsRefuseAtTheTerminal` (`cmd/seed/modes_e2e_test.go`) running
+`worker-proposes` and `smuggled-role-lesson` through `seed knowledge` in
+the small-team fixture. *A real recurring chore in the fixture converts
+to a workflow through the gates*:
+`TestSmallTeamChoreWorkedThreeTimesConverts`
+(`cmd/seed/flywheel_e2e_test.go`), the chore worked three times, its
+shape recurring at the second occurrence, the draft validated by the v1
+engine's `workflow validate` and `workflow run --mock` from a staging
+worktree, proposed on `seed/flywheel-<shape>` and never on `main`,
+observed merged, the rate `1.000` in the report's `flywheel` section;
+and with a break planted in one step, the mock run failing, the repair
+contract filed under the dispatcher's key, the implementer's fix passing
+its verdict, the proposal admitting citing it, and one merge closing
+both. Every numbered item has a merged PR: 1 in #234, 2 in #235, 3 in
+#236, 4 in #237, 5 in #240. Charter III.K as a whole is walked rather
+than the two criteria the exit line scopes, and every row is met. Row 1
+(online lanes append evidence only; conclusion-writing grant-gated to
+the curator's proposal path): met by #234, `curation.deadend.recorded`
+inside the holder's window and `curation.hypothesis.proposed` from
+`curate` alone, disjoint from `claim` and `operator` at the grant in
+both directions (`TestCuratorReadsAndCannotWrite`). Row 2 (the pipeline
+staged with distinct storage and gates; no stage skips): met by #234's
+three facts and the lessons store with #235's promotion requiring an
+admitted, uncontested hypothesis whose support still passes, a
+promotion citing nothing folding `unbound`
+(`TestFoldRendersStagesAndCountsAnomalies`,
+`TestKnowledgeVerbsDriveTheStages`). Row 3 (applies-when; support from
+more than one non-failed trajectory and more than one actor where the
+family allows; provenance; last-validated; adversarial evaluation for
+behavior-changing lessons): met by #235, `applies_when` a predicate over
+record-derivable fields, the support rule's actor arm with
+`single_actor_family` recorded where waived, `carrier`, `adversarial`,
+`last_validated` and `digest` on the fact, and the eval marker bound to
+the lesson anchor (`TestAppliesWhenIsAPredicateOverRecordFields`,
+`TestShapesRefuseAtRegisteredGates`). Row 4 (trajectories untrusted;
+the poisoning drill fails to achieve promotion in CI): met by #236, the
+exit line's first criterion, with #237 adding a poison per new gate so
+the corpus stays derived. Row 5 (conflicting evidence a first-class
+contested state, never averaged; contested lessons do not surface): met
+by #235, `curation.hypothesis.contested` citing held-out observations,
+the fold's `contested` stage, removal from every delivery with the file
+and the facts kept (`TestSmallTeamPromotionDeliversLessonsAtClaimTime`).
+Row 6 (expiry for revalidation; retirement keeping evidence; rollback by
+reverting the PR): met by #237, expiry derived at a declared instant and
+never a fact, `curation.lesson.retired` with `regression` carrying the
+revert's `pr`, `superseded` and `expired`, the fold keeping file,
+hypothesis and observations (`TestExpiryIsDerivedAtAnInstant`,
+`TestRetirementShapesRefuseAtTheirGates`). Row 7 (dead ends carry
+failure condition and environment, un-retired on environment change):
+met by #234's dead-end shape and #237's `curation.deadend.retired` and
+`unretired` on a changed environment, applicability by string equality
+with the run's declared environment. Row 8 (the flywheel closes through
+gates; repair roles propose patches as PRs; conversion rate tracked):
+met by #240, the exit line's second criterion, with
+`TestRawChainsManufactureNoChore` and
+`TestRawRepairVerdictLeavesTheRepairOpen`
+(`internal/flywheel/flywheel_test.go`) pinning that only
+boundary-authentic completions and repair verdicts count. Row 9
+(knowledge bloat managed: dedup with provenance, staleness flags,
+structure lint): met by #237, `lint.duplicate` and `lint.structure`
+under `seed knowledge lint` and `make check`, `stale` at the
+projection's declared instant, the `lesson_stale` maintenance finding
+(`TestStructureAndDedupLints`), the row routed to Phase 11 item 4 by the
+build plan. The Phase 8 record's routing closes here: III.I row 5
+(matching promoted lessons surface in packets and envelopes at claim
+time) is met by #235, the surfacing set on `claim take --repo`, in the
+provisioned `.seed-run/lessons.json` and in `seed situation --repo`,
+verified against the repository and reported unverified where it is
+not, so full III.I conformance now waits on Phase 13 item 6 alone. One
+thing this phase learned twice is worth one sentence: item 1's curation
+fold and item 5's flywheel fold each found that the lifecycle fold is
+tolerant by design, so a folded `done` reads what the table permits and
+never what the boundary admitted, and every consumer that counts
+completions — the support rule, the promotion gate, the reconciler, the
+flywheel's occurrences and its repairs — re-judges authenticity at the
+record's own position through one derivation, `curation.AuthenticPass`
+(`memory/LEARNINGS.md`). This exit record is card os-efb2a099's task PR
+(an administrative card, not a Phase 11 item).
+
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
 - 12.2 forge-hosted admission service (stateless, sole-writer) and the
@@ -1453,8 +1542,8 @@ os-a026f5ea's task PR) are merged with every card closed.
 
 Phase 11's five items are merged (#234, #235, #236, #237, #240 against
 plans #226, #228, #229, #230, #231), so its exit criteria are met by
-their items; the Phase 11 exit record is carded as os-efb2a099 with
-its plan merged (#243), and its task PR is what closes the phase.
+their items; the Phase 11 exit record above is card os-efb2a099's task
+PR (this card), which closes the phase.
 
 Phase 12 declares `deps: all`, so its gate opens when the Phase 11
 exit record merges; until then its cards are filed and planned, and
@@ -1463,7 +1552,9 @@ rule keeps structurally ordered (decisions/0003). Item 1, the
 compromised-actor drill (os-465e356e), is planned in #241 (merged: the
 drill builds on the shipped `seed-admit` hook rather than a second one,
 and unauthorized pushes to code refs are exercised, not exempted) and
-names its follow-up card
+implemented in #250 (in review: the hook's code-ref half, the
+`internal/redteam` ceiling asserted both ways, the protected surface
+restricted to the governance root); it names its follow-up card
 os-32d06c65 for III.E row 8's reap arm. Items 2 through 6 are carded
 and planned: item 2, the forge-hosted admission service and the
 protections reconciler (os-5c8a312c, plan #244 merged, implementation
@@ -1478,16 +1569,16 @@ exit line's week-long accelerated backlog (os-16e55c11, plan #249
 merged). All six extend one declaration, `seed.json`; whichever lands
 later merges the struct.
 
-**Next action: implement Phase 12 in item order — item 1 against
-#241 and item 2 against #244 are in progress; items 3, 4 and 6 follow
+**Next action: implement Phase 12 in item order — item 1 (#250,
+in review) and item 2 against #244 are in progress; items 3, 4 and 6 follow
 against their merged plans, and item 5 once #248 merges** —
 implementation PRs as drafts until the Phase 11 exit record
 (os-efb2a099) merges and the phase gate opens (decisions/0003). The derivation, stated rather than read off a
 summary: every Phase 10 item has a merged PR and the exit record above
 walks III.E, III.G, III.O and III.J row 3 and routes what it found
 unmet, so nothing in Phase 10 remains to claim; every Phase 11 item is
-merged and its exit record is planned; every Phase 12 item is carded
-and planned and none is implemented.
+merged and this card is its exit record; every Phase 12 item is carded
+and planned, and item 1 is implemented (#250).
 
 **The destination is promotion (spin-out)**, defined in
 `docs/next-build-plan.md` §5 (merged #169, card os-768361cc) as two

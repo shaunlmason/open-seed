@@ -1,6 +1,6 @@
 package main
 
-// `seed perf run` (plans/os-7508ab9e.md D7): the four ledger
+// `seed perf run` (plans/os-7508ab9e.md D7): the five ledger
 // performance metrics measured against the representative history and
 // printed as an envelope, beside their ceilings when a budget file is
 // given. The gate itself is cmd/perfgate under `make check-next`; this

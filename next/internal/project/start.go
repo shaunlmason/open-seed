@@ -111,15 +111,19 @@ func StartFromCheckpoint(ledgerDir, artifactsDir, outDir string, projections []P
 	// support. It costs one fold and turns a lying checkpoint from an
 	// invisible failure into a named one.
 	prefix := records[:at]
+	derived := map[string]bool{}
 	for _, p := range projections {
-		if _, ok := snap.Files[p.Name+"/"+p.Name+".json"]; !ok {
-			continue
-		}
 		built, err := p.Build(prefix, Inputs{})
 		if err != nil {
 			return nil, fmt.Errorf("projection %s at %d: %v", p.Name, at, err)
 		}
+		// Every file this reader derives must be in the snapshot and
+		// equal, whatever the projection names its files (the cache
+		// publishes cache.db, not cache.json); a projection the
+		// snapshot lacks altogether fails on its first file, so a
+		// checkpoint cannot attest less than the derivation.
 		for name, want := range built {
+			derived[p.Name+"/"+name] = true
 			got, ok := snap.Files[p.Name+"/"+name]
 			if !ok {
 				return nil, &MismatchError{What: "the snapshot's files", Detail: fmt.Sprintf("%s/%s is missing", p.Name, name)}
@@ -127,6 +131,13 @@ func StartFromCheckpoint(ledgerDir, artifactsDir, outDir string, projections []P
 			if string(got) != string(want) {
 				return nil, &MismatchError{What: "the snapshot's files", Detail: fmt.Sprintf("%s/%s differs from the derivation at position %d", p.Name, name, at)}
 			}
+		}
+	}
+	// And nothing more: a file the derivation does not produce is a
+	// state the chain does not support either.
+	for name := range snap.Files {
+		if !derived[name] {
+			return nil, &MismatchError{What: "the snapshot's files", Detail: fmt.Sprintf("%s is in the snapshot and not in the derivation at position %d", name, at)}
 		}
 	}
 	// The trusted-prefix replay: linkage, hashing, the version

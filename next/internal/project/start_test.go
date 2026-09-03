@@ -39,7 +39,9 @@ func checkpointed(t *testing.T, contracts, at int, signer ed25519.PrivateKey, ta
 		t.Fatal(err)
 	}
 	var records []*event.Record
-	_ = store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil })
+	if err := store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil }); err != nil {
+		t.Fatal(err)
+	}
 	files := map[string][]byte{}
 	for _, p := range Default() {
 		built, err := p.Build(records[:at], Inputs{})
@@ -85,7 +87,9 @@ func checkpointed(t *testing.T, contracts, at int, signer ed25519.PrivateKey, ta
 	// A little more history after the checkpoint, so the suffix is
 	// real work and not just the checkpoint record.
 	records = nil
-	_ = store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil })
+	if err := store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil }); err != nil {
+		t.Fatal(err)
+	}
 	return fixture{ledger: dir, artifacts: artifacts, res: res, records: records}
 }
 
@@ -279,7 +283,9 @@ func TestStartFromCheckpointRefusesALyingCheckpoint(t *testing.T) {
 	k := checkpointed(t, 2, at, nil, nil)
 	store, _ := ledger.Open(k.ledger)
 	var records []*event.Record
-	_ = store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil })
+	if err := store.Records(func(pos int, r *event.Record) error { records = append(records, r); return nil }); err != nil {
+		t.Fatal(err)
+	}
 	files := map[string][]byte{}
 	for _, p := range Default() {
 		built, _ := p.Build(records[:at], Inputs{})

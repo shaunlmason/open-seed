@@ -379,7 +379,7 @@ ordered fragment list prevents.
   metrics half: the `ready` origin of `contract.specified` at `seed/4`
   ([`lifecycle.md`](lifecycle.md)), the plan verbs' content digest
   ([`plans.md`](plans.md)) and the report's `lanes` section
-  ([`projections.md`](projections.md)); the harness half, III.O row 5's
+  ([`projections.md`](projections.md)); the harness half, III.O row 3's
   recorded decision points replayed against these manifests, is the
   same spec's, with its residual (no decider re-runs at a point) named
   in this suite's words.
@@ -406,7 +406,7 @@ ordered fragment list prevents.
   dispatcher's key with its patch on the same branch, and the report's
   `flywheel` section.
 
-- III.G row 8 and III.O row 2 (rubric verdicts scored item by item
+- III.G row 7 and III.O row 2 (rubric verdicts scored item by item
   with cited evidence and explicit uncertainty; low-confidence items
   routed to a human verdict; calibration against a human-scored gold
   set with automatic authority suspension on drift and a defect
@@ -414,6 +414,15 @@ ordered fragment list prevents.
   rubric and the scorecard"; [`evals.md`](evals.md), "Calibration"):
   the verifier lane's summary and fragment carry the scorecard and
   the deferral.
+
+- III.O row 3 (the compromised-actor drill passes in CI — the
+  architecture's own definition of done) — met by Phase 12 item 1
+  ([`redteam.md`](redteam.md), "Conformance"): the §I.2 adversary
+  played against the enforced reference deployment
+  ([`admission.md`](admission.md)), the ceiling asserted clause by
+  clause at the push with coverage derived both ways, one derivation
+  shared with `admit.Check`, and the residuals named and pinned. The
+  gate is `make check`, so CI runs it with the rest of the suite.
 
 ## A gap the mode fixtures surfaced
 
