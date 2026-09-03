@@ -53,7 +53,7 @@ func TestTwoOrganizationsAcrossTheBoundary(t *testing.T) {
 	appendA(rootA, "actor.enrolled", vfp, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "verifier"}`, vpub))
 	appendA(rootA, "actor.granted", vfp, `{"capability": "verdict"}`)
 	dir := t.TempDir()
-	cfgA := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "boundary": {"accepts": ["cross-repo"], "ingress": "`+ldA+`"}}`)
+	cfgA := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "boundary": {"accepts": ["cross-repo"], "ingress": `+jsonString(ldA)+`}}`)
 	cardPath := filepath.Join(dir, "card.json")
 	// acme publishes its card.
 	e, code := runEnv(t, "boundary", "card", "--config", cfgA, "--key", rootA, "--name", "acme", "--out", cardPath)
@@ -322,7 +322,7 @@ func TestBoundaryRefusals(t *testing.T) {
 	}
 	ld, root, _, _, _ := requestLedger(t)
 	dir := t.TempDir()
-	cfg := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "boundary": {"accepts": ["cross-repo"], "ingress": "`+ld+`"}}`)
+	cfg := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "boundary": {"accepts": ["cross-repo"], "ingress": `+jsonString(ld)+`}}`)
 	card := filepath.Join(dir, "card.json")
 	if _, code := runEnv(t, "boundary", "card", "--config", cfg, "--key", root, "--name", "acme", "--out", card); code != 0 {
 		t.Fatal("the card")

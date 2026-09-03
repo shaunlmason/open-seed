@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/project"
@@ -129,6 +130,9 @@ func TestCacheEqualsTheViews(t *testing.T) {
 
 // conformance: III.D cache row — mid-operation deletion loses nothing.
 func TestCacheMidOperationDeletionLosesNothing(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows refuses to delete a database another handle holds open, so a mid-operation deletion is not observable there (next/spec/platform.md)")
+	}
 	dir, resolve, _, _ := lifecycleChain(t)
 	out := lockedTempOut(t, "projections")
 	if _, err := project.Rebuild(dir, out, project.Default(), resolve); err != nil {
