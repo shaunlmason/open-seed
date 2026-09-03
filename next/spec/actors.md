@@ -102,6 +102,22 @@ it would leave zero active roots: no admitted transition may leave the
 deployment without a key admission accepts `actor.*` from. Root rotation
 beyond that guard is genesis-level governance, outside these events.
 
+## Import-generated identities
+
+A predecessor import ([`import.md`](import.md)) enrolls one identity
+per distinct v1 actor name with a key the importer generated and held
+in memory for that import only, kind from the transform table, grants
+derived from the run-log before replay, and suspends every one of them
+after the replay. The rule above — attribution is not trust, kind is
+an operator's assertion — is what makes this honest: the imported
+chain attributes each record to the name v1 recorded, under a key
+nobody but the importer ever held, and the mapping manifest
+`system.imported` cites says so. No import-generated key is ever
+granted `operator`; what only an operator may sign, the importing
+operator's own key signs. A suspended import identity can be
+reinstated by `actor.enrolled` like any other suspended key, which is
+an operator's deliberate act, never the import's.
+
 ## Capabilities
 
 Grants are events (`actor.granted`) checked at admission on every verb
@@ -120,6 +136,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `system.halt.lifted` | `operator` (the charter: only an operator's lift may append) |
 | `system.protocol.upgraded` | `operator` |
 | `system.checkpoint` | `maintenance`, `operator` (the charter names checkpoints as signed by the maintenance actor or an operator) |
+| `system.imported` | `operator` (the predecessor import's provenance record, from seed/5, once per ledger; [import.md](import.md)) |
 | `actor.*` (enrolled, granted, suspended, revoked) | `operator` |
 | `actor.qualified`, `actor.disqualified` | `supervise`, `operator` (the first non-operator actor rows: SEED-NEXT.md §5 makes suspension of a failing configuration the supervisor's attributable act with no operator ceremony, and a mint is the same act with the opposite sign; operator stays the standing override, evals.md) |
 | `intent.filed` | `dispatch`, `operator` |

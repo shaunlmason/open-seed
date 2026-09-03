@@ -370,7 +370,7 @@ func TestCapabilityVocabulary(t *testing.T) {
 	// table, so removing a spec row without changing the code fails too.
 	for _, verb := range []string{
 		"system.halt.declared", "system.halt.lifted", "system.protocol.upgraded",
-		"system.checkpoint", keyring.VerbEnrolled, keyring.VerbGranted,
+		"system.checkpoint", "system.imported", keyring.VerbEnrolled, keyring.VerbGranted,
 		keyring.VerbSuspended, keyring.VerbRevoked,
 		"intent.filed", "contract.specified", "contract.blocked",
 		"contract.unblocked", "contract.cancelled", "claim.taken",

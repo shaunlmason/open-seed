@@ -2995,3 +2995,79 @@ an operator.
   classification state (no_data included, because a revocation is a
   ledger fact not silence), and no admission rule on claim.reaped
   changes. The plan (#262) was amended to match before implementation.
+
+## Phase 12 item 5 — migration from open-seed, drilled against a real export (os-cf13fb51, plan #248)
+
+**A done card without a receipt maps through a pass verdict over an
+import note, not `merge.overridden`.** The plan's D7 named the
+override as "the honest verb for a done the chain cannot justify";
+the boundary admits `merge.overridden` only over a standing fail
+verdict on the current submission, and nothing failed on these cards.
+An override citing a verdict nobody rendered would be the dishonest
+record. The verdict cites an artifact saying "none recorded in the
+export", the disposition says so, and the count is in the manifest
+(81 of 106 done cards in the fixture).
+
+**Grants derive from the run-log before replay, by rehearsal.** A
+static table from v1 verb to capability missed the bridges (a claim
+on a card the log never filed is filed and specified first, which
+needs `dispatch`), and a first draft that replayed with every
+capability granted to learn the verbs cost a third of the wall-clock
+in the admission fold. The rehearsal is the same transform over a dry
+chain that folds the lifecycle without admission and without the
+keyring — cheap, exact, bridges included — and each identity is
+granted the capabilities the verbs it signed consume. The manifest
+lists what each holds.
+
+**Every imported contract is `trivial`, routed to its squad.** D4
+named `standard`; above `trivial` the plan gate refuses a claim with
+no `plan.approved` record and the tier's independence level refuses
+the verdicts, so a `standard` replay would not admit, and admission is
+not loosened for an import. The routing is the card's squad, as D4
+said. `unblock` is a row to `contract.unblocked` where v1 recorded a
+transition, as D4 said; `blocker_resolved` stays a named drop, since
+`decision.recorded` answers a standing escalation and no v1 card
+raised one — the unblock that follows it records the transition.
+
+**No generated key holds operator; the importing operator signs what
+only an operator may.** `contract.cancelled` and the reconciliation of
+a card to its declared state are the operator's records, and the
+`import-verifier` service identity renders the verdict where the v1
+closer had claimed the card. Both are stated on the disposition.
+
+**`ledger.AppendAll` is a scope addition.** `Append` reconciles the
+store per call, so writing 1,345 admitted records took longer than
+admitting them. The batch append checks exactly what the single one
+checks (resolver, signature, `prev` chaining) and writes one segment;
+it is not a raw write, and the chain is verified from genesis after
+it. `internal/ledger` was not in the plan's file scope; the change is
+sixty lines and named here.
+
+**Exit 29 `import_refused`, not 8 and 21.** The plan routed
+`unanchored` under `chain_invalid` and `export_mismatch` under
+`receipt_mismatch`; the plan PR's review held that a refusal computed
+before any chain exists is neither, and the build plan's routing
+allocated a family for the import's pre-write refusals. The three
+refinements are `unanchored`, `export_mismatch`, `import_unmapped`.
+
+**The fixture is the anchored tree, written with `--at-anchor`.** The
+v1 state head had moved one commit past the newest anchor when the
+fixture was taken, and anchoring pushes a tag, an outward act this
+task does not perform. `regenerate.sh` refuses by default unless the
+head is the newest anchor and derives the export document from the
+anchored tree with `--at-anchor`; the document is the tree the v1
+command would have printed at that head, which is what the import
+verifies.
+
+**`merged` resolves from the repository or is listed unresolved.** The
+squash commit naming the card's pull request, else the commit that
+added the card's receipt, else the export head with the card under
+`unresolved` in the manifest and the envelope (four early cards in the
+fixture). Nothing is invented; what stands in is named.
+
+**Evidence matches by kind and instant, and the entry itself is the
+artifact otherwise.** v1 wrote the run-log entry and the card's block
+from one clock; 98 of 155 evidence entries match within ten seconds,
+the rest have no block of their kind left on the card (pruned or
+rewritten) and become the entry as an artifact, noted. The match is
+not loosened to raise the number.

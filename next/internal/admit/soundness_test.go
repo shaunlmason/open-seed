@@ -62,6 +62,10 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 			}
 		}
 	}
+	// The chain's active version, as the production view carries it:
+	// a probe at seed/4 or later must carry the plan digest the shape
+	// rule requires, or the regression class fires on its own helper.
+	v.version = ctx.Active
 	return v
 }
 

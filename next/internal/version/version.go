@@ -50,12 +50,21 @@ const Seed3 = "seed/3"
 // records at earlier positions keep their earlier judgment.
 const Seed4 = "seed/4"
 
+// Seed5 is the protocol version that activates the predecessor import
+// (next/spec/import.md; plans/os-cf13fb51.md D2): system.imported, the
+// operator-only provenance record a genesis import appends once,
+// before the replayed history. A seed/4 validator has no row for the
+// verb and refuses it as out of grant, so the two judge a seed/5 chain
+// differently, which is next/spec/protocol.md's bump trigger; records
+// at earlier positions keep their earlier judgment.
+const Seed5 = "seed/5"
+
 // Supported lists the protocol versions this build verifies and appends:
 // the genesis default plus every later version it implements. Verifiers
 // and admission points seed their default supported sets from it, so a
 // chain that upgrades to a version this build implements keeps verifying
 // without per-caller configuration.
-func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3, Seed4} }
+func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3, Seed4, Seed5} }
 
 // Activated reports whether the semantics seed/1 introduced (the actor
 // keyring, the lifecycle fold, budgets, offers) are active at a record
@@ -64,7 +73,9 @@ func Supported() []string { return []string{Protocol, Seed1, Seed2, Seed3, Seed4
 // has not registered activates nothing however it would sort
 // (plans/os-8e53ffd9.md D8). tuple.Applies is the narrower gate for
 // what seed/2 added on top.
-func Activated(v string) bool { return v == Seed1 || v == Seed2 || v == Seed3 || v == Seed4 }
+func Activated(v string) bool {
+	return v == Seed1 || v == Seed2 || v == Seed3 || v == Seed4 || v == Seed5
+}
 
 // EvalApplies reports whether the qualification verbs and the eval
 // marker on intent.filed are defined at a record carrying version v:
@@ -75,7 +86,7 @@ func Activated(v string) bool { return v == Seed1 || v == Seed2 || v == Seed3 ||
 // registered activates nothing however it would sort. It lives here
 // rather than beside the eval package because the keyring and the fold
 // gate on it and the eval derivation reads both.
-func EvalApplies(v string) bool { return v == Seed3 || v == Seed4 }
+func EvalApplies(v string) bool { return v == Seed3 || v == Seed4 || v == Seed5 }
 
 // LevelsApply reports whether the independence levels and the verdict's
 // declared tuple are defined at a record carrying version v: seed/4
@@ -86,4 +97,10 @@ func EvalApplies(v string) bool { return v == Seed3 || v == Seed4 }
 // contract.specified ready origin (re-specification) and the plan
 // verbs' content digest (plans/os-6bd9ffff.md D4, D5, D7), each a
 // row or field a seed/3 validator judges differently.
-func LevelsApply(v string) bool { return v == Seed4 }
+func LevelsApply(v string) bool { return v == Seed4 || v == Seed5 }
+
+// ImportApplies reports whether system.imported is defined at a record
+// carrying version v: seed/5 exactly today, a named list of one
+// (plans/os-cf13fb51.md D2), so a version this build has not registered
+// activates nothing however it would sort.
+func ImportApplies(v string) bool { return v == Seed5 }

@@ -98,6 +98,17 @@
     `seed/3` position by version, naming `seed/4`, and the fold reads
     each at `seed/4` positions only, so every existing chain verifies
     byte for byte.
+  - `seed/5` — activates the predecessor import
+    ([`import.md`](import.md)): `system.imported` `{source,
+    export_head, anchor, manifest}`, operator-only, admitted once per
+    ledger, the provenance record a genesis import writes right after
+    the upgrades. A `seed/4` validator's unknown-verb arm fails a chain
+    carrying it, so the two judge a `seed/5` record differently, hence
+    the bump, which makes a `seed/4`-only validator refuse an upgraded
+    chain at the first `seed/5` record by version rather than as
+    corruption. At `seed/4` positions the verb stays unknown-and-refused
+    under a `seed/5` validator too, and nothing else changes, so every
+    existing chain verifies byte for byte.
 
 ## Canonical event form
 
@@ -188,7 +199,8 @@ implement them (schema files will sit beside this spec and be linted at
 admission).
 
 - `system.*` — `genesis`, `halt.declared`, `halt.lifted`, `checkpoint`,
-  `protocol.upgraded`.
+  `protocol.upgraded`, and from `seed/5` `imported` (the predecessor
+  import's provenance record, once per ledger; [`import.md`](import.md)).
 - `actor.*` — `enrolled`, `granted`, `suspended`, `revoked`, `qualified`
   (cites eval results and the runtime tuple) and its inverse
   `disqualified`, both from `seed/3` ([`evals.md`](evals.md)). Payload
