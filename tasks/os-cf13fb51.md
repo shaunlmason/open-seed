@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-03T01:47:48Z"
     lease_expires: "2026-09-03T06:31:29Z"
 created_at: "2026-09-03T00:10:19Z"
-updated_at: "2026-09-03T05:31:29Z"
+updated_at: "2026-09-03T05:57:59Z"
 ---
 
 Build plan Phase 12 item 5 (docs/next-build-plan.md): migration — `seed import --from-open-seed <export>`: v1 lossless export → verify anchors → transform (cards → contracts, run-log entries → events, receipts → verdict records, mail → messages) → genesis import refusing non-empty ledgers; drilled against a real v1 fixture. This carries promotion's migration gate (build plan §5 criterion 3: drilled against a real export of THIS repository's v1 state, not only a fixture).
@@ -24,3 +24,7 @@ Expected shape, for the plan to settle: the export's tamper-evidence checked fir
 ## Evidence ev-e5eb282d (pr, seed-next-implementer, 2026-09-03T02:37:01Z)
 
 https://github.com/shaunlmason/open-seed/pull/255
+
+## Evidence ev-adcd9613 (receipt, seed-next-implementer, 2026-09-03T05:57:59Z)
+
+receipts/os-cf13fb51.json
