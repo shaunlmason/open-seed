@@ -47,10 +47,12 @@ accepts work at (from `teams` and `guardrails`, the names only), the
 artifact kinds it returns (receipts, plans, bodies by digest), the
 protocol version, and a JCS-canonical signature by the operator key
 over the card. The card carries no fingerprint but the signer's, no
-lane manifest, no fragment, no prompt, no position. It is published
-where the deployment chooses (a file in the repository at
-`next/boundary/card.json`, or served); a reader verifies the
-signature against the operator key it was given out of band. Refused:
+lane manifest, no fragment, no prompt, no position. Its publication
+location is bound: the card is checked in at `next/boundary/card.json`
+(the file `seed boundary card` writes, which CI re-renders and diffs
+so a stale card fails the gate) and the boundary surface serves that
+same file at its card route; a reader verifies the signature against
+the operator key it was given out of band. Refused:
 a card that names internals (manifests, fragments, budgets, models);
 an unsigned card.
 
@@ -84,7 +86,8 @@ by name; serving anything not in the artifact store; serving the
 ledger.
 
 **D4. Opacity is the invariant, proven at the surface.** The boundary
-surface exposes exactly three reads (card, tasks, artifact by digest)
+surface exposes exactly three reads (the checked-in card, tasks,
+artifact by digest)
 and one write (item 4's request, through the ingress the card names);
 the drill enumerates every route and every field of every response
 and pins the set, so a field added later is a deliberate change to a
