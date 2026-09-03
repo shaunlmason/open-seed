@@ -9,3 +9,4 @@ bin/
 var/
 # Coverage artifacts from make check-next.
 coverage.out
+perf/last.json

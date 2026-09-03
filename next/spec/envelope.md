@@ -135,6 +135,8 @@ rule above forbids:
 | 66 | `posture_unreadable` | the posture declaration exists and cannot be read: the same operational failure as `unreadable`, narrowed to the one input whose absence is separately reportable as `posture_undeclared` |
 | 28 | `protections_drift` | `seed protections plan`, or `seed doctor --current`, over a forge whose rulesets, CODEOWNERS or scheduled workflows differ from what the declaration derives: the family's answer, "the declared state is not the observed one", with the surface named (`postures.md`) |
 | 2 | `non_fast_forward` | the admission service's answer to a proposal linked to a tip that is no longer the tip (HTTP 409): contention at the ref rather than at a claim, and the one refusal the proposer's own loop answers by re-linking rather than by reading anything (`postures.md`) |
+| 4 | `trust_undeclared` | `seed project start` under a declaration with no `checkpoints.trust` block: a `not_found` whose subject is a config field — the one choice the charter says is declared, not defaulted — and the only `not_found` a caller answers by declaring `replay` or `signers` (`checkpoints.md`) |
+| 21 | `checkpoint_mismatch` | `seed project start` over a checkpoint whose snapshot is not retrievable, whose digest, position or files do not reproduce from the chain at the cited position: the family's answer, a cited state that recomputation does not reproduce, and the word says the citation was a checkpoint rather than a receipt (`checkpoints.md`) |
 
 A refinement is not a way around the allocation rule. A condition a caller
 must act on **differently** takes its own exit, which is precisely why
