@@ -48,6 +48,7 @@ with its fact:
 | `verdict.unmerged` (unrequested) | `merge.requested` | [`reconciliation.md`](reconciliation.md) |
 | `escalation.pending` | `decision.recorded`, `contract.cancelled` | [`escalation.md`](escalation.md) |
 | `verdict.human` | `verdict.rendered` | [`verdicts.md`](verdicts.md) |
+| `request.pending` | `request.answered` | [`requests.md`](requests.md) |
 
 ## The kinds
 
@@ -60,6 +61,12 @@ with its fact:
   ([`verdicts.md`](verdicts.md), "The rubric and the scorecard").
 - **`submission.pending`** — a submission no verdict cites; owed by
   the verifier lane.
+- **`request.pending`** — an inbound request nobody has answered
+  ([`requests.md`](requests.md)); owed by the dispatch lane
+  (`lane:dispatch`), one row per subject carrying the oldest
+  unanswered request's position and timestamp, so the situation read
+  reports its age in elapsed seconds; discharged by the dispatcher's
+  `request.answered`.
 - **`verdict.unmerged`** — a pass verdict with no observed merge. The
   merge chain is **two events**, so this kind has two shapes: until a
   request cites the verdict the debt is the operator's and

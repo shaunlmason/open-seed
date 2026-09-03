@@ -115,6 +115,7 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 				obligation.LaneObserver:   "observer",
 				obligation.LaneSupervisor: "supervise",
 				obligation.LaneOperator:   "operator",
+				obligation.LaneDispatcher: "dispatch",
 			} {
 				if ring.HasAnyCapability(fp, []string{capability}) {
 					lanes[lane] = true
@@ -273,6 +274,7 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 		"obligations": out,
 		"windows":     windows,
 		"messages":    messagesFor(st, fp, *subject, sincePos, haveSince),
+		"requests":    requestsFor(st, *subject, now),
 	}
 	if *repo == "" && unverified > 0 {
 		result["lessons_unverified"] = map[string]any{"count": fmt.Sprintf("%d", unverified), "verify_with": "--repo <dir>"}
@@ -331,6 +333,43 @@ func messagesFor(st *verdictState, fp, only string, sincePos int, haveSince bool
 		}
 		if m.Undeliverable {
 			row["undeliverable"] = true
+		}
+		out = append(out, row)
+	}
+	return out
+}
+
+// requestsFor is the read a lane learns of inbound proposals from
+// (plans/os-48df10a2.md D2): NOTICES of the unanswered requests —
+// origin, kind, size, position, age — never the summary, which is
+// payload text a surface outside the ledger wrote and the situation
+// read is the surface every lane orients from. The body is fetched
+// deliberately by position (seed ledger show). Whole-board and
+// unfiltered by caller: a request is owed to the dispatch lane, and
+// every other lane sees the same notice.
+func requestsFor(st *verdictState, only string, now time.Time) []map[string]any {
+	out := []map[string]any{}
+	for _, r := range st.fold.Requests() {
+		if r.Answered != nil || (only != "" && r.Subject != only) {
+			continue
+		}
+		row := map[string]any{
+			"origin":  r.Origin,
+			"kind":    r.Kind,
+			"subject": r.Subject,
+			"at":      fmt.Sprintf("%d", r.Pos),
+			"from":    r.Signer,
+			"ts":      r.TS,
+		}
+		if r.Pos < len(st.records) {
+			row["bytes"] = fmt.Sprintf("%d", len(st.records[r.Pos].Event.Payload))
+		}
+		if filed, err := time.Parse(time.RFC3339, r.TS); err == nil {
+			age := int64(now.Sub(filed).Seconds())
+			if age < 0 {
+				age = 0
+			}
+			row["age_seconds"] = fmt.Sprintf("%d", age)
 		}
 		out = append(out, row)
 	}

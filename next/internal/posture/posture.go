@@ -169,9 +169,26 @@ type Teams struct {
 }
 
 // Config is the deployment declaration.
+// FederationRemote is one read remote (plans/os-48df10a2.md D4): a
+// name, the git remote whose ledger ref is read, and that ref. Read
+// only: nothing here names a key or a write.
+type FederationRemote struct {
+	Name   string `json:"name"`
+	Remote string `json:"remote"`
+	Ref    string `json:"ref"`
+}
+
+// Federation is the declaration's federation block: the other
+// deployments this one reads, uniformly, into its org view. Absent is
+// no federation.
+type Federation struct {
+	Remotes []FederationRemote `json:"remotes"`
+}
+
 type Config struct {
-	Posture   Posture    `json:"posture"`
-	Admission *Admission `json:"admission,omitempty"`
+	Posture    Posture     `json:"posture"`
+	Admission  *Admission  `json:"admission,omitempty"`
+	Federation *Federation `json:"federation,omitempty"`
 	// Protected enumerates the protected surface (SEED-NEXT.md §II.14)
 	// as repository-relative path prefixes: a path equal to an entry,
 	// or under an entry as a directory, is write-denied to every agent
@@ -323,7 +340,36 @@ func Parse(b []byte) (*Config, error) {
 // table's and is checked where the table is, at admission and at
 // `seed preseed check`), prefixes clean, the change process the one
 // the charter names.
+// validateFederation holds the federation block to its shape: names
+// non-empty and unique, remotes non-empty, refs full ref names or
+// absent (the default ledger ref).
+func (c *Config) validateFederation() error {
+	if c.Federation == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	for i, r := range c.Federation.Remotes {
+		if strings.TrimSpace(r.Name) == "" || strings.ContainsAny(r.Name, " /\\") {
+			return fmt.Errorf("federation.remotes[%d].name is a non-empty token without spaces or slashes, got %q", i, r.Name)
+		}
+		if seen[r.Name] {
+			return fmt.Errorf("federation.remotes names %q twice", r.Name)
+		}
+		seen[r.Name] = true
+		if strings.TrimSpace(r.Remote) == "" {
+			return fmt.Errorf("federation.remotes.%s names no git remote", r.Name)
+		}
+		if r.Ref != "" && !strings.HasPrefix(r.Ref, "refs/") {
+			return fmt.Errorf("federation.remotes.%s.ref is a full ref name (refs/…) or absent for the default ledger ref, got %q", r.Name, r.Ref)
+		}
+	}
+	return nil
+}
+
 func (c *Config) validatePreseed() error {
+	if err := c.validateFederation(); err != nil {
+		return err
+	}
 	if c.Governance != nil {
 		if strings.TrimSpace(c.Governance.Root) == "" {
 			return errors.New("governance.root names the governance root's key fingerprint")

@@ -1423,3 +1423,15 @@ the assertions read, and there is no copy to go stale.
   needs a state's exits to grow, ask whether it is an exit at all. A
   racing claim is not, so it became a claim-scoped fact and the table
   stayed the contract it was.
+- An ingress verb is safest as a fact with a derived subject: hold the
+  record's subject to what the payload cites (a contract on the chain
+  or `system`) at admission, and every downstream notice can carry
+  the subject without re-checking it.
+- A projection section that only chains from a new version can carry
+  needs no projection version bump: `omitempty` keeps every older
+  build byte-identical, and the spec can say so in place of a
+  republish. Bump when an unchanged tip would render differently.
+- A federation read should never reuse the loop's session opener:
+  the opener applies the local declaration (ledger ref, proposer) to
+  whatever remote it opens, which is wrong for a foreign ledger. Open
+  with the gitref client and the remote's own genesis instead.

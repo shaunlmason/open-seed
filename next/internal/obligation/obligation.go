@@ -60,6 +60,11 @@ const (
 	// a human is a key with operator standing, and discharged by the
 	// verdict.rendered such a key makes on the same submission.
 	KindVerdictHuman = "verdict.human"
+	// KindRequestPending is an inbound request nobody has answered
+	// (plans/os-48df10a2.md D2): owed by the dispatch lane, one row per
+	// subject carrying the oldest unanswered request's position and
+	// timestamp, discharged by the dispatcher's request.answered.
+	KindRequestPending = "request.pending"
 )
 
 // Lane names used where an obligation is owed by a role rather than
@@ -70,6 +75,7 @@ const (
 	LaneObserver   = "lane:observer"
 	LaneSupervisor = "lane:supervise"
 	LaneOperator   = "lane:operator"
+	LaneDispatcher = "lane:dispatch"
 )
 
 // factDischargers is the closed set of fact-shaped obligations: their
@@ -90,6 +96,8 @@ var factDischargers = map[string][]string{
 	KindEscalationPending: {"contract.cancelled", "decision.recorded"},
 	// next/spec/verdicts.md: the human's render answers the deferral.
 	KindVerdictHuman: {"verdict.rendered"},
+	// next/spec/requests.md: the dispatcher's answer closes a request.
+	KindRequestPending: {"request.answered"},
 }
 
 // mergeRequestVerb discharges a standing pass verdict that no merge
@@ -174,6 +182,7 @@ func Derive(records []*event.Record, table *transition.Table, deps Deps) []Row {
 		}
 		rows = append(rows, subjectRows(subject, s, table, deps)...)
 	}
+	rows = append(rows, requestRows(fold)...)
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].Subject != rows[j].Subject {
 			return rows[i].Subject < rows[j].Subject
@@ -304,4 +313,29 @@ func runFlaggable(s transition.SubjectState, fence int) bool {
 		}
 	}
 	return false
+}
+
+// requestRows is the unanswered requests as obligations on the
+// dispatch lane (plans/os-48df10a2.md D2): one row per subject, since
+// identity is (Subject, Kind), carrying the oldest unanswered request
+// on it; the situation read lists every request as its own notice.
+// The requests on system are owed like the ones on a contract.
+func requestRows(fold *transition.Fold) []Row {
+	var rows []Row
+	seen := map[string]bool{}
+	for _, r := range fold.Requests() {
+		if r.Answered != nil || seen[r.Subject] {
+			continue
+		}
+		seen[r.Subject] = true
+		rows = append(rows, Row{
+			Subject:      r.Subject,
+			Kind:         KindRequestPending,
+			OwedBy:       LaneDispatcher,
+			Since:        r.Pos,
+			TS:           r.TS,
+			DischargedBy: append([]string(nil), factDischargers[KindRequestPending]...),
+		})
+	}
+	return rows
 }
