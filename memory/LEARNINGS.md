@@ -1536,3 +1536,23 @@ the assertions read, and there is no copy to go stale.
   the opener applies the local declaration (ledger ref, proposer) to
   whatever remote it opens, which is wrong for a foreign ledger. Open
   with the gitref client and the remote's own genesis instead.
+
+## The GitHub↔Gitea protection impedance (os-ad610334, Phase 13 item 3)
+
+- **Gitea/Forgejo has no unified "ruleset" model.** Protection splits
+  across `branch_protections` (keyed by `rule_name`, which IS the branch
+  glob — no separate name) and `tag_protections` (keyed by id). A branch
+  protection's existence carries deletion + non-fast-forward; the push
+  whitelist carries "only the identity may update"; so an adapter maps
+  the four Desired rulesets onto those two resources and remembers each
+  protection's key (like the GitHub adapter's `ids`) for update/delete.
+- **`Unexpressible` is rule-TYPE level, and `differences()` is
+  param-exact.** A forge that expresses a rule partially (Forgejo:
+  approvals yes, thread-resolution/code-owner no) cannot both apply the
+  expressible part and avoid drift on the rest. The honest resolution is
+  to mark the WHOLE rule unexpressible (manual) rather than half-apply it
+  and read back as falsely compliant — the mutation drill forbids the
+  silent drop.
+- **A forge field defaulting keeps old declarations valid.**
+  `admission.forge` absent = github; the CLI `--forge` default must stay
+  the credential-free `snapshot` arm the existing drills rely on.

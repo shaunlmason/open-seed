@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -187,5 +188,67 @@ func TestForgejoNeedsAToken(t *testing.T) {
 	defer srv.Close()
 	if _, err := NewForgejo(srv.URL, "o", "r", "").Read(); err == nil || !strings.Contains(err.Error(), "401") {
 		t.Fatalf("a tokenless read must be refused 401, got %v", err)
+	}
+}
+
+func TestForgejoMutationEvidence(t *testing.T) {
+	// The desired state is one table: both forges derive from Desired,
+	// never a forge-specific fork.
+	cfg := declaration(t)
+	want, err := Desired(cfg, "trunk")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(want.Rulesets) != 4 {
+		t.Fatalf("Desired is the one shared table of four rulesets, got %d", len(want.Rulesets))
+	}
+
+	// A Forgejo read that drops the ledger branch's sole writer is caught
+	// as drift, never accepted.
+	fake := newFakeForgejo()
+	srv := httptest.NewServer(fake.handler(t))
+	defer srv.Close()
+	fj := NewForgejo(srv.URL, "o", "r", "tok")
+	if _, err := Apply(cfg, fj, ""); err != nil {
+		t.Fatal(err)
+	}
+	fake.mu.Lock()
+	led := fake.branches["seed-ledger"]
+	led.EnablePush = true // anyone may push — the whitelist is gone
+	led.EnablePushWhitelist = false
+	led.PushWhitelistUsernames = nil
+	fake.branches["seed-ledger"] = led
+	fake.mu.Unlock()
+	rep, _, err := Plan(cfg, fj, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.DriftCount == 0 {
+		t.Fatal("dropping the ledger branch's sole writer must be drift")
+	}
+}
+
+// TestForgejoLive reconciles a real Forgejo instance when one is
+// configured; it skips with a named reason otherwise (never silently).
+func TestForgejoLive(t *testing.T) {
+	url, repo, tok := os.Getenv("SEED_FORGEJO_URL"), os.Getenv("SEED_FORGEJO_REPO"), os.Getenv("FORGEJO_TOKEN")
+	if url == "" || repo == "" || tok == "" {
+		t.Skip("live Forgejo drill: set SEED_FORGEJO_URL, SEED_FORGEJO_REPO and FORGEJO_TOKEN to run against a real instance")
+	}
+	owner, name, ok := strings.Cut(repo, "/")
+	if !ok {
+		t.Fatalf("SEED_FORGEJO_REPO must be owner/name, got %q", repo)
+	}
+	cfg := declaration(t)
+	fj := NewForgejo(url, owner, name, tok)
+	if _, err := Apply(cfg, fj, ""); err != nil {
+		t.Fatalf("applying to the live Forgejo: %v", err)
+	}
+	after, _, err := Plan(cfg, fj, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.DriftCount != 0 {
+		t.Fatalf("the live Forgejo must reconcile to no drift, got %d", after.DriftCount)
 	}
 }

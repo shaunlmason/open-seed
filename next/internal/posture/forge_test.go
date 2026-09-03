@@ -50,3 +50,10 @@ func TestForgeIsStrict(t *testing.T) {
 		t.Error("a non-URL api must be refused")
 	}
 }
+
+func TestNoTokenInTheDeclaration(t *testing.T) {
+	_, err := Parse([]byte(`{"posture": "enforced-forge-hosted", "admission": {"endpoint": "https://a.example", "identity": "bot", "checks": ["v"], "reviews": 1, "forge": "forgejo", "api": "https://f.example", "token": "secret"}}`))
+	if err == nil {
+		t.Fatal("a token in the declaration must be refused: secrets never live in the tree")
+	}
+}
