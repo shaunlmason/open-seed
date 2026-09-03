@@ -20,7 +20,6 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/history"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
-	"github.com/shaunlmason/open-seed/next/internal/project"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -87,11 +86,11 @@ func (m Measurer) Measure() (Reading, error) {
 	r[MetricAdmission] = ms(total / time.Duration(samples))
 
 	// Rebuild: every registered projection published from the chain.
-	start = time.Now()
-	if _, err := project.Rebuild(ledgerDir, filepath.Join(work, "out"), project.Default(), res.Resolve); err != nil {
+	rebuilt, err := rebuildMS(ledgerDir, filepath.Join(work, "out"), res.Resolve)
+	if err != nil {
 		return nil, fmt.Errorf("rebuild: %w", err)
 	}
-	r[MetricRebuild] = ms(time.Since(start))
+	r[MetricRebuild] = rebuilt
 
 	// Contention: Writers concurrent appenders against one bare
 	// remote seeded with the history, the hook installed when given,
