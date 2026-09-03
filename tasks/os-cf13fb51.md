@@ -8,9 +8,9 @@ claim:
     actor: seed-next-implementer
     token: c-7f8709fc0cece37a
     claimed_at: "2026-09-03T01:47:48Z"
-    lease_expires: "2026-09-03T03:35:36Z"
+    lease_expires: "2026-09-03T04:11:57Z"
 created_at: "2026-09-03T00:10:19Z"
-updated_at: "2026-09-03T02:37:01Z"
+updated_at: "2026-09-03T03:11:57Z"
 ---
 
 Build plan Phase 12 item 5 (docs/next-build-plan.md): migration — `seed import --from-open-seed <export>`: v1 lossless export → verify anchors → transform (cards → contracts, run-log entries → events, receipts → verdict records, mail → messages) → genesis import refusing non-empty ledgers; drilled against a real v1 fixture. This carries promotion's migration gate (build plan §5 criterion 3: drilled against a real export of THIS repository's v1 state, not only a fixture).
