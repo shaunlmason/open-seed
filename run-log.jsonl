@@ -1450,3 +1450,4 @@
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-0352a8de","kind":"comment"},"task":"os-d63c7441","ts":"2026-09-03T22:55:06Z","verb":"comment"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-d63c7441","ts":"2026-09-03T22:55:11Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T23:55:44Z"},"task":"os-f262585a","ts":"2026-09-03T22:55:44Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"title":"next: the contention benchmark at target scale — a scheduled run with hundreds of writers through the hook, tracked against the perf budgets (III.C row 4)"},"task":"os-a00d3f34","ts":"2026-09-03T22:57:44Z","verb":"create"}
