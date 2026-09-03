@@ -77,6 +77,12 @@ func TestCurationRowsAndTheRaise(t *testing.T) {
 		"curation.hypothesis.contested": {keyring.CapCurate},
 		"curation.lesson.promoted":      {keyring.CapObserver, keyring.CapOperator},
 		"escalation.raised":             {keyring.CapClaim, keyring.CapDispatch, keyring.CapVerdict, keyring.CapSupervise, keyring.CapOperator, keyring.CapCurate},
+		// The flywheel's two rows (plans/os-9075c308.md D4): the
+		// proposal is curate alone, the same no-fallback posture as
+		// the hypothesis; the merge observation is the observer's
+		// with the operator fallback merge.observed has.
+		"workflow.proposed": {keyring.CapCurate},
+		"workflow.merged":   {keyring.CapObserver, keyring.CapOperator},
 	} {
 		if got := keyring.AcceptedCapabilities(verb); fmt.Sprint(got) != fmt.Sprint(want) {
 			t.Errorf("%s accepts %v, want %v", verb, got, want)

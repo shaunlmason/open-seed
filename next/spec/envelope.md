@@ -121,6 +121,7 @@ rule above forbids:
 | exit | refining code | the narrower condition |
 |---|---|---|
 | 3 | `ledger_not_empty` | `seed init` against a ledger that already has a genesis: an illegal transition whose one useful detail is *which* illegal one, since the caller's next move is to point at a different directory rather than to re-read the tables |
+| 3 | `name_taken` | `seed flywheel draft --validate`, `propose` or `repair` on a shape whose workflow name the registry already holds at the repository's head: an illegal step whose one useful detail is that nothing was staged, since a drafted workflow takes no existing name and the caller's next move is to look at the file that holds it (`flywheel.md`) |
 | 4 | `posture_undeclared` | the posture declaration the invocation needs does not exist: a `not_found` whose subject is a config file rather than a ledger subject, and the only `not_found` a caller answers by writing a file |
 | 17 | `level_short` | the verdict's achieved independence level is short of the level its tier requires (`tiers.md`'s `independence` column): the family's answer, "this verifier cannot judge this contract", stands, and the word says it is the configuration rather than the key (`verdicts.md`) |
 | 20 | `carrier_absent` | `seed verdict render` on an eval bound to a candidate lesson whose carrier commit is not an ancestor of the submission head: the transcripts may be green, and the verdict still cannot be rendered, because the thing under test was never applied (evals.md) |

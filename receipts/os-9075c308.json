@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "task": "os-9075c308",
+  "merge_base": "4fea8f1ba645bf82e942c33d0a1e4dfd244dee2f",
+  "head": "6015c91708b479a77af69ee4c63fa3afed99c2e6",
+  "plan_path": "plans/os-9075c308.md",
+  "plan_sha256": "440d2ab9ecf28bc205387f48157657f22297b5d5a42c07a1c47c13e170c7c161",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/flywheel.go",
+    "next/cmd/seed/flywheel_cli_test.go",
+    "next/cmd/seed/flywheel_e2e_test.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/remote.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/affordances_test.go",
+    "next/internal/admit/curation_test.go",
+    "next/internal/admit/flywheel_test.go",
+    "next/internal/admit/testdata/injection/curator-residuals.json",
+    "next/internal/flywheel/flywheel.go",
+    "next/internal/flywheel/flywheel_test.go",
+    "next/internal/flywheel/testdata/chore-planned.yaml",
+    "next/internal/flywheel/testdata/chore.yaml",
+    "next/internal/keyring/curate_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/project/flywheel_test.go",
+    "next/internal/project/knowledge_test.go",
+    "next/internal/project/lanes_report_test.go",
+    "next/internal/project/refusals_report_test.go",
+    "next/internal/project/report.go",
+    "next/internal/transition/transition.go",
+    "next/lanes/fragments/lane/curator.md",
+    "next/spec/actors.md",
+    "next/spec/curation.md",
+    "next/spec/envelope.md",
+    "next/spec/flywheel.md",
+    "next/spec/lanes.md",
+    "next/spec/projections.md",
+    "next/spec/protocol.md",
+    "next/trajectories/lanes/curator.json"
+  ],
+  "diff_sha256": "36d477327335d219f4c379acf4d655f23d9eba6c6425c06fad6d7da045665e32",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/flywheel/ ./internal/keyring/ ./internal/admit/ ./internal/project/ ./cmd/seed/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "seed-next-implementer"
+}
