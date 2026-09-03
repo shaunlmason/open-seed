@@ -120,6 +120,17 @@
     rather than by misjudging a race. At `seed/5` positions a second
     claim stays contention under a `seed/6` validator too, no table row
     changes, and every existing chain verifies byte for byte.
+  - `seed/7` — activates the request ingress ([`requests.md`](requests.md)):
+    `request.filed`, the one verb a proposal from a projection surface,
+    a dashboard or another deployment enters the ledger by, a fact that
+    changes no state and grants nothing, and `request.answered`, the
+    dispatcher's close of one. A `seed/6` validator's unknown-verb arm
+    fails a chain carrying either, so the two judge a `seed/7` record
+    differently, hence the bump, which makes a `seed/6`-only validator
+    refuse an upgraded chain at the first request by version rather
+    than as corruption. At `seed/6` positions both verbs stay
+    unknown-and-refused under a `seed/7` validator too, no table row
+    changes, and every existing chain verifies byte for byte.
 
 ## Canonical event form
 

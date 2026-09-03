@@ -304,11 +304,21 @@ dashboard or mirror renders, so whichever card lands `request.*`
 inherits an input that already carries hostile text verbatim. Pinned by
 its own drill rather than left implicit.
 
-**The mirror arm cannot be met at all.** `request.*` — the protocol's
-inbound-proposal family for mirror edits and dashboard actions — has
-**zero rows** in `next/spec/transitions.json`. There is nothing to fire
-a corpus at. III.J's second row is therefore **two-thirds met**, not
-closed: intents and tool output are covered, mirrors are not.
+**The mirror arm is met from `seed/7`** ([`requests.md`](requests.md)).
+`request.filed` — the protocol's inbound-proposal family for mirror
+edits, dashboard actions and cross-repo work — is the one door a
+surface's proposal enters by: a fact, standing only, changing no state.
+The corpus is fired at it (`TestNoHostileRequestWidensTheDispatcherSet`
+in the admit suite, the terminal arm in `cmd/seed`): every corpus
+file planted in `summary`, in `reference` (a valid ref form with
+hostile text is not a reference, so the shape refuses it), in
+`origin` and in the subject; the dispatcher's reachable set with
+pending hostile requests is exactly its pinned set; the situation read
+carries the marker nowhere (the notice is origin, kind, size,
+position and age, never the summary); and `request.answered` over a
+hostile request yields only what the dispatcher's allowlist already
+permitted. III.J's second row is therefore **met in full**: intents,
+tool output and mirrors.
 
 **The vocabulary has an honest edge.** The sweep covers
 `admit.affordanceCatalog`, whose completeness against the spec table is
@@ -371,9 +381,10 @@ ordered fragment list prevents.
 - III.J "The dispatcher runs with least standing capability and passes
   the injection conformance suite" — the allowlist above for the
   standing half, drilled against `operator` explicitly; the suite above
-  for the input-handling half, **two-thirds met**: intents and tool
-  output are covered and mirrors are not, because `request.*` is
-  unlanded. Three residuals are named and pinned rather than closed.
+  for the input-handling half, **met in full** from `seed/7`: intents,
+  tool output and mirrors, the last through the corpus fired at
+  `request.filed` ([`requests.md`](requests.md)). The remaining
+  residuals are named and pinned rather than closed.
 - III.J row 3 "Dispatcher re-triage rate and planner unedited-approval
   rate are tracked" — met by [`trajectories.md`](trajectories.md)'s
   metrics half: the `ready` origin of `contract.specified` at `seed/4`

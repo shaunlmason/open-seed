@@ -147,6 +147,11 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   section and its `contested` count, [`curation.md`](curation.md), so
   an unchanged tip republishes with the section; version "12" its
   `retired` and `stale` counts, the latter at the declared instant;
+  version "15" carries `requests` when the prefix holds a request
+  ([`requests.md`](requests.md), from `seed/7`: total, unanswered, by
+  kind, by outcome, mean answer latency in elapsed seconds), a
+  section absent from every chain that carries none, so no version
+  moves for it (no chain before `seed/7` can hold one);
   version "15" splits `lanes` by the acting key's roster kind
   (`by_kind`: a specification under its appender's kind, an approval
   under its approver's, the kind read from the keyring at the record's
