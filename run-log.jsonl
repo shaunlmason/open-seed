@@ -1460,3 +1460,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-a00d3f34","ts":"2026-09-03T23:12:33Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T00:42:37Z"},"task":"os-a00d3f34","ts":"2026-09-03T23:12:37Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-a00d3f34","ts":"2026-09-03T23:14:53Z","verb":"transition"}
+{"actor":"seed-next-implementer","data":{"title":"next: seed ledger audit — the five-bar audit over any ledger, the shadow run's evidence for III.R row 5"},"task":"os-7599c27d","ts":"2026-09-03T23:22:33Z","verb":"create"}
