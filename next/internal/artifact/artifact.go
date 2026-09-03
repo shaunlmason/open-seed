@@ -63,6 +63,21 @@ func (s *Store) Put(b []byte) (string, error) {
 	return digest, nil
 }
 
+// PutVerified stores b under the digest the caller expected, refusing
+// content that hashes to anything else: the verified-on-arrival put a
+// fetch across an organization boundary uses (plans/os-40ed0ca0.md
+// D3), so what the store holds under a name is what was named.
+func (s *Store) PutVerified(digest string, b []byte) error {
+	if !digestRE.MatchString(digest) {
+		return fmt.Errorf("artifact store: %q is not a lowercase-hex sha256 digest", digest)
+	}
+	if got := Digest(b); got != digest {
+		return fmt.Errorf("artifact store: content hashes to %s, not the %s it was fetched as — refused on arrival", got, digest)
+	}
+	_, err := s.Put(b)
+	return err
+}
+
 // Get returns the bytes stored under digest, recomputing and checking
 // the digest on the way out: a store whose disk content no longer
 // hashes to its name is corrupt, and corrupt content must never be

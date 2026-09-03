@@ -959,6 +959,26 @@ func coreRules() []Rule {
 			}
 			return nil
 		}},
+		{Name: "boundary", Check: func(c *Context, rec *event.Record) error {
+			// The card's word (plans/os-40ed0ca0.md D1, D5): a deployment
+			// that declares a boundary block accepts the request kinds
+			// it names and no other, so a request the card refuses the
+			// ingress refuses too — policy from the declaration, never
+			// chain validity, like the ceiling.
+			if rec.Event.Verb != request.FiledVerb || c.Declaration == nil || c.Declaration.Boundary == nil {
+				return nil
+			}
+			p, err := request.ParseFiled(rec.Event.Subject, rec.Event.Payload)
+			if err != nil {
+				return nil // the request rule's refusal
+			}
+			for _, k := range c.Declaration.Boundary.Accepts {
+				if k == p.Kind {
+					return nil
+				}
+			}
+			return &request.Error{Verb: rec.Event.Verb, Subject: rec.Event.Subject, Reason: fmt.Sprintf("kind %q is not one this deployment's card accepts (%s)", p.Kind, strings.Join(c.Declaration.Boundary.Accepts, ", "))}
+		}},
 		{Name: "plan", Check: func(c *Context, rec *event.Record) error {
 			// The plan gate (plans/os-16c1d142.md): plan.* payloads
 			// carry their anchors, and a submission above the trivial

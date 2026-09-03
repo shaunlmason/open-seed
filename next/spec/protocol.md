@@ -132,6 +132,14 @@
     unknown-and-refused under a `seed/7` validator too, no table row
     changes, and every existing chain verifies byte for byte.
 
+## The cross-organization boundary
+
+The boundary ([`boundary.md`](boundary.md)) is not a protocol version:
+it appends nothing and defines no verb. It is a read surface over a
+verified clone — the signed capability card, the five-state task view
+derived from the chain, artifacts by digest — and the one write across
+it is the request ingress this register activates at `seed/7`.
+
 ## Canonical event form
 
 Events are JSON objects canonicalized per **RFC 8785 (JCS)**. The canonical
