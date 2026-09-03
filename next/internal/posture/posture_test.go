@@ -20,11 +20,16 @@ func write(t *testing.T, content string) string {
 // conformance: III posture item — every deployment declares one of the
 // three charter postures; everything else refuses.
 func TestLoadRoundTripsAndRefuses(t *testing.T) {
-	for _, p := range []Posture{EnforcedSelfHosted, EnforcedForgeHosted, Cooperative} {
+	for _, p := range []Posture{EnforcedSelfHosted, Cooperative} {
 		cfg, err := Load(write(t, `{"posture": "`+string(p)+`"}`))
 		if err != nil || cfg.Posture != p {
 			t.Errorf("%s must round-trip, got %+v %v", p, cfg, err)
 		}
+	}
+	// The third posture round-trips with the block it requires
+	// (TestAdmissionBlockIsPostureGated holds it to that).
+	if cfg, err := Load(write(t, forgeHosted)); err != nil || cfg.Posture != EnforcedForgeHosted {
+		t.Errorf("%s must round-trip with its block, got %+v %v", EnforcedForgeHosted, cfg, err)
 	}
 
 	if _, err := Load(filepath.Join(t.TempDir(), "absent.json")); !errors.Is(err, ErrUndeclared) {
@@ -65,7 +70,113 @@ func TestPostureProperties(t *testing.T) {
 			t.Errorf("the named consequence must keep the charter phrase %q", phrase)
 		}
 	}
-	if !strings.Contains(ForgeHostedGap, "Phase 12") {
-		t.Error("the forge-hosted gap must name Phase 12")
+}
+
+const forgeHosted = `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://127.0.0.1:8437", "identity": "seed-admission[bot]", "ledger_ref": "refs/heads/seed-ledger", "checks": ["check", "verify"], "reviews": 1, "owners": ["@governance-root"]}}`
+
+// conformance: III.B — the third posture is declared with the block
+// the service and the reconciler read (plans/os-5c8a312c.md D3, D5):
+// required under enforced-forge-hosted, refused under the others, and
+// strict about the endpoint, the identity and the branch namespace.
+func TestAdmissionBlockIsPostureGated(t *testing.T) {
+	cfg, err := Load(write(t, forgeHosted))
+	if err != nil {
+		t.Fatalf("a complete forge-hosted declaration must load: %v", err)
+	}
+	if cfg.Admission == nil || cfg.Admission.Endpoint != "http://127.0.0.1:8437" || cfg.Admission.Identity != "seed-admission[bot]" || cfg.LedgerRef() != "refs/heads/seed-ledger" || cfg.Admission.Reviews != 1 || len(cfg.Admission.Checks) != 2 || len(cfg.Admission.Owners) != 1 {
+		t.Fatalf("the block must round-trip, got %+v", cfg.Admission)
+	}
+	cfg, err = Load(write(t, `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "https://admit.example", "identity": "bot"}}`))
+	if err != nil || cfg.LedgerRef() != DefaultLedgerRef {
+		t.Fatalf("an unnamed ledger ref defaults to the branch %s, got %q %v", DefaultLedgerRef, cfg.LedgerRef(), err)
+	}
+	for _, p := range []Posture{EnforcedSelfHosted, Cooperative} {
+		cfg, err := Load(write(t, `{"posture": "`+string(p)+`"}`))
+		if err != nil || cfg.LedgerRef() != "" {
+			t.Fatalf("%s carries no ledger ref of its own, got %q %v", p, cfg.LedgerRef(), err)
+		}
+	}
+	for name, content := range map[string]string{
+		"missing block":     `{"posture": "enforced-forge-hosted"}`,
+		"block elsewhere":   `{"posture": "cooperative", "admission": {"endpoint": "http://x", "identity": "bot"}}`,
+		"no endpoint":       `{"posture": "enforced-forge-hosted", "admission": {"identity": "bot"}}`,
+		"bad scheme":        `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "ftp://x", "identity": "bot"}}`,
+		"no identity":       `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": " "}}`,
+		"custom namespace":  `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": "bot", "ledger_ref": "refs/seed/ledger"}}`,
+		"negative reviews":  `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": "bot", "reviews": -1}}`,
+		"empty check":       `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": "bot", "checks": [""]}}`,
+		"empty owner":       `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": "bot", "owners": [" "]}}`,
+		"unknown sub-field": `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://x", "identity": "bot", "token": "secret"}}`,
+		"protected slash":   `{"posture": "cooperative", "protected": ["/Makefile"]}`,
+		"protected dotdot":  `{"posture": "cooperative", "protected": ["../x"]}`,
+		"protected unclean": `{"posture": "cooperative", "protected": ["next//spec"]}`,
+		"protected empty":   `{"posture": "cooperative", "protected": [" "]}`,
+	} {
+		_, err := Load(write(t, content))
+		if err == nil || errors.Is(err, ErrUndeclared) || errors.Is(err, ErrUnreadable) {
+			t.Errorf("%s must refuse with a validity error, got %v", name, err)
+		}
+	}
+	if _, err := Load(write(t, `{"posture": "enforced-forge-hosted"}`)); err == nil || !strings.Contains(err.Error(), "admission block") {
+		t.Errorf("the missing block must be named, got %v", err)
+	}
+}
+
+// conformance: III.L — the protected surface is enumerated in config
+// (plans/os-465e356e.md D1): the declaration carries it as clean
+// repository-relative prefixes, its own path is protected by
+// construction, and membership is exact-or-under.
+func TestProtectedSurfaceIsDeclaredAndSelfIncluding(t *testing.T) {
+	cfg, err := Load(write(t, `{"posture": "enforced-self-hosted", "protected": ["Makefile", ".github/workflows/", "next/spec/transitions.json", "Makefile"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{".github/workflows", "Makefile", "next/spec/transitions.json", "seed.json"}
+	if got := cfg.ProtectedSurface(); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("surface %v, want %v (deduplicated, sorted, self-including)", got, want)
+	}
+	for p, want := range map[string]bool{
+		"Makefile":                        true,
+		"seed.json":                       true,
+		".github/workflows/check.yml":     true,
+		".github/workflows":               true,
+		"next/spec/transitions.json":      true,
+		"next/spec/transitions.json.bak":  false,
+		"Makefile.old":                    false,
+		"docs/seed.json":                  false,
+		"next/spec/lanes.md":              false,
+		".github/workflowsX/a.yml":        false,
+		"next/internal/redteam/x_test.go": false,
+	} {
+		if got := cfg.Protects(p); got != want {
+			t.Errorf("Protects(%q) = %v, want %v", p, got, want)
+		}
+	}
+	// A declaration without the field protects exactly its own path.
+	bare, err := Load(write(t, `{"posture": "enforced-self-hosted"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := bare.ProtectedSurface(); len(got) != 1 || got[0] != DeclarationPath || !bare.Protects(DeclarationPath) || bare.Protects("Makefile") {
+		t.Fatalf("an unlisted surface is the declaration alone, got %v", got)
+	}
+	for name, content := range map[string]string{
+		"empty entry":     `{"posture": "cooperative", "protected": [""]}`,
+		"absolute":        `{"posture": "cooperative", "protected": ["/etc"]}`,
+		"escaping":        `{"posture": "cooperative", "protected": ["../x"]}`,
+		"dot":             `{"posture": "cooperative", "protected": ["."]}`,
+		"unclean":         `{"posture": "cooperative", "protected": ["a//b"]}`,
+		"backslash":       `{"posture": "cooperative", "protected": ["a\\b"]}`,
+		"not a list":      `{"posture": "cooperative", "protected": "Makefile"}`,
+		"not strings":     `{"posture": "cooperative", "protected": [1]}`,
+		"unknown sibling": `{"posture": "cooperative", "protected": [], "protect": []}`,
+	} {
+		if _, err := Load(write(t, content)); err == nil || !strings.Contains(err.Error(), "valid postures") {
+			t.Errorf("%s must refuse naming the valid postures, got %v", name, err)
+		}
+	}
+	// Parse is Load without the file: the same strictness on bytes.
+	if _, err := Parse([]byte(`{"posture": "anarchy"}`)); err == nil {
+		t.Fatal("Parse must apply Load's validity check")
 	}
 }
