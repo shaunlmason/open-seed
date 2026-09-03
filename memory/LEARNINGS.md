@@ -1524,6 +1524,12 @@ the assertions read, and there is no copy to go stale.
   predecessor later pruned simply have no match, and the entry itself
   is then the artifact. Do not loosen the match to make the count look
   better.
+- When two surfaces must expose the same verbs, draw both from one
+  table and hold the table to the dispatchers' own usage text in a
+  drill; a hand-kept second list drifts the day someone adds a verb.
+- bufio.ScanLines strips a trailing carriage return and TrimSpace
+  strips another: a "refuse CRLF" rule needs a split function and a
+  trim that keep the CR, or the parser never sees what it must refuse.
 - An ingress verb is safest as a fact with a derived subject: hold the
   record's subject to what the payload cites (a contract on the chain
   or `system`) at admission, and every downstream notice can carry
