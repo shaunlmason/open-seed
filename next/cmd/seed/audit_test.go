@@ -51,6 +51,17 @@ func TestCapabilityAuditOfTheShippedManifests(t *testing.T) {
 	if got := operatorHolders(t, "../../lanes"); strings.Join(got, ",") != "maintenance" {
 		t.Fatalf("the operator-holding manifests are exactly maintenance, got %v", got)
 	}
+	for _, must := range []string{"next/spec", "next/internal/admit", "next/internal/keyring", "next/lanes", "Makefile", ".github/workflows", "scripts"} {
+		found := false
+		for _, req := range RequiredProtected {
+			if req == must {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("the required surface names %s (charter §II.14)", must)
+		}
+	}
 	seen := map[string]bool{}
 	for _, req := range RequiredProtected {
 		if seen[req] || strings.HasPrefix(req, "/") || strings.HasSuffix(req, "/") || strings.Contains(req, "..") {

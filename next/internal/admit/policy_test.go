@@ -69,6 +69,12 @@ func TestAgentCeilingReadsTheRosterKind(t *testing.T) {
 	if err := Check(&with, draftV(t, worker, version.Seed1, "claim.taken", "c-2", `{}`, ctx.Tip)); err != nil {
 		t.Fatalf("a trivial contract is under the standard ceiling: %v", err)
 	}
+	// A declaration with no guardrails block ceilings nobody: absent
+	// is undeclared, never a default.
+	with.Declaration = declared(t, `{"posture": "cooperative", "teams": {"squads": [{"name": "core", "lanes": ["implementer"]}]}}`)
+	if err := Check(&with, draftV(t, worker, version.Seed1, "claim.taken", "c-1", `{}`, ctx.Tip)); err != nil {
+		t.Fatalf("no guardrails block, no ceiling: %v", err)
+	}
 	other := `{"intent": "elsewhere", "tier": "critical", "budget": "small", "routing": "other"}`
 	noTeams := declared(t, `{"posture": "cooperative", "guardrails": {"squads": {"core": {"default": "standard", "max_agent": "standard"}}}}`)
 	with.Declaration = noTeams

@@ -88,8 +88,25 @@ func TestReportLanesSection(t *testing.T) {
 	// the flywheel section (plans/os-9075c308.md D5) took "14" when
 	// the two cards met in the merge. The pin is on the derivation's
 	// current version, never on the number this section introduced.
-		if v := project.Report().Version; v != "15" {
+	if v := project.Report().Version; v != "15" {
 		t.Fatalf("the report's version moves with its sections: %s", v)
+	}
+	// The by_kind split (plans/os-0d4f2af3.md D6) partitions the
+	// totals: every figure sums across kinds to the section's own.
+	if len(rep.Lanes.ByKind) == 0 {
+		t.Fatal("work subjects exist: the by_kind split is present")
+	}
+	var sumSpec, sumRespec, sumApprovals, sumUnedited, sumEdited, sumUnmeasured int
+	for _, k := range rep.Lanes.ByKind {
+		sumSpec += k.Dispatcher.Specified
+		sumRespec += k.Dispatcher.Respecified
+		sumApprovals += k.Planner.Approvals
+		sumUnedited += k.Planner.Unedited
+		sumEdited += k.Planner.Edited
+		sumUnmeasured += k.Planner.Unmeasured
+	}
+	if sumSpec != d.Specified || sumRespec != d.Respecified || sumApprovals != p.Approvals || sumUnedited != p.Unedited || sumEdited != p.Edited || sumUnmeasured != p.Unmeasured {
+		t.Fatalf("by_kind sums to the totals: %+v vs %+v %+v", rep.Lanes.ByKind, d, p)
 	}
 
 	// A specified set with no approval, and an approval set with no
