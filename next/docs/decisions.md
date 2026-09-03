@@ -2948,3 +2948,41 @@ ceiling with no provenance.
 stderr is for the consequences the charter wants in front of an
 operator; an unmade `checkpoints.trust` is a machine field
 (`undeclared: true`) and `seed project start` is what refuses it.
+
+## Phase 12 item 4 — the preseed, agent-only guardrails, and the protected surface in config (os-0d4f2af3, plan #247)
+
+**The declaration-driven rules are admission policy, never chain
+validity, and they ride the context.** `admit.Context` gains a
+`Declaration` set by `WithDeclaration`; the ceiling and routing rules
+are no-ops without one. The CLI passes the declaration it finds
+(`--config`, `$SEED_CONFIG`, `./seed.json`) into every context it
+builds; the hook's read of `seed.json` at the default branch's tip
+arrives with #241's implementation, and until it merges the hook judges
+the two rules with no declaration, which is today's behavior.
+
+**The ceiling reads the roster's kind, not the lane.** A service key is
+ceilinged like an agent; a human key is not; the tier order the ceiling
+compares by is stated once in `transition.TierOrder` beside the table
+rather than derived from the table's booleans.
+
+**The path floor is enforced at the plan lint and the render, not at
+admission.** A path is a fact about a repository; admission reads the
+ledger and the declaration alone. Both readers share `floorShortfalls`
+so the words are the same.
+
+**The capability audit's claim is the derivable one.** The first draft
+asserted "no lane grants operator"; the shipped `maintenance` lane
+does, by Phase 9's design. The audit now derives the operator-holding
+set and holds it to exactly `maintenance`, and the surface's own
+protection is #241's root-only rule, referenced rather than restated.
+
+**`seed init --preseed` resolves one kind of drift and refuses the
+rest.** A declared protocol above the chain's is answered by appending
+the missing activations, since that is what init is for; a different
+root or a lower protocol is drift the file must fix, because history is
+never edited to match a declaration.
+
+**The doctor reports the blocks; it does not narrate them.** `preseed`
+in the result says which blocks are declared; nothing new is printed to
+stderr, which stays for the consequences the charter wants in front of
+an operator.

@@ -16,9 +16,11 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
@@ -122,10 +124,20 @@ func runPlanFact(args []string, verb, name string, stdout, stderr io.Writer) int
 }
 
 func runPlanLint(args []string, stdout, stderr io.Writer) int {
-	if len(args) != 1 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "plan lint <file>"), stdout, stderr)
+	fs := flag.NewFlagSet("plan lint", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	config := fs.String("config", "", "deployment declaration whose path floors the plan's file scope is held to (with --tier)")
+	tier := fs.String("tier", "", "the card's tier, compared against the declaration's path floors")
+	// The file may come before or after the flags: flag parsing stops
+	// at the first positional, so the remainder is parsed again.
+	if err := fs.Parse(args); err != nil || fs.NArg() < 1 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "plan lint <file> [--config <declaration> --tier <tier>]"), stdout, stderr)
 	}
-	doc, err := os.ReadFile(args[0])
+	path := fs.Arg(0)
+	if err := fs.Parse(fs.Args()[1:]); err != nil || fs.NArg() != 0 || (*config == "") != (*tier == "") {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "plan lint <file> [--config <declaration> --tier <tier>]"), stdout, stderr)
+	}
+	doc, err := os.ReadFile(path)
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnreadable, "unreadable", fmt.Sprintf("cannot read plan: %v", err)), stdout, stderr)
 	}
@@ -138,7 +150,52 @@ func runPlanLint(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitClassificationRef, "classification_refused",
 			"the plan is not falsifiable: "+strings.Join(parts, "; ")), stdout, stderr)
 	}
-	return render(envelope.OK(map[string]any{"plan": args[0], "falsifiable": true}), stdout, stderr)
+	result := map[string]any{"plan": path, "falsifiable": true}
+	if *config != "" {
+		// The floor compares the card's tier; an unknown or absent
+		// tier would rank above every floor and bypass them, so it
+		// is refused before anything is compared.
+		if _, ok := transition.Tier(*tier); !ok {
+			return render(envelope.Fail(envelope.ExitUsage, "usage",
+				fmt.Sprintf("--tier %q is not a tier in the vocabulary (%s); --config needs the card's tier", *tier, strings.Join(transition.TierOrder(), ", "))), stdout, stderr)
+		}
+		cfg, failEnv := loadDeclarationFor(*config)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
+		}
+		if short := floorShortfalls(cfg, *tier, plan.Scope(doc)); len(short) > 0 {
+			return render(envelope.Fail(envelope.ExitUngated, "under_tiered",
+				fmt.Sprintf("the plan's file scope touches a floored prefix at a tier below its floor (seed.json guardrails.paths): %s", strings.Join(short, "; "))), stdout, stderr)
+		}
+		result["tier"] = *tier
+		result["scope"] = plan.Scope(doc)
+	}
+	return render(envelope.OK(result), stdout, stderr)
+}
+
+// floorShortfalls names every path under a declared floor that the
+// tier falls short of (plans/os-0d4f2af3.md D3): the plan lint's and
+// the render's shared check, so a plan that passed lint is not refused
+// at the verdict for the same reason with different words.
+func floorShortfalls(cfg *posture.Config, tier string, paths []string) []string {
+	var out []string
+	for _, p := range paths {
+		// A token that is not a clean repository-relative path can
+		// match no floor, so it fails closed rather than slipping
+		// under one.
+		if path.IsAbs(p) || p == ".." || strings.HasPrefix(p, "../") {
+			out = append(out, fmt.Sprintf("%s is not a repository-relative path", p))
+			continue
+		}
+		floor, ok := cfg.Floor(p, transition.TierAbove)
+		if !ok {
+			continue
+		}
+		if transition.TierAbove(floor, tier) {
+			out = append(out, fmt.Sprintf("%s needs %s, the contract is %s", p, floor, tier))
+		}
+	}
+	return out
 }
 
 func runPlanClassify(args []string, stdin io.Reader, stdout, stderr io.Writer) int {

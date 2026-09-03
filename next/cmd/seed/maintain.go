@@ -173,7 +173,11 @@ func (m *maintainSession) append(verb, subject string, payload []byte) error {
 	if failEnv != nil {
 		return fmt.Errorf("%s", failEnv.Error.Message)
 	}
-	ctx, err := admit.ContextAt(store)
+	opts, failEnv := declaredAdmitOptions()
+	if failEnv != nil {
+		return fmt.Errorf("%s", failEnv.Error.Message)
+	}
+	ctx, err := admit.ContextAt(store, opts...)
 	if err != nil {
 		return err
 	}
