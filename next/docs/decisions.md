@@ -2911,3 +2911,13 @@ already shares with the CLI, and `TestHookAndServiceAdmitTheRepresentativeHistor
 pushes the history through both. `internal/history` lands with this
 card rather than item 3's (which needs it for its budgets) because the
 drill that found the gap is this card's; item 3 inherits it.
+
+- 2026-09-03 — the reap arm (os-32d06c65) threads revocation through the
+  maintenance loop's corroboration, not an admission gate. Implementing
+  surfaced that claim.reaped admission never consulted
+  InterruptValid/WedgeDeclared — the corroboration is Corroborate +
+  Reapable, filled from internal/admit. So admit.RevokedHolder feeds a
+  new Corroboration.Revoked, Reapable reaps a revoked holder in every
+  classification state (no_data included, because a revocation is a
+  ledger fact not silence), and no admission rule on claim.reaped
+  changes. The plan (#262) was amended to match before implementation.

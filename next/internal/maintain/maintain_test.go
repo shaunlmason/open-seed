@@ -345,3 +345,24 @@ func TestRevocationReapsInEveryState(t *testing.T) {
 		t.Fatalf("the reap packet must name the revocation as the reason: %v %s", err, pkt)
 	}
 }
+
+// The revoked-holder reap's packet names the revocation as the reason,
+// cites the fence, and admits at the boundary even on a no_data stream —
+// the one place no_data is reaped (plans/os-32d06c65.md D3, D5).
+func TestReapPacketNamesTheRevocation(t *testing.T) {
+	s := transition.SubjectState{State: "in_progress", Acceptance: &transition.AcceptanceInfo{Ref: "accept.md @ abc1234"}}
+	body, err := ReapPacket(s, 5, classified(obs.NoData), Corroboration{Revoked: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fence := fenceOf(t, body); fence != "5" {
+		t.Errorf("the revoked reap cites the fence it closes: %q", fence)
+	}
+	p, err := packet.FromPayload("c-1", body)
+	if err != nil {
+		t.Fatalf("the revoked reap's payload must admit at the boundary that closes the window: %v", err)
+	}
+	if !strings.Contains(p.Findings[0].Tried, "revoked") {
+		t.Errorf("the finding names the revocation as the reason: %q", p.Findings[0].Tried)
+	}
+}

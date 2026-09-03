@@ -1438,3 +1438,16 @@ the assertions read, and there is no copy to go stale.
   into `budget.settle` needs the additive-versus-inclusive cached-token
   distinction and token-boundary model lookup, or cache-heavy runs
   misprice by up to ten times.
+- claim.reaped admission never gated on reap corroboration — that
+  discipline (InterruptValid/WedgeDeclared) is the maintenance loop's
+  (the Corroborate closure + Reapable), not an admission rule. A card
+  that assumed an "admission reap gate" would wire its change to the
+  wrong place; the reap is already admissible from the reaping lane, and
+  what a new corroboration changes is whether the LOOP chooses to reap.
+- A revocation is the one reap corroboration the ledger itself supplies:
+  a revoked holder provably cannot exit its window, so its claim reaps
+  in every classification state, no_data included — the single exception
+  to "no_data is never reaped", and only because the chain, not the
+  lossy observation channel, corroborates it. Judge the revocation at
+  its own position (the InterruptValid posture) so a raw or unprivileged
+  one, or a suspension whose standing can return, corroborates nothing.

@@ -73,6 +73,31 @@ boundary **at its own chain position** — `admit.InterruptRequested` and
 nothing, which is what stops silence plus a forged request from reaping
 live work.
 
+### Revocation is the third corroboration, and the only one the ledger supplies
+
+There is one case where the chain itself — not the observation channel —
+says the holder can no longer act: its key was **revoked**. From the
+`actor.revoked` position on, every proposal by that key refuses at
+admission, so a revoked holder can neither submit, release, park nor be
+interrupted; its open claim can end no other way than a reap. So the
+reap arm adds a third corroboration, `admit.RevokedHolder` (judged at
+the revocation's own position, the `InterruptValid` posture, so a raw or
+unprivileged revocation corroborates nothing, and a *suspension* — whose
+standing can return — does not qualify):
+
+3. the active claim's holder has a boundary-valid `actor.revoked`.
+
+Because a revocation is a **ledger fact rather than a stream signal**, it
+reaps in **every** classification state, `no_data` included — the one
+place `no_data` is reaped, and only because the chain, not the channel,
+corroborates it. The interrupt/wedge paths are unchanged: `no_data` with
+no revocation is still never reaped, and a reap on a live, un-revoked
+holder still needs (1) and (2). The maintenance pass reaps every open
+claim a revocation orphans with a force packet whose finding names the
+revocation, so the work is re-offered; `internal/obligation` surfaces
+the same debt as a `claim.reap-owed` row, so a deployment running no
+maintenance still sees the orphaned claim rather than a silent stall.
+
 The "no deliberate exit followed" half needs no scan: every deliberate
 exit leaves `in_progress`, and a reap is admissible only FROM
 `in_progress` on that same fence, so a window still standing on the
