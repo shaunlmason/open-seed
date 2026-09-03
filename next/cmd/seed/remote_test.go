@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -51,6 +52,8 @@ func hardenGitRepo(t testing.TB, repo string) {
 		{"gc.auto", "0"},            // the heuristic itself
 		{"gc.autoDetach", "false"},  // any gc that runs stays in the foreground
 		{"receive.autoGC", "false"}, // the push path, which is the one that bit
+		{"core.autocrlf", "false"},  // the ledger is LF-only on every platform (next/spec/platform.md)
+		{"core.eol", "lf"},
 	} {
 		if out, err := exec.Command("git", "-C", repo, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
 			t.Fatalf("hardening %s (%s): %v %s", repo, kv[0], err, out)
@@ -316,6 +319,9 @@ func buildRivals(t *testing.T, remote string, resolve ledger.Resolver, n int) []
 }
 
 func TestRemoteAppendRaceRetriesAndLands(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the rival lands through a pre-receive hook, which needs a POSIX git server (next/spec/platform.md)")
+	}
 	dir, priv, _ := writeKeys(t)
 	remote := bareRemote(t)
 	resolve := seedRemoteGenesis(t, remote)
@@ -335,6 +341,9 @@ func TestRemoteAppendRaceRetriesAndLands(t *testing.T) {
 }
 
 func TestRemoteAppendExhaustsAtContention(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the rival lands through a pre-receive hook, which needs a POSIX git server (next/spec/platform.md)")
+	}
 	dir, priv, _ := writeKeys(t)
 	remote := bareRemote(t)
 	resolve := seedRemoteGenesis(t, remote)
@@ -348,6 +357,9 @@ func TestRemoteAppendExhaustsAtContention(t *testing.T) {
 }
 
 func TestRemoteAppendHookRejectionAt11(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the pre-receive hook needs a POSIX git server; a bare Windows checkout runs the cooperative or forge-hosted posture (next/spec/platform.md)")
+	}
 	dir, priv, _ := writeKeys(t)
 	remote := bareRemote(t)
 	seedRemoteGenesis(t, remote)
@@ -394,6 +406,9 @@ func TestRemoteAppendVanishedRefRegression(t *testing.T) {
 // exit 12 via the recorded verified head; nothing appends over the
 // regression (#91 review).
 func TestRemoteAppendMidInvocationRollbackRefuses(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the rival lands through a pre-receive hook, which needs a POSIX git server (next/spec/platform.md)")
+	}
 	dir, priv, _ := writeKeys(t)
 	remote := bareRemote(t)
 	resolve := seedRemoteGenesis(t, remote)

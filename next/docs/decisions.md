@@ -3150,6 +3150,76 @@ lane's loop through loop.Driver" is imprecise: only those two declare
 `acts_through`. The simulation drives them through `internal/loop` and
 the other six lanes/roles through their ordinary CLI verbs, all through
 the one credential-free `loopVerbs` seam.
+
+## Phase 13 item 6 — the machine-protocol surface and platform parity (os-b55e5647, plan #261)
+
+**The transport is the one carve-out from "exists iff".** `serve` is a
+CLI verb and the protocol itself; a `serve` method would start a
+server on the stream that carries it. The registry marks it, the
+method set omits it, and the drill pins that it is the only such row.
+
+**The protocol runs the CLI's run function and forwards its stdout.**
+Identical semantics are a property of the call, not of a promise: the
+JSON-RPC layer builds an argv from the params, runs the registered
+function with buffers for its streams, and returns the envelope bytes
+it rendered. A verb that reads stdin (`plan`) gets an empty stream
+under the protocol, since stdin is the transport's; it takes a file.
+
+**Params map to flags by name.** An object's keys become `--key
+value` (booleans bare, arrays repeated, numbers as text), sorted, with
+`args` appended verbatim; an array is argv itself. Nothing is
+interpreted: the flag parser the CLI already has is the only parser.
+
+**The registry is held to the usage lines.** The drill parses each
+group's own "requires a subverb: …" text and compares it with the
+registered subverbs in both directions, and refuses a `case` branch in
+`run`: the table cannot drift from the dispatchers because the
+dispatchers' words are the reference.
+
+**The CRLF refusal lives in the reader.** The plan scoped the change
+to `cmd/seed` and a platform package, but a carriage return can only
+be refused where lines are read: the segment scanner (`internal/ledger`)
+now keeps a carriage return and the record parser (`internal/event`)
+refuses it. Two small edits outside the listed scope, each required by
+D4's "refuses rather than silently normalizes".
+
+**The Windows matrix is the only Windows run, so it owns two fixes
+from main.** The simulate gate drills used a path under `/proc` as a
+root nothing can be created under; Windows creates it, and the
+deployment reached genesis with no key and panicked. The drills now
+use a path beneath a regular file, which every platform refuses. The
+artifact store's concurrent-put drill raced eight renames onto one
+digest; Windows refuses a rename while a rival's is in flight, and the
+read that should have recognized the rival's identical bytes ran
+before those bytes landed. The read is now retried briefly. Two edits
+outside the listed scope, each visible only on this PR's platform
+matrix.
+
+**The path lint reads call sites.** Slash-joined strings are legitimate
+for refs, URLs and repository-relative names, so a lint over every
+concatenation would refuse the spec's own vocabulary; the lint flags
+an `os` file call whose argument is joined with a literal slash or
+`path.Join`, which is exactly what a platform would break.
+
+**The line-ending rule reaches git itself.** The first Windows run
+refused every committed fixture and every materialized ledger — git
+had converted them on checkout and archive, and the new LF-only rule
+did its job. So the repository root gained a `.gitattributes`
+declaring LF for text (outside the plan's file scope, the smallest
+change that makes the rule true on a checkout), the gitref client
+tells git `core.autocrlf=false` and `core.eol=lf` on every call, and
+every `hardenGitRepo` copy in the tests pins the same two keys.
+
+**Platform code is two files, not a build tag on a package.** The
+verdict runner's process group and its kill moved to
+`workspace_unix.go` and `workspace_windows.go`; the rest of the
+runner is shared, and the Windows file says what it cannot do.
+
+**Windows is a matrix leg, not a sentence.** The workflow runs the Go
+suites on the three platforms with `fail-fast: false`; the doctor
+names the postures each can run; the enforced self-hosted posture is
+unavailable on Windows with the reason, since no server executes the
+hook on a bare checkout.
 ## Phase 13 item 1 — racing mode (os-56bee171, plan #256)
 
 **A racing claim is a fact on an `in_progress` subject, never a table

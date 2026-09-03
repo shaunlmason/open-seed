@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -852,6 +853,9 @@ func TestALoopWithNoSeamRefuses(t *testing.T) {
 // deliberately — the exact ambiguity the four deliberate exits exist to
 // remove.
 func TestAPacketThatCannotBeWrittenIsAnError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not enforced on Windows, so an unwritable directory is not observable there (next/spec/platform.md)")
+	}
 	// A TMPDIR that is not a directory: os.CreateTemp fails, and there
 	// is no packet to name.
 	notADir := filepath.Join(t.TempDir(), "file")
