@@ -46,8 +46,21 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		// only a machine field.
 		fmt.Fprintln(stderr, posture.Consequence)
 	case posture.EnforcedForgeHosted:
-		result["gap"] = posture.ForgeHostedGap
-		fmt.Fprintln(stderr, posture.ForgeHostedGap)
+		// The third posture reports the deployment it can see: where
+		// proposals go, which branch the ledger rides and which forge
+		// identity is its sole writer (plans/os-5c8a312c.md D7). The
+		// gap sentence that stood here until the service landed is
+		// gone with the gap.
+		a := cfg.Admission
+		result["admission"] = map[string]any{
+			"endpoint":   a.Endpoint,
+			"identity":   a.Identity,
+			"ledger_ref": cfg.LedgerRef(),
+			"checks":     append([]string{}, a.Checks...),
+			"reviews":    a.Reviews,
+			"owners":     append([]string{}, a.Owners...),
+		}
+		fmt.Fprintf(stderr, "enforced-forge-hosted: proposals go to %s; the ledger rides %s, written by %s alone\n", a.Endpoint, cfg.LedgerRef(), a.Identity)
 	}
 	return render(envelope.OK(result), stdout, stderr)
 }

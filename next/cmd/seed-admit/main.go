@@ -40,6 +40,11 @@ const (
 )
 
 func main() {
+	// The service form (plans/os-5c8a312c.md D1): the same judgment,
+	// answering proposals instead of reading the hook protocol.
+	if len(os.Args) > 1 && os.Args[1] == "serve" {
+		os.Exit(runServe(os.Args[2:], os.Stdout, os.Stderr))
+	}
 	guarded := os.Getenv("SEED_ADMIT_REF")
 	if guarded == "" {
 		guarded = defaultRef
@@ -98,13 +103,13 @@ func admitUpdate(gitDir, oldID, newID string) error {
 	// records to the admission pass.
 	resolve, _, err := genesis.Bootstrap(newStore)
 	if err != nil {
-		return fmt.Errorf("rule verify: %v", err)
+		return fmt.Errorf("rule verify: %w", err)
 	}
 	var records []*event.Record
 	if _, err := newStore.VerifyFromGenesis(resolve, ledger.WithObserver(func(pos int, rec *event.Record) {
 		records = append(records, rec)
 	})); err != nil {
-		return fmt.Errorf("rule verify: %v", err)
+		return fmt.Errorf("rule verify: %w", err)
 	}
 
 	// The previously admitted range is a strict record prefix: same
@@ -176,7 +181,7 @@ func admitUpdate(gitDir, oldID, newID string) error {
 			Lifecycle: table.FoldRecords(records[:i]),
 		}
 		if err := admit.Run(ctx, records[i], rules); err != nil {
-			return fmt.Errorf("position %d: %v", i, err)
+			return fmt.Errorf("position %d: %w", i, err)
 		}
 		h, err := records[i].Event.Hash()
 		if err != nil {

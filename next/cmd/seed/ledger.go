@@ -24,6 +24,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/refusal"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -50,17 +51,7 @@ func runLedger(args []string, stdout, stderr io.Writer) int {
 // position field carries the failing position too: ledger-aware refusals
 // are stamped like every other ledger-aware response, not only narrated.
 func failureEnvelope(fail *ledger.Failure) *envelope.Envelope {
-	msg := fmt.Sprintf("position %d: %s: %s", fail.Position, fail.Reason, fail.Detail)
-	var env *envelope.Envelope
-	switch fail.Reason {
-	case ledger.ReasonVersionMismatch, ledger.ReasonVersionUnsupported:
-		env = envelope.Fail(envelope.ExitVersionMismatch, fail.Reason, msg)
-	default:
-		env = envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", msg)
-	}
-	pos := fmt.Sprintf("%d", fail.Position)
-	env.Position = &pos
-	return env
+	return refusal.FailureEnvelope(fail)
 }
 
 // supportedList renders a supported-version set deterministically for
@@ -75,11 +66,7 @@ func supportedList(set map[string]bool) string {
 }
 
 func stampTip(env *envelope.Envelope, count int) *envelope.Envelope {
-	if count > 0 {
-		pos := fmt.Sprintf("%d", count-1)
-		env.Position = &pos
-	}
-	return env
+	return refusal.StampTip(env, count)
 }
 
 func openStore(dir string) (*ledger.Store, *envelope.Envelope) {

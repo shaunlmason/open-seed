@@ -24,9 +24,8 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
-	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
-	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/refusal"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -271,82 +270,7 @@ func remoteFailureEnvelope(err error) *envelope.Envelope {
 	if errors.As(err, &div) {
 		return div.env
 	}
-	var herr *halt.HaltedError
-	if errors.As(err, &herr) {
-		return envelope.Fail(envelope.ExitHalted, "halted", err.Error())
-	}
-	var cerr *admit.ClassificationError
-	if errors.As(err, &cerr) {
-		return envelope.Fail(envelope.ExitClassificationRef, "classification_refused", err.Error())
-	}
-	var oog *admit.OutOfGrantError
-	if errors.As(err, &oog) {
-		return envelope.Fail(envelope.ExitOutOfGrant, "out_of_grant", err.Error())
-	}
-	var vin *admit.VerbInactiveError
-	if errors.As(err, &vin) {
-		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
-	}
-	var itr *transition.InvalidTransitionError
-	if errors.As(err, &itr) {
-		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
-	}
-	var be *admit.BudgetError
-	if errors.As(err, &be) && be.Exhausted {
-		// Exhaustion only. Every other budget refusal falls through to
-		// the catch-all below and keeps chain_invalid: a caller that
-		// answers this code by asking for less must not also be
-		// answering a malformed payload (plans/os-d03bde01.md D1).
-		return envelope.Fail(envelope.ExitBudgetExhausted, "budget_exhausted", err.Error())
-	}
-	var ce *admit.ContentionError
-	if errors.As(err, &ce) {
-		return envelope.Fail(envelope.ExitContention, "contention", err.Error())
-	}
-	var fe *admit.FenceError
-	if errors.As(err, &fe) {
-		return envelope.Fail(envelope.ExitFenced, "fenced_out", err.Error())
-	}
-	var lse *admit.LevelShortError
-	if errors.As(err, &lse) {
-		// The family's exit with the refining code (next/spec/envelope.md).
-		return envelope.Fail(envelope.ExitNotIndependent, "level_short", err.Error())
-	}
-	var nie *admit.NotIndependentError
-	if errors.As(err, &nie) {
-		return envelope.Fail(envelope.ExitNotIndependent, "not_independent", err.Error())
-	}
-	var ve *admit.VerdictError
-	if errors.As(err, &ve) && ve.Code != "" {
-		// The rubric derivation's refinements under checks_red
-		// (plans/os-2e34f66a.md D3; next/spec/envelope.md).
-		return envelope.Fail(envelope.ExitChecksRed, ve.Code, err.Error())
-	}
-	var pre *transition.PlanRequiredError
-	if errors.As(err, &pre) {
-		return envelope.Fail(envelope.ExitPlanRequired, "plan_required", err.Error())
-	}
-	var fail *ledger.Failure
-	if errors.As(err, &fail) {
-		return failureEnvelope(fail)
-	}
-	switch {
-	case errors.Is(err, ledger.ErrUnknownActor):
-		return envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
-	case errors.Is(err, gitref.ErrRetriesSpent):
-		return envelope.Fail(envelope.ExitContention, "contention", err.Error())
-	case errors.Is(err, gitref.ErrRemoteRejected):
-		return envelope.Fail(envelope.ExitRemoteRejected, "remote_rejected", err.Error())
-	case errors.Is(err, gitref.ErrHeadRegression):
-		return envelope.Fail(envelope.ExitHeadRegression, "head_regression", err.Error())
-	case errors.Is(err, gitref.ErrUnavailable):
-		return envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
-	}
-	var ref *admit.Refusal
-	if errors.As(err, &ref) {
-		return envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
-	}
-	return envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
+	return refusal.Envelope(err)
 }
 
 // readPosture is the transport half a position-stamped READ shares:
