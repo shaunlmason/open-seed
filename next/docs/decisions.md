@@ -2911,3 +2911,15 @@ already shares with the CLI, and `TestHookAndServiceAdmitTheRepresentativeHistor
 pushes the history through both. `internal/history` lands with this
 card rather than item 3's (which needs it for its budgets) because the
 drill that found the gap is this card's; item 3 inherits it.
+
+## `ledger show` stamps its failing position (os-37fcf7c6, plan #259)
+
+**The stamp is where the response was computed, not the chain's
+length.** `plans/os-fa69345e.md` D3 left `show`'s `chain_invalid`
+unstamped and pinned it as a tripwire so the change would be a
+decision. The decision: the envelope spec defines the stamp as the
+position the response was computed at, a scan that read records
+`0..p-1` and failed at `p` was computed at `p`, and `verify` already
+stamps that position on the same chain; `show` now does the same, the
+tripwire is inverted, and null keeps its one meaning — a refusal
+raised before any position was read.
