@@ -58,8 +58,8 @@ func TestReportFlywheelSectionDerivesFromTheRecord(t *testing.T) {
 	if report := currentView(t, out, "report"); !strings.Contains(report, `"flywheel": null`) {
 		t.Fatalf("no work subject, a null flywheel section: %s", report)
 	}
-	if project.Report().Version != "16" {
-		t.Fatalf("the report's version moves with its sections (15: the lanes section's by_kind split, plans/os-0d4f2af3.md D6; 16: the planner's strongest, plans/os-c7554f18.md D3): %s", project.Report().Version)
+	if project.Report().Version != "17" {
+		t.Fatalf("the report's version moves with its sections (15: the lanes section's by_kind split, plans/os-0d4f2af3.md D6; 16: the planner's strongest, plans/os-c7554f18.md D3; 17: the adapters section, plans/os-083112ac.md): %s", project.Report().Version)
 	}
 
 	// Two done contracts of one shape: recurring, unproposed. The
