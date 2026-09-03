@@ -1,5 +1,5 @@
 // perfgate runs the performance half of `make check-next`
-// (plans/os-7508ab9e.md D6, D7): the four metrics against the
+// (plans/os-7508ab9e.md D6, D7): the five metrics against the
 // representative history at the budget file's size, each held to its
 // ceiling, a miss re-measured cold once before it fails. The last
 // reading is written to next/perf/last.json (gitignored) so an
