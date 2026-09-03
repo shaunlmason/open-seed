@@ -168,10 +168,10 @@ func WriteBasis(outDir string, basis *Basis) error {
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
 	}
-	if err := os.Chmod(outDir, 0o755); err != nil {
+	if err := setMode(outDir, 0o755); err != nil {
 		return err
 	}
-	defer func() { _ = os.Chmod(outDir, 0o555) }()
+	defer func() { _ = setMode(outDir, 0o555) }()
 	if basis == nil {
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err

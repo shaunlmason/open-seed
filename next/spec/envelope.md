@@ -188,3 +188,12 @@ machine consumer needs it.
 - `choice_diverged` is a trajectory replay divergence class, not an exit
   code: it travels in the replay result and shares the `trajectory_diverged`
   refusal (exit 26 `lane_invalid`). See [`trajectories.md`](trajectories.md).
+
+## The machine framing
+
+Under `seed serve` ([`platform.md`](platform.md)) an envelope travels
+as the `result` of a JSON-RPC 2.0 response, byte for byte: the
+framing is `machine-envelope/0`, versioned apart from
+`seed-envelope/0`, and a refusal stays a result carrying the failing
+envelope (its `exit` and `code` intact) rather than a transport error.
+Transport errors are JSON-RPC's own codes and name no verb outcome.
