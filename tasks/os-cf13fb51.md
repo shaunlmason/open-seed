@@ -1,16 +1,12 @@
 ---
 id: os-cf13fb51
 title: 'next: Phase 12 item 5 — migration: seed import --from-open-seed, lossless export → anchors verified → transform → genesis import, drilled against a real v1 export'
-state: in_progress
+state: review
 priority: P1
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-7f8709fc0cece37a
-    claimed_at: "2026-09-03T01:47:48Z"
-    lease_expires: "2026-09-03T06:31:29Z"
+author: seed-next-implementer
 created_at: "2026-09-03T00:10:19Z"
-updated_at: "2026-09-03T05:57:59Z"
+updated_at: "2026-09-03T05:58:02Z"
 ---
 
 Build plan Phase 12 item 5 (docs/next-build-plan.md): migration — `seed import --from-open-seed <export>`: v1 lossless export → verify anchors → transform (cards → contracts, run-log entries → events, receipts → verdict records, mail → messages) → genesis import refusing non-empty ledgers; drilled against a real v1 fixture. This carries promotion's migration gate (build plan §5 criterion 3: drilled against a real export of THIS repository's v1 state, not only a fixture).

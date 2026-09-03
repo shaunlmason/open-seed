@@ -1301,3 +1301,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T06:32:33Z"},"task":"os-40ed0ca0","ts":"2026-09-03T05:32:33Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-66b0df47","kind":"comment"},"task":"os-48df10a2","ts":"2026-09-03T05:41:01Z","verb":"comment"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-adcd9613","kind":"receipt"},"task":"os-cf13fb51","ts":"2026-09-03T05:57:59Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-cf13fb51","ts":"2026-09-03T05:58:02Z","verb":"transition"}
