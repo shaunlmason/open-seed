@@ -1957,7 +1957,7 @@ canonicalization follow-up os-1c284ba8 in review, #290), 6 in #273, 7
 in #286; the two routed gaps (#265, #266) are merged. Two things the
 phase's exit line needs are in flight: the conformance report
 (os-83bc3d84, plan #287 open, task PR #289 in review) and the
-promotion evidence packet (os-98ce6f8a, plan #291 open, task PR #293
+promotion evidence packet (os-98ce6f8a, plan #291 open, task PR #294
 in review). The exit record (os-d63c7441, plan #288 merged) is parked
 on the packet: its plan writes the record only when the doctor
 reports complete, which III.R's rows make reachable after the shadow
@@ -1974,7 +1974,7 @@ carded (os-222189a3).
 §5: 1, 2, 3, 5 and 7 met, 6 partial until #289 merges, 4 reserved on
 one question, the shadow ledger's remote and posture, with three
 costed options. Until that answer the agent-side work is to merge the
-open PRs as they clear review (#287 then #289; #291 then #293; #290;
+open PRs as they clear review (#287 then #289; #291 then #294; #290;
 #292), implement the scale benchmark (os-a00d3f34) so III.C row 4 can
 flip, and keep the packet's citations true. After the answer: the
 shadow run per the packet's protocol, its measurements recorded into

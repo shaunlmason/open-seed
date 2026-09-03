@@ -185,8 +185,8 @@ existing in the tree rather than by a claim about it.
 
 | drill | file | PR |
 |---|---|---|
-| `TestPacketWritesTheCutoverDown` | `internal/promotion/promotion_test.go` | #293 |
-| `TestPacketCitesRealDrills` | `internal/promotion/promotion_test.go` | #293 |
+| `TestPacketWritesTheCutoverDown` | `internal/promotion/promotion_test.go` | #294 |
+| `TestPacketCitesRealDrills` | `internal/promotion/promotion_test.go` | #294 |
 
 ## 6. Core conformance
 
