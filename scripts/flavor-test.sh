@@ -224,8 +224,16 @@ integration_tests() {
   a="$work/core-a"; instantiate "$a" || bad "could not instantiate for the core-gate comparison"
   b="$work/core-b"; instantiate "$b" || bad "could not instantiate for the core-gate comparison"
   rm -rf "$b/flavors" "$b/scripts/seed-flavor"
-  (cd "$a" && make check >"$work/out-a" 2>&1) || true
-  (cd "$b" && make check >"$work/out-b" 2>&1) || true
+  # The two gates run concurrently. Each is a full `make check` and they
+  # share nothing but Go's build cache, which is safe under concurrent use;
+  # run back to back they were most of this script's wall clock. Either
+  # gate may fail: a bare `wait` exits 0 whatever the children returned
+  # (POSIX: with no operands it reports nothing about them), so `set -e`
+  # cannot fire here, and the two outputs are compared below exactly as
+  # the sequential `|| true` form compared them.
+  (cd "$a" && make check >"$work/out-a" 2>&1) &
+  (cd "$b" && make check >"$work/out-b" 2>&1) &
+  wait
   # Normalise the per-run temp path, and drop the flavor block's own lines from
   # both sides: that block is by definition not the core gate, and it is the
   # only thing that legitimately differs when the flavor tree is gone.

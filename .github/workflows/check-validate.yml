@@ -18,6 +18,16 @@ on:
 permissions:
   contents: read
 
+# One live run per pull request. A reviewer app posting several reviews
+# within seconds, or a push landing while the previous run was still going,
+# fanned out into parallel runs of the same work on the same head; the newest
+# run sees everything the older ones would have (the receipt, the diff, every
+# review), so the older ones are cancelled. Pushes to main and merge-queue
+# entries are keyed by commit and never cancel one another.
+concurrency:
+  group: check-validate-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_review' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -25,6 +35,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/go-env
+        with:
+          save: ${{ github.event_name == 'push' }}
       - name: make check (validators + project checks)
         run: make check
       - name: 'Shared skills pinned (D8: skills install --frozen)'
@@ -70,6 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/go-env
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -90,6 +104,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/go-env
       - name: Resolve head branch
         id: head
         env:

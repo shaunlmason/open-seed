@@ -176,6 +176,15 @@ machine consumer needs it.
 - III.I "affordance computation and admission enforcement consume the same
   rule set" — Phase 8, against `internal/admit`.
 
+## Refinements added in Phase 12 item 6
+
+- `docs_drift` refines exit 28 `drift` (`envelope.CodeDocsDrift`): a
+  committed generated document differs from what `seed docs generate`
+  renders from its table. See [`simulation.md`](simulation.md).
+- `choice_diverged` is a trajectory replay divergence class, not an exit
+  code: it travels in the replay result and shares the `trajectory_diverged`
+  refusal (exit 26 `lane_invalid`). See [`trajectories.md`](trajectories.md).
+
 ## The machine framing
 
 Under `seed serve` ([`platform.md`](platform.md)) an envelope travels

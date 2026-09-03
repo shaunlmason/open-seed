@@ -1,5 +1,7 @@
 # actors.md — actor events and the keyring projection
 
+> The enumeration is generated: [`../docs/generated/capabilities.md`](../docs/generated/capabilities.md) renders each verb's accepted-capability set from the table this file explains; `seed docs check` holds them equal.
+
 > Status: v0, normative for `next/**` from protocol version **`seed/1`**.
 > Authority: [`SEED-NEXT.md`](../../SEED-NEXT.md) Part II "Enrollment" and
 > "Capabilities"; [`docs/next-build-plan.md`](../../docs/next-build-plan.md)

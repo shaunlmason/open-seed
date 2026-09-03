@@ -1497,12 +1497,64 @@ the assertions read, and there is no copy to go stale.
   lossy observation channel, corroborates it. Judge the revocation at
   its own position (the InterruptValid posture) so a raw or unprivileged
   one, or a suspension whose standing can return, corroborates nothing.
+- Replaying a thousand records through a from-scratch admission
+  context is quadratic in JSON decoding, not in signatures: profile
+  before optimizing, and cut passes (derive grants from the source
+  before replay) rather than the boundary. A store whose append
+  rescans every segment is quadratic too; a one-pass batch append that
+  checks exactly what the single append checks is the fix, not a raw
+  segment write.
+- A verb that overrules a standing fail verdict (`merge.overridden`)
+  cannot stand in for a missing pass: when the predecessor recorded no
+  verdict, the honest record is a pass over an artifact that says no
+  receipt was recorded, with the disposition noted, never an override
+  of a failure nobody rendered.
+- Card evidence blocks and run-log entries share one clock in v1, so
+  matching by kind and instant within seconds works; blocks the
+  predecessor later pruned simply have no match, and the entry itself
+  is then the artifact. Do not loosen the match to make the count look
+  better.
+- CI wall clock for check-validate was dominated by four full runs of the
+  next/ suite per pull-request run (the check job, the plan's `make check`
+  under receipt verify, and the two core-gate instantiations in
+  flavor-test), each with a cold Go cache and packages serialized under
+  `-p 1`. Measure a job's steps before changing anything: the fix was
+  caches restored from main, package-level parallelism on the first
+  coverage reading, the two core-gate checks run concurrently, the four
+  backend fakes run concurrently, a tmpfs TMPDIR (the drills fsync and
+  spawn git, so sys time halves), and one live run per pull request. No
+  gate, ceiling, or command changed.
+
 - When two surfaces must expose the same verbs, draw both from one
   table and hold the table to the dispatchers' own usage text in a
   drill; a hand-kept second list drifts the day someone adds a verb.
 - bufio.ScanLines strips a trailing carriage return and TrimSpace
   strips another: a "refuse CRLF" rule needs a split function and a
   trim that keep the CR, or the parser never sees what it must refuse.
+## Docs generation and simulation mode (os-16e55c11, Phase 12 item 6)
+
+- **Go constants are not runtime-enumerable.** To generate a doc from a
+  package's constants (the exit-code table) without a hand-kept duplicate,
+  parse the source with `go/ast` at generation time. `docs check` runs in
+  the repo, so `<root>/next/internal/envelope/envelope.go` is available;
+  a planted constant change then fails the drift check.
+- **The loop's per-iteration act is not a function of its trajectory
+  frame.** Identical frames recorded different acts (implementer pos44 vs
+  pos53), because the loop resolves the choice from internal state the
+  frame does not carry. A "decider" over the frame must be PARTIAL — decide
+  where the frame determines the act, abstain otherwise — or it false-
+  positives on legitimately-identical frames. This is the same reason
+  #239 recorded frames rather than deciders.
+- **`claim take` is remote-only** (an exclusive, online-only verb), so any
+  end-to-end run of the loop — including a "local/cooperative" simulation —
+  needs a bare git remote, not just a local ledger. Admission stamps each
+  event's ts with the real wall clock, so a simulated/accelerated clock can
+  only feed the reporting surfaces (`--now`/`--as-of`), never the event ts;
+  an offer's expiry must sit past the real now.
+- **The credential-free in-process seam is `loopVerbs` → `run(args,...)`**
+  in `cmd/seed` (package main is not importable), so a non-test package
+  that drives the CLI (`internal/simulate`) takes an injected `loop.Verbs`
+  and the `cmd/seed` verb supplies `loopVerbs{}`.
 - An ingress verb is safest as a fact with a derived subject: hold the
   record's subject to what the payload cites (a contract on the chain
   or `system`) at admission, and every downstream notice can carry

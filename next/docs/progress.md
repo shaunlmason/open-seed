@@ -1625,6 +1625,19 @@ record's own position through one derivation, `curation.AuthenticPass`
   the synthetic predecessor, the four refusals, the CLI's envelopes, the
   spec mirror); `next/spec/import.md` new, `protocol.md` (`seed/5`),
   `envelope.md` (exit 29) and `actors.md` following)
+- 12.6 docs generation (lifecycle/capabilities/exit-codes/per-lane from
+  the tables, drift-checked), the operator handbook, and simulation mode
+  — os-16e55c11 — **in review** (task PR against plan #249:
+  `admit.CatalogVerbs()`, `internal/docs` + `seed docs generate/check`
+  (`docs_drift` refining exit 28) + `make check-next`; `internal/decider`
+  + `trajectory.ChoiceDiverged` + `trajectory replay --decider scripted`;
+  `executor.Mock`, `internal/simulate` + `seed simulate [--days]
+  [--posture]` driving every lane to done credential-free under both
+  postures with the five-bar ledger audit; `next/spec/simulation.md`,
+  the handbook, the committed `next/docs/generated/`. Reconciliations in
+  decisions.md: the reference decider is partial because the frame does
+  not determine the loop's per-iteration act; `claim take` is remote-only
+  so both postures run on a bare remote)
 of this repository (os-cf13fb51, plan #248 merged); item 6, docs
 **Next action: implement Phase 12 in item order — item 1 (#250) is
 merged; items 2, 3, 4 and 5 are in review against their merged plans,
