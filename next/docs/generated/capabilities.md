@@ -10,6 +10,8 @@ Every verb the affordance catalog drafts, with the capability set the keyring ac
 | `system.halt.lifted` | `operator` |
 | `system.protocol.upgraded` | `operator` |
 | `system.imported` | `operator` |
+| `request.filed` | — (standing only) |
+| `request.answered` | `dispatch`, `operator` |
 | `system.checkpoint` | `maintenance`, `operator` |
 | `actor.enrolled` | `operator` |
 | `actor.granted` | `operator` |
