@@ -1,10 +1,11 @@
 ---
 id: os-37fcf7c6
 title: 'next: ledger show''s chain_invalid does not stamp its failing position, unlike verify'
-state: backlog
+state: ready
 priority: P3
 squad: core
 created_at: "2026-09-01T08:55:24Z"
+updated_at: "2026-09-03T03:22:34Z"
 ---
 
 Review finding on #183, deliberately not taken there because plans/os-fa69345e.md D3 decided the opposite in advance ('the drill pins it so a future consistency cleanup does not extend the stamp there'). This card is that cleanup, made deliberate.
