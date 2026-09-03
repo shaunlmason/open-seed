@@ -416,13 +416,13 @@ and disjointness checks above.
   implementing key; override its own verb) — the `verdict` capability
   row, the L1 independence rule with exit 17, the operator-fallback
   omission; the override verb itself is 6.4.
-- III.G row 1 (independence levels L1–L3 defined, declared per tier,
+- III.G row 6 (independence levels L1–L3 defined, declared per tier,
   enforced at verdict time, recorded in the verdict; high-consequence
   tiers require L2 or L3) — the levels section above, the tier table's
   `independence` column, the verdict rule's equality and tier checks
   with `level_short`, the fold's recorded level and tuple, the merge
   chain's reapplication, and `independence_unverified`.
-- III.G row 7 (qualitative residue: acceptance that cannot be a
+- III.G row 8 (qualitative residue: acceptance that cannot be a
   command is a rubric the verifier scores item by item with cited
   evidence and explicit uncertainty, never a single holistic score;
   low-confidence items route to human verdict; rubric calibration runs

@@ -3,8 +3,8 @@
 > Charter: SEED-NEXT.md §16 ("Trajectory-prefix regression for lane
 > behavior: recorded decision points replay against lane
 > configurations to catch behavioral regressions in role or prompt
-> changes"), Part III.O row 3 (its recorded half; the simulation-mode
-> half is Phase 13's), III.J row 3 (the two lane-quality metrics the
+> changes"), Part III.O row 5 (its recorded half; the simulation-mode
+> half is Phase 12 item 6's), III.J row 3 (the two lane-quality metrics the
 > harness makes meaningful); [`plans/os-6bd9ffff.md`](../../plans/os-6bd9ffff.md).
 
 ## A trajectory is what the record already says a lane did
@@ -155,8 +155,8 @@ re-runs at a point. A green replay proves that the configuration still
 presents the same frame at every recorded decision point and still
 permits the same act, not that a model would choose it. A role or
 prompt change is caught as a changed posture or manifest, never as a
-changed choice. Phase 13's simulation mode is the seam where a decider
-plugs in and the second half of III.O row 3 lands; until then the
+changed choice. Phase 12 item 6's simulation mode is the seam where a decider
+plugs in and the second half of III.O row 5 lands; until then the
 harness is the recorded half, stated as such.
 
 ## The two lane-quality metrics
@@ -181,10 +181,10 @@ differ across a squash merge even when the content is identical.
 
 ## Conformance mapping
 
-- III.O row 3 "Trajectory-prefix regression covers lane decision
+- III.O row 5 "Trajectory-prefix regression covers lane decision
   points" — the recorded half: `internal/trajectory`, `seed trajectory
   record|replay`, the corpus and its three drills; the simulation-mode
-  half is Phase 13's, named above.
+  half is Phase 12 item 6's, named above.
 - III.J row 3 "Dispatcher re-triage rate and planner unedited-approval
   rate are tracked" — the `ready` origin, the plan digests and the
   report's `lanes` section, each drilled at the boundary, in the fold
