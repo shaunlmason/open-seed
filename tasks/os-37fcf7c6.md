@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-03T04:04:53Z"
     lease_expires: "2026-09-03T05:04:53Z"
 created_at: "2026-09-01T08:55:24Z"
-updated_at: "2026-09-03T04:04:53Z"
+updated_at: "2026-09-03T04:06:42Z"
 ---
 
 Review finding on #183, deliberately not taken there because plans/os-fa69345e.md D3 decided the opposite in advance ('the drill pins it so a future consistency cleanup does not extend the stamp there'). This card is that cleanup, made deliberate.
@@ -24,3 +24,7 @@ D3's argument was that 'the count it reached is a count of records read before a
 The change is small and needs no ledger change. runLedgerShow already tracks count inside the Records callback, and store.Records returns the ParseRecord error BEFORE invoking the callback for that position, so for a failure at position p the callback ran for 0..p-1 and count == p exactly. The failing position is already in scope; it just is not stamped.
 
 Scope: next/cmd/seed/ledger.go (one return), next/cmd/seed/ledger_test.go (invert the D3 assertion added by #183), and a sentence in next/spec/envelope.md if the 'before a tip was ever read' wording needs sharpening to say 'before any position was read'.
+
+## Evidence ev-2874fe7c (pr, seed-next-implementer, 2026-09-03T04:06:42Z)
+
+https://github.com/shaunlmason/open-seed/pull/265

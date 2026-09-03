@@ -1261,3 +1261,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:259","to":"ready"},"task":"os-37fcf7c6","ts":"2026-09-03T04:04:47Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-03T05:04:53Z"},"task":"os-37fcf7c6","ts":"2026-09-03T04:04:53Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:260","to":"ready"},"task":"os-74ce2261","ts":"2026-09-03T04:05:09Z","verb":"plan-unblock"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-2874fe7c","kind":"pr"},"task":"os-37fcf7c6","ts":"2026-09-03T04:06:42Z","verb":"attach-evidence"}
