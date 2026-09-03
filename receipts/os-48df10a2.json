@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-48df10a2",
   "merge_base": "160bed4c627d768424cde5a6d6e5df5ed14cc3a1",
-  "head": "ebd84b3e3e8b7d7b75892f6e2dd3a457576acd79",
+  "head": "3d4174c2ae6fc656103b06c5ab6d35814510490a",
   "plan_path": "plans/os-48df10a2.md",
   "plan_sha256": "5d9daea9a55fc2541b1270117c4dfe816157ad3c60f9411aa961a252fff6aef8",
   "diff_files": [
@@ -87,7 +87,7 @@
     "next/spec/requests.md",
     "next/trajectories/lanes/dispatcher.json"
   ],
-  "diff_sha256": "400004960fcb2922e55514b252aed9f807da72656bb619e2ed38b4c82f37d290",
+  "diff_sha256": "6931a1e324cbafc10c3e05ff24894b6f59d7d643c26f6465556a8952970c4646",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/obligation/ ./internal/project/ ./internal/posture/ ./cmd/seed/ -run 'Request|Federation|Injection|Dispatcher|Obligation' -count=1",
