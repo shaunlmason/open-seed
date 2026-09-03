@@ -43,6 +43,11 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	result := map[string]any{
 		"posture":  string(cfg.Posture),
 		"enforced": cfg.Posture.Enforced(),
+		// The protected surface the enforced hook write-denies to
+		// agent credentials (plans/os-465e356e.md D1): the declared
+		// entries plus the declaration itself, so the operator sees
+		// exactly what the remote will refuse.
+		"protected": cfg.ProtectedSurface(),
 	}
 	switch cfg.Posture {
 	case posture.Cooperative:
