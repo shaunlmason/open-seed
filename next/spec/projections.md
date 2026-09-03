@@ -249,6 +249,14 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
 The write-boundary lint is 4.4's.
 Registration is data: later phases append.
 
+**`boundary`** (version "1"; [`boundary.md`](boundary.md)): the
+cross-organization task view — `tasks.json`, the index, and
+`tasks/<request>.json` per `cross-repo` request, each the pinned
+fields alone (`request`, `answer`, `state`, `artifacts`), the state
+one of five derived from the chain. A chain carrying no cross-repo
+request builds the index empty and nothing else, so no other
+projection moves for it.
+
 ## The consumer verb and staleness
 
 `seed project current --name <projection> [--out <dir>]

@@ -1,0 +1,27 @@
+{
+  "name": "open-seed",
+  "protocol": "seed/4",
+  "ingress": {
+    "kinds": [
+      "cross-repo",
+      "dashboard-action",
+      "mirror-edit"
+    ],
+    "through": "git@github.com:shaunlmason/open-seed.git"
+  },
+  "squads": [
+    {
+      "name": "core",
+      "tiers": [
+        "standard"
+      ]
+    }
+  ],
+  "artifacts": [
+    "receipt",
+    "plan",
+    "body"
+  ],
+  "signer": "7b03f9a6fbf5d6c2adc2fdc3326e293c96503fd7bd4beb30a77fd7a325019e35",
+  "signature": "2196dc0a10b02685a104045bbe54c542be0300b3bd663f53d17723248e7c5e9119e67f4ce6b7be2ff42a0fd691b5c6fe3af6cef45c44aba6e0832de517123b0f"
+}

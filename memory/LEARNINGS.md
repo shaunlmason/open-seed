@@ -1587,3 +1587,10 @@ the assertions read, and there is no copy to go stale.
 - **A credential in a declaration is an env-var NAME.** Lint it to an
   identifier shape (`^[A-Za-z_][A-Za-z0-9_]*$`), which a token cannot
   satisfy — the secret stays in the environment, never the tree.
+- A published statement across a trust boundary should be a strict
+  object with a pinned field list on both sides: the writer refuses
+  to add a field without moving the pin, and the reader refuses a
+  field it does not know, so opacity survives either side's drift.
+- Sign over canonical bytes computed from the struct itself, and
+  verify by recomputing; never store the canonical bytes beside the
+  signature, or the two can disagree without anyone noticing.

@@ -25,6 +25,10 @@
     "scripts"
   ],
   "checkpoints": {"trust": "signers"},
+  "boundary": {
+    "accepts": ["cross-repo", "mirror-edit", "dashboard-action"],
+    "ingress": "git@github.com:shaunlmason/open-seed.git"
+  },
   "guardrails": {
     "squads": {
       "core": {"default": "standard", "max_agent": "standard"}

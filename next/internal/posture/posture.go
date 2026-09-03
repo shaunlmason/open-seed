@@ -179,6 +179,16 @@ type FederationRemote struct {
 	Ref    string `json:"ref"`
 }
 
+// Boundary is the declaration's boundary block (plans/os-40ed0ca0.md
+// D1): what the capability card publishes — the request kinds this
+// deployment accepts through its ingress and the remote or endpoint a
+// request is filed through. Optional; absent means the card names no
+// ingress and every request kind admits as before.
+type Boundary struct {
+	Accepts []string `json:"accepts"`
+	Ingress string   `json:"ingress"`
+}
+
 // Federation is the declaration's federation block: the other
 // deployments this one reads, uniformly, into its org view. Absent is
 // no federation.
@@ -190,6 +200,7 @@ type Config struct {
 	Posture    Posture     `json:"posture"`
 	Admission  *Admission  `json:"admission,omitempty"`
 	Federation *Federation `json:"federation,omitempty"`
+	Boundary   *Boundary   `json:"boundary,omitempty"`
 	// Protected enumerates the protected surface (SEED-NEXT.md §II.14)
 	// as repository-relative path prefixes: a path equal to an entry,
 	// or under an entry as a directory, is write-denied to every agent
@@ -410,8 +421,33 @@ func (c *Config) validateFederation() error {
 	return nil
 }
 
+// validateBoundary holds the boundary block to its shape: the accepted
+// kinds a non-empty list of distinct tokens, the ingress non-empty.
+func (c *Config) validateBoundary() error {
+	if c.Boundary == nil {
+		return nil
+	}
+	if len(c.Boundary.Accepts) == 0 {
+		return fmt.Errorf("boundary.accepts names the request kinds the deployment takes, at least one")
+	}
+	seen := map[string]bool{}
+	for _, k := range c.Boundary.Accepts {
+		if strings.TrimSpace(k) == "" || strings.ContainsAny(k, " \t") || seen[k] {
+			return fmt.Errorf("boundary.accepts entries are distinct non-empty tokens, got %q", k)
+		}
+		seen[k] = true
+	}
+	if strings.TrimSpace(c.Boundary.Ingress) == "" {
+		return fmt.Errorf("boundary.ingress names the remote or endpoint a request is filed through")
+	}
+	return nil
+}
+
 func (c *Config) validatePreseed() error {
 	if err := c.validateFederation(); err != nil {
+		return err
+	}
+	if err := c.validateBoundary(); err != nil {
 		return err
 	}
 	if err := c.validateExecutors(); err != nil {
