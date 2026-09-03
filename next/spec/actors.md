@@ -151,6 +151,8 @@ ending standing is deferred until the catalog grows a verb for it.
 | `curation.hypothesis.proposed` | `curate` (the fifth no-fallback row: operator already reaches claim.taken and the deliberate exits, so an operator fallback would let one key write a trajectory's observations and then conclude from them; the proposal is reachable through curate alone, and curate is disjoint from claim and operator at the grant, curation.md) |
 | `curation.hypothesis.contested` | `curate` (the contest is the curator's attributable judgment over held-out evidence the record already holds, the proposal's own no-fallback posture, curation.md) |
 | `curation.lesson.promoted` | `observer`, `operator` (the observation that a lesson file landed by PR, citing the admitted hypothesis it promotes: the merge.observed posture, curation.md) |
+| `workflow.proposed` | `curate` (the flywheel's proposal, the curator's posture of proposing everything and approving nothing: a drafted, mock-validated workflow proposed as a PR, flywheel.md) |
+| `workflow.merged` | `observer`, `operator` (the observation that the workflow file landed in the registry by PR, citing the admitted proposal: the merge.observed posture, flywheel.md) |
 | `curation.lesson.retired` | `observer`, `operator` (the observation that a promotion is revoked: the revert's merge for a regression, a later promotion for a supersession, the stamp for an expiry; the promotion's own row, curation.md) |
 | `curation.deadend.retired` | `curate` (the curator's attributable judgment that a dead end's environment moved, citing the dead end on its contract; the evidence stays, curation.md) |
 | `curation.deadend.unretired` | `curate` (the same judgment in the other direction, over a standing retirement, curation.md) |
