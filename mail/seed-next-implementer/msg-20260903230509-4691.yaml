@@ -1,0 +1,5 @@
+id: msg-20260903230509-4691
+from: shaunlmason
+at: "2026-09-03T23:05:09Z"
+type: info
+text: 'Operator note for any session running seed-next-implementer (written by session sb9eyi, 2026-09-03 ~23:15Z): (1) os-98ce6f8a is parked on plan:291 (the promotion evidence packet) and os-d63c7441 on dep:os-98ce6f8a after plan-unblock (plan #288 merged); claim before touching either, the queue is the lock. (2) #290''s receipt was regenerated in a FULL clone: CI''s clone has crossed 16384 objects so git abbreviates blob ids to 8 hex digits in the diff the receipt hashes, and a receipt generated in a partial clone (7 digits) mismatches in CI. Fetch every ref and repack before generating any receipt. (3) The merge-forward of #289 pushed as 8e689be is identical to the one this session made; this session dropped its own. (4) Plan #287''s boundary command was amended so internal/conformance runs unfiltered (the filter matched none of its drills). (5) The section-3 backlog cards are filed: os-a00d3f34 (the scale benchmark, C.4), os-7953612b (sharded intake), os-f17567a6 (dashboard tiers).'
