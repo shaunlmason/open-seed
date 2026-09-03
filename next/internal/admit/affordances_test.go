@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -219,6 +220,12 @@ func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
 		// exists for.
 		walkStep{"root", version.Seed3, keyring.VerbSuspended, fpOf(t, lanes["holder"]), static(`{"reason": "walk"}`), "suspended"},
 		walkStep{"root", version.Seed3, keyring.VerbRevoked, fpOf(t, lanes["holder"]), static(`{"reason": "walk"}`), "revoked"},
+		// seed/5: the predecessor import's provenance record is
+		// afforded to the operator once, on a chain that carries none,
+		// and to nobody after it is written (next/spec/import.md).
+		walkStep{"root", version.Seed3, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed4 + `"}`), ""},
+		walkStep{"root", version.Seed4, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed5 + `"}`), "seed5"},
+		walkStep{"root", version.Seed5, "system.imported", "system", static(`{"source": "open-seed", "export_head": "` + strings.Repeat("0", 40) + `", "anchor": "seed-anchor/walk", "manifest": "` + zeros64 + `"}`), "imported"},
 	)
 }
 
@@ -294,6 +301,19 @@ func TestAffordancesWalk(t *testing.T) {
 			}
 			if has(fresh, "claim.taken") || has(fresh, "run.started") {
 				t.Fatalf("claim and run must not list before birth: %v", fresh)
+			}
+		},
+		"seed5": func() {
+			if l := list(signer, "system"); !has(l, "system.imported") {
+				t.Fatalf("at seed/5 the operator lists the import on an unimported chain: %v", l)
+			}
+			if l := list(keys["holder"], "system"); has(l, "system.imported") {
+				t.Fatalf("a worker never lists the import: %v", l)
+			}
+		},
+		"imported": func() {
+			if l := list(signer, "system"); has(l, "system.imported") {
+				t.Fatalf("an imported chain lists no second import: %v", l)
 			}
 		},
 		"filed-c1": func() {
