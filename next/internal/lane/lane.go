@@ -310,21 +310,34 @@ func ValidateEach(dir string, ms []Manifest) []Finding {
 		// HasAnyCapability, so requiring every accepted capability
 		// would hand `operator` to every lane that claims or spends
 		// and dissolve the separation this check exists to protect.
+		runsLoop := false
 		for _, name := range m.ActsThrough {
 			act, ok := loopverb.ByName(name)
+			verb := act.Verb
 			if !ok {
-				add(m.Lane, "acts_through", fmt.Sprintf("%q is not a loop act (%s)",
-					name, strings.Join(loopverb.Names(), ", ")))
-				continue
+				// The lane acts outside the worker loop
+				// (plans/os-48df10a2.md): the dispatcher's answer to an
+				// inbound request is its one declared act, a fact the
+				// loop never appends, held to the same grant
+				// intersection as a loop act.
+				lv, lane := laneActs[name]
+				if !lane {
+					add(m.Lane, "acts_through", fmt.Sprintf("%q is not a loop act (%s) nor a lane act (%s)",
+						name, strings.Join(loopverb.Names(), ", "), strings.Join(laneActNames(), ", ")))
+					continue
+				}
+				verb = lv
+			} else {
+				runsLoop = true
 			}
-			accepted := keyring.AcceptedCapabilities(act.Verb)
+			accepted := keyring.AcceptedCapabilities(verb)
 			if len(accepted) == 0 {
 				continue
 			}
 			if !intersects(m.Grants, accepted) {
 				add(m.Lane, "acts_through", fmt.Sprintf(
 					"%s appends %s, which admits for any of {%s}, and this lane grants {%s}",
-					name, act.Verb, strings.Join(accepted, ", "), strings.Join(m.Grants, ", ")))
+					name, verb, strings.Join(accepted, ", "), strings.Join(m.Grants, ", ")))
 			}
 		}
 
@@ -341,7 +354,6 @@ func ValidateEach(dir string, ms []Manifest) []Finding {
 		// holding the claim capability means it claims, and claiming
 		// IS a loop act, so the grant it already declares decides
 		// whether the obligation applies.
-		runsLoop := len(m.ActsThrough) > 0
 		if contains(m.Grants, keyring.CapClaim) && !runsLoop {
 			add(m.Lane, "acts_through", "grants claim but declares no acts: claiming is a loop act, so a lane "+
 				"holding the claim capability acts through the loop verbs and must say which")
@@ -555,4 +567,21 @@ func intersects(a, b []string) bool {
 		}
 	}
 	return false
+}
+
+// laneActs is the closed set of acts a lane declares that are not
+// loop acts: the CLI phrase and the ledger verb it appends
+// (next/spec/requests.md). A lane that declares one alone runs no
+// worker loop, so the liveness obligation does not apply to it.
+var laneActs = map[string]string{
+	"request answer": "request.answered",
+}
+
+func laneActNames() []string {
+	out := make([]string, 0, len(laneActs))
+	for name := range laneActs {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
 }

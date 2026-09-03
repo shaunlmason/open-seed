@@ -143,6 +143,24 @@ type ReportView struct {
 	// fold alone. Null when no work subject exists, the reconciliation
 	// section's posture.
 	Lanes *ReportLanes `json:"lanes"`
+	// Requests is the ingress section (plans/os-48df10a2.md D2;
+	// next/spec/requests.md): requests by kind and by outcome, the
+	// unanswered count, and the answer latency in elapsed seconds
+	// over the answered ones, present only when the prefix carries a
+	// request, so builds of chains that carry none stay
+	// byte-identical.
+	Requests *ReportRequests `json:"requests,omitempty"`
+}
+
+// ReportRequests counts the inbound requests: total, by kind, by
+// outcome (`pending` for the unanswered), and the mean answer latency
+// in elapsed seconds as a string, null when nothing was answered.
+type ReportRequests struct {
+	Total             int            `json:"total"`
+	Unanswered        int            `json:"unanswered"`
+	ByKind            map[string]int `json:"by_kind"`
+	ByOutcome         map[string]int `json:"by_outcome"`
+	MeanAnswerSeconds *string        `json:"mean_answer_seconds"`
 }
 
 // ReportLanes carries the two lane-quality metrics III.J row 3 asks
@@ -315,7 +333,51 @@ func reportView(records []*event.Record) (*ReportView, error) {
 		stages := DeriveKnowledge(records).Stages
 		view.Knowledge = &stages
 	}
+	table, err := transition.Default()
+	if err != nil {
+		return nil, err
+	}
+	if reqs := table.FoldRecords(records).Requests(); len(reqs) > 0 {
+		view.Requests = requestsSection(reqs, records)
+	}
 	return &view, nil
+}
+
+// requestsSection counts the requests the fold applied and measures
+// the answer latency from the two records' own timestamps: elapsed
+// time, never a position difference (the obligation projection's
+// posture on age).
+func requestsSection(reqs []transition.IngressFact, records []*event.Record) *ReportRequests {
+	sec := &ReportRequests{ByKind: map[string]int{}, ByOutcome: map[string]int{}}
+	var total float64
+	answered := 0
+	for _, r := range reqs {
+		sec.Total++
+		sec.ByKind[r.Kind]++
+		if r.Answered == nil {
+			sec.Unanswered++
+			sec.ByOutcome["pending"]++
+			continue
+		}
+		sec.ByOutcome[r.Outcome]++
+		if *r.Answered < len(records) {
+			filed, err1 := time.Parse(time.RFC3339, r.TS)
+			at, err2 := time.Parse(time.RFC3339, records[*r.Answered].Event.TS)
+			if err1 == nil && err2 == nil {
+				secs := at.Sub(filed).Seconds()
+				if secs < 0 {
+					secs = 0
+				}
+				total += secs
+				answered++
+			}
+		}
+	}
+	if answered > 0 {
+		mean := fmt.Sprintf("%.1f", total/float64(answered))
+		sec.MeanAnswerSeconds = &mean
+	}
+	return sec
 }
 
 // lanesSection derives the lane-quality metrics from the fold

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "task": "os-48df10a2",
+  "merge_base": "19352a0ddb8ef022bed9658d35013cfe442d458a",
+  "head": "082708962aa722c77798e2ae89708d268151f90c",
+  "plan_path": "plans/os-48df10a2.md",
+  "plan_sha256": "5d9daea9a55fc2541b1270117c4dfe816157ad3c60f9411aa961a252fff6aef8",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/federation.go",
+    "next/cmd/seed/main.go",
+    "next/cmd/seed/remote_test.go",
+    "next/cmd/seed/request.go",
+    "next/cmd/seed/request_cli_test.go",
+    "next/cmd/seed/situation.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/admit/admit.go",
+    "next/internal/admit/affordances.go",
+    "next/internal/admit/affordances_test.go",
+    "next/internal/admit/injection_request_test.go",
+    "next/internal/admit/obligation_sweep_test.go",
+    "next/internal/admit/request_test.go",
+    "next/internal/admit/soundness_test.go",
+    "next/internal/keyring/keyring.go",
+    "next/internal/keyring/keyring_test.go",
+    "next/internal/lane/lane.go",
+    "next/internal/obligation/obligation.go",
+    "next/internal/posture/posture.go",
+    "next/internal/posture/posture_test.go",
+    "next/internal/project/report.go",
+    "next/internal/project/requests_view_test.go",
+    "next/internal/refusal/refusal.go",
+    "next/internal/request/request.go",
+    "next/internal/request/request_test.go",
+    "next/internal/transition/transition.go",
+    "next/internal/version/version.go",
+    "next/internal/version/version_test.go",
+    "next/lanes/dispatcher.json",
+    "next/spec/actors.md",
+    "next/spec/envelope.md",
+    "next/spec/lanes.md",
+    "next/spec/obligations.md",
+    "next/spec/postures.md",
+    "next/spec/projections.md",
+    "next/spec/protocol.md",
+    "next/spec/requests.md",
+    "next/trajectories/lanes/dispatcher.json"
+  ],
+  "diff_sha256": "53148c5c224fc338f0f7cffeeb76ff2608618fb99253025ae68dce74612cfafe",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/obligation/ ./internal/project/ ./internal/posture/ ./cmd/seed/ -run 'Request|Federation|Injection|Dispatcher|Obligation' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
