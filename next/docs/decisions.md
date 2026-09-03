@@ -2986,6 +2986,15 @@ never edited to match a declaration.
 in the result says which blocks are declared; nothing new is printed to
 stderr, which stays for the consequences the charter wants in front of
 an operator.
+- 2026-09-03 — the reap arm (os-32d06c65) threads revocation through the
+  maintenance loop's corroboration, not an admission gate. Implementing
+  surfaced that claim.reaped admission never consulted
+  InterruptValid/WedgeDeclared — the corroboration is Corroborate +
+  Reapable, filled from internal/admit. So admit.RevokedHolder feeds a
+  new Corroboration.Revoked, Reapable reaps a revoked holder in every
+  classification state (no_data included, because a revocation is a
+  ledger fact not silence), and no admission rule on claim.reaped
+  changes. The plan (#262) was amended to match before implementation.
 ## The cache carries the event's ts (os-74ce2261, plan #260)
 
 **Verbatim beside parsed.** The envelope's `ts` string is the record
