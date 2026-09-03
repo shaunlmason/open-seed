@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-16e55c11",
   "merge_base": "4cf97f189149c9631a1f75e23b270132dde235b8",
-  "head": "4c51c642d09ca4c76cda8c09086e3fa634848e78",
+  "head": "95d6426725cf17c3076a44db5b21a76824193cd1",
   "plan_path": "plans/os-16e55c11.md",
   "plan_sha256": "6b7d42507cb534c5099e350826eba731880ed1bbaec344fb8926f460573b503a",
   "diff_files": [
@@ -57,19 +57,19 @@
     "next/spec/simulation.md",
     "next/spec/trajectories.md"
   ],
-  "diff_sha256": "6435797957960f2e1235f335182277e0e155955b2911a5344212834edbcd2dad",
+  "diff_sha256": "0ad02b06da40b724424f1b542dbc38cbb7334d98f8203e12a759064d56220a3f",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/docs/ ./internal/decider/ ./internal/simulate/ ./internal/trajectory/ ./executor/ ./cmd/seed/ -count=1",
-      "exit": 1
+      "exit": 0
     },
     {
       "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
-      "exit": 1
+      "exit": 0
     },
     {
       "cmd": "make check",
-      "exit": 2
+      "exit": 0
     }
   ],
   "generated_by": "local"
