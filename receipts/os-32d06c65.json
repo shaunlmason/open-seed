@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-32d06c65",
-  "merge_base": "2ebc938ca95a7d2f7d26815615ece1ee620e8c68",
-  "head": "a9fd58b5a573aa0974ba93de758f9a7f8eb5e47f",
+  "merge_base": "160bed4c627d768424cde5a6d6e5df5ed14cc3a1",
+  "head": "364c7af73f16c561a3321633083ba5dede683673",
   "plan_path": "plans/os-32d06c65.md",
   "plan_sha256": "691d5a8786dcd0668e4f6ff0e0382b1af6a4a8ac7b0356675a9f94b06be74066",
   "diff_files": [
@@ -20,7 +20,7 @@
     "next/spec/maintenance.md",
     "next/spec/obligations.md"
   ],
-  "diff_sha256": "3ca5affaac035474218f6885604bbf8328b8bcead56f73aa22da4af9fb794de9",
+  "diff_sha256": "204c2a9e32d26a8a7058f1109176964814179c99ca68bdb9fea32d4e8aa1cd35",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/admit/ ./internal/obligation/ ./internal/maintain/ ./internal/redteam/ ./cmd/seed/ -count=1",
@@ -35,5 +35,5 @@
       "exit": 0
     }
   ],
-  "generated_by": "seed-next-implementer"
+  "generated_by": "local"
 }
