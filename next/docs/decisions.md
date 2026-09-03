@@ -3322,6 +3322,30 @@ the tree. The remote-worker adapter opens no connection — it puts the
 packet in the artifact store and appends the pickup line the enrolled
 service actor reads, keeping §II.9's no-inbound rule. The container
 adapter runs credential-free in CI through `executor/fakeoci`.
+## Phase 13 item 3 — the Forgejo forge adapter (os-ad610334, plan #275)
+
+**The pull-request rule is unexpressible on Forgejo, so the whole
+requirement is manual — not partially applied.** Forgejo's branch
+protection has no conversation-thread-resolution gate and no
+code-owner-review gate, and the reconciler reconciles by rule type
+against a parameter-exact `differences()`. There is no way to apply the
+approvals Forgejo *can* express while not-drifting on the resolution and
+owner gates it cannot, so rather than half-apply the rule and read the
+protection back as compliant on gates it does not enforce — a false
+compliance the mutation drill forbids — the whole pull-request rule lands
+in `State.Unexpressible` and `plan` reports it manual. Required approvals
+are still set best-effort through the API; the operator sets the review
+gates in Forgejo's settings and records that they did. `Desired` is
+untouched: one decision table, two forges held to it.
+
+**The `--forge` default stays `snapshot`, and the forge is declared, not
+defaulted from the flag.** Six existing protections drills rely on
+`--forge` defaulting to the credential-free `snapshot` arm, so that
+default is retained. The forge a deployment runs is named in
+`admission.forge` (default `github`, so every existing declaration keeps
+its meaning) with `admission.api` (required under `forgejo`, which has no
+public API); `seed doctor` reports it and `--forge github|forgejo`
+selects the live arm, reading `--api`/the token env per forge.
 ## Phase 13 item 5 — the A2A-shaped cross-organization boundary (os-40ed0ca0, plan #258)
 
 **The card's inputs live in the declaration.** The plan derives the

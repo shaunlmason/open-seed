@@ -154,6 +154,7 @@ rule above forbids:
 | 28 | `card_drift` | the checked-in card does not say what the declaration renders, or is absent: re-render it with `seed boundary card` ([`boundary.md`](boundary.md)) |
 | 3 | `boundary_unpinned` | a task view read across the boundary carrying a field the pin does not list ([`boundary.md`](boundary.md)) |
 | 3 | `artifact_mismatch` | bytes fetched across the boundary that hash to something other than the digest they were fetched as ([`boundary.md`](boundary.md)) |
+| 3 | `not_merged` | `seed merge observe --pr N --forge <kind>` when the forge reports the pull request is not merged: `merge.observed` records a merge the forge confirms, not an intention, so recording one for an unmerged pull request is the illegal step, the pull request named ([`forges.md`](forges.md)) |
 | 18 | `under_tiered` | `seed plan lint --config --tier` on a file scope, or `seed verdict render --config` on a receipt's changed files, touching a floored prefix at a tier below its floor: content whose gate is short, the family's answer, with the path and the two tiers named (`postures.md`, `plans.md`) |
 
 A refinement is not a way around the allocation rule. A condition a caller

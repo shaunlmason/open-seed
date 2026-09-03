@@ -367,3 +367,10 @@ authenticates the service's credential and nothing sets `SEED_PUSHER`.
 - III.P row 2 (the validator ships in hook and service form, both
   stateless, both rebuildable from a clone) — `seed-admit` and
   `seed-admit serve`, the two kill-and-replace drills.
+
+## The declared forge (Phase 13 item 3)
+
+The enforced-forge-hosted `admission` block names its forge:
+`admission.forge` (`github` default, or `forgejo`) and `admission.api`
+(the forge's API base; required under `forgejo`). See
+[`forges.md`](forges.md) for the per-forge capability table.

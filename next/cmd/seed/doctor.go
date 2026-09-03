@@ -98,8 +98,10 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 			"checks":     append([]string{}, a.Checks...),
 			"reviews":    a.Reviews,
 			"owners":     append([]string{}, a.Owners...),
+			"forge":      a.ForgeKind(),
+			"api":        a.Api,
 		}
-		fmt.Fprintf(stderr, "enforced-forge-hosted: proposals go to %s; the ledger rides %s, written by %s alone\n", a.Endpoint, cfg.LedgerRef(), a.Identity)
+		fmt.Fprintf(stderr, "enforced-forge-hosted: proposals go to %s; the ledger rides %s, written by %s alone; forge %s\n", a.Endpoint, cfg.LedgerRef(), a.Identity, a.ForgeKind())
 		if *probe {
 			h, err := propose.New(a.Endpoint).Probe()
 			if err != nil {
