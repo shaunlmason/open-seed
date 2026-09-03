@@ -375,3 +375,13 @@ the root rather than in every build's stamp so that a build from a
 checkpoint and a build from genesis stay byte-identical; a full
 `project rebuild` into the same root removes it, because a replay rests
 on nothing but the chain. Consumers that care read it beside the stamp.
+
+## The adapters section (Phase 13 item 2)
+
+The report gains an `adapters` section (version 16): per executor
+substrate, the runs started under its harness and its budget posture
+(`enforced` or `risk-limit`), derived from the `run.started` tuples the
+fold holds. Present only when the prefix carries a `run.started`, so
+chains that carry none stay byte-identical. A cloud or remote adapter
+never reads `enforced`, and an unknown harness defaults to a risk limit.
+See [`executors.md`](executors.md).
