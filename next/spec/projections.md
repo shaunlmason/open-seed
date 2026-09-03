@@ -151,7 +151,11 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   measured ones; rates are three-decimal strings, null at a zero
   denominator, and the section is null when no work subject exists,
   the reconciliation section's posture; record-derivable from the
-  fold alone, no new projection registered):
+  fold alone, no new projection registered;
+  version "14" the `flywheel` section, [`flywheel.md`](flywheel.md):
+  null on an empty ledger, else the recurring, proposed and merged
+  shape counts, the repair contracts filed and done, and the
+  conversion rate):
   null unless a rebuild declares
   an attempts journal, else the affordance-gap metric — outcome
   counts over the journal's one population, refusal breakdowns, the

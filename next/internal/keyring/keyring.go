@@ -251,6 +251,14 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapCurate}
 	case "curation.lesson.promoted":
 		return []string{CapObserver, CapOperator}
+	// The flywheel (plans/os-9075c308.md D4): the workflow proposal is
+	// the curator's alone, the proposal posture; the merge is the
+	// observation of the workflow PR's landing, the merge.observed
+	// row.
+	case "workflow.proposed":
+		return []string{CapCurate}
+	case "workflow.merged":
+		return []string{CapObserver, CapOperator}
 	// Expiry, retirement and rollback (plans/os-0d537fbd.md D2, D3): a
 	// lesson's retirement is the promotion's own row (the observation
 	// of a revoked conclusion), a dead end's retirement and
