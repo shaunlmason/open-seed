@@ -216,7 +216,15 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   `contracts`, `offers`, and `reservations` indexed by subject,
   `queue` + `queue_meta`,
   `actor_history`/`actor_signed` indexed by fingerprint, `report`
-  key-values) plus a one-row `stamp` table carrying **exactly** the
+  key-values), every per-event table carrying the envelope's `ts`
+  verbatim beside `ts_unix`, the instant it names as nanoseconds since
+  the epoch (NULL when the string does not parse, such rows queryable
+  by that NULL and counted under the `report` table's `ts_unparsed`
+  key), so evidence is
+  queryable by contract, actor, time and outcome in one query (charter
+  III.G row 10; plans/os-74ce2261.md) — a range compares `ts_unix`,
+  never the text, since RFC 3339 mixes fractional precision — plus a
+  one-row `stamp` table carrying **exactly** the
   tree stamp's fields (name, position, tip, version), so a pure-SQL
   consumer demands a minimum position with one query:
   `SELECT position >= :min FROM stamp`. The database is the API:
