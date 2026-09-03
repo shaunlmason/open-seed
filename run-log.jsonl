@@ -1211,3 +1211,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-daaa4bf4","kind":"pr"},"task":"os-5c8a312c","ts":"2026-09-03T01:51:00Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-a08e6e9c","kind":"receipt"},"task":"os-5c8a312c","ts":"2026-09-03T01:51:03Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-3d1bc4f6","kind":"check"},"task":"os-5c8a312c","ts":"2026-09-03T01:51:05Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-5c8a312c","ts":"2026-09-03T01:51:08Z","verb":"transition"}
