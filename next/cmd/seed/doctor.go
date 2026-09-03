@@ -14,6 +14,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/executor"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/platform"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/propose"
 	"github.com/shaunlmason/open-seed/next/internal/protections"
@@ -55,6 +56,11 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	// always; the container, cloud and remote adapters when declared.
 	result["adapters"] = doctorAdapters(cfg)
 	// The preseed's blocks, each declared or not (plans/os-0d4f2af3.md).
+	// The platform and the postures it can run
+	// (plans/os-b55e5647.md D4; next/spec/platform.md): the enforced
+	// self-hosted hook needs a server that executes it, so a bare
+	// Windows checkout names the postures it must run instead.
+	result["platform"] = platform.Report()
 	result["preseed"] = map[string]any{
 		"protocol":   cfg.Protocol,
 		"governance": cfg.Governance != nil,

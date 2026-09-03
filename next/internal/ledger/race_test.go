@@ -14,6 +14,7 @@ package ledger
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -80,6 +81,9 @@ func TestConcurrentAppendAndOpenRepair(t *testing.T) {
 // the established mode: 0644 on first write, the operator's own
 // mode thereafter.
 func TestWriteHeadPreservesMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not enforced on Windows, so a preserved mode is not observable there (next/spec/platform.md)")
+	}
 	priv := fixtureKey(t, 1)
 	resolve := fixtureResolver(t, priv)
 	dir := t.TempDir()

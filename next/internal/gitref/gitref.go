@@ -150,9 +150,13 @@ func withoutGitConfigSelection(env []string) []string {
 }
 
 func runGit(gitDir string, args ...string) (string, error) {
-	full := args
+	// The ledger is LF-only (next/spec/platform.md): git is told so on
+	// every call, so a checkout or archive on a platform whose
+	// default converts line endings never hands the verifier bytes
+	// the signatures do not cover.
+	full := append([]string{"-c", "core.autocrlf=false", "-c", "core.eol=lf"}, args...)
 	if gitDir != "" {
-		full = append([]string{"--git-dir", gitDir}, args...)
+		full = append([]string{"--git-dir", gitDir, "-c", "core.autocrlf=false", "-c", "core.eol=lf"}, args...)
 	}
 	cmd := exec.Command("git", full...)
 	out, err := cmd.CombinedOutput()
@@ -248,7 +252,7 @@ func (c *Client) Materialize(commit, dir string) error {
 	if commit == "" {
 		return nil
 	}
-	archive := exec.Command("git", "--git-dir", c.gitDir, "archive", commit)
+	archive := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", c.gitDir, "archive", commit)
 	untar := exec.Command("tar", "-x", "-C", dir)
 	pipe, err := archive.StdoutPipe()
 	if err != nil {
@@ -294,7 +298,7 @@ func (c *Client) Commit(dir, parent, message string) (string, error) {
 	if parent != "" {
 		commitArgs = append(commitArgs, "-p", parent)
 	}
-	cmd := exec.Command("git", append([]string{"--git-dir", c.gitDir,
+	cmd := exec.Command("git", append([]string{"--git-dir", c.gitDir, "-c", "core.autocrlf=false", "-c", "core.eol=lf",
 		"-c", "user.name=seed-ledger", "-c", "user.email=ledger@seed"}, commitArgs...)...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
