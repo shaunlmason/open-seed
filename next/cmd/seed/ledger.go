@@ -307,10 +307,17 @@ func runLedgerShow(args []string, stdout, stderr io.Writer) int {
 		return nil
 	})
 	if err != nil && !errors.Is(err, stop) {
-		// A scan that failed partway established nothing: the count it
-		// reached is records read before an error, not a statement
-		// about the chain, so this refusal stays unstamped (D3).
-		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+		// The stamp is the position the response was computed at
+		// (next/spec/envelope.md), and a scan that read records 0..p-1
+		// and failed at p was computed at p: store.Records returns the
+		// parse error before invoking the callback for p, so count is
+		// exactly the failing position, the stamp verify gives the same
+		// chain (plans/os-37fcf7c6.md D1). Null stays for a refusal
+		// raised before any position was read.
+		env := envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error())
+		pos := fmt.Sprintf("%d", count)
+		env.Position = &pos
+		return render(env, stdout, stderr)
 	}
 	if found == nil {
 		// stampTip declines at zero, so an empty ledger correctly
