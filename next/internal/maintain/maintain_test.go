@@ -322,3 +322,26 @@ func TestAnUnknownClassificationDoesNotReap(t *testing.T) {
 		t.Errorf("the refusal names the unknown class: %q", because)
 	}
 }
+
+// conformance: plans/os-32d06c65.md D5 — a revocation is a ledger fact,
+// not a stream classification, so it reaps in EVERY state, no_data
+// included: the one place no_data is reaped, and only because the chain
+// corroborates it. reapBecause and the packet name the revocation.
+func TestRevocationReapsInEveryState(t *testing.T) {
+	for _, st := range []obs.State{obs.NoData, obs.Live, obs.Expired, obs.Wedged} {
+		ok, because := Reapable(obs.Classification{State: st}, Corroboration{Revoked: true})
+		if !ok {
+			t.Fatalf("a revoked holder reaps in state %q, refused %q", st, because)
+		}
+	}
+	if !(Corroboration{Revoked: true}).Stands() {
+		t.Fatal("a revocation stands as corroboration")
+	}
+	if b := reapBecause(Corroboration{Revoked: true}); !strings.Contains(b, "revoked") {
+		t.Errorf("reapBecause must name the revocation, got %q", b)
+	}
+	pkt, err := ReapPacket(transition.SubjectState{}, 3, obs.Classification{State: obs.NoData}, Corroboration{Revoked: true})
+	if err != nil || !strings.Contains(string(pkt), "revoked") {
+		t.Fatalf("the reap packet must name the revocation as the reason: %v %s", err, pkt)
+	}
+}

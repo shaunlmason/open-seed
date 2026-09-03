@@ -126,6 +126,10 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 			return maintain.Corroboration{
 				Interrupted: admit.InterruptRequested(st.records, st.table, subject, s, fence),
 				Wedged:      admit.WedgeDeclared(st.records, st.table, subject, fence),
+				// A revoked holder can no longer act on its claim, so
+				// the ledger corroborates the reap directly
+				// (plans/os-32d06c65.md D3).
+				Revoked: admit.RevokedHolder(st.records, st.table, subject, fence),
 			}
 		},
 		Append: sess.append,
