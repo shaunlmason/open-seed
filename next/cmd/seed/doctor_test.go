@@ -56,12 +56,29 @@ func TestDoctorStatesPostures(t *testing.T) {
 		t.Fatalf("enforced posture carries no cooperative consequence, got %+v %q", e.Result, errOut)
 	}
 
-	e, code, errOut = runDoctorEnv(t, "--config", writePosture(t, `{"posture": "enforced-forge-hosted"}`))
-	if code != 0 || e.Result["enforced"] != true || e.Result["gap"] != posture.ForgeHostedGap {
-		t.Fatalf("forge-hosted doctor must name its gap, got %d %+v", code, e)
+	// The third posture reports its deployment (plans/os-5c8a312c.md
+	// D7): endpoint, identity and the ledger branch, and no gap sentence.
+	e, code, errOut = runDoctorEnv(t, "--config", writePosture(t, `{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://127.0.0.1:1", "identity": "seed-admission[bot]", "checks": ["check"], "reviews": 1, "owners": ["@root"]}}`))
+	if code != 0 || e.Result["enforced"] != true {
+		t.Fatalf("forge-hosted doctor failed: %d %+v", code, e)
 	}
-	if !strings.Contains(errOut, "Phase 12") {
-		t.Fatalf("the operator-facing gap must name Phase 12, got %q", errOut)
+	adm, _ := e.Result["admission"].(map[string]any)
+	if adm["endpoint"] != "http://127.0.0.1:1" || adm["identity"] != "seed-admission[bot]" || adm["ledger_ref"] != posture.DefaultLedgerRef {
+		t.Fatalf("the doctor must report the admission block, got %+v", e.Result)
+	}
+	if _, ok := e.Result["gap"]; ok {
+		t.Fatalf("the forge-hosted gap sentence retired with the gap, got %+v", e.Result)
+	}
+	for _, phrase := range []string{"proposals go to http://127.0.0.1:1", posture.DefaultLedgerRef, "seed-admission[bot] alone"} {
+		if !strings.Contains(errOut, phrase) {
+			t.Fatalf("the operator-facing output must say %q, got %q", phrase, errOut)
+		}
+	}
+	// Without its block the posture is a declaration that names a
+	// service nothing can reach: refused at 13 and named.
+	e, code, _ = runDoctorEnv(t, "--config", writePosture(t, `{"posture": "enforced-forge-hosted"}`))
+	if code != 13 || e.Error == nil || e.Error.Code != "posture_invalid" || !strings.Contains(e.Error.Message, "admission block") {
+		t.Fatalf("a forge-hosted declaration without its block must exit 13 naming the block, got %d %+v", code, e)
 	}
 }
 

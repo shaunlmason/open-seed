@@ -142,3 +142,17 @@ identities, outside the identity plan, so the grants assertion keeps
 measuring only lane-derived ones. That is honest for a fixture and
 wrong as a shipped posture, and it is carded (`os-d6a52784`) rather
 than papered over: `next/lanes/**` is not this card's to change.
+
+## The third posture in the fixture
+
+Both modes run on the remote posture, and until Phase 12 item 2 the
+only enforcing remote a fixture could build was the hook's. The
+forge-hosted posture has a fixture too ([`postures.md`](postures.md),
+"The fixture's model of the forge"): a bare remote with no admission
+hook whose pre-receive lets the admission identity alone write the
+ledger branch, and `seed-admit serve` as a subprocess the drills
+propose to. Under a `seed.json` declaring `enforced-forge-hosted`, the
+same CLI verbs the modes drive propose instead of push
+(`cmd/seed/forge_cli_test.go`); the modes fixtures themselves keep the
+hook posture, because what they prove is the identity plan, not the
+transport.

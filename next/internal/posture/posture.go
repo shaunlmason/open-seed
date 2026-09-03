@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"sort"
@@ -72,15 +73,51 @@ func (p Posture) Enforced() bool {
 // protect nothing.
 const DeclarationPath = "seed.json"
 
+// DefaultLedgerRef is the ledger ref a forge-hosted deployment rides
+// when the admission block does not name one: a branch, because forges
+// protect branches and tags and nothing under refs/seed/* (#244).
+const DefaultLedgerRef = "refs/heads/seed-ledger"
+
+// Admission is the forge-hosted deployment's admission block. Endpoint
+// is where `seed-admit serve` answers proposals; Identity is the forge
+// login or app slug the service's git credential belongs to (the
+// ledger branch's sole writer); LedgerRef is the branch the ledger
+// rides (DefaultLedgerRef when empty); Checks and Reviews are the
+// default branch's required status checks and review count; Owners
+// are the forge identities that review the protected surface, rendered
+// into CODEOWNERS by the reconciler (#244).
+type Admission struct {
+	Endpoint  string   `json:"endpoint"`
+	Identity  string   `json:"identity"`
+	LedgerRef string   `json:"ledger_ref"`
+	Checks    []string `json:"checks"`
+	Reviews   int      `json:"reviews"`
+	Owners    []string `json:"owners"`
+}
+
 // Config is the deployment declaration.
 type Config struct {
-	Posture Posture `json:"posture"`
+	Posture   Posture    `json:"posture"`
+	Admission *Admission `json:"admission,omitempty"`
 	// Protected enumerates the protected surface (SEED-NEXT.md §II.14)
 	// as repository-relative path prefixes: a path equal to an entry,
 	// or under an entry as a directory, is write-denied to every agent
 	// credential at the enforced hook. Optional; the declaration's own
 	// path is always protected whether or not it is listed.
 	Protected []string `json:"protected,omitempty"`
+}
+
+// LedgerRef is the ref the ledger rides under this declaration: the
+// admission block's branch under enforced-forge-hosted, or "" for the
+// other postures, whose callers keep their own default (#244).
+func (c *Config) LedgerRef() string {
+	if c.Posture != EnforcedForgeHosted || c.Admission == nil {
+		return ""
+	}
+	if c.Admission.LedgerRef == "" {
+		return DefaultLedgerRef
+	}
+	return c.Admission.LedgerRef
 }
 
 // Load reads a strict declaration {"posture": "<name>", "protected"?}:
@@ -113,6 +150,9 @@ func Parse(b []byte) (*Config, error) {
 	if !c.Posture.Valid() {
 		return nil, fmt.Errorf("%q is not a Seed posture (valid postures: %s)", c.Posture, validList())
 	}
+	if err := c.validateAdmission(); err != nil {
+		return nil, fmt.Errorf("%v (valid postures: %s)", err, validList())
+	}
 	for i, p := range c.Protected {
 		if err := validProtectedEntry(p); err != nil {
 			return nil, fmt.Errorf("protected[%d] %q: %v (valid postures: %s)", i, p, err, validList())
@@ -135,6 +175,45 @@ func validProtectedEntry(p string) error {
 		return errors.New("entries use forward slashes")
 	case path.Clean(trimmed) != trimmed || trimmed == "." || trimmed == ".." || strings.HasPrefix(trimmed, "../"):
 		return errors.New("entries are clean relative paths (no '.', '..' or doubled separators)")
+	}
+	return nil
+}
+
+// validateAdmission holds the admission block to its posture: required
+// and well-formed under enforced-forge-hosted (#244), refused elsewhere.
+func (c *Config) validateAdmission() error {
+	if c.Posture != EnforcedForgeHosted {
+		if c.Admission != nil {
+			return fmt.Errorf("the admission block is valid under %s only (this declaration says %q)", EnforcedForgeHosted, c.Posture)
+		}
+		return nil
+	}
+	a := c.Admission
+	if a == nil {
+		return fmt.Errorf("%s requires the admission block {endpoint, identity, ledger_ref, checks, reviews, owners}: the service actors propose to and the identity the forge lets write the ledger branch", EnforcedForgeHosted)
+	}
+	u, err := url.Parse(a.Endpoint)
+	if a.Endpoint == "" || err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return fmt.Errorf("admission.endpoint must be an http(s) URL the admission service answers on, got %q", a.Endpoint)
+	}
+	if strings.TrimSpace(a.Identity) == "" {
+		return errors.New("admission.identity must name the forge identity the admission service pushes as (the ledger branch's sole writer)")
+	}
+	if a.LedgerRef != "" && !strings.HasPrefix(a.LedgerRef, "refs/heads/") {
+		return fmt.Errorf("admission.ledger_ref must be a branch (refs/heads/...), because forges protect branches and tags and nothing under refs/seed/*: got %q", a.LedgerRef)
+	}
+	if a.Reviews < 0 {
+		return fmt.Errorf("admission.reviews must be zero or more, got %d", a.Reviews)
+	}
+	for _, chk := range a.Checks {
+		if strings.TrimSpace(chk) == "" {
+			return errors.New("admission.checks must not carry an empty check name")
+		}
+	}
+	for _, o := range a.Owners {
+		if strings.TrimSpace(o) == "" {
+			return errors.New("admission.owners must not carry an empty identity")
+		}
 	}
 	return nil
 }

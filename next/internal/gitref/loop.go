@@ -142,6 +142,24 @@ func (c *Client) attempt(draft Draft, sign Signer, resolve ledger.Resolver, vali
 	if err != nil {
 		return nil, err
 	}
+	if c.proposer != nil {
+		// The forge-hosted posture: the service, not this client, is
+		// the ref's writer. The record proposed is the one just
+		// validated, linked to the tip this attempt fetched; a moved
+		// tip comes back as the race it is and the loop re-links. The
+		// persisted head is left at the fetched tip: the commit the
+		// service made is not in this git dir until the next fetch
+		// verifies it, and persisting an object we do not hold would
+		// turn the monotonic-head rule into a self-inflicted regression.
+		res, err := c.proposer.Propose(c.Ref, []*event.Record{rec})
+		if err != nil {
+			return nil, err
+		}
+		if res.Position != pos {
+			return nil, fmt.Errorf("%w: the service admitted at position %d where this proposer expected %d", ErrNonFastForward, res.Position, pos)
+		}
+		return res, nil
+	}
 	commit, err := c.CommitAndPush(storeDir, tipCommit, "ledger: "+draft.Verb)
 	if err != nil {
 		return nil, err
