@@ -1,0 +1,42 @@
+{
+  "posture": "enforced-self-hosted",
+  "protocol": "seed/4",
+  "governance": {
+    "root": "declared-at-init",
+    "owners": ["@shaunlmason"],
+    "change_process": "pr+owner-review"
+  },
+  "protected": [
+    "next/spec",
+    "next/internal/admit",
+    "next/internal/transition",
+    "next/internal/keyring",
+    "next/internal/verdict",
+    "next/internal/seal",
+    "next/internal/eval",
+    "next/evals",
+    "next/internal/curation",
+    "next/knowledge/lessons",
+    "next/lanes",
+    "next/cmd/seed-admit",
+    "next/cmd/covergate",
+    "Makefile",
+    ".github/workflows",
+    "scripts"
+  ],
+  "checkpoints": {"trust": "signers"},
+  "guardrails": {
+    "squads": {
+      "core": {"default": "standard", "max_agent": "standard"}
+    },
+    "paths": [
+      {"prefix": "next/internal/admit", "min": "critical"},
+      {"prefix": "next/spec/transitions.json", "min": "critical"}
+    ]
+  },
+  "teams": {
+    "squads": [
+      {"name": "core", "lanes": ["dispatcher", "planner", "implementer", "verifier", "curator", "maintenance", "supervisor", "observer"]}
+    ]
+  }
+}

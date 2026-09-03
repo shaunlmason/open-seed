@@ -87,6 +87,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runProtections(args[1:], stdout, stderr)
 	case "perf":
 		return runPerf(args[1:], stdout, stderr)
+	case "preseed":
+		return runPreseed(args[1:], stdout, stderr)
+
 	case "run":
 		return runRun(args[1:], stdout, stderr)
 	case "eval":
@@ -118,11 +121,13 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 	keyPath := fs.String("key", "", "OpenSSH ed25519 private key of the initializing operator")
 	var operators repeatedFlag
 	fs.Var(&operators, "operator", "OpenSSH ed25519 public key of an additional governance-root operator (repeatable)")
+	preseed := fs.String("preseed", "", "deployment declaration to bootstrap from, idempotently (plans/os-0d4f2af3.md)")
+	lanesDir := fs.String("lanes", "next/lanes", "lane manifests the preseed's teams are checked against (empty to skip)")
 	if err := fs.Parse(args); err != nil {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
 	}
 	if *dir == "" || *keyPath == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "init requires --ledger <dir> and --key <openssh-ed25519-private>"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "init requires --ledger <dir> and --key <openssh-ed25519-private> [--preseed <file>]"), stdout, stderr)
 	}
 	keyBytes, err := os.ReadFile(*keyPath)
 	if err != nil {
@@ -147,6 +152,37 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 	store, err := ledger.Open(*dir)
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot open ledger dir: %v", err)), stdout, stderr)
+	}
+	if *preseed != "" {
+		// The preseed path: genesis when empty, then the declared
+		// protocol's activations, idempotently; a second run appends
+		// nothing, and a chain the file contradicts refuses.
+		cfg, failEnv := loadDeclarationFor(*preseed)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
+		}
+		if err := lintPreseed(cfg, *lanesDir); err != nil {
+			return render(preseedFailEnvelope(err), stdout, stderr)
+		}
+		appended, err := applyPreseed(store, cfg, signer, extras, time.Now())
+		if err != nil {
+			env := preseedFailEnvelope(err)
+			if _, count, terr := store.Tip(); terr == nil && count > 0 {
+				env = stampTip(env, count)
+			}
+			return render(env, stdout, stderr)
+		}
+		_, count, err := store.Tip()
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+		}
+		env := envelope.OK(map[string]any{
+			"preseed":   *preseed,
+			"appended":  appended,
+			"unchanged": len(appended) == 0,
+			"protocol":  cfg.Protocol,
+		})
+		return render(stampTip(env, count), stdout, stderr)
 	}
 	rec, err := genesis.Init(store, signer, extras, time.Now())
 	if errors.Is(err, ledger.ErrNotEmpty) {

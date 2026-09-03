@@ -79,6 +79,19 @@ func Envelope(err error) *envelope.Envelope {
 	if errors.As(err, &vin) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "invalid_transition", err.Error())
 	}
+	// The declaration-driven policy refusals (plans/os-0d4f2af3.md):
+	// illegal steps at this position under this deployment's
+	// guardrails and teams, named so the caller knows which file
+	// refused.
+	var ceil *admit.CeilingError
+	if errors.As(err, &ceil) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "tier_above_ceiling", err.Error())
+	}
+	var route *admit.RoutingError
+	if errors.As(err, &route) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "routing_unknown", err.Error())
+	}
+
 	// A flywheel gate (next/spec/flywheel.md) is an illegal step at
 	// this position, and the message names the gate.
 	var fwe *flywheel.Error

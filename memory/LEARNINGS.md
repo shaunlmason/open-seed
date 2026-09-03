@@ -1452,6 +1452,16 @@ the assertions read, and there is no copy to go stale.
   into `budget.settle` needs the additive-versus-inclusive cached-token
   distinction and token-boundary model lookup, or cache-heavy runs
   misprice by up to ten times.
+- Before asserting "no manifest grants X" in an audit, derive the set
+  and print it: the shipped maintenance lane holds operator by design,
+  and an audit written from the charter's sentence rather than the
+  tree fails on its first run. Hold the derived set to a named list.
+- Go's flag package stops at the first positional: a verb taking a
+  file then flags must parse twice, or every flag after the file lands
+  in NArg as a usage error the drill reads as "refused".
+- A test helper's third return is not always what its name suggests:
+  `writeKeys`'s `pub` is a second operator's key, not the signer's.
+  Derive a fingerprint from the key you signed with.
 - claim.reaped admission never gated on reap corroboration — that
   discipline (InterruptValid/WedgeDeclared) is the maintenance loop's
   (the Corroborate closure + Reapable), not an admission rule. A card

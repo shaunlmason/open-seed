@@ -142,6 +142,11 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   section and its `contested` count, [`curation.md`](curation.md), so
   an unchanged tip republishes with the section; version "12" its
   `retired` and `stale` counts, the latter at the declared instant;
+  version "15" splits `lanes` by the acting key's roster kind
+  (`by_kind`: a specification under its appender's kind, an approval
+  under its approver's, the kind read from the keyring at the record's
+  own position; [`postures.md`](postures.md), "The preseed"), and the
+  cache moves to generation 13 with it;
   version "13" adds `lanes`, [`trajectories.md`](trajectories.md):
   `dispatcher` `{specified, respecified, retriage_rate}`, subjects
   with one or more applied specifications, those with two or more,

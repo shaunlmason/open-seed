@@ -62,6 +62,111 @@ protected surface. `protected` is the protected surface as
 repository-relative path prefixes ([`admission.md`](admission.md));
 `ProtectedSurface()` always includes the declaration itself.
 
+## The preseed
+
+One declarative file bootstraps a deployment (charter §II.17, Appendix
+D.1; [`plans/os-0d4f2af3.md`](../../plans/os-0d4f2af3.md)): the
+declaration above, completed. Four blocks join `posture`, `admission`,
+`protected` and `checkpoints`, each undeclared when absent and never
+defaulted:
+
+```json
+{
+  "protocol": "seed/4",
+  "governance": {"root": "<the root key's fingerprint>", "owners": ["@org/governance"], "change_process": "pr+owner-review"},
+  "guardrails": {
+    "squads": {"core": {"default": "standard", "max_agent": "standard"}},
+    "paths": [{"prefix": "next/internal/admit", "min": "critical"}]
+  },
+  "teams": {"squads": [{"name": "core", "lanes": ["dispatcher", "planner", "implementer", "verifier", "curator", "maintenance", "supervisor", "observer"]}]}
+}
+```
+
+`protocol` is the version the deployment activates through (the
+register in [`protocol.md`](protocol.md)); `governance` names the root
+and the one change process the charter names for the protected
+surface; `guardrails` are tiers per squad (`default`, and `max_agent`,
+the highest tier an agent-kind key may claim) and per path (`min`, the
+tier a contract touching the prefix files at); `teams` are the squads
+`routing` names and the manifests each runs. Keys stay out of the file:
+enrollment is the operator's signed act after init, in Appendix D.1's
+order.
+
+**`seed init --preseed seed.json --ledger <dir> --key <root key>`** is
+idempotent. On an empty ledger it writes genesis naming the key as the
+root — refusing `preseed_drift` before genesis when `governance.root`
+names another — and activates every protocol version up to `protocol`
+in order under the root. A second run appends nothing (`unchanged:
+true`). A chain the file contradicts refuses `preseed_drift` (exit 28
+`drift`) naming the field and both values, the chain untouched: a
+different root, a protocol below the chain's. A declared protocol above
+the chain's is the one drift init resolves, by appending exactly the
+missing activations; `seed preseed check` names it as pending.
+
+**`seed preseed check --config seed.json [--ledger <dir>] [--lanes
+<dir>]`** is the same comparison with no writes, and without `--ledger`
+it lints the file alone — what `make check-next` runs against the
+fixture deployment's declaration: tiers in the vocabulary
+([`tiers.md`](tiers.md)), guardrail squads among the declared teams,
+team lanes among the shipped manifests, the protocol in the register,
+and the protected surface complete. **Complete** means every member the
+charter requires is on it (`RequiredProtected`, compared by prefix):
+`next/spec`, `next/internal/admit`, `next/internal/transition`,
+`next/internal/keyring`, `next/internal/verdict`, `next/internal/seal`,
+`next/internal/eval`, `next/evals`, `next/internal/curation`,
+`next/knowledge/lessons`, `next/lanes`, `next/cmd/seed-admit`,
+`next/cmd/covergate`, `Makefile`, `.github/workflows`, `scripts`, and
+the declaration itself by construction. The supervisor's policy lives
+in this file's `guardrails` block; the sealed keyring is a recipient
+set derived from ledger grants and has no path. An omission refuses
+`preseed_incomplete` (exit 13 `posture_invalid`: a judgment on the
+declaration's content, distinct from drift against a chain) naming the
+member.
+
+**The guardrails are enforced, not prose.** The agent claim ceiling is
+an admission rule (`policyRules`, `internal/admit`): a `claim.taken`
+signed by a key whose roster kind is `agent` or `service` on a
+contract whose tier is above its squad's `max_agent` refuses
+`tier_above_ceiling` (exit 3) naming the kind, the squad, the tier and
+the ceiling; a `human` key is not ceilinged — the charter's agent-only
+guardrail reading the distinction the roster records (III.E row 9). The
+routing rule holds `intent.filed`'s `routing` to the declared squads
+(`routing_unknown`, exit 3), closing the residual [`tiers.md`](tiers.md)
+and [`lanes.md`](lanes.md) named. Both read the declaration as
+**admission policy, not chain validity** — the tiers precedent: the
+cooperative client reads `seed.json` from its working tree (`--config`,
+`$SEED_CONFIG`, `./seed.json`), the hook reads it at the default
+branch's tip, a raw-pushed record that would have refused folds as
+filed, every chain verifies byte for byte, and no protocol version
+bumps. With no declaration both rules are no-ops: today's behavior.
+
+**The path floor is enforced at the plan lint and at the render**, never
+at admission, because a path is a fact about a repository and admission
+reads the ledger and the declaration alone. `seed plan lint <file>
+--config seed.json --tier <tier>` holds the plan's "File Scope" section
+to the floors ([`plans.md`](plans.md)); `seed verdict render --config
+seed.json` holds the receipt's changed files to them; both refuse
+`under_tiered` (exit 18 `ungated`'s family: content whose gate is short)
+naming the path and the two tiers, with the same words.
+
+**The capability audit** (`TestCapabilityAuditOfTheShippedManifests`,
+`cmd/seed`) derives from the shipped manifests that the manifests
+holding `operator` — the standing the hook lets update the default
+branch — are exactly `maintenance`, and fails by name on a planted
+second holder; the protected surface itself is the governance root's
+alone under the hook's rule ([`admission.md`](admission.md)). The
+test-content residual stands in the charter's words: ordinary test
+content outside the surface remains in an implementer's write scope,
+and diff-versus-plan review plus sealed checks are the mitigations.
+
+**Human/agent metrics.** The report's `lanes` section (version 15,
+[`projections.md`](projections.md)) splits the re-triage and
+unedited-approval figures by the acting key's roster kind (`by_kind`),
+so an operator can see whether the agents or the humans are the ones
+re-triaging.
+
+The doctor reports every block as declared or not (`preseed`).
+
 ## The proposal protocol
 
 Under the forge-hosted posture an actor's credential can fetch the
