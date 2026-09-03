@@ -79,16 +79,31 @@ else
   say "WARNING: engine unavailable, skipped spec lint + validate ($out)"
 fi
 
-# Backend plugin contract tests (offline, fake substrates).
+# Backend plugin contract tests (offline, fake substrates). The four suites
+# are independent (each binds an OS-assigned loopback port and works in its
+# own temp dir), so they run concurrently: together they were most of this
+# script's wall clock. Each suite's output is captured and reported in the
+# fixed order below, so `check` output stays byte-stable run to run.
 if command -v jq >/dev/null 2>&1; then
+  # A bare `wait` exits 0 whatever the children returned (POSIX: with no
+  # operands it reports nothing about them), so `set -e` cannot fire here
+  # and every suite's verdict reaches the loop below through its .ok
+  # marker; the exit status of a failing suite is never what is checked.
+  bt=$(mktemp -d)
   for b in beads paperclip linear jira; do
-    if out=$(sh "$root/.seed/backends/$b/test.sh" 2>&1); then
+    ( sh "$root/.seed/backends/$b/test.sh" > "$bt/$b.out" 2>&1 && : > "$bt/$b.ok" ) &
+  done
+  wait
+  for b in beads paperclip linear jira; do
+    out=$(cat "$bt/$b.out")
+    if [ -f "$bt/$b.ok" ]; then
       say "$out"
     else
       say "FAIL: $b contract test: $out"
       fail=1
     fi
   done
+  rm -rf "$bt"
 else
   say "WARNING: jq unavailable, skipped backend contract tests"
 fi
