@@ -142,6 +142,14 @@ invocation running the CLI's own run function and returning its
 semantics and no path to the ledger; the framing is versioned apart
 from the envelope so the verb semantics never fork.
 
+## The cross-organization boundary
+
+The boundary ([`boundary.md`](boundary.md)) is not a protocol version:
+it appends nothing and defines no verb. It is a read surface over a
+verified clone — the signed capability card, the five-state task view
+derived from the chain, artifacts by digest — and the one write across
+it is the request ingress this register activates at `seed/7`.
+
 ## Canonical event form
 
 Events are JSON objects canonicalized per **RFC 8785 (JCS)**. The canonical

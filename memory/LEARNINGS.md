@@ -1567,3 +1567,10 @@ the assertions read, and there is no copy to go stale.
   the opener applies the local declaration (ledger ref, proposer) to
   whatever remote it opens, which is wrong for a foreign ledger. Open
   with the gitref client and the remote's own genesis instead.
+- A published statement across a trust boundary should be a strict
+  object with a pinned field list on both sides: the writer refuses
+  to add a field without moving the pin, and the reader refuses a
+  field it does not know, so opacity survives either side's drift.
+- Sign over canonical bytes computed from the struct itself, and
+  verify by recomputing; never store the canonical bytes beside the
+  signature, or the two can disagree without anyone noticing.
