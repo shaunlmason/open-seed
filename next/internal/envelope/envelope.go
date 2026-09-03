@@ -71,9 +71,13 @@ const (
 	// (plans/os-5c8a312c.md D6): the forge's protections against the
 	// declaration first, and every later declared-versus-observed
 	// comparison as a refinement, the message naming each difference.
-	ExitDrift      = 28
-	ExitUsage      = 64
-	ExitUnreadable = 66
+	ExitDrift = 28
+	// ExitImportRefused is the predecessor import refusing before any
+	// write (plans/os-cf13fb51.md D1, D4): unanchored, export_mismatch,
+	// import_unmapped.
+	ExitImportRefused = 29
+	ExitUsage         = 64
+	ExitUnreadable    = 66
 )
 
 // Error is the machine-branchable half of a refusal: a stable code to
