@@ -49,8 +49,10 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	if trust := cfg.CheckpointTrust(); trust != "" {
 		result["checkpoints"] = map[string]any{"trust": trust}
 	} else {
+		// Reported, not narrated: stderr is for the consequences the
+		// charter wants in front of an operator, and an unmade choice
+		// is a fact the machine field states.
 		result["checkpoints"] = map[string]any{"trust": nil, "undeclared": true}
-		fmt.Fprintln(stderr, "checkpoints.trust is undeclared: a fresh reader replays from genesis until the deployment declares \"replay\" or \"signers\"")
 	}
 	switch cfg.Posture {
 	case posture.Cooperative:

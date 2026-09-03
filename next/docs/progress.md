@@ -1369,7 +1369,32 @@ Phase 10 item).
   doctor's probe and drift) and in the packages; `next/spec/postures.md`
   new, `envelope.md` and `modes.md` following)
 
+- 12.3 checkpoint trust docs with the replay-equals-genesis CI proof;
+  performance budgets tracked in CI; III.C row 4's contention benchmark
+  — os-7508ab9e — **in review** (task PR against plan #246, stacked on
+  item 2: `checkpoints.trust` on the declaration, `replay` or `signers`,
+  an absent block undeclared and `seed project start` refusing
+  `trust_undeclared` rather than choosing; `ledger.WithTrustedPrefix`
+  replaying a trusted prefix without its signature checks and holding
+  the attested tip at the trusted position; `checkpoint.Latest` with the
+  capable-signer rule (maintenance, operator or a root at the
+  checkpoint's own position); `project.StartFromCheckpoint` cross-
+  checking the snapshot's files against its own derivation before
+  publishing, then publishing builds byte-identical to a genesis
+  replay's with `basis.json` beside them, a rebuild clearing it; the
+  proof with teeth (a corrupted prefix signature caught by rebuild and
+  not by start, a corrupted suffix by both) and the lying-checkpoint
+  refusals; `internal/history`, the seeded representative chain
+  admissible by construction (landed with item 2, whose hook drill it
+  found a gap for); `internal/perfgate` and `cmd/perfgate` measuring
+  admission latency, replay, rebuild and the storm's wall time and
+  attempts ratio against `next/perf/budgets.json` with provenance,
+  re-measuring cold once, under `make check-next` after coverage; `seed
+  perf run`; the doctor's trust report; `next/spec/checkpoints.md` new,
+  `maintenance.md`, `projections.md` and `envelope.md` following)
+
 ## Frontier
+
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,
 #120, #121), every implementation (5.1 #122 through 5.6 #131), the
