@@ -156,7 +156,9 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   (`by_kind`: a specification under its appender's kind, an approval
   under its approver's, the kind read from the keyring at the record's
   own position; [`postures.md`](postures.md), "The preseed"), and the
-  cache moves to generation 13 with it;
+  cache moves to generation 13 with it; version "16" adds `strongest`
+  to `lanes.planner`, the `tuples` scope of the latest applied offer
+  that carries one ([`ranking.md`](ranking.md)), absent when none has;
   version "13" adds `lanes`, [`trajectories.md`](trajectories.md):
   `dispatcher` `{specified, respecified, retriage_rate}`, subjects
   with one or more applied specifications, those with two or more,
@@ -210,6 +212,17 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   report carries a `knowledge` section with the stage counts when the
   chain holds any curation fact, so builds of chains that hold none
   stay byte-identical.
+
+- **`ranking`** (`ranking.json`, version 1): the strongest qualified
+  tuples per capability ([`ranking.md`](ranking.md)): `as_of` (the
+  latest qualification fact's `ts`, empty until one exists, never the
+  tip's, so an unrelated append changes nothing), `agreement_refined` (always `false`: the gold is
+  outside the tree), and `capabilities` with `claim` and `verdict`
+  each an ordered list of entries (tuple, score, latest, holders,
+  evidence, agreement). Input-free and byte-identical on the same
+  chain; a chain carrying no qualification builds two empty lists.
+  `seed doctor --ledger` and `seed offer publish --strongest` read the
+  same derivation at the tip.
 
 - **`cache`** (`cache.db`): the single-machine read-throughput
   surface — one SQLite database mirroring the views (`roster`,
@@ -386,7 +399,7 @@ on nothing but the chain. Consumers that care read it beside the stamp.
 
 ## The adapters section (Phase 13 item 2)
 
-The report gains an `adapters` section (version 16): per executor
+The report gains an `adapters` section (version 17): per executor
 substrate, the runs started under its harness and its budget posture
 (`enforced` or `risk-limit`), derived from the `run.started` tuples the
 fold holds. Present only when the prefix carries a `run.started` whose

@@ -1618,3 +1618,18 @@ the assertions read, and there is no copy to go stale.
 - Sign over canonical bytes computed from the struct itself, and
   verify by recomputing; never store the canonical bytes beside the
   signature, or the two can disagree without anyone noticing.
+
+
+## Tuple ranking as supervisor policy (os-c7554f18, Phase 13 item 7)
+
+- A policy table belongs in one place with a mirror the tests hold to
+  it: `ranking.Rules` states the rows in the spec's own words and a
+  drill parses `ranking.md` and compares, so a change to the policy in
+  either place fails until both move. The behavior drills pin the code
+  to the rows; the table drill pins the spec to the code.
+- Scheduling policy and admission are different authorities: the
+  ranking is read by the offer writer and never by a rule, so the
+  bridge for never-qualified workers (admission never judges an
+  offer's scope) survives a policy that sends work to the strongest,
+  and a first eval's offer stays the one unscoped door.
+
