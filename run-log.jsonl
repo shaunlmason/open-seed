@@ -1151,3 +1151,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-22b85190","kind":"receipt"},"task":"os-9075c308","ts":"2026-09-03T00:00:20Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 12 item 2 — forge-hosted admission service (stateless, sole-writer) and the protections desired-state reconciler"},"task":"os-5c8a312c","ts":"2026-09-03T00:10:13Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: Phase 12 item 3 — checkpoint trust docs with the replay-equals-genesis CI proof; performance budgets tracked in CI"},"task":"os-7508ab9e","ts":"2026-09-03T00:10:15Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: Phase 12 item 4 — the preseed file (config, guardrails, teams, protections, posture), idempotent and CI-verified; agent-only guardrails and the protected surface in config"},"task":"os-0d4f2af3","ts":"2026-09-03T00:10:17Z","verb":"create"}
