@@ -459,14 +459,23 @@ func TestHookRefusesHistoryRewriteAndRefShapes(t *testing.T) {
 		t.Fatal("forced update moved the ref")
 	}
 
-	// An unrelated ref passes untouched.
+	// An unrelated ref takes the code-ref half (plans/os-465e356e.md
+	// D1): the genesis root holds operator standing and may create it;
+	// with no asserted identity the same push refuses. This assertion
+	// used to read "an unrelated ref passes untouched" — the exemption
+	// the compromised-actor drill closed, amended deliberately.
 	exec.Command("git", "-C", scratch, "config", "user.email", "t@t").Run()
 	exec.Command("git", "-C", scratch, "config", "user.name", "t").Run()
 	if out, err := exec.Command("git", "-C", scratch, "commit", "--allow-empty", "-qm", "docs").CombinedOutput(); err != nil {
 		t.Fatalf("scratch commit: %v %s", err, out)
 	}
-	if out, err := exec.Command("git", "-C", scratch, "push", remote, "HEAD:refs/heads/docs").CombinedOutput(); err != nil {
-		t.Fatalf("unrelated ref must pass: %v %s", err, out)
+	if out, err := exec.Command("git", "-C", scratch, "push", remote, "HEAD:refs/heads/docs").CombinedOutput(); err == nil || !strings.Contains(string(out), pusherEnv) {
+		t.Fatalf("an unrelated ref with no asserted identity must refuse naming %s: %v %s", pusherEnv, err, out)
+	}
+	asRoot := exec.Command("git", "-C", scratch, "push", remote, "HEAD:refs/heads/docs")
+	asRoot.Env = append(os.Environ(), pusherEnv+"="+fpFor(t, fixtureKey(t)))
+	if out, err := asRoot.CombinedOutput(); err != nil {
+		t.Fatalf("an unrelated ref created by operator standing must pass: %v %s", err, out)
 	}
 }
 
@@ -499,20 +508,28 @@ func parentlessCommit(t *testing.T, dir string) string {
 // a guarded-ref override behave as documented.
 func TestHookStdinContractAndRefOverride(t *testing.T) {
 	var errOut strings.Builder
-	if code := run(strings.NewReader("garbage line\n"), &errOut, ".", guardedRef); code != 1 || !strings.Contains(errOut.String(), "malformed") {
+	if code := run(strings.NewReader("garbage line\n"), &errOut, ".", guardedRef, ""); code != 1 || !strings.Contains(errOut.String(), "malformed") {
 		t.Fatalf("malformed update line must refuse: %d %q", code, errOut.String())
 	}
-	// Updates to other refs pass without touching the repo.
-	if code := run(strings.NewReader(fmt.Sprintf("%s %s refs/heads/main\n", zeroID, zeroID)), &strings.Builder{}, "/nonexistent", guardedRef); code != 0 {
-		t.Fatal("non-guarded refs must pass without repo access")
+	// Updates to other refs take the code-ref half (plans/os-465e356e.md
+	// D1): with no pusher identity asserted they refuse before any repo
+	// access. This line used to pin "non-guarded refs must pass without
+	// repo access", the exemption the compromised-actor drill found
+	// reported three ceiling clauses green by never asking; the
+	// amendment is deliberate and named in the task PR.
+	var noID strings.Builder
+	if code := run(strings.NewReader(fmt.Sprintf("%s %s refs/heads/main\n", zeroID, zeroID)), &noID, "/nonexistent", guardedRef, ""); code != 1 || !strings.Contains(noID.String(), pusherEnv) {
+		t.Fatalf("a code ref with no asserted identity must refuse naming %s: %d %q", pusherEnv, code, noID.String())
 	}
-	// With an override, the default ref is no longer guarded.
-	if code := run(strings.NewReader(fmt.Sprintf("%s %s %s\n", zeroID, zeroID, guardedRef)), &strings.Builder{}, "/nonexistent", "refs/other/ledger"); code != 0 {
-		t.Fatal("an overridden guard must release the default ref")
+	// With an override, the default ref is no longer guarded: it is a
+	// code ref like any other, and takes the code-ref half's answer.
+	var released strings.Builder
+	if code := run(strings.NewReader(fmt.Sprintf("%s %s %s\n", zeroID, zeroID, guardedRef)), &released, "/nonexistent", "refs/other/ledger", ""); code != 1 || !strings.Contains(released.String(), pusherEnv) {
+		t.Fatalf("an overridden guard must release the default ref to the code-ref half: %d %q", code, released.String())
 	}
 	// Deletion of the guarded ref refuses before any repo access.
 	var del strings.Builder
-	if code := run(strings.NewReader(fmt.Sprintf("%s %s %s\n", "a1b2c3", zeroID, guardedRef)), &del, "/nonexistent", guardedRef); code != 1 || !strings.Contains(del.String(), "deletion") {
+	if code := run(strings.NewReader(fmt.Sprintf("%s %s %s\n", "a1b2c3", zeroID, guardedRef)), &del, "/nonexistent", guardedRef, ""); code != 1 || !strings.Contains(del.String(), "deletion") {
 		t.Fatalf("deletion must refuse: %d %q", code, del.String())
 	}
 }
