@@ -1423,6 +1423,39 @@ record's own position through one derivation, `curation.AuthenticPass`
 (`memory/LEARNINGS.md`). This exit record is card os-efb2a099's task PR
 (an administrative card, not a Phase 11 item).
 
+## Phase 13 — Conformance completion (docs/next-build-plan.md Phase 13; deps: 12)
+
+- 13.1 racing mode as the per-squad opt-in with first-verified
+  settlement (III.F row 7) — os-56bee171 — **in review** (task PR
+  against plan #256, stacked on Phase 12 item 5, a draft until the
+  Phase 12 exit record merges: the `racing` block on a squad's
+  guardrails (`racers` two or more, `cost` in the operator's words,
+  refused otherwise, absent is exclusivity); at `seed/6` a further
+  `claim.taken` admits on an `in_progress` racing contract below the
+  cap for a claimant holding none, its fence its own position,
+  `contention` naming every holder at the cap; the fold's plural
+  `Claims`, `Submissions` and `Verdicts` beside the singular facts;
+  claim-scoped exits (every racer's exit but the first submission and
+  the last departure moves no state, the table untouched); verdicts
+  binding to the submission they cite with the lockout per submission;
+  the merge chain citing the newest verdict on its submission;
+  settlement at `merge.observed` with the other claims settled-out
+  (`race_settled` on their next act, their own exit still admitted, the
+  maintenance pass reaping the silent ones with a packet naming the
+  settlement); the contracts view's `racing` object at version 14 and
+  the claim response's racing note; drilled at the boundary (the
+  opt-in, the cap, the fences, the exits, the settlement, the reap's
+  admission), in the maintenance pass and at the declaration;
+  `next/spec/lifecycle.md` "Racing" new, `postures.md`, `envelope.md`,
+  `maintenance.md`, `budgets.md`, `projections.md` and `protocol.md`
+  (`seed/6`) following)
+- routed gap: the cache carries the event's `ts`, so evidence is
+  queryable by time (charter III.G row 10, recorded UNMET at the Phase
+  10 exit) — os-74ce2261 — **in review** (task PR against plan #260:
+  `ts` verbatim and `ts_unix` parsed on every per-event table at cache
+  generation 14, ranges over the integer since RFC 3339 mixes
+  fractional precision, an unparseable `ts` NULL and counted, the
+  time-range drill with the four names of the row in one query)
 - routed gap: `ledger show`'s `chain_invalid` stamps the position it
   was computed at — os-37fcf7c6 — **in review** (task PR against plan
   #259: the scan's failing position stamped, the same stamp verify

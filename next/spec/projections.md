@@ -112,7 +112,12 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   (Version "4"; `lifecycle.md`).
   One file, not per-subject files (subjects are opaque strings; the
   cache is the lookup-throughput surface). An empty chain yields an
-  empty array, not a missing file.
+  empty array, not a missing file. Version 14 adds the
+  `racing` object on a subject that raced (plans/os-56bee171.md D4):
+  `racers` (the active claims by fence order), and after settlement
+  `settled_at` and `settled_out`; absent on every other subject, so
+  chains without a race are byte-identical.
+
 - **`queue`** (`queue.json`): the claimable-work surface —
   `{schema_version: "1", derivation, ready: […]}`, entries carrying
   `{subject, since_position}`. The derivation is
@@ -206,7 +211,15 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   `contracts`, `offers`, and `reservations` indexed by subject,
   `queue` + `queue_meta`,
   `actor_history`/`actor_signed` indexed by fingerprint, `report`
-  key-values) plus a one-row `stamp` table carrying **exactly** the
+  key-values), every per-event table carrying the envelope's `ts`
+  verbatim beside `ts_unix`, the instant it names as nanoseconds since
+  the epoch (NULL when the string does not parse, such rows queryable
+  by that NULL and counted under the `report` table's `ts_unparsed`
+  key), so evidence is
+  queryable by contract, actor, time and outcome in one query (charter
+  III.G row 10; plans/os-74ce2261.md) — a range compares `ts_unix`,
+  never the text, since RFC 3339 mixes fractional precision — plus a
+  one-row `stamp` table carrying **exactly** the
   tree stamp's fields (name, position, tip, version), so a pure-SQL
   consumer demands a minimum position with one query:
   `SELECT position >= :min FROM stamp`. The database is the API:

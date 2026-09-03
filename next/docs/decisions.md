@@ -2986,6 +2986,27 @@ never edited to match a declaration.
 in the result says which blocks are declared; nothing new is printed to
 stderr, which stays for the consequences the charter wants in front of
 an operator.
+- 2026-09-03 — the reap arm (os-32d06c65) threads revocation through the
+  maintenance loop's corroboration, not an admission gate. Implementing
+  surfaced that claim.reaped admission never consulted
+  InterruptValid/WedgeDeclared — the corroboration is Corroborate +
+  Reapable, filled from internal/admit. So admit.RevokedHolder feeds a
+  new Corroboration.Revoked, Reapable reaps a revoked holder in every
+  classification state (no_data included, because a revocation is a
+  ledger fact not silence), and no admission rule on claim.reaped
+  changes. The plan (#262) was amended to match before implementation.
+## The cache carries the event's ts (os-74ce2261, plan #260)
+
+**Verbatim beside parsed.** The envelope's `ts` string is the record
+and is stored as written; `ts_unix` is the instant it names, parsed as
+RFC 3339 with optional fractional seconds, because a range over the
+text mis-orders mixed precision (a review finding on the plan). An
+unparseable `ts` folds NULL rather than a guessed instant, queryable as
+such and counted under the cache's `ts_unparsed` report key (a review
+finding: the lifecycle fold's anomaly count is the lifecycle's, and the
+cache does not borrow it). Phase 12 item 4 (#254) took generation 13 for `by_kind` and landed
+first, so this card re-bumps to generation 14 with its pins and its
+migration, as both PRs said whichever landed second would.
 ## `ledger show` stamps its failing position (os-37fcf7c6, plan #259)
 
 **The stamp is where the response was computed, not the chain's
@@ -3082,3 +3103,34 @@ not loosened to raise the number.
   never fail, and it takes the coverage collection from 5m21s to about
   2m30s on a 4-core host, which was most of every `make check` in CI.
   (CI/CD performance PR)
+
+## Phase 13 item 1 — racing mode (os-56bee171, plan #256)
+
+**A racing claim is a fact on an `in_progress` subject, never a table
+row.** The first cut widened `claim.taken`'s origin to `in_progress`
+and `submission.made`'s to `review`; the table's self-validation
+refused it at once — the in_progress exits are exactly the four
+deliberate exits, and a claim from in_progress is not an exit. The
+charter's invariant was right: racing changes who may hold, not what
+a state may become. So the fold applies a second claim as a claim
+fact and a racer's exit as a claim-scoped fact, the table is untouched,
+and the widened judgment lives in the lifecycle rule beside contention,
+gated by `seed/6` so a `seed/5` validator refuses by version.
+
+**Two exits move the state, the rest move a claim.** The first
+submission enters review (the other racers keep working there), and
+the last racer's departure with no submission yet re-readies or blocks
+the subject as the table says; every other exit closes its own claim.
+After settlement every exit is claim-scoped, which is what lets a
+settled-out racer leave with its packet and the reaper reap on a done
+subject.
+
+**The lockout is per submission.** A fail on one racer's submission
+locks that racer's pass out and touches no other; the merge chain
+cites the newest verdict on its own submission, so a racer's later
+fail cannot shadow another's earlier pass.
+
+**The reaper's third corroboration is the ledger.** A settled race
+needs no observation stream to reap: nothing a settled-out racer does
+can land but its exit, so the maintenance pass reaps each remaining
+claim with a packet naming the settlement, reported as `settled`.

@@ -43,6 +43,7 @@ type ContractEntry struct {
 	State         *string               `json:"state"`
 	Anomalies     int                   `json:"anomalies"`
 	Claim         *ContractClaim        `json:"claim,omitempty"`
+	Racing        *ContractRacing       `json:"racing,omitempty"`
 	Acceptance    *ContractAcceptance   `json:"acceptance,omitempty"`
 	Verdict       *ContractVerdict      `json:"verdict"`
 	Requested     *string               `json:"requested"`
@@ -201,6 +202,17 @@ type ContractClaim struct {
 	Fence  string `json:"fence"`
 }
 
+// ContractRacing is the race on a racing squad's contract
+// (plans/os-56bee171.md D4): every active claim by fence order, and
+// after the first verified success the settling position and the
+// claims it settled out. Absent on a subject that never raced, so
+// every existing view stays byte-identical.
+type ContractRacing struct {
+	Racers     []ContractClaim `json:"racers"`
+	SettledAt  *string         `json:"settled_at,omitempty"`
+	SettledOut []ContractClaim `json:"settled_out,omitempty"`
+}
+
 // Contracts returns the contract-detail projection. Version "2" added
 // the folded state and anomaly count; Version "3" the claim object;
 // Version "4" the acceptance field; Version "5" the fold's seed/1
@@ -221,7 +233,7 @@ type ContractClaim struct {
 // republishing under a new build id via the version-in-identity
 // machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "13", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "14", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -291,6 +303,23 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 			}
 			if s.Claim != nil {
 				e.Claim = &ContractClaim{Holder: s.Claim.Holder, Fence: fmt.Sprintf("%d", s.Claim.Fence)}
+			}
+			// The racing object rides every subject that raced, claim
+			// standing or none: the racers while it runs, the settling
+			// position and the settled-out claims after, an empty
+			// racer list when every racer has left.
+			if s.Racing {
+				race := &ContractRacing{Racers: []ContractClaim{}}
+				for _, c := range s.Claims {
+					race.Racers = append(race.Racers, ContractClaim{Holder: c.Holder, Fence: fmt.Sprintf("%d", c.Fence)})
+				}
+				if s.RaceSettled != nil {
+					at := fmt.Sprintf("%d", *s.RaceSettled)
+					race.SettledAt = &at
+					race.SettledOut = race.Racers
+					race.Racers = []ContractClaim{}
+				}
+				e.Racing = race
 			}
 			if s.Acceptance != nil {
 				e.Acceptance = &ContractAcceptance{Ref: s.Acceptance.Ref, Executable: s.Acceptance.Executable, Gated: s.Acceptance.Gated}

@@ -2,6 +2,7 @@ package posture
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -178,5 +179,39 @@ func TestProtectedSurfaceIsDeclaredAndSelfIncluding(t *testing.T) {
 	// Parse is Load without the file: the same strictness on bytes.
 	if _, err := Parse([]byte(`{"posture": "anarchy"}`)); err == nil {
 		t.Fatal("Parse must apply Load's validity check")
+	}
+}
+
+// conformance: plans/os-56bee171.md AC1 — the racing block is an
+// explicit opt-in that says both things or refuses: two or more
+// racers, a cost sentence in the operator's words; an absent block
+// is no racing.
+func TestRacingBlockSaysBothOrRefuses(t *testing.T) {
+	base := `{"posture": "cooperative", "guardrails": {"squads": {"core": {"default": "standard", "max_agent": "standard"%s}}}, "teams": {"squads": [{"name": "core", "lanes": ["implementer"]}]}}`
+	cfg, err := Parse([]byte(fmt.Sprintf(base, `, "racing": {"racers": 2, "cost": "two runs per contract"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if racers, cost, ok := cfg.RacingFor("core"); !ok || racers != 2 || cost != "two runs per contract" {
+		t.Fatalf("the block reads back: %d %q %v", racers, cost, ok)
+	}
+	if _, _, ok := cfg.RacingFor("other"); ok {
+		t.Fatal("an undeclared squad does not race")
+	}
+	plain, err := Parse([]byte(fmt.Sprintf(base, "")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, ok := plain.RacingFor("core"); ok {
+		t.Fatal("an absent block is no racing")
+	}
+	for name, block := range map[string]string{
+		"one racer":     `, "racing": {"racers": 1, "cost": "one is exclusivity"}`,
+		"no cost":       `, "racing": {"racers": 3, "cost": " "}`,
+		"unknown field": `, "racing": {"racers": 2, "cost": "x", "mode": "fast"}`,
+	} {
+		if _, err := Parse([]byte(fmt.Sprintf(base, block))); err == nil {
+			t.Errorf("%s must refuse", name)
+		}
 	}
 }

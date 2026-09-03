@@ -49,10 +49,17 @@ type Corroboration struct {
 	Interrupted bool
 	// Wedged: an admitted wedge.declared stands on the active fence.
 	Wedged bool
+	// Revoked: the active claim's holder has been revoked
+	// (admit.RevokedHolder). Unlike Interrupted and Wedged this is a
+	// LEDGER fact rather than a stream signal — a revoked holder
+	// provably cannot exit its window — so it corroborates a reap in
+	// every classification state, no_data included
+	// (plans/os-32d06c65.md D1, D5).
+	Revoked bool
 }
 
 // Stands reports whether any corroborating fact was found.
-func (c Corroboration) Stands() bool { return c.Interrupted || c.Wedged }
+func (c Corroboration) Stands() bool { return c.Interrupted || c.Wedged || c.Revoked }
 
 // Reapable is the whole reap rule, and it is deliberately pure.
 //
@@ -77,6 +84,14 @@ func (c Corroboration) Stands() bool { return c.Interrupted || c.Wedged }
 // this is where the instinct to reap is strongest and the evidence
 // weakest.
 func Reapable(c obs.Classification, corr Corroboration) (bool, string) {
+	// A revocation is a ledger fact, not a stream classification: a
+	// revoked holder can no longer act on its claim, so the claim is
+	// reapable in EVERY classification state, no_data included — the
+	// one place a no_data stream is reaped, and only because the chain,
+	// not the channel, corroborates it (plans/os-32d06c65.md D5).
+	if corr.Revoked {
+		return true, ""
+	}
 	switch c.State {
 	case obs.NoData:
 		return false, "the stream holds nothing at all, so there is no evidence either way — absence of data is stated, never read as death (next/spec/observations.md)"
@@ -212,44 +227,110 @@ func (d Deps) reap(rep *Report) {
 	}
 	for _, id := range d.Fold.Subjects() {
 		s, ok := d.Fold.State(id)
-		if !ok || s.Claim == nil || s.State != "in_progress" {
+		if !ok || s.Claim == nil {
 			continue
 		}
-		stream, _ := d.Obs.StreamFor(s.Claim.Holder, obs.FormatFence(s.Claim.Fence))
-		class := obs.Classify(stream, d.Now, d.Thresholds)
-		var corr Corroboration
-		if d.Corroborate != nil {
-			corr = d.Corroborate(id, s.Claim.Fence)
-		}
-		ok2, because := Reapable(class, corr)
-		if !ok2 {
-			rep.Skipped = append(rep.Skipped, Skip{Subject: id, State: string(class.State), Because: because})
+		// A settled race (plans/os-56bee171.md D3): the first verified
+		// success closed the contract while other racers still held
+		// claims. The ledger itself corroborates the reap — nothing a
+		// settled-out racer does can land except its own exit — so
+		// each remaining claim is reaped with a packet naming the
+		// settlement, and the losers' work is visibly over.
+		if s.RaceSettled != nil {
+			for _, c := range s.Claims {
+				payload, err := RaceReapPacket(s, c.Fence, *s.RaceSettled)
+				if err != nil {
+					rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+					continue
+				}
+				if d.Append == nil {
+					continue
+				}
+				if err := d.Append("claim.reaped", id, payload); err != nil {
+					rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+					continue
+				}
+				rep.Reaped = append(rep.Reaped, Reap{
+					Subject: id, Fence: c.Fence, Holder: c.Holder,
+					State: "settled", Because: fmt.Sprintf("the race was settled at position %d and this claim outlived it", *s.RaceSettled),
+				})
+			}
 			continue
 		}
-		payload, err := ReapPacket(s, s.Claim.Fence, class, corr)
-		if err != nil {
-			rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+		if s.State != "in_progress" {
 			continue
 		}
-		if d.Append == nil {
-			continue
+		// Every active claim is classified on its own stream: one on
+		// an exclusive subject, each racer's on a racing one.
+		for _, c := range s.Claims {
+			stream, _ := d.Obs.StreamFor(c.Holder, obs.FormatFence(c.Fence))
+			class := obs.Classify(stream, d.Now, d.Thresholds)
+			var corr Corroboration
+			if d.Corroborate != nil {
+				corr = d.Corroborate(id, c.Fence)
+			}
+			ok2, because := Reapable(class, corr)
+			if !ok2 {
+				rep.Skipped = append(rep.Skipped, Skip{Subject: id, State: string(class.State), Because: because})
+				continue
+			}
+			payload, err := ReapPacket(s, c.Fence, class, corr)
+			if err != nil {
+				rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+				continue
+			}
+			if d.Append == nil {
+				continue
+			}
+			if err := d.Append("claim.reaped", id, payload); err != nil {
+				rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
+				continue
+			}
+			rep.Reaped = append(rep.Reaped, Reap{
+				Subject: id, Fence: c.Fence, Holder: c.Holder,
+				State: string(class.State), Because: reapBecause(corr),
+			})
 		}
-		if err := d.Append("claim.reaped", id, payload); err != nil {
-			rep.Refusals = append(rep.Refusals, Refusal{Verb: "claim.reaped", Subject: id, Reason: err.Error()})
-			continue
-		}
-		rep.Reaped = append(rep.Reaped, Reap{
-			Subject: id, Fence: s.Claim.Fence, Holder: s.Claim.Holder,
-			State: string(class.State), Because: reapBecause(corr),
-		})
 	}
 }
 
-func reapBecause(corr Corroboration) string {
-	if corr.Interrupted {
-		return "an admitted run.interrupted on the active fence went unanswered"
+// RaceReapPacket composes the claim.reaped payload for a settled-out
+// racer (plans/os-56bee171.md D3): the fence it kills and a packet
+// whose finding names the settlement, so the loser's packet says why
+// its work is over without inventing what it found.
+func RaceReapPacket(s transition.SubjectState, fence int, settledAt int) ([]byte, error) {
+	acceptance := "the contract's acceptance spec, which the fold does not carry"
+	if s.Acceptance != nil && s.Acceptance.Ref != "" {
+		acceptance = s.Acceptance.Ref
 	}
-	return "an admitted wedge.declared stands on the active fence"
+	body, err := packet.Render(packet.Packet{
+		Acceptance: []string{acceptance},
+		Decisions:  []packet.Decision{},
+		Base:       packet.ZeroRange,
+		Refs:       []string{},
+		Findings: []packet.Finding{{
+			Tried:   "racing this contract against another claim",
+			Outcome: fmt.Sprintf("the race was settled at position %d by the first verified success; this claim outlived it and was reaped by the maintenance lane, its work written off as the squad's declared cost", settledAt),
+		}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(map[string]any{
+		"fence":    strconv.Itoa(fence),
+		packet.Key: json.RawMessage(body),
+	})
+}
+
+func reapBecause(corr Corroboration) string {
+	switch {
+	case corr.Revoked:
+		return "the claim's holder was revoked and can no longer act on it, so its open claim is reaped on the revocation alone"
+	case corr.Interrupted:
+		return "an admitted run.interrupted on the active fence went unanswered"
+	default:
+		return "an admitted wedge.declared stands on the active fence"
+	}
 }
 
 // ReapPacket composes the whole claim.reaped payload: the fence the
@@ -274,7 +355,10 @@ func ReapPacket(s transition.SubjectState, fence int, c obs.Classification, corr
 		acceptance = s.Acceptance.Ref
 	}
 	tried := "the holder was asked to stop by an admitted run.interrupted on this fence"
-	if !corr.Interrupted {
+	switch {
+	case corr.Revoked:
+		tried = "the holder's key was revoked, so it can no longer act on this claim and the open window is reaped on the revocation alone"
+	case !corr.Interrupted:
 		tried = "the holder's run was declared wedged on this fence"
 	}
 	outcome := fmt.Sprintf("no deliberate exit followed and the stream classified %s (last observation %q, last advance %q, count %d) — reaped by the maintenance lane, and the run's actuals settle afterward",
