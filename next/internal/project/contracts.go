@@ -303,19 +303,23 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 			}
 			if s.Claim != nil {
 				e.Claim = &ContractClaim{Holder: s.Claim.Holder, Fence: fmt.Sprintf("%d", s.Claim.Fence)}
-				if s.Racing {
-					race := &ContractRacing{Racers: []ContractClaim{}}
-					for _, c := range s.Claims {
-						race.Racers = append(race.Racers, ContractClaim{Holder: c.Holder, Fence: fmt.Sprintf("%d", c.Fence)})
-					}
-					if s.RaceSettled != nil {
-						at := fmt.Sprintf("%d", *s.RaceSettled)
-						race.SettledAt = &at
-						race.SettledOut = race.Racers
-						race.Racers = []ContractClaim{}
-					}
-					e.Racing = race
+			}
+			// The racing object rides every subject that raced, claim
+			// standing or none: the racers while it runs, the settling
+			// position and the settled-out claims after, an empty
+			// racer list when every racer has left.
+			if s.Racing {
+				race := &ContractRacing{Racers: []ContractClaim{}}
+				for _, c := range s.Claims {
+					race.Racers = append(race.Racers, ContractClaim{Holder: c.Holder, Fence: fmt.Sprintf("%d", c.Fence)})
 				}
+				if s.RaceSettled != nil {
+					at := fmt.Sprintf("%d", *s.RaceSettled)
+					race.SettledAt = &at
+					race.SettledOut = race.Racers
+					race.Racers = []ContractClaim{}
+				}
+				e.Racing = race
 			}
 			if s.Acceptance != nil {
 				e.Acceptance = &ContractAcceptance{Ref: s.Acceptance.Ref, Executable: s.Acceptance.Executable, Gated: s.Acceptance.Gated}

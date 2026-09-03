@@ -244,11 +244,9 @@ func (c *Config) AgentCeiling(squad string) (string, bool) {
 	return g.MaxAgent, true
 }
 
-// Floor is the minimum tier a contract touching path files at: the
-// strictest floor among the declared prefixes the path is under; ok is
-// false when none applies.
-// RacingFor is the squad's racing opt-in, or ok=false when the squad
-// declares none (the exclusive behavior the tree has always had).
+// RacingFor reads a squad's racing opt-in (plans/os-56bee171.md D1):
+// the declared cap and the cost in the operator's words; ok is false
+// when the guardrails, the squad or the block are undeclared.
 func (c *Config) RacingFor(squad string) (racers int, cost string, ok bool) {
 	if c == nil || c.Guardrails == nil {
 		return 0, "", false
@@ -260,6 +258,9 @@ func (c *Config) RacingFor(squad string) (racers int, cost string, ok bool) {
 	return g.Racing.Racers, g.Racing.Cost, true
 }
 
+// Floor is the minimum tier a contract touching path files at: the
+// strictest floor among the declared prefixes the path is under; ok is
+// false when none applies.
 func (c *Config) Floor(path string, above func(a, b string) bool) (string, bool) {
 	if c == nil || c.Guardrails == nil {
 		return "", false
