@@ -32,6 +32,32 @@ jobs:
       - name: State-ref lint (read-only; reports, never halts here)
         run: scripts/seed state lint
 
+  platform:
+    # Platform parity is tested, not asserted (plans/os-b55e5647.md D4,
+    # D6; next/spec/platform.md): the Go suites run on Linux, macOS and
+    # Windows. A platform-gated skip names its reason in the run, and
+    # the doctor's platform report says which postures each can run.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: next/go.mod
+          cache-dependency-path: next/go.sum
+      - name: go test (the Seed suites on ${{ matrix.os }})
+        run: go test ./... -count=1
+        working-directory: next
+      - name: seed doctor reports the platform
+        run: go run ./cmd/seed doctor --config fixtures/deployment/seed.json
+        working-directory: next
+        continue-on-error: true
+
   flavor-test:
     # The flavor integration test (ADR 0002). Deliberately its own job, not a
     # step in `check`: it needs node and the npm registry, and §2.6 binds

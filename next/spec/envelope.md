@@ -173,3 +173,12 @@ machine consumer needs it.
   serialized field set) and the CLI tests in `next/cmd/seed`.
 - III.I "affordance computation and admission enforcement consume the same
   rule set" — Phase 8, against `internal/admit`.
+
+## The machine framing
+
+Under `seed serve` ([`platform.md`](platform.md)) an envelope travels
+as the `result` of a JSON-RPC 2.0 response, byte for byte: the
+framing is `machine-envelope/0`, versioned apart from
+`seed-envelope/0`, and a refusal stays a result carrying the failing
+envelope (its `exit` and `code` intact) rather than a transport error.
+Transport errors are JSON-RPC's own codes and name no verb outcome.

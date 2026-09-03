@@ -10,6 +10,7 @@ package ledger
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
@@ -160,9 +161,13 @@ func (s *Store) scan(fn func(pos int, segment string, line []byte) error) error 
 			return err
 		}
 		sc := bufio.NewScanner(f)
+		sc.Split(scanLinesKeepCR)
 		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 		for sc.Scan() {
-			line := strings.TrimSpace(sc.Text())
+			// Blank lines and stray spaces are tolerated; a carriage
+			// return is not trimmed, so a CRLF-mangled segment is
+			// refused by the parser rather than normalized here.
+			line := strings.Trim(sc.Text(), " \t")
 			if line == "" {
 				continue
 			}
@@ -413,4 +418,21 @@ func (s *Store) Records(fn func(pos int, rec *event.Record) error) error {
 		}
 		return fn(pos, rec)
 	})
+}
+
+// scanLinesKeepCR splits on LF alone and keeps any carriage return in
+// the line, so a CRLF-mangled segment reaches the record parser and is
+// refused there (next/spec/platform.md): bufio.ScanLines would strip
+// the CR and silently normalize the bytes a signature covers.
+func scanLinesKeepCR(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		return i + 1, data[:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }
