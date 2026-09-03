@@ -2813,3 +2813,69 @@ verb at `seed/0`, where no keyring applies, the same way it accepts the
 `curation.*` verbs; the curator's reach over a recurring shape is
 pinned by the flywheel admit drill and joined into the curator residual
 drill's sweep instead.
+
+## Phase 12 item 2 — the forge-hosted admission service and the protections reconciler (os-5c8a312c, plan #244)
+
+**Exit 28 `drift` is allocated, and the service's race answer is a
+refinement of contention.** The plan's first cut reported protections
+drift under exit 3; review pointed at the allocation rule (a distinct
+condition takes the next unused integer), so `drift` is 28 — a declared
+desired state and an observed one differ — with `protections_drift`
+its first refinement and the later declared-versus-observed
+comparisons (#247's `preseed_drift`, #249's `docs_drift`) refining the
+same family. The service answers a stale proposal with HTTP 409 and the
+envelope `contention`/`non_fast_forward`: contention at the ref rather
+than at a claim, and the one refusal the proposer's loop answers by
+re-linking.
+
+**The refusal-to-envelope mapping moved out of `cmd/seed` into
+`internal/refusal`.** The plan's file scope did not name a new package
+for it, but the service must answer with the very code the CLI would
+print, and a mapping that lives in one binary is a mapping the other
+re-derives. `cmd/seed`'s `remoteFailureEnvelope`, `failureEnvelope` and
+`stampTip` delegate; the flywheel's gate error (#240) joined the shared
+mapping during the merge. The hook's `admitUpdate` wraps with `%w` so
+the typed refusal reaches the mapping; its stderr text is unchanged.
+
+**Bypass identities are the forge's actor forms, not logins.** The plan
+said "the forge login or app slug"; GitHub's rulesets take actors by
+type and numeric id, and resolving a slug would add a lookup the core
+has no business making. `identity` is therefore `app:<id>`,
+`team:<id>`, `deploy-key` or `org-admin` under the GitHub adapter, any
+other form refusing by name before anything is written. The doctor
+prints it as declared.
+
+**The ledger ref lives in the branch namespace under the forge-hosted
+posture** (`refs/heads/seed-ledger` by default): forges protect
+branches and tags and nothing under `refs/seed/*`, which is why v1's
+ledger was a branch. The hook posture keeps `refs/seed/ledger`; the
+remote verbs swap the default for the declaration's branch under the
+third posture and honor an explicit `--ref` as given.
+
+**The declaration is found in a fixed order and its absence changes
+nothing.** `--config`, else `$SEED_CONFIG`, else `./seed.json` when it
+exists, else no declaration — today's behavior byte for byte. An
+explicitly named absent declaration refuses `posture_undeclared`; one
+that exists and does not parse refuses `posture_invalid` before any
+transport, never a silent fallback to pushing.
+
+**The service persists a verified head; the proposing client does not
+persist the commit it proposed.** The service records each admitted
+candidate as its verified head, so a rewritten remote refuses at its
+next fetch (the monotonic-head rule at the service). The client leaves
+its persisted head at the tip it fetched: the service's commit is not
+in the client's git dir until the next fetch verifies it, and
+persisting an object it does not hold would turn the monotonic rule
+into a self-inflicted regression.
+
+**`Protected` mirrors #241's shape.** Field, tag, `Parse`,
+`DeclarationPath`, `ProtectedSurface()`, `Protects()` and the entry
+validation were agreed with item 1's implementation so whichever lands
+second merges as a no-op; CODEOWNERS renders from `ProtectedSurface()`,
+which includes the declaration itself by construction.
+
+**The fixture's forge asserts identity through `SEED_PUSHER`.** A bare
+repository on a local path has no notion of who pushes, so the
+fixture's ruleset stand-in reads an environment variable the drill sets
+around the service's pushes and clears around the actor's. It is a
+model of the forge's rule and the spec says so; production sets nothing.

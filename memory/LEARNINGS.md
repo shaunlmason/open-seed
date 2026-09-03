@@ -1329,3 +1329,24 @@ the assertions read, and there is no copy to go stale.
 - `loop.go`'s `gitOut` treats empty output as an error; git verbs that
   succeed silently (`add`, `commit --quiet`, `worktree remove`) need a
   runner that reads the exit status alone.
+
+- In one test process "who is pushing" is an environment fact. A
+  fixture that models a forge's sole-writer rule with an environment
+  variable must set it around the service's pushes and clear it around
+  the actor's, or the actor's raw push and the service's proposal look
+  like the same writer and the drill proves nothing about either.
+- A hook that wraps refusals with `%v` prints the same text as one
+  that wraps with `%w`, and only the second lets a service built on the
+  same judgment answer with the boundary's typed code. Wrap with `%w`
+  where a second caller might ever need `errors.As`.
+- Forges protect branches and tags, not custom ref namespaces: a
+  ledger that a forge must guard lives under `refs/heads/`. The ref
+  name is one parameter of every seam, so this is a declaration, not a
+  code path — but only if nobody hard-codes the default a second time.
+- A client that lands a write through a third party must not persist
+  a commit it does not hold: the monotonic-head rule compares by
+  ancestry in the client's own git dir, and an object that is not
+  there reads as a regression on the next fetch.
+- Copying a mapping into a second binary is how two postures come to
+  disagree on a code. When the second caller appears, move the mapping
+  to a package both can import before writing the second caller.
