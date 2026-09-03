@@ -36,6 +36,11 @@ type Forgejo struct {
 	Repo  string
 	Token string
 	HTTP  *http.Client
+	// LedgerBranch is the branch the ledger rides (from the declaration's
+	// admission.ledger_ref); Read maps its protection back to the ledger
+	// ruleset. Empty falls back to the default (seed-ledger), so the
+	// convention still works when the caller does not set it.
+	LedgerBranch string
 
 	branchRule map[string]string // ruleset name -> Forgejo rule_name, from Read
 	tagID      map[string]int64  // ruleset name -> tag-protection id, from Read
@@ -177,10 +182,14 @@ func (f *Forgejo) Read() (*State, error) {
 // stands for. The default branch is read from the repo; the contract
 // glob and the ledger branch are conventional (seed/* and seed-ledger).
 func (f *Forgejo) rulesetFor(glob string) string {
+	ledger := f.LedgerBranch
+	if ledger == "" {
+		ledger = forgejoLedgerBranch
+	}
 	switch glob {
 	case "seed/*":
 		return RulesetContracts
-	case forgejoLedgerBranch:
+	case ledger:
 		return RulesetLedger
 	case f.defBranch:
 		return RulesetDefault

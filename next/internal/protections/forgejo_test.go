@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 )
 
 type fakeForgejo struct {
@@ -251,4 +253,41 @@ func TestForgejoLive(t *testing.T) {
 	if after.DriftCount != 0 {
 		t.Fatalf("the live Forgejo must reconcile to no drift, got %d", after.DriftCount)
 	}
+}
+
+func TestForgejoCustomLedgerBranch(t *testing.T) {
+	// A deployment whose ledger rides a non-default branch: Read maps the
+	// protection back to the ledger ruleset by the declared branch, not
+	// the seed-ledger convention, so a custom-ledger deployment does not
+	// drift-loop on its own ledger protection.
+	cfg, err := posture.Parse([]byte(`{"posture": "enforced-forge-hosted", "admission": {"endpoint": "http://127.0.0.1:1", "identity": "app:4242", "ledger_ref": "refs/heads/my-ledger", "checks": ["verify"], "reviews": 1}, "protected": ["Makefile"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake := newFakeForgejo()
+	srv := httptest.NewServer(fake.handler(t))
+	defer srv.Close()
+	fj := NewForgejo(srv.URL, "o", "r", "tok")
+	fj.LedgerBranch = "my-ledger"
+	if _, err := Apply(cfg, fj, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := fake.branches["my-ledger"]; !ok {
+		t.Fatalf("the ledger protection lands under the declared branch, got %v", keysOf(fake.branches))
+	}
+	after, _, err := Plan(cfg, fj, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.DriftCount != 0 {
+		t.Fatalf("a custom-ledger deployment must reconcile to no drift, got %d", after.DriftCount)
+	}
+}
+
+func keysOf(m map[string]fjBranch) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }

@@ -106,7 +106,9 @@ func runProtectionsReconcile(verb string, args []string, stdout, stderr io.Write
 		if token == "" {
 			return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the forgejo forge needs a token in $%s", env)), stdout, stderr)
 		}
-		forge = protections.NewForgejo(base, owner, name, token)
+		fj := protections.NewForgejo(base, owner, name, token)
+		fj.LedgerBranch = strings.TrimPrefix(cfg.LedgerRef(), "refs/heads/")
+		forge = fj
 	default:
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown forge %q (snapshot | github | forgejo)", *forgeKind)), stdout, stderr)
 	}
