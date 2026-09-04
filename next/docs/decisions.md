@@ -3501,10 +3501,10 @@ writes them, and its own drill holds the section to that shape, so the
 evidence row for the criterion cites the packet's drill rather than a
 claim about a document elsewhere.
 
-**Criterion 6 stays partial on a PR in review.** The doctor's
-conformance section is os-83bc3d84's, in review when the packet
-landed; the packet says so and cites the exit records for the phases,
-never a PR that has not merged.
+**Criterion 6 cites what has merged.** The doctor's conformance
+section is os-83bc3d84's (#289); while it was in review the packet
+said `partial` and cited the exit records alone, and it moved to
+`met` citing #289's drills the day the report merged, never before.
 
 **The shadow run runs at the posture the criteria name; the server
 is the question.** Build plan §5 evaluates every criterion at the

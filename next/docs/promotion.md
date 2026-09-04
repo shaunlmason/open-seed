@@ -36,12 +36,12 @@ carries the `Question:` the operator answers.
 | 3 | migration proven | met |
 | 4 | shadow run | reserved |
 | 5 | cutover and rollback written down | met |
-| 6 | core conformance | partial |
+| 6 | core conformance | met |
 | 7 | the compromised-actor drill green in CI before the cutover | met |
 
-The gate is not open: criterion 4 waits on a decision only the
-operator can make, and criterion 6 on one pull request in review.
-Everything an agent can do before that decision is done and cited
+The gate is not open: criterion 4 waits on the one thing only the
+operator can supply, the server the enforced self-hosted posture
+needs. Everything an agent can do before that is done and cited
 below.
 
 ## 1. Loop-completeness
@@ -189,9 +189,29 @@ existing in the tree rather than by a claim about it.
 
 ## 6. Core conformance
 
-Status: partial
+Status: met
 
-Missing: the doctor's half. The criterion is "Phases 0 through 12 complete, so every pillar's mechanisms stand, with `doctor` reporting exactly which Phase 13 rows remain open"; the phases are complete and recorded, and the conformance report that gives the doctor its `conformance` section is os-83bc3d84's task PR #289, in review at this packet's writing. Until it merges the open rows are read from the exit records in `next/docs/progress.md`, which is the same knowledge in prose; once it merges, `seed doctor --repo .` on the fixture deployment lists them by pillar, row and status, and this status moves to met.
+Phases 0 through 12 are complete and recorded, and the doctor reports
+exactly which Phase 13 rows remain open: the conformance report
+(os-83bc3d84, #289) checks in Part III as a table held to the
+charter row for row, renders it under the docs drift gate, and gives
+`seed doctor --repo .` a `conformance` section that counts the rows by
+status, lists every row not yet met by pillar, row and status, sets
+the enforced-only rows aside at the cooperative posture and names the
+mixed rows there, and reports `complete` only when every applicable
+row is met. The rows it lists as open today are Phase 13's, flipped
+by the Phase 13 exit record (os-d63c7441) once III.R's measurements
+exist, which is the promotion critical path in the build plan's own
+words.
+
+| drill | file | PR |
+|---|---|---|
+| `TestTableIsTheCharterRowForRow` | `internal/conformance/conformance_test.go` | #289 |
+| `TestTableDriftFromTheCharterIsRefused` | `internal/conformance/conformance_test.go` | #289 |
+| `TestVocabularyHolds` | `internal/conformance/conformance_test.go` | #289 |
+| `TestAssessJudgesAtThePosture` | `internal/conformance/conformance_test.go` | #289 |
+| `TestConformanceRendersFromTheTableWithoutAClock` | `internal/docs/docs_test.go` | #289 |
+| `TestDoctorReportsConformanceAtThePosture` | `cmd/seed/doctor_test.go` | #289 |
 
 Phases 0 through 12 each closed with an exit record that walks the
 pillars its exit line names, row by row, with drills on `main` cited

@@ -1585,7 +1585,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   #291: `next/docs/promotion.md`, one section per criterion with a
   status from a closed vocabulary (`met`, `partial`, `not started`,
   `reserved`) and its evidence as drill, file and PR rows; criteria 1,
-  2, 3, 5 and 7 met, 6 partial until the conformance report merges,
+  2, 3, 5, 6 and 7 met (6 by the conformance report, #289, merged),
   4 reserved on one question, the POSIX git server that hosts the
   shadow ledger with the hook, the run itself at the enforced
   self-hosted posture the criteria name; `internal/promotion` parsing the packet
@@ -1973,11 +1973,10 @@ Phase 13 declares `deps: 12`, so its gate opened when the Phase 12
 exit record merged (#284), and every numbered item has a merged PR: 1
 in #269, 2 in #282, 3 in #281, 4 in #270, 5 in #279 (its
 canonicalization follow-up os-1c284ba8 in review, #290), 6 in #273, 7
-in #286; the two routed gaps (#265, #266) are merged. Two things the
-phase's exit line needs are in flight: the conformance report
-(os-83bc3d84, plan #287 open, task PR #289 in review) and the
-promotion evidence packet (os-98ce6f8a, plan #291 open, task PR #294
-in review). The exit record (os-d63c7441, plan #288 merged) is parked
+in #286; the two routed gaps (#265, #266) are merged. The conformance report
+(os-83bc3d84, #289) is merged, so the doctor reports the open rows;
+the promotion evidence packet (os-98ce6f8a, plan #291 open, task PR
+#294 in review) is the other thing the phase's exit line needs. The exit record (os-d63c7441, plan #288 merged) is parked
 on the packet: its plan writes the record only when the doctor
 reports complete, which III.R's rows make reachable after the shadow
 run and the cutovers, not before. The build plan's §3 backlog is
@@ -1993,12 +1992,11 @@ carded (os-222189a3).
 
 **Next action: the operator's answer at the promotion gate.**
 `next/docs/promotion.md` presents the seven criteria of build plan
-§5: 1, 2, 3, 5 and 7 met, 6 partial until #289 merges, 4 reserved on
-one question, the POSIX git server that hosts the shadow ledger with
-the hook, the run at the enforced self-hosted posture the criteria
-name. Until that answer the agent-side work is to merge the
-open PRs as they clear review (#289 now that #287 has merged; #291
-then #294; #293 then #297; #295 then #296; #290; #292), fix the
+§5: 1, 2, 3, 5, 6 and 7 met, 4 reserved on one question, the POSIX
+git server that hosts the shadow ledger with the hook, the run at the
+enforced self-hosted posture the criteria name. Until that answer the agent-side work is to merge the
+open PRs as they clear review (#291 then #294; #293 then #297; #295
+then #296; #299 then #300; #290; #292), fix the
 scale defect (os-5063e8ba) so the weekly run can be green and III.C
 row 4 can flip, and keep the packet's citations true. After the answer: the
 shadow run per the packet's protocol, its measurements recorded into
