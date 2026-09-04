@@ -3823,11 +3823,26 @@ policy the lookup found implicitly is explicit in the envelope; a
 declaration that exists and does not parse refuses `posture_invalid`
 before any bar.
 
-**The blind-retry clause is stated, not faked.** A refused append
-never lands, so no bar over the chain can see a refusal or its retry.
-The clause belongs to the refusal journal and the report's refusal
-rate (`refusals.md`), which never read the chain, and `simulation.md`
-says so in the bar's own description. The charter's row is untouched.
+**The blind-retry clause is unmet, and says so.** A refused append
+never lands, so no bar over the chain can see a refusal or its retry;
+and the refusal journal cannot tell a blind retry from a corrected one
+as it stands (an entry keeps no digest of the attempted payload), so
+routing the clause there would have marked it covered by a surface
+that cannot measure it (review on #322). `simulation.md` names the
+clause unmet and cites os-a9e715dc, which owns the measurement. The
+charter's row is untouched; the bar's description shrank rather than
+grew.
+
+**One policy epoch per reading, and the simulation reads its own.**
+The ledger carries no declaration digest, so the arm judges every
+claim under the one declaration given and names it; a deployment
+whose guardrails changed audits each epoch with the file it ran
+under. The seven-day simulation, the audit that is supposed to show
+every claim within its ceiling, now declares a ceiling of its own
+(the core squad's agents at `trivial`), admits every claim under it
+and audits under the same file, reporting `declared: true`, so the
+arm is live in the conformance run rather than silent there (review
+on #322).
 
 **A chain whose roster does not replay is silence, not a guess.** The
 arm needs a kind to judge; where the keyring cannot be replayed it

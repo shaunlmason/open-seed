@@ -81,13 +81,17 @@ run leaves every list empty:
    refuses. The scheduling concern (work ready with no live offer) is
    `internal/eval`'s read, not this bar's (plans/os-aaec6a3c.md D1,
    D3). The bar's other contracted clause, **no refusal followed by a
-   blind retry**, is not the chain's to show and this bar does not
-   pretend to: a refused append never lands, so a refusal and its
-   retry leave only the retry. What sees refusals is the client's
-   refusal journal and the report's refusal-rate metric
-   ([`refusals.md`](refusals.md)), which count what the boundary
-   refused a lane and how often, and never read the chain
-   (plans/os-b5051f2e.md D4).
+   blind retry**, is **unmet and unmeasured**: a refused append never
+   lands, so a refusal and its retry leave only the retry in the
+   chain, and the client's refusal journal
+   ([`refusals.md`](refusals.md)) cannot tell a blind retry from a
+   corrected one as it stands, since an entry keeps actor, verb,
+   subject, outcome, code and position but no digest of the attempted
+   payload. No surface measures the clause today; os-a9e715dc owns the
+   measurement (the journal entry gains the attempt's digest and the
+   report counts a same-digest retry as blind), and until it lands
+   this bar's description claims the ceiling arm and the sealed-author
+   arm alone (plans/os-b5051f2e.md D4).
 5. **Unreserved spend** — every `run.started` is fenced to the
    reservation it cited. The bar asks admission's own predicate,
    `admit.RunStartValid`, which judges the start's cited reservation
@@ -110,7 +114,16 @@ present, else none), so an audit and the admission it judges read one
 file by one rule; a clean reading names the declaration it was judged
 under (`declaration`, or `null`), and a declaration that exists and
 does not parse refuses `posture_invalid` before any bar
-(plans/os-b5051f2e.md D3).
+(plans/os-b5051f2e.md D3). The arm judges every claim under the one
+declaration given, which is the caller's assertion about the policy
+epoch: the ledger carries no declaration digest, so a deployment whose
+guardrails changed after claims landed audits each epoch with the
+declaration it ran under, and the reading names which it was judged
+under. The simulation declares a ceiling of its own (the core squad's
+agents at `trivial`, the tier its catalog files at) and audits under
+it, so its clean reading says `declared: true`: the ceiling was among
+the things it read, at every claim the run admitted and again at the
+end (plans/os-b5051f2e.md D5).
 This is how the shadow run's real chain is measured against charter
 III.R row 5 (`next/docs/promotion.md`).
 

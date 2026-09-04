@@ -2108,10 +2108,12 @@ written by the two implementing sessions, one voice.
   subject, kind, key, tier, position, squad and ceiling; `seed ledger
   audit --config` reads the declaration by the remote verbs' shared
   lookup and names it in the reading; `Audit(records)` is unchanged
-  for every caller, the simulation included. The blind-retry clause is
-  stated rather than faked: a refused append never lands, so it is the
-  refusal journal's and the report's refusal rate's (`refusals.md`),
-  which `simulation.md`'s bar 4 now says. Drilled in both packages; an
+  for every caller; the simulation declares a ceiling of its own and
+  audits under it, its reading saying `declared: true` (review on
+  #322). The blind-retry clause is stated as unmet: a refused append
+  never lands and the refusal journal keeps no attempt digest, so no
+  surface measures it today, which `simulation.md`'s bar 4 now says,
+  citing os-a9e715dc for the measurement. Drilled in both packages; an
   admission-grade 40-contract chain audits clean under a declaration
   in about 180 ms)
 

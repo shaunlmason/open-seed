@@ -28,6 +28,11 @@ type AuditResult struct {
 	GuardrailBreaches  []string `json:"guardrail_breaches"`
 	UnreservedSpend    []string `json:"unreserved_spend"`
 	Clean              bool     `json:"clean"`
+	// Declared reports whether the guardrail bar's ceiling arm judged
+	// under a declaration with guardrails (plans/os-b5051f2e.md D5): a
+	// reading that says clean says whether the ceiling was among the
+	// things it read.
+	Declared bool `json:"declared"`
 }
 
 // ClaimTakenVerb is the one verb the bars read that the protocol
@@ -140,6 +145,7 @@ func AuditUnder(records []*event.Record, declaration *posture.Config) AuditResul
 	}
 	res.GuardrailBreaches = append(res.GuardrailBreaches, sealedAuthorClaims(tbl, records)...)
 	res.GuardrailBreaches = append(res.GuardrailBreaches, ceilingClaims(tbl, records, declaration)...)
+	res.Declared = declaration != nil && declaration.Guardrails != nil
 
 	// A subject still open (claim taken, no deliberate exit) is a silent
 	// abandonment; a done contract is closed by construction.
