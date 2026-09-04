@@ -1926,6 +1926,20 @@ written by the two implementing sessions, one voice.
   tree, so the cause stays open and the next occurrence is a
   directory to read; `checkpoints.md` "The seventh race shape")
 
+## A fixture that escaped the hardening guard (os-222189a3)
+
+- the flywheel engine drill's skip path races `t.TempDir`'s cleanup on
+  macOS (`unlinkat .../.git/objects: directory not empty`), reporting
+  a skipped drill as a failed one on #290's macOS leg — os-222189a3 —
+  **in review** (task PR against plan #301: `requireEngine` reads the
+  pin from the source tree, the same shim and lock `instantiate`
+  copies, and runs as the drill's first statement, so a skip builds
+  nothing: twelve git spawns on the skip path before, none after;
+  `fixtureRepo` hardened right after `init`, written into the
+  repository's config; the guard's alternation gains `gitIn(`, the
+  helper name that had kept the fixture outside os-c4e8b57a's
+  property while the guard passed; tests only)
+
 ## Frontier
 
 
