@@ -164,7 +164,7 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 		writers = 1
 	}
 	if len(res.Keys.Writers) < writers {
-		return 0, 0, fmt.Errorf("the history enrolled %d writer keys for %d writers", len(res.Keys.Writers), writers)
+		return 0, 0, 0, fmt.Errorf("the history enrolled %d writer keys for %d writers", len(res.Keys.Writers), writers)
 	}
 	var attempts int64
 	var relinked int64
@@ -215,7 +215,6 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 		// storm's verdict is a diagnosis, not a guess.
 		return 0, 0, 0, fmt.Errorf("%d of %d writers failed to land; the first: %v", failed, writers, firstErr)
 	}
-	// Every append landed exactly once: the chain grew by writers.
 	c, err := gitref.NewClient(filepath.Join(work, "reader"), remote, "refs/seed/ledger")
 	if err != nil {
 		return 0, 0, 0, err
@@ -247,10 +246,8 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 	if rep.Count != res.Records+writers {
 		return 0, 0, 0, fmt.Errorf("the chain holds %d records, %d expected: a lost or doubled update", rep.Count, res.Records+writers)
 	}
-	return wall, float64(attempts) / float64(writers), relinked, nil
-
 	if len(actors) != writers {
-		return 0, 0, fmt.Errorf("the storm's records carry %d distinct actors for %d writers", len(actors), writers)
+		return 0, 0, 0, fmt.Errorf("the storm's records carry %d distinct actors for %d writers", len(actors), writers)
 	}
-	return wall, float64(attempts) / float64(writers), nil
+	return wall, float64(attempts) / float64(writers), relinked, nil
 }
