@@ -1639,6 +1639,17 @@ the assertions read, and there is no copy to go stale.
   judged it, hold the criteria to the charter by parsing the charter,
   and let the doctor say what is still open rather than what is done.
 
+## The seventh race shape (os-5063e8ba)
+
+- A retry classifier that names its shapes is honest about what it
+  does not retry, and a refusal that lands beyond the position a
+  client appended is the client's tree disagreeing with the remote,
+  which a fresh fetch settles either way; keep the refused tree
+  before retrying, because a lost temp dir is a lost diagnosis.
+- Measure the count of a mitigation (`relinked`) beside the budgets
+  it protects, never as a budget: a clean run reads zero, and a
+  non-zero reading points at the kept evidence.
+
 ## seed ledger audit (os-7599c27d)
 
 - A verb that reads an invariant over a chain verifies the chain
