@@ -9,7 +9,11 @@
 # release is the operator's act at the distribution step, and the
 # CI-identity lint (next/internal/protections) holds scheduled workflows
 # to read-only. Seed's tags live under seed/v*, apart from the template's
-# v* releases and the seed-anchor/* state anchors.
+# v* releases and the seed-anchor/* state anchors, and the reconciled
+# seed-release-tags ruleset makes them immutable on the forge as the
+# hook already does on a git server. Every third-party action is pinned
+# to a commit SHA: this job holds OIDC, attestation and write privileges,
+# and nothing executable in it resolves through a mutable tag.
 name: seed-release
 
 on:
@@ -32,7 +36,7 @@ jobs:
     env:
       VERSION: ${{ inputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -92,6 +96,6 @@ jobs:
             --notes "Seed $VERSION at $GITHUB_SHA, protocol register up to $protocol. Binaries: seed and seed-admit for linux, darwin and windows on amd64 and arm64, built with -trimpath from next/. Verify an archive against checksums.txt and its provenance with: gh attestation verify <archive> --repo $GITHUB_REPOSITORY"
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-checksums: dist/checksums.txt

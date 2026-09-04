@@ -39,7 +39,7 @@ credential-free arm CI and the drills run).
 | **ledger branch** | deletion + non-fast-forward + update, sole writer = the admission identity | one ruleset, bypass actor = the identity | a branch protection: deletion and non-fast-forward ride the protection; the sole writer is the push whitelist (`enable_push:false`, `push_whitelist_usernames:[identity]`) |
 | **default branch** | deletion + non-fast-forward + required reviews (with thread resolution and code-owner) + required checks | one ruleset expressing all of it | a branch protection: deletion, non-fast-forward and required status checks are expressed; **the pull-request requirement is unexpressible** (see below) |
 | **contract branches** (`seed/*`) | deletion + non-fast-forward | one ruleset | a branch protection over the `seed/*` glob |
-| **release tags** (`v*`) | deletion + non-fast-forward + update, sole writer = the identity | one ruleset, target tag | a tag protection with `whitelist_usernames:[identity]` |
+| **release tags** (`v*` and `seed/v*`, the template's and Seed's; plans/os-2e46aa2f.md) | deletion + non-fast-forward + update, sole writer = the identity | one ruleset, target tag, both patterns | one tag protection per pattern with `whitelist_usernames:[identity]` |
 
 ## What Forgejo cannot express
 

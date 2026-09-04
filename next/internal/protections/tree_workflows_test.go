@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 )
 
 // conformance: III.L row 5 — least-privilege CI identities. The tree's
@@ -109,6 +111,48 @@ func TestSeedReleaseWorkflowIsDispatchOnly(t *testing.T) {
 			t.Errorf("the matrix lacks %s", target)
 		}
 	}
+	// Every third-party action is pinned to a commit SHA (D4): the job
+	// holds OIDC, attestation and write privileges, so nothing in it
+	// resolves through a mutable tag. A local composite action is a
+	// path in this tree and is pinned by the commit that runs it.
+	uses := 0
+	for _, line := range strings.Split(wf, "\n") {
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "- ")
+		if !strings.HasPrefix(line, "uses:") {
+			continue
+		}
+		ref := strings.TrimSpace(strings.TrimPrefix(line, "uses:"))
+		if i := strings.Index(ref, "#"); i >= 0 {
+			ref = strings.TrimSpace(ref[:i])
+		}
+		if strings.HasPrefix(ref, "./") {
+			continue
+		}
+		uses++
+		at := strings.LastIndex(ref, "@")
+		if at < 0 || !isHexSHA(ref[at+1:]) {
+			t.Errorf("action %q is not pinned to a commit SHA", ref)
+		}
+	}
+	if uses < 2 {
+		t.Fatalf("the workflow uses checkout and the attestation action, found %d third-party actions", uses)
+	}
+	// The namespace it tags is one the reconciled desired state
+	// protects (D8): a released tag cannot be retargeted on the forge.
+	desired, err := Desired(&posture.Config{Posture: posture.EnforcedForgeHosted, Admission: &posture.Admission{Endpoint: "https://admit.example", Identity: "app:1", LedgerRef: "refs/heads/seed-ledger"}}, "main")
+	if err != nil {
+		t.Fatal(err)
+	}
+	protected := false
+	for _, ref := range desired.Rulesets[RulesetTags].Refs {
+		if ref == "refs/tags/seed/v*" {
+			protected = true
+		}
+	}
+	if !protected {
+		t.Fatalf("the seed/v namespace is not among the immutable release tags: %v", desired.Rulesets[RulesetTags].Refs)
+	}
 	findings, err := LintWorkflows(root)
 	if err != nil {
 		t.Fatal(err)
@@ -124,6 +168,15 @@ func TestSeedReleaseWorkflowIsDispatchOnly(t *testing.T) {
 	if err := os.MkdirAll(wfDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	// Mutation: a tag reference where a SHA belongs is caught by the
+	// same reading.
+	unpinned := strings.Replace(wf, "actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be", "actions/attest-build-provenance@v2", 1)
+	if unpinned == wf {
+		t.Fatal("the pin mutation did not apply")
+	}
+	if !hasUnpinnedAction(unpinned) {
+		t.Fatal("a tag reference must read as unpinned")
+	}
 	mutated := strings.Replace(wf, "on:\n  workflow_dispatch:", "on:\n  schedule:\n    - cron: \"0 0 * * *\"\n  workflow_dispatch:", 1)
 	if mutated == wf {
 		t.Fatal("the mutation did not apply")
@@ -135,4 +188,39 @@ func TestSeedReleaseWorkflowIsDispatchOnly(t *testing.T) {
 	if err != nil || len(findings) != 1 {
 		t.Fatalf("a scheduled release writer is one finding: %v %v", findings, err)
 	}
+}
+
+func isHexSHA(s string) bool {
+	if len(s) != 40 {
+		return false
+	}
+	for _, r := range s {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f')) {
+			return false
+		}
+	}
+	return true
+}
+
+// hasUnpinnedAction reports whether any third-party action in a
+// workflow resolves through something other than a commit SHA.
+func hasUnpinnedAction(wf string) bool {
+	for _, line := range strings.Split(wf, "\n") {
+		line = strings.TrimPrefix(strings.TrimSpace(line), "- ")
+		if !strings.HasPrefix(line, "uses:") {
+			continue
+		}
+		ref := strings.TrimSpace(strings.TrimPrefix(line, "uses:"))
+		if i := strings.Index(ref, "#"); i >= 0 {
+			ref = strings.TrimSpace(ref[:i])
+		}
+		if strings.HasPrefix(ref, "./") {
+			continue
+		}
+		at := strings.LastIndex(ref, "@")
+		if at < 0 || !isHexSHA(ref[at+1:]) {
+			return true
+		}
+	}
+	return false
 }

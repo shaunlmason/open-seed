@@ -3821,6 +3821,20 @@ bash than to work around. `internal/version.Version` is a var so the
 `-ldflags -X` stamp lands; from source it stays the pre-release
 default, and a drill pins both.
 
+**Every action hash-pinned, and the namespace protected before it is
+used (review on #328).** The job holds OIDC, attestation and write
+privileges, so nothing executable in it resolves through a mutable
+tag: `actions/checkout` and `actions/attest-build-provenance` are
+pinned to commit SHAs with the tag in a trailing comment, and the
+drill refuses any `uses:` that is not a local path or a 40-hex SHA.
+The hook already refuses an update or deletion of any tag, but the
+forge reconciler's `seed-release-tags` ruleset named `refs/tags/v*`
+alone, so under the forge-hosted posture a released `seed/v*` tag
+could have been retargeted; the ruleset now names both namespaces,
+the Forgejo adapter keeps one tag protection per pattern, and the
+release drill asserts the namespace it tags is one the desired state
+protects.
+
 **Attested, and verifiable from the handbook.** `checksums.txt` is
 attested with `actions/attest-build-provenance`, the attestation the
 engine ships, and the handbook says how an adopter verifies an archive

@@ -2115,7 +2115,10 @@ written by the two implementing sessions, one voice.
   anchors; `seed` and `seed-admit` built from `next/` for six targets
   with the version stamped into `internal/version` (now a var);
   archives, `checksums.txt`, a GitHub Release and
-  `actions/attest-build-provenance`; held by
+  `actions/attest-build-provenance`, every third-party action pinned to
+  a commit SHA; the reconciler's `seed-release-tags` ruleset gains
+  `refs/tags/seed/v*` so the namespace is immutable on the forge as it
+  already is under the hook (review on #328); held by
   `TestSeedReleaseWorkflowIsDispatchOnly` beside the scheduled-writer
   drill and `TestVersionIsStampableAndPreReleaseFromSource`; the
   handbook's Install section names the release and how to verify one.

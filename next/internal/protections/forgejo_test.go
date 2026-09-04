@@ -144,8 +144,17 @@ func TestForgejoAdapterReconciles(t *testing.T) {
 	if after.Manual != 1 {
 		t.Fatalf("the manual rule persists after apply, got %d", after.Manual)
 	}
-	if len(fake.branches) != 3 || len(fake.tags) != 1 {
-		t.Fatalf("three branch protections and one tag protection, got %d/%d", len(fake.branches), len(fake.tags))
+	// One tag protection per release-tag pattern (plans/os-2e46aa2f.md
+	// D8): the template's v* and Seed's seed/v*.
+	if len(fake.branches) != 3 || len(fake.tags) != 2 {
+		t.Fatalf("three branch protections and two tag protections, got %d/%d", len(fake.branches), len(fake.tags))
+	}
+	patterns := map[string]bool{}
+	for _, tg := range fake.tags {
+		patterns[tg.NamePattern] = true
+	}
+	if !patterns["v*"] || !patterns["seed/v*"] {
+		t.Fatalf("the release-tag ruleset protects both namespaces on the forge, got %v", patterns)
 	}
 	// The ledger branch's sole writer is the admission identity.
 	led, ok := fake.branches["seed-ledger"]

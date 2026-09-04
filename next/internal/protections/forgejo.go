@@ -43,7 +43,7 @@ type Forgejo struct {
 	LedgerBranch string
 
 	branchRule map[string]string // ruleset name -> Forgejo rule_name, from Read
-	tagID      map[string]int64  // ruleset name -> tag-protection id, from Read
+	tagID      map[string]int64  // tag pattern -> tag-protection id, from Read (plans/os-2e46aa2f.md D8: one Forgejo protection per release-tag pattern)
 	defBranch  string            // the repository's default branch, from Read
 }
 
@@ -102,7 +102,30 @@ func (f *Forgejo) do(method, path string, body, out any) (int, error) {
 }
 
 const forgejoLedgerBranch = "seed-ledger" // DefaultLedgerRef's branch; the ledger protection's glob
-const releaseTagPattern = "v*"
+
+// releaseTagPatterns are the tag globs the release-tag ruleset names,
+// as Forgejo takes them (the ruleset's refs without the refs/tags/
+// prefix): the template's releases and Seed's (plans/os-2e46aa2f.md
+// D8). Forgejo protects one glob per tag protection, so the one
+// ruleset is as many protections as it has patterns.
+var releaseTagPatterns = []string{"v*", "seed/v*"}
+
+func isReleaseTagPattern(p string) bool {
+	for _, want := range releaseTagPatterns {
+		if p == want {
+			return true
+		}
+	}
+	return false
+}
+
+func tagPatterns(rs Ruleset) []string {
+	var out []string
+	for _, ref := range rs.Refs {
+		out = append(out, strings.TrimPrefix(ref, "refs/tags/"))
+	}
+	return out
+}
 
 type fjRepo struct {
 	DefaultBranch string `json:"default_branch"`
@@ -164,15 +187,28 @@ func (f *Forgejo) Read() (*State, error) {
 	if _, err := f.do(http.MethodGet, f.repoPath()+"/tag_protections", nil, &tags); err != nil {
 		return nil, err
 	}
-	for _, t := range tags {
-		if t.NamePattern != releaseTagPattern {
-			continue
+	// Every release-tag protection the forge holds folds into the one
+	// ruleset, its refs in the ruleset's own order, so a forge holding
+	// one of the two patterns reads as an update rather than as absent.
+	var refs []string
+	var bypass []string
+	for _, pattern := range releaseTagPatterns {
+		for _, t := range tags {
+			if t.NamePattern != pattern {
+				continue
+			}
+			f.tagID[t.NamePattern] = t.ID
+			refs = append(refs, "refs/tags/"+t.NamePattern)
+			if bypass == nil {
+				bypass = append([]string(nil), t.WhitelistUsernames...)
+			}
 		}
-		f.tagID[RulesetTags] = t.ID
+	}
+	if len(refs) > 0 {
 		st.Rulesets[RulesetTags] = Ruleset{
-			Name: RulesetTags, Target: TargetTag, Refs: []string{"refs/tags/" + t.NamePattern},
+			Name: RulesetTags, Target: TargetTag, Refs: refs,
 			Rules:  []Rule{{Type: RuleDeletion}, {Type: RuleNonFastForward}, {Type: RuleUpdate}},
-			Bypass: append([]string(nil), t.WhitelistUsernames...),
+			Bypass: bypass,
 		}
 	}
 	return st, nil
@@ -279,33 +315,54 @@ func (f *Forgejo) putBranch(kind string, rs Ruleset) error {
 	return err
 }
 
+// putTag reconciles the release-tag ruleset onto the forge, one tag
+// protection per pattern: a pattern the forge holds is patched, one it
+// lacks is created, and one it holds that the ruleset no longer names
+// is deleted, so a create and an update are the same walk.
 func (f *Forgejo) putTag(kind string, rs Ruleset) error {
-	body := fjTag{NamePattern: releaseTagPattern, WhitelistUsernames: append([]string(nil), rs.Bypass...)}
-	if kind == ChangeCreate {
+	wanted := map[string]bool{}
+	for _, pattern := range tagPatterns(rs) {
+		if !isReleaseTagPattern(pattern) {
+			return fmt.Errorf("tag pattern %q is not a release-tag pattern the adapter maps (%s)", pattern, strings.Join(releaseTagPatterns, ", "))
+		}
+		wanted[pattern] = true
+		body := fjTag{NamePattern: pattern, WhitelistUsernames: append([]string(nil), rs.Bypass...)}
+		if id, ok := f.tagID[pattern]; ok {
+			if _, err := f.do(http.MethodPatch, fmt.Sprintf("%s/tag_protections/%d", f.repoPath(), id), body, nil); err != nil {
+				return err
+			}
+			continue
+		}
 		var created fjTag
 		if _, err := f.do(http.MethodPost, f.repoPath()+"/tag_protections", body, &created); err != nil {
 			return err
 		}
-		f.tagID[RulesetTags] = created.ID
-		return nil
+		f.tagID[pattern] = created.ID
 	}
-	id, ok := f.tagID[RulesetTags]
-	if !ok {
-		return fmt.Errorf("no release-tag protection id to update")
+	for pattern, id := range f.tagID {
+		if wanted[pattern] {
+			continue
+		}
+		if _, err := f.do(http.MethodDelete, fmt.Sprintf("%s/tag_protections/%d", f.repoPath(), id), nil, nil); err != nil {
+			return err
+		}
+		delete(f.tagID, pattern)
 	}
-	_, err := f.do(http.MethodPatch, fmt.Sprintf("%s/tag_protections/%d", f.repoPath(), id), body, nil)
-	return err
+	return nil
 }
 
 func (f *Forgejo) remove(name string) error {
 	if name == RulesetTags {
-		id, ok := f.tagID[RulesetTags]
-		if !ok {
+		if len(f.tagID) == 0 {
 			return fmt.Errorf("no release-tag protection id to delete")
 		}
-		_, err := f.do(http.MethodDelete, fmt.Sprintf("%s/tag_protections/%d", f.repoPath(), id), nil, nil)
-		delete(f.tagID, name)
-		return err
+		for pattern, id := range f.tagID {
+			if _, err := f.do(http.MethodDelete, fmt.Sprintf("%s/tag_protections/%d", f.repoPath(), id), nil, nil); err != nil {
+				return err
+			}
+			delete(f.tagID, pattern)
+		}
+		return nil
 	}
 	rule, ok := f.branchRule[name]
 	if !ok {

@@ -253,7 +253,7 @@ and the charter's rules, with no second source
 | `seed-ledger` | the declared ledger branch | updates by the admission identity alone; no force-push; no deletion |
 | `seed-default-branch` | the repository's default branch, **read from `HEAD`**, never declared | the declared `checks` required; `reviews` approving reviews; review-thread resolution; code-owner review when `owners` are declared; no force-push; no deletion |
 | `seed-contract-branches` | `refs/heads/seed/*` | no force-push; no deletion |
-| `seed-release-tags` | `refs/tags/v*` | create-only: no update, no deletion |
+| `seed-release-tags` | `refs/tags/v*` and `refs/tags/seed/v*` (the template's releases and Seed's, plans/os-2e46aa2f.md) | create-only: no update, no deletion |
 
 Beside the rulesets: `CODEOWNERS` rendered from the protected surface
 (every prefix, the declaration itself included, owned by `owners`) and
