@@ -7,13 +7,16 @@ directly. All hooks run with the worktree as cwd.
 | Hook | When | Contract |
 |---|---|---|
 | `setup` | once per clone | install deps, prepare the machine |
-| `post-create.d/*` | after a task worktree is created | run in lexical order; propagate `.worktreeinclude` files, install deps |
+| `post-create.d/*` | after a task worktree is created | run in lexical order; propagate `.worktreeinclude` files, install deps. **Non-zero means the worktree is not fit to work in** (no approved plan at the branch point, say): runners that can honor an exit code should, and `scripts/loop.sh` releases the card |
 | `run` | to start an agent session in a worktree | optional convenience entry |
 | `pre-merge.d/*` | before merging a task branch | **blocking**: any non-zero exit stops the merge (the local gate: a fast pre-check; CI is the authority, R11) |
 | `teardown` | before a worktree is removed | flush state, stop processes |
 
 Keep hooks fast and deterministic. They are user-editable convention, not
-control logic: the port and CI gates do the enforcing.
+control logic: the port and CI gates do the enforcing. Where a hook mirrors a
+CI gate (`pre-merge.d/20-receipt-verify` runs the verify command CI runs), it
+exists so the gate is discovered locally in a second rather than from a red
+run: the CI copy is still the authority (R11).
 
 Portable context: runners and shims export what they know of
 `SEED_WORKTREE`, `SEED_REPO_ROOT`, `SEED_BRANCH`, `SEED_TARGET_BRANCH`

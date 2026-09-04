@@ -1988,7 +1988,13 @@ written by the two implementing sessions, one voice.
   append until os-5063e8ba's re-link lands, which is the carded
   defect, not a regression)
 - sharded admission intake (III.B row 6, MAY) — os-7953612b —
-  **backlog** (filed; not conformance-blocking)
+  **backlog** (filed; a true extra whose absence conforms: the row is
+  a permission, and os-9ef9ab34 marks it met by abstention, since the
+  charter's clause binds a system that shards and this one does not.
+  Until that card, the row sat `open` on the grounds that nobody had
+  claimed it, which made `seed doctor`'s `complete: true` unreachable
+  and would have blocked the Phase 13 exit record and promotion with
+  it)
 - dashboard tiers beyond the report — os-f17567a6 — **backlog**
   (filed; not conformance-blocking)
 - the flywheel engine drill's skip path racing TempDir cleanup on
