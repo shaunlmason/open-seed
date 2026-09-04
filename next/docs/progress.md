@@ -2117,8 +2117,11 @@ written by the two implementing sessions, one voice.
   `TestServeApprovalsAreAttributableToTheirSigner` reads
   `decision.recorded` and `plan.approved` back through `serve`'s
   `ledger.show` with the signing key's fingerprint as `actor` and the
-  chain verifying afterward. The row flips to met with the drills as its
-  evidence, the doctor's outstanding rows falling from 30 to 29, and
+  chain verifying afterward. Review on #320 (chatgpt-codex-connector)
+  read charter II.14 back: per-verb policy is allow, deny and
+  require-approval, and the tree has no require-approval mode, so the
+  row moves to `partial` rather than met, its note naming the missing
+  third and os-5781a026, the card that builds it and flips the row;
   `platform.md`'s conformance section names the drills; no non-test
   line moves)
 
@@ -2225,11 +2228,9 @@ switch, so both are escalations. That section is the authority; no
 promotion criteria are restated here.
 
 Of the two rows outside III.R that stood open on the tree's own
-account, III.L row 4 is drilled and flipped by os-8ecef90f (plan #320,
-task PR in review) and III.A row 7 (os-db5cd353) remains, so the doctor
-reads 29 outstanding rows once #320's task merges: 21 Phase 13 rows the
-exit record flips, C.4 and Q.7 routed to the backlog run and to
-promotion, and III.R's seven.
+account, III.L row 4 is drilled for allow and deny by os-8ecef90f (plan
+#320, task PR in review) and moves to `partial`, its require-approval
+mode being os-5781a026's, and III.A row 7 (os-db5cd353) remains.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

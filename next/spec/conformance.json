@@ -929,10 +929,10 @@
           "row": 4,
           "text": "Per-verb policy governs the machine-protocol surface with attributable approvals.",
           "posture": "any",
-          "status": "met",
+          "status": "partial",
           "phase": "13",
           "evidence": "#273 (one dispatch path: the registry, the CLI's own run functions, the envelope verbatim); os-8ecef90f: TestServeRefusesByTheSamePolicyAsTheCLI (a verb the grant table refuses, a filing the declaration's routing rule refuses and a claim its agent ceiling refuses each come back through serve as the failing envelope with the CLI's own code, and each admitted twin lands through the same surface) and TestServeApprovalsAreAttributableToTheirSigner (decision.recorded and plan.approved landed through serve read back through serve's ledger.show with actor equal to the signing key's fingerprint at the reported position, the chain verifying afterward), cmd/seed/serve_policy_test.go",
-          "note": "the surface authenticates nobody and consults the boundary alone, so the policy per verb is admission's and the only attribution an approval landed there has is the chain's signature (plans/os-8ecef90f.md D1); routed to Phase 13 item 6 by the Phase 12 record, re-routed to os-8ecef90f by plans/os-d63c7441.md's table, met there"
+          "note": "allow and deny are drilled on the surface (the grant table, the declaration's ceiling and routing rules) and approvals are attributable to their signer; the require-approval mode charter II.14 defines (approvals as request events resolved attributably in an operator inbox) does not exist in the tree and is os-5781a026's: guardrails.approvals in the declaration, approval.requested/granted/denied, the admission rule that consumes an open approval, approval.pending in the operator's inbox, the machine-surface drill; the row flips to met there (plans/os-8ecef90f.md D3, review on #320)"
         },
         {
           "row": 5,

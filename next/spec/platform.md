@@ -173,7 +173,10 @@ drills pass there.
   with attributable approvals; plans/os-8ecef90f.md): the surface
   authenticates nobody and consults the boundary alone, so the policy
   that governs a verb here is admission's and the only attribution an
-  approval landed here can have is the chain's signature. Drilled by
+  approval landed here can have is the chain's signature. The allow
+  and deny modes are drilled here; the require-approval mode charter
+  II.14 names is os-5781a026's, and the row stands `partial` until it
+  lands. Drilled by
   `TestServeRefusesByTheSamePolicyAsTheCLI` (a verb the grant table
   refuses the caller, a filing the declaration's routing rule refuses
   and a claim its agent ceiling refuses each come back through `serve`

@@ -3829,9 +3829,13 @@ fingerprint, and the chain verifies afterward. A fresh reader
 attributes the approval from the chain alone, which is what the row's
 word buys.
 
-**The row flips here.** The precedent is os-9ef9ab34 (#308), which
-flipped III.B row 6 outside an exit record when the evidence landed;
-plans/os-d63c7441.md D2 governs the Phase 13 rows, and this row is a
-Phase 12 row that plan's own routing table re-routed to this card. The
-exit record cites the flip rather than making it.
+**The row moves to partial, not met (review on #320).** Charter II.14
+defines per-verb policy as allow, deny and require-approval, with
+approvals as request events resolved attributably in an operator
+inbox. The drills here cover allow and deny; the tree has no
+require-approval mode at all, so flipping the row on them would have
+recorded a mode nobody built. The row's note names the missing third
+and os-5781a026, the card that builds it and flips the row on all
+three together. The precedent for moving a row outside an exit record
+is os-9ef9ab34 (#308).
 
