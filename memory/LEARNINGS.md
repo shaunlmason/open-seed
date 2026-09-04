@@ -1933,3 +1933,16 @@ failed step skips the rest of the job.
   bar, and the question was never "which is broken" but "which is the
   authority": the boundary decides what a chain may contain, and a
   conformance bar that disagrees is the thing that moves.
+
+## The packet after the substitution (os-4fde2bdf)
+
+- When one section of a gate document is corrected, re-read the rest
+  in the corrected tense: a question anchored on an event that will
+  no longer happen is an open question nobody can answer.
+- A gate that waits on a human should say exactly what it waits on
+  and that nothing else remains; otherwise every reader re-derives
+  the frontier and some derive it wrong.
+- A configuration block a human will copy belongs under a drill, not
+  in prose alone: the fixture's declaration was linted in CI and the
+  packet's twin was not, and only the twin is the one that ships.
+

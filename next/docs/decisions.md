@@ -3798,3 +3798,34 @@ threading the declaration through the verb and correcting the row's
 wording. Writing this down is the point: the offer rule most likely
 grew from a bar whose contract named something else and whose
 something else was unreachable.
+
+## The packet names what stands between it and the question (os-4fde2bdf)
+
+**A gate document says what the gate waits on.** The packet's section
+4 was honest about the substitution and the rest of the packet still
+spoke in the shadow window's tense, so a reader could not tell what
+remained. The gate paragraph now says it: no Seed deployment for this
+repository exists, standing one up is the operator's because the
+autonomy contract reserves credentials and infrastructure to a human,
+and nothing agent-side remains once the three cards in review merge.
+
+**The question is asked at a position the operator records.** Under
+the substitution no window closes, so the Self-hosting question's
+anchor moved from "the position the shadow window closed" to "the
+position the operator records as the start", and its preconditions
+name the substitution rather than pretend a seventh `met`. Both
+cutovers stay questions the parser models; neither is answered.
+
+**The proposed declaration is held to the tree.** A block the
+operator copies at the cutover should be one CI has linted, so
+`TestPacketDeclarationLints` runs `seed preseed check` on the packet's
+block and fails on a planted unknown tier. The block's home moved from
+a `next/deploy/` file to the root `seed.json`, which is where
+`postures.md` says a deployment declares and where the doctor, the
+remote verbs and the hook read.
+
+**The frontier is re-derived from the cards.** Five merged cards read
+`done` with their PRs; the three in review are named with the rows
+they flip and the doctor's count once they merge; the operator's
+decision is stated once, in order: the deployment, then the answer.
+

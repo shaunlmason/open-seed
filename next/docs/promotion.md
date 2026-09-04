@@ -48,6 +48,23 @@ escalations). The deviation is named in section 4. The two cutovers
 remain the reserved escalations they are; the packet presents them
 and stops.
 
+What stands between this packet and the Self-hosting question is not
+agent work. No Seed deployment for this repository exists: no
+`seed.json` at the root, no `refs/seed/ledger` on the remote, no
+`seed-admit` hook on a git server, no root key at a genesis. Standing
+one up is the operator's, because the autonomy contract reserves
+credentials and infrastructure to a human: the ledger remote whose
+`pre-receive` is the `seed-admit` binary (or, under the forge-hosted
+posture, the admission service and the git credential it pushes
+with), the operator's key as the governance root, one enrolled key per
+lane, as "The deployment" below spells out and as the declaration
+block there, linted under `make check`, declares. Once the three cards
+in review merge (os-8ecef90f for III.L row 4, os-b5051f2e for the
+audit's ceiling arm, os-db5cd353 for III.A row 7), nothing agent-side
+remains open at this gate: every criterion's evidence is on `main`,
+and the next act is the operator's deployment, then the operator's
+answer.
+
 ## 1. Loop-completeness
 
 Status: met
@@ -197,6 +214,7 @@ existing in the tree rather than by a claim about it.
 |---|---|---|
 | `TestPacketWritesTheCutoverDown` | `internal/promotion/promotion_test.go` | #294 |
 | `TestPacketCitesRealDrills` | `internal/promotion/promotion_test.go` | #294 |
+| `TestPacketDeclarationLints` | `cmd/seed/promotion_cli_test.go` | #327 |
 
 ## 6. Core conformance
 
@@ -300,9 +318,12 @@ holder's open claims on the revocation alone, landed in #267.
 
 ## The shadow run, as a protocol
 
-A proposal for criterion 4, in the build plan's words: "Seed
-coordinates a declared slice of this repository's own cards beside v1
-for a stated window, with any divergence reconciled and recorded."
+The protocol the operator substituted the accelerated simulation for
+(section 4), preserved as the record of what was proposed and what
+was traded away. A proposal for criterion 4, in the build plan's
+words: "Seed coordinates a declared slice of this repository's own
+cards beside v1 for a stated window, with any divergence reconciled
+and recorded."
 Every line below is a default the operator can amend; none of it is
 in force until the operator says so. This section presents; it does
 not schedule. No window opens, no slice is declared and no deployment
@@ -310,10 +331,14 @@ is created until the operator accepts or amends what is written here,
 which is what build plan §5 asks of the packet: present the evidence
 and stop.
 
-**The deployment.** A declaration for this repository, kept under
-`next/deploy/` and passed to every verb by `--config` (or
-`SEED_CONFIG`), in the shape `seed init --preseed` reads
-(`next/spec/postures.md`, "The preseed"). The proposed content:
+**The deployment.** What the cutover needs whether or not a window
+runs, since the ledger authority moves to is this deployment either
+way: a declaration for this repository at the root (`seed.json`,
+`posture.DeclarationPath`, the file the doctor, the remote verbs and
+the hook read), in the shape `seed init --preseed` reads
+(`next/spec/postures.md`, "The preseed"). The proposed content, which
+`TestPacketDeclarationLints` holds to `seed preseed check` so the block
+the operator copies is one `make check` has linted:
 
 ```json
 {
@@ -456,11 +481,13 @@ is the entry-point switch, and renaming the later publish does not
 authorize the earlier authority switch. Agents drive the work up to
 each gate, present this packet, and stop.
 
-**Self-hosting.** Question: does this repository's own development move to Seed at the position the shadow window closed, on the terms in "The cutover and the rollback"?
+**Self-hosting.** Question: does this repository's own development move to Seed at the position the operator records as the start, on the terms in "The cutover and the rollback", with criterion 4 standing `partial` under the substitution section 4 records?
 
-Its preconditions are the seven criteria all `met`, the shadow window
-closed with every divergence reconciled, and the compromised-actor
-drill green on the commit that carries the cutover.
+Its preconditions are six criteria `met` and the fourth `partial` by
+the operator's own substitution, a deployment standing at the enforced
+self-hosted posture ("The deployment"), the v1 state anchored and
+imported into that deployment's ledger at the flip, and the
+compromised-actor drill green on the commit that carries the cutover.
 
 **Distribution.** Question: does Seed become what new users clone, and from which repository?
 

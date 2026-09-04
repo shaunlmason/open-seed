@@ -1930,7 +1930,7 @@ written by the two implementing sessions, one voice.
 - at 200 writers, one storm pushed a chain whose new record cited a
   stale tip (`bad_prev` at the hook, classified as policy and not
   retried), once in three runs, the one across midnight UTC —
-  os-5063e8ba — **in review** (task PR against plan #299: the seventh
+  os-5063e8ba — **done** (#300 against plan #299: the seventh
   race shape, a hook's `bad_prev` at or beyond the position the
   client appended, re-linked from a fresh fetch and counted as
   `Result.Relinked`; the rejected commit's own tree beside the work
@@ -2003,7 +2003,7 @@ written by the two implementing sessions, one voice.
 - at 200 writers, one storm pushed a chain whose new record cited a
   stale tip (`bad_prev` at the hook, classified as policy and not
   retried), once in three runs, the one that crossed midnight UTC —
-  os-5063e8ba — **in review** (#300 against plan #299, merged;
+  os-5063e8ba — **done** (#300 against plan #299, merged;
   filed from the scale benchmark's second measurement; P1: a lost append is what III.C row 4 forbids; the
   drill first, then the fix, and the loop re-linking on a `bad_prev`
   whose cited tip is not the tip it fetched)
@@ -2026,7 +2026,7 @@ written by the two implementing sessions, one voice.
 
 - the five-bar audit's unreserved-spend bar counted `budget.reserved`
   against a protocol that emits `budget.reserve` — os-b86dab4c —
-  **in review** (task PR against plan #304: the bars name the
+  **done** (#306 against plan #304: the bars name the
   protocol's constants, the deliberate exits come from
   `transition.IsExit` instead of the audit's own copy, and
   `AuditedVerbs` is held to `admit.CatalogVerbs()` by a drill, which is
@@ -2043,7 +2043,7 @@ written by the two implementing sessions, one voice.
 - `seed receipt verify --run` takes its own cold `make check`, and cold
   collection swings a few tenths, so at a 0.1 margin above the 90 gate a
   receipt green when written could verify red as a `receipt mismatch`
-  — os-f262585a — **in review** (task PR against plan #292: tests only,
+  — os-f262585a — **done** (#314 against plan #292: tests only,
   no gate, ceiling or behavior change. Measuring first showed the plan's
   premise had already moved: the tree read 90.99 cold, not the ~90.1 the
   plan describes, because os-ad610334 and the cards after it landed. The
@@ -2070,7 +2070,7 @@ written by the two implementing sessions, one voice.
 ## The audit's budget model (os-88df7ab2)
 
 - the unreserved-spend bar counted a reservation's occurrence, not an
-  open valid one — os-88df7ab2 — **in review** (task PR against plan
+  open valid one — os-88df7ab2 — **done** (#311 against plan
   #309 with amendment #310: the bar asks `admit.RunStartValid` per
   folded start, so a run is fenced to the reservation it cited and not
   to whichever one happens to be open, and a start the fold could not
@@ -2083,7 +2083,7 @@ written by the two implementing sessions, one voice.
 ## The audit's guardrail bar (os-aaec6a3c)
 
 - the bar required an offer the boundary does not — os-aaec6a3c —
-  **in review** (task PR against plan #312: admission's claim arms are
+  **done** (#313 against plan #312: admission's claim arms are
   authoring isolation and the lifecycle transition and none reads the
   subject's offers, so an unoffered claim is no breach and
   `internal/history`'s admission-grade chains stop tripping the bar;
@@ -2178,23 +2178,44 @@ masks rather than the document changes, and one is in
 so the stage does not read `plans/` at all and the correction is carded
 as os-0dba8c6a for a plan PR.
 
-**Next action: the operator's answer at the promotion gate.**
-`next/docs/promotion.md` presents the seven criteria of build plan
-§5: 1, 2, 3, 5, 6 and 7 met, 4 reserved on one question, the POSIX
-git server that hosts the shadow ledger with the hook, the run at the
-enforced self-hosted posture the criteria name. Until that answer the agent-side work is to merge the
-open PRs as they clear review (#300; #304 then its fix; #292), fix the
-scale defect (os-5063e8ba) so the weekly run can be green (III.C
-row 4 stays `partial` on it: the charter's clause is sharded
-intake's, os-7953612b), and keep the packet's citations true. After the answer: the
-shadow run per the packet's protocol, its measurements recorded into
-the packet by follow-up cards, the two escalated cutovers, and only
-then the Phase 13 exit record. The derivation, stated rather than
-read off a summary: every Phase 13 item has a merged PR; the exit
-line's remaining criterion, the conformance report showing Part III
-complete, cannot be met by any agent act, because the table routes
-III.R's rows to measurements the shadow run supplies and the shadow
-run needs a deployment only the operator can authorize.
+**Next action: the operator's deployment, then the operator's
+answer.** `next/docs/promotion.md` presents the seven criteria of
+build plan §5: 1, 2, 3, 5, 6 and 7 met, 4 `partial` by the operator's
+own substitution of the credential-free accelerated simulation for
+the live seven-day shadow run (os-f79bc5a0, #316, the deviation named
+in the packet's section 4; every III.R row stays `not measured`,
+because the simulation raises no escalation and runs no real backlog
+for a real week). The agent-side remainder at the gate is three cards
+in review, each a plan PR and a draft task PR waiting on the owner's
+merge: os-8ecef90f (plan #320, task #321) drills III.L row 4 on the
+machine-protocol surface and flips it; os-b5051f2e (plan #322, task
+#323) gives the five-bar audit's guardrail bar its ceiling arm under
+the declaration `seed ledger audit --config` reads; os-db5cd353 (plan
+#324, task #325) adds `artifact.erased`, so an erasure is an
+attributable event, and flips III.A row 7; this card (os-4fde2bdf,
+plan #326) re-derives the packet and this frontier. Once they merge
+the doctor reads 28 outstanding rows: the 21 Phase 13 rows the exit
+record flips, C.4 and Q.7 routed to the backlog's scale run and to
+promotion, and III.R's seven, none of which an agent act can supply.
+What stands between the packet and the Self-hosting question is the
+deployment, which the autonomy contract reserves to the operator: a
+ledger remote whose `pre-receive` is the `seed-admit` binary (or the
+admission service and its credential under the forge-hosted posture),
+the operator's key as the governance root, one enrolled key per lane,
+declared in the block the packet's "The deployment" carries and
+`TestPacketDeclarationLints` holds to `seed preseed check`. After the
+deployment: the v1 state anchored and imported at the flip, the
+cutover PR the packet's "The cutover and the rollback" writes down,
+the operator's answer to the Self-hosting question at the position
+they record, and only then the Phase 13 exit record (os-d63c7441, plan
+#288 with #315, blocked on this gate), whose plan writes it when the
+doctor reports complete, which III.R makes reachable after the
+cutovers, not before. The derivation, stated rather than read off a
+summary: every Phase 13 item has a merged PR; the exit line's
+remaining criterion, the conformance report showing Part III complete,
+cannot be met by any agent act, because the table routes III.R's rows
+to measurements a real deployment supplies and the deployment needs
+credentials and infrastructure only the operator can grant.
 
 **The destination is promotion (spin-out)**, defined in
 `docs/next-build-plan.md` §5 (merged #169, card os-768361cc) as two
