@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-83bc3d84",
   "merge_base": "daecac0959688e7c6df2c777716eb737f9c72318",
-  "head": "b34436e075267686ebc05f057dcfb6bfa78e8e6e",
+  "head": "bd8c430e22f5d87bf9e51045eb3c20c941a16dd2",
   "plan_path": "plans/os-83bc3d84.md",
   "plan_sha256": "b27c9c21572b385d17236467fa5d4d54aeb15e920c42a5fe011df30297eec438",
   "diff_files": [
@@ -22,7 +22,7 @@
     "next/spec/conformance.json",
     "next/spec/conformance.md"
   ],
-  "diff_sha256": "284e6646f6cbfafcb71e915a04dec4b9066ead3a0f87b2973fab279a3449f8f2",
+  "diff_sha256": "54a9cce50f729c875b03bd46923eb2dea9229abad4d5cf94c70e068f5a0136b7",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/conformance/ -count=1 \u0026\u0026 go test ./internal/docs/ ./cmd/seed/ -run 'Conformance|Docs|Doctor' -count=1",
