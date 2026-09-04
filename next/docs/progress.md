@@ -1935,13 +1935,13 @@ written by the two implementing sessions, one voice.
 - dashboard tiers beyond the report — os-f17567a6 — **backlog**
   (filed; not conformance-blocking)
 - the flywheel engine drill's skip path racing TempDir cleanup on
-  macOS — os-222189a3 — **backlog** (filed from #290's macOS leg;
-  tests only)
+  macOS — os-222189a3 — **done** (#302 against plan #301; tests
+  only)
 - at 200 writers, one storm pushed a chain whose new record cited a
   stale tip (`bad_prev` at the hook, classified as policy and not
   retried), once in three runs, the one that crossed midnight UTC —
-  os-5063e8ba — **backlog** (filed from the scale benchmark's second
-  measurement; P1: a lost append is what III.C row 4 forbids; the
+  os-5063e8ba — **planned** (plan #299 open, draft task PR #300;
+  filed from the scale benchmark's second measurement; P1: a lost append is what III.C row 4 forbids; the
   drill first, then the fix, and the loop re-linking on a `bad_prev`
   whose cited tip is not the tip it fetched)
 
@@ -1950,7 +1950,7 @@ written by the two implementing sessions, one voice.
 - the flywheel engine drill's skip path races `t.TempDir`'s cleanup on
   macOS (`unlinkat .../.git/objects: directory not empty`), reporting
   a skipped drill as a failed one on #290's macOS leg — os-222189a3 —
-  **in review** (task PR against plan #301: `requireEngine` reads the
+  **done** (#302 against plan #301: `requireEngine` reads the
   pin from the source tree, the same shim and lock `instantiate`
   copies, and runs as the drill's first statement, so a skip builds
   nothing: twelve git spawns on the skip path before, none after;
