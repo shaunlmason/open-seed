@@ -31,8 +31,13 @@ the task branch carries the replacement text and merges forward when
 - **The report's `refusals` section counts** (`internal/project`
   `refusalsSection`): refused and admitted, breakdowns by code and
   verb, the position span, the four-decimal rate; version "10"
-  introduced it and the report's version register is at "16"
-  (`projections.md`).
+  introduced it and the report's version register is at "17" (the
+  adapters section, `projections.md`; `project.Report().Version`).
+- **The blind retry is already defined** (`modes.md`, "Convergence"):
+  the same act refusing with the same code on consecutive iterations
+  from a position that did not advance; an admitting next attempt is
+  the first convergence arm. The loop drills assert it from a
+  transcript; nothing measures it from a deployment's journal.
 - **The trajectory recorder reads the journal's refused lines** for a
   lane's decision points (`internal/trajectory`) and ignores fields it
   does not frame; the recorder's corpus is a separate artifact.
@@ -71,18 +76,27 @@ the task branch carries the replacement text and merges forward when
   cannot name a payload (none exists today) would journal without a
   digest rather than journal nothing: the rate's population must not
   shrink because a field is unknown.
-- **D3 — the report counts blind retries.** In `refusalsSection`, for
+- **D3 — the report counts blind retries, by the established
+  definition.** `modes.md` already defines the blind retry the loop
+  drills assert against: the same act refusing with the same code on
+  consecutive iterations from a position that did not advance, while
+  an admitting next attempt is the first convergence arm. The report
+  reads the same thing from the journal: in `refusalsSection`, for
   each refused entry that carries a digest, the same actor's next
-  journaled attempt on the same subject, whatever its outcome, is a
-  blind retry when its digest equals the refusal's; each refused entry
-  counts at most once. The section gains `blind_retries` (the count),
-  `blind_retries_by_code` (keyed by the refusal's code, so a caller can
-  read the retries the optimistic loop makes on `contention` apart from
-  the retries of a `fenced_out` or `invalid_transition` refusal) and
-  `undigested` (the lines that carry no digest and so could not be
-  judged). The report version moves to "17" (`projections.md`'s
-  register), the cache generation does not, since the cache mirrors
-  the input-free report and never carries this section.
+  journaled attempt on the same subject is a blind retry when its
+  digest equals the refusal's, it is refused with the same code, and
+  its stamped position equals the refusal's; each refused entry counts
+  at most once. An admitted next attempt is convergence, a refusal
+  with another code or from an advanced position is a new answer to a
+  new state, and neither is blind. The section gains `blind_retries`
+  (the count), `blind_retries_by_code` (keyed by the code, so the
+  optimistic loop's `contention` spins read apart from a `fenced_out`
+  or `invalid_transition` act re-sent unchanged) and `undigested` (the
+  lines that carry no digest and so could not be judged). The report
+  version moves from "17" to "18" (`projections.md`'s register; the
+  four drills that pin the number move with it); the cache generation
+  does not, since the cache mirrors the input-free report and never
+  carries this section.
 - **D4 — the audit's description names the count.** `simulation.md`'s
   guardrail bar replaces the "unmet and unmeasured" sentence with the
   clause's evidence: a refused append never lands, so the clause is
@@ -145,9 +159,11 @@ Nothing else. NOT `next/internal/simulate/**`, NOT
    naming the line.
 2. **The report tells a blind retry from a corrected one.** A refusal
    followed by the same actor's same-digest attempt on the same
-   subject counts as one blind retry under the refusal's code; a
-   corrected retry counts none; an undigested line is reported as
-   such; the report version reads "17".
+   subject, refused with the same code from the same position, counts
+   as one blind retry under that code; a corrected retry, an admitted
+   next attempt (convergence), a refusal with another code or one from
+   an advanced position count none; an undigested line is reported as
+   such; the report version reads "18".
 3. **The audit's description names the count** as the clause's
    evidence, and says the simulation journals nothing; `seed docs
    check` clean.
