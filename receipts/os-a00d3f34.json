@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-a00d3f34",
   "merge_base": "7f15ce0340b86e079b18b41d5ab0bfea407fef6d",
-  "head": "1d4b6fbbd7d6f2b897c93c7fb4f46be4da53ee89",
+  "head": "e01d783d0762ce59a1b7c953749db59dbac4945d",
   "plan_path": "plans/os-a00d3f34.md",
   "plan_sha256": "c07c454d2c4e7084c86623e33f3ba0590284102ff85a8123e3d785e56a16b3df",
   "diff_files": [
@@ -18,7 +18,7 @@
     "next/perf/budgets-scale.json",
     "next/spec/checkpoints.md"
   ],
-  "diff_sha256": "54f946af2f03664fbe0537f75abc66d2ea98b9315606a9f8a10fe2437f325151",
+  "diff_sha256": "e5b49524c829a32bb4a825767e6f0d3d30acea137e19f096f8d9fd3a06322f5e",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/perfgate/ ./internal/protections/ -count=1",
