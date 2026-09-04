@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
+	"github.com/shaunlmason/open-seed/next/internal/approval"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
@@ -36,6 +37,9 @@ func TestEnvelopeMapsRefusals(t *testing.T) {
 		{&admit.LevelShortError{}, envelope.ExitNotIndependent, "level_short"},
 		{&admit.NotIndependentError{}, envelope.ExitNotIndependent, "not_independent"},
 		{&admit.VerdictError{Code: "rubric_red"}, envelope.ExitChecksRed, "rubric_red"},
+		{&approval.Error{Verb: approval.GrantedVerb}, envelope.ExitInvalidTransition, "approval_refused"},
+		{&admit.ApprovalRequiredError{Verb: "claim.taken"}, envelope.ExitInvalidTransition, "approval_required"},
+		{fmt.Errorf("wrapped: %w", &admit.Refusal{Rule: "require-approval", Err: &admit.ApprovalRequiredError{Verb: "claim.taken"}}), envelope.ExitInvalidTransition, "approval_required"},
 		{&transition.PlanRequiredError{}, envelope.ExitPlanRequired, "plan_required"},
 		{&ledger.Failure{Position: 2, Reason: "bad_prev", Detail: "x"}, envelope.ExitChainInvalid, "chain_invalid"},
 		{&ledger.Failure{Position: 2, Reason: ledger.ReasonVersionUnsupported, Detail: "x"}, envelope.ExitVersionMismatch, ledger.ReasonVersionUnsupported},

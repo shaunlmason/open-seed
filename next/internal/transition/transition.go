@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/approval"
 	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
@@ -951,6 +952,131 @@ type Fold struct {
 	// regressions keep the maximum count, so tolerated history never
 	// lowers the monotonic bar.
 	milestones map[string]milestoneFact
+	// approvals is every approval.requested applied, in order, with
+	// its answer and the act that spent it (plans/os-5781a026.md D3):
+	// the require-approval mode's facts, kept beside the lifecycle
+	// like the requests. ApprovalAnomalies counts the malformed ones.
+	approvals         []ApprovalFact
+	ApprovalAnomalies int
+}
+
+// ApprovalFact is one per-verb approval request as the fold keeps it
+// (plans/os-5781a026.md D3): who asked, on which subject, for which
+// verb by which actor and why; the operator's answer when one landed;
+// and the position of the act that spent a grant, since one approval
+// admits one act.
+type ApprovalFact struct {
+	Pos        int
+	TS         string
+	Requester  string
+	Subject    string
+	Verb       string
+	Actor      string
+	Reason     string
+	Answered   *int
+	Granted    bool
+	Answerer   string
+	ConsumedAt *int
+}
+
+// Open reports whether the grant still admits an act: answered, granted
+// and not yet spent.
+func (a ApprovalFact) Open() bool {
+	return a.Answered != nil && a.Granted && a.ConsumedAt == nil
+}
+
+// Approvals is every approval request the fold applied, in chain order.
+func (f *Fold) Approvals() []ApprovalFact { return append([]ApprovalFact(nil), f.approvals...) }
+
+// ApprovalAt finds an approval request by its position.
+func (f *Fold) ApprovalAt(pos int) (ApprovalFact, bool) {
+	for _, a := range f.approvals {
+		if a.Pos == pos {
+			return a, true
+		}
+	}
+	return ApprovalFact{}, false
+}
+
+// OpenApproval finds the oldest open grant for an act: on the subject,
+// naming the verb and the actor, granted and not yet spent
+// (plans/os-5781a026.md D3). An unanswered or denied request admits
+// nothing.
+func (f *Fold) OpenApproval(subject, verb, actor string) (ApprovalFact, bool) {
+	for _, a := range f.approvals {
+		if a.Subject == subject && a.Verb == verb && a.Actor == actor && a.Open() {
+			return a, true
+		}
+	}
+	return ApprovalFact{}, false
+}
+
+// OpenApprovals is every open grant for an act, oldest first: what the
+// admission rule re-judges position-accurately before trusting any of
+// them, since the tolerant fold records a well-shaped raw push.
+func (f *Fold) OpenApprovals(subject, verb, actor string) []ApprovalFact {
+	var out []ApprovalFact
+	for _, a := range f.approvals {
+		if a.Subject == subject && a.Verb == verb && a.Actor == actor && a.Open() {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// PendingApprovals is every unanswered request on the subject, oldest
+// first: what the answer verbs derive their citation from and what
+// the obligations projection owes the operator.
+func (f *Fold) PendingApprovals(subject string) []ApprovalFact {
+	var out []ApprovalFact
+	for _, a := range f.approvals {
+		if a.Subject == subject && a.Answered == nil {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+func (f *Fold) foldApproval(pos int, e *event.Event) {
+	switch e.Verb {
+	case approval.RequestedVerb:
+		p, err := approval.ParseRequested(e.Subject, e.Payload)
+		if err != nil {
+			f.ApprovalAnomalies++
+			return
+		}
+		f.approvals = append(f.approvals, ApprovalFact{Pos: pos, TS: e.TS, Requester: e.Actor, Subject: e.Subject, Verb: p.Verb, Actor: p.Actor, Reason: p.Reason})
+	case approval.GrantedVerb, approval.DeniedVerb:
+		_, cited, err := approval.ParseAnswer(e.Verb, e.Subject, e.Payload)
+		if err != nil {
+			f.ApprovalAnomalies++
+			return
+		}
+		for i := range f.approvals {
+			a := &f.approvals[i]
+			if a.Pos == cited && a.Answered == nil && a.Subject == e.Subject {
+				at := pos
+				a.Answered, a.Granted, a.Answerer = &at, e.Verb == approval.GrantedVerb, e.Actor
+				return
+			}
+		}
+		f.ApprovalAnomalies++
+	}
+}
+
+// consumeApproval spends the oldest open grant the record matches: the
+// first record on the grant's subject whose verb and actor it names,
+// at that record's position (plans/os-5781a026.md D3), so one approval
+// admits one act and a second act needs a second request.
+func (f *Fold) consumeApproval(pos int, e *event.Event) {
+	for i := range f.approvals {
+		a := &f.approvals[i]
+		if a.Subject == e.Subject && a.Verb == e.Verb && a.Actor == e.Actor && a.Open() {
+			at := pos
+			a.ConsumedAt = &at
+			return
+		}
+	}
 }
 
 // PlanApproved reports the subject's approved-plan anchor, if any.
@@ -1002,6 +1128,18 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		if e.Verb == "request.filed" || e.Verb == "request.answered" {
 			f.foldRequest(pos, e)
 			continue
+		}
+		// The per-verb approval (plans/os-5781a026.md D3): additive
+		// catalog growth active from seed/1, beside the lifecycle;
+		// every other activated record spends the grant it matches.
+		if approval.IsApprovalVerb(e.Verb) {
+			if version.Activated(e.V) {
+				f.foldApproval(pos, e)
+			}
+			continue
+		}
+		if version.Activated(e.V) {
+			f.consumeApproval(pos, e)
 		}
 		if !version.Activated(e.V) {
 			// Lifecycle semantics activate at seed/1 and stay on at

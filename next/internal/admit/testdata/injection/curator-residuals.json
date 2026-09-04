@@ -35,6 +35,11 @@
       "verb": "message.sent",
       "why_admitted": "standing-only: any enrolled active actor appends it",
       "consequence": "RELAYS text, bounded by the classification lint at 512 bytes per string; the same residual the dispatcher's table names"
+    },
+    {
+      "verb": "approval.requested",
+      "why_admitted": "standing-only: the per-verb approval request grants nothing, so any enrolled active actor files one (plans/os-5781a026.md D2)",
+      "consequence": "puts a request in the operator's inbox (approval.pending, owed by lane:operator) naming a catalog verb, an enrolled actor and a one-line reason; admits nothing until the operator's grant, which is spent by one act by the actor named, so a persuaded curator can only ask, attributably; the same residual the dispatcher's table names"
     }
   ]
 }

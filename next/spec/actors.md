@@ -154,6 +154,8 @@ ending standing is deferred until the catalog grows a verb for it.
 | `contract.cancelled` | `operator` (until a real need appears) |
 | `escalation.raised` | `claim`, `dispatch`, `verdict`, `supervise`, `operator`, `curate` (any lane may raise blocked(needs-you) per the charter, and breadth is safe because raising a question grants nothing: the offer.published argument. A raised contract leaves blocked only through decision.recorded or a citing cancellation, so a raiser can stop work and hand a human the decision, never move it, escalation.md; the curator joined the row with its proposal grant, curation.md) |
 | `decision.recorded` | `operator` (the fourth no-fallback row: the charter names escalations a gate humans hold, so a dispatch fallback would let a machine lane answer a human gate, escalation.md) |
+| `approval.granted` | `operator` (the per-verb approval's grant, from seed/1 as additive catalog growth: an approval is a gate a human holds, the decision.recorded posture, and a machine-lane fallback would let the governed lane answer for itself; the request verb itself has no row — standing only, like request.filed — since asking grants nothing; [protocol.md](protocol.md), "Per-verb approval") |
+| `approval.denied` | `operator` (the same row's other answer) |
 | `plan.proposed` | `claim`, `operator` (the claim holder plans; the fence matrix applies) |
 | `plan.approved` | `operator` (an external-fact observation, the merge.observed posture) |
 | `progress.milestone` | `claim`, `operator` (the claim lane's coarse summarization fact; the fence matrix applies) |

@@ -1933,3 +1933,36 @@ failed step skips the rest of the job.
   bar, and the question was never "which is broken" but "which is the
   authority": the boundary decides what a chain may contain, and a
   conformance bar that disagrees is the thing that moves.
+
+## Require-approval per verb (os-5781a026)
+
+- The raw seam runs no admission. `ledger append --ledger` verifies and
+  appends; the rules run at the hook, at the remote loop and in the loop
+  verbs' pre-flight. A drill that expects a boundary refusal from a
+  local raw append is testing the wrong surface: put the refusal on the
+  remote path or on a loop verb, and use the raw append to show the
+  fold's tolerance instead.
+- A projection's identity rule outranks a plan's row count. The
+  obligations projection keys rows by (subject, kind) because the
+  situation read's delta does; a plan line that says "one row per
+  request" would have produced two rows with one key. When a plan
+  detail collides with a normative invariant the tree already states,
+  follow the invariant and record the refinement in `decisions.md`.
+- A new verb family lands in eight places, and the drills find each
+  one: the keyring row and the spec table it is parsed from, the
+  affordance catalog and the completeness list, the two reachable-set
+  residual tables (dispatcher and curator: a standing-only verb is
+  reachable by every lane), the walk's stations, the generated docs.
+  Run the package suites before writing prose; the failures are the
+  checklist.
+- A governance root has no roster kind. Any rule that reads
+  `Entry.Kind` must decide what an empty kind means, and "governed like
+  an agent" is wrong for the key that answers every gate.
+- The laundering countermeasure applies to every folded fact that
+  authorizes, and a plan review will find the omission if the plan does
+  not design it in: a grant the fold keeps is a well-shaped raw push
+  until its signer and its citation are re-judged at their positions.
+  Write the `Valid` function beside the fold accessor from the start,
+  and have the rule iterate the open facts through it rather than take
+  the oldest.
+

@@ -116,6 +116,22 @@ func Capabilities() []string {
 	}
 }
 
+// Kinds is the roster-kind vocabulary an enrollment asserts
+// (SEED-NEXT.md Part II "Enrollment"): the distinction the agent-only
+// guardrails read. One place, so the enrollment shape, the ceiling and
+// the approvals lint cannot disagree on what a kind is.
+func Kinds() []string { return []string{"human", "agent", "service"} }
+
+// KnownKind reports whether the name is a roster kind.
+func KnownKind(kind string) bool {
+	for _, k := range Kinds() {
+		if k == kind {
+			return true
+		}
+	}
+	return false
+}
+
 // Known reports whether the name is a capability in the vocabulary.
 func Known(capability string) bool {
 	for _, c := range Capabilities() {
@@ -206,6 +222,14 @@ func AcceptedCapabilities(verb string) []string {
 		// (plans/os-48df10a2.md D1); request.filed itself is standing-only,
 		// like message.sent, and appears in no case.
 		return []string{CapDispatch, CapOperator}
+	case "approval.granted", "approval.denied":
+		// The per-verb approval's answers (plans/os-5781a026.md D2):
+		// operator only, the decision.recorded posture, because an
+		// approval is a gate a human holds and a machine-lane fallback
+		// would let the governed lane answer for itself.
+		// approval.requested is standing-only, like request.filed,
+		// since asking grants nothing, and appears in no case.
+		return []string{CapOperator}
 	// The supervisor lane (plans/os-c61c3392.md): offers invite
 	// claims and grant nothing, so the standard operator fallback
 	// stands.
@@ -665,7 +689,7 @@ func (s *State) Advance(rec *event.Record) error {
 		if err != nil || len(raw) != ed25519.PublicKeySize {
 			return fmt.Errorf("%s key must be the raw 32-byte ed25519 public key in hex", e.Verb)
 		}
-		if p.Kind != "human" && p.Kind != "agent" && p.Kind != "service" {
+		if !KnownKind(p.Kind) {
 			return fmt.Errorf("%s kind %q is not one of human, agent, service", e.Verb, p.Kind)
 		}
 		if p.Name == "" {

@@ -44,6 +44,7 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 		packet:      probePacket,
 		position:    fmt.Sprintf("%d", ctx.Count),
 		request:     "0",
+		approval:    "0",
 	}
 	if ctx.Lifecycle != nil {
 		// The request probes' citations, as the production view
@@ -55,6 +56,12 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 				v.request = fmt.Sprintf("%d", r.Pos)
 				break
 			}
+		}
+		// The approval answers' citation, as the production view
+		// carries it (plans/os-5781a026.md D7): the oldest unanswered
+		// request on the queried subject.
+		if pending := ctx.Lifecycle.PendingApprovals(subject); len(pending) > 0 {
+			v.approval = fmt.Sprintf("%d", pending[0].Pos)
 		}
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			v.requestAbout = subject
@@ -137,6 +144,9 @@ func TestAffordanceRegressionClass(t *testing.T) {
 			}
 			fp := fpOf(t, key)
 			v := probeViewAt(ctx, pair.subject)
+			// The request probe names the prober as the actor that
+			// will act, as the production view does.
+			v.actor = fp
 			for _, verb := range listed {
 				fill, ok := synth[verb]
 				if !ok {

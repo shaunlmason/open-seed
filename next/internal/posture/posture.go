@@ -171,12 +171,59 @@ type PathFloor struct {
 	Min    string `json:"min"`
 }
 
+// ApprovalRule is one per-verb require-approval entry (charter §II.14;
+// plans/os-5781a026.md D1): an act of Verb by a key whose roster kind
+// is in Kinds (absent means every non-human kind; human may be named,
+// since a deployment may want a human's act approved too) on a
+// contract whose tier is at or above MinTier (absent means every
+// tier; a system subject has no tier and is governed whenever the
+// verb is) requires an open approval.granted naming the verb and the
+// actor. The vocabularies (catalog verbs, roster kinds, tiers) are
+// checked where the tables are, at `seed preseed check`.
+type ApprovalRule struct {
+	Verb    string   `json:"verb"`
+	Actors  []string `json:"actors,omitempty"`
+	Kinds   []string `json:"kinds,omitempty"`
+	MinTier string   `json:"min_tier,omitempty"`
+}
+
+// Governs reports whether the entry reaches a key: the fingerprints
+// Actors names and the roster kinds Kinds names, and every non-human
+// kind when it names neither. The policy varies by actor (the
+// charter's individual keypair: one agent allowed while another of the
+// same kind needs an approval) and by risk class (the kind, and the
+// tier the caller compares separately). A key with no asserted kind (a
+// governance root, enrolled by genesis rather than by an operator's
+// assertion) is reached by no kind selector, only by its fingerprint:
+// the root is the operator every approval is answered by.
+func (r ApprovalRule) Governs(actor, kind string) bool {
+	for _, a := range r.Actors {
+		if a == actor {
+			return true
+		}
+	}
+	if kind == "" {
+		return false
+	}
+	if len(r.Kinds) == 0 && len(r.Actors) == 0 {
+		return kind != "human"
+	}
+	for _, k := range r.Kinds {
+		if k == kind {
+			return true
+		}
+	}
+	return false
+}
+
 // Guardrails is the declaration's guardrails block: tiers per squad and
 // per path (charter III.L row 1), the agent ceiling reading the
-// roster's kind (III.E row 9).
+// roster's kind (III.E row 9), and the verbs that require an approval
+// (III.L row 4's third mode).
 type Guardrails struct {
-	Squads map[string]SquadGuardrail `json:"squads,omitempty"`
-	Paths  []PathFloor               `json:"paths,omitempty"`
+	Squads    map[string]SquadGuardrail `json:"squads,omitempty"`
+	Paths     []PathFloor               `json:"paths,omitempty"`
+	Approvals []ApprovalRule            `json:"approvals,omitempty"`
 }
 
 // Squad is one declared squad and the lane manifests it runs.
@@ -306,6 +353,22 @@ func (c *Config) AgentCeiling(squad string) (string, bool) {
 		return "", false
 	}
 	return g.MaxAgent, true
+}
+
+// ApprovalRule reads the require-approval entry for a verb
+// (plans/os-5781a026.md D1); ok is false when the guardrails are
+// undeclared or name no entry for it. Policy, not chain validity: no
+// declaration, no rule.
+func (c *Config) ApprovalRule(verb string) (ApprovalRule, bool) {
+	if c == nil || c.Guardrails == nil {
+		return ApprovalRule{}, false
+	}
+	for _, r := range c.Guardrails.Approvals {
+		if r.Verb == verb {
+			return r, true
+		}
+	}
+	return ApprovalRule{}, false
 }
 
 // RacingFor reads a squad's racing opt-in (plans/os-56bee171.md D1):
@@ -507,6 +570,36 @@ func (c *Config) validatePreseed() error {
 		for _, f := range c.Guardrails.Paths {
 			if validProtectedEntry(f.Prefix) != nil || strings.TrimSpace(f.Min) == "" {
 				return fmt.Errorf("guardrails.paths entries are clean repository-relative prefixes with a min tier, got %+v", f)
+			}
+		}
+		// The approvals block's shape (plans/os-5781a026.md D1): one
+		// entry per verb, the verb a token, the kinds distinct tokens,
+		// the floor a token or absent. The vocabularies are the lint's.
+		seenVerb := map[string]bool{}
+		for i, a := range c.Guardrails.Approvals {
+			if strings.TrimSpace(a.Verb) == "" || strings.ContainsAny(a.Verb, " \t\r\n") {
+				return fmt.Errorf("guardrails.approvals[%d].verb names the governed verb, one token, got %q", i, a.Verb)
+			}
+			if seenVerb[a.Verb] {
+				return fmt.Errorf("guardrails.approvals names %q twice: one entry per verb", a.Verb)
+			}
+			seenVerb[a.Verb] = true
+			seenActor := map[string]bool{}
+			for _, f := range a.Actors {
+				if strings.TrimSpace(f) == "" || strings.ContainsAny(f, " \t\r\n") || seenActor[f] {
+					return fmt.Errorf("guardrails.approvals.%s.actors entries are distinct key fingerprints, got %q", a.Verb, f)
+				}
+				seenActor[f] = true
+			}
+			seenKind := map[string]bool{}
+			for _, k := range a.Kinds {
+				if strings.TrimSpace(k) == "" || strings.ContainsAny(k, " \t\r\n") || seenKind[k] {
+					return fmt.Errorf("guardrails.approvals.%s.kinds entries are distinct roster kinds, got %q", a.Verb, k)
+				}
+				seenKind[k] = true
+			}
+			if a.MinTier != "" && (strings.TrimSpace(a.MinTier) == "" || strings.ContainsAny(a.MinTier, " \t\r\n")) {
+				return fmt.Errorf("guardrails.approvals.%s.min_tier is a tier or absent, got %q", a.Verb, a.MinTier)
 			}
 		}
 	}

@@ -16,10 +16,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
+	"github.com/shaunlmason/open-seed/next/internal/approval"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
@@ -74,6 +77,12 @@ type preseedIncomplete struct{ Detail string }
 
 func (e *preseedIncomplete) Error() string { return "preseed incomplete: " + e.Detail }
 
+// fingerprintShape is a key fingerprint as event.Fingerprint renders
+// it: the hex of a sha256, the shape an approvals entry's actor must
+// have (the lint reads no ledger, so enrollment is admission's to
+// judge).
+var fingerprintShape = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
 // lintPreseed holds the declaration's content to the tables: tiers to
 // the vocabulary, lane manifests to the shipped set, the protected
 // surface to the required members, the protocol to the register. It
@@ -101,6 +110,38 @@ func lintPreseed(cfg *posture.Config, lanesDir string) error {
 		for _, f := range cfg.Guardrails.Paths {
 			if _, ok := transition.Tier(f.Min); !ok {
 				return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.paths %s names tier %q, not in the vocabulary", f.Prefix, f.Min)}
+			}
+		}
+		// The approvals block (plans/os-5781a026.md D1): each entry
+		// names a catalog verb that is not an approval verb, roster
+		// kinds and a tier in their vocabularies.
+		for _, a := range cfg.Guardrails.Approvals {
+			if approval.IsApprovalVerb(a.Verb) {
+				return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.approvals names %s, an approval verb: the three are never governed", a.Verb)}
+			}
+			known := false
+			for _, v := range admit.CatalogVerbs() {
+				if v == a.Verb {
+					known = true
+				}
+			}
+			if !known {
+				return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.approvals names %q, which is no catalog verb (next/docs/generated/capabilities.md lists them)", a.Verb)}
+			}
+			for _, f := range a.Actors {
+				if !fingerprintShape.MatchString(f) {
+					return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.approvals.%s names actor %q, which is no key fingerprint (64 hex characters)", a.Verb, f)}
+				}
+			}
+			for _, k := range a.Kinds {
+				if !keyring.KnownKind(k) {
+					return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.approvals.%s names kind %q, not a roster kind (%s)", a.Verb, k, strings.Join(keyring.Kinds(), ", "))}
+				}
+			}
+			if a.MinTier != "" {
+				if _, ok := transition.Tier(a.MinTier); !ok {
+					return &preseedIncomplete{Detail: fmt.Sprintf("guardrails.approvals.%s names min_tier %q, not in the vocabulary (%s)", a.Verb, a.MinTier, strings.Join(transition.TierOrder(), ", "))}
+				}
 			}
 		}
 		// A guardrail squad is a declared team, and an absent teams

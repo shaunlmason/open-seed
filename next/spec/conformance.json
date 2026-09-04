@@ -929,10 +929,10 @@
           "row": 4,
           "text": "Per-verb policy governs the machine-protocol surface with attributable approvals.",
           "posture": "any",
-          "status": "routed",
-          "phase": "12",
-          "evidence": "",
-          "note": "Phase 13 item 6, #273"
+          "status": "met",
+          "phase": "13",
+          "evidence": "#330/os-5781a026 TestServeGovernsAnActByApproval, TestServeApprovalsAreAttributableAndAnsweredOnce, TestPreseedCheckLintsTheApprovalsBlock (cmd/seed/approval_cli_test.go); TestGovernedActNeedsAnOpenGrantAndSpendsIt, TestApprovalShapesAndCitationsHoldRegardlessOfDeclaration, TestAffordancesListAGovernedActExactlyUnderAnOpenGrant (internal/admit/approval_test.go); TestApprovalGrantsAreSpentOnce (internal/transition/approval_fold_test.go); TestApprovalPendingIsOwedByTheOperatorUntilAnswered (internal/obligation/approval_test.go); the allow and deny modes: TestServeRefusesByTheSamePolicyAsTheCLI, TestServeApprovalsAreAttributableToTheirSigner (cmd/seed/serve_policy_test.go, os-8ecef90f), TestAgentCeilingReadsTheRosterKind, TestRoutingIsHeldToTheDeclaredSquads (internal/admit/policy_test.go), the grant drills (internal/admit/grant_test.go)",
+          "note": "charter II.14 names three modes: allow and deny (the grant table; the declaration's ceiling and routing rules) and require-approval (guardrails.approvals, the approval.* verbs, the approval.pending inbox row, os-5781a026); the surface authenticates nobody and consults the boundary, so the policy is admission's and the attribution the chain's signature; routed by Phase 13 item 6 (#273), partial at os-8ecef90f, met here"
         },
         {
           "row": 5,

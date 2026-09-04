@@ -378,6 +378,7 @@ func TestCapabilityVocabulary(t *testing.T) {
 		"submission.made", "merge.observed", "plan.proposed", "plan.approved",
 		"merge.requested", "verdict.rendered", "check.sealed",
 		"contract.returned", "merge.overridden", "offer.published", "request.answered",
+		"approval.granted", "approval.denied",
 		"budget.reserve", "budget.settle", "budget.release",
 		"run.started", "run.settled", "run.interrupted",
 		"curation.deadend.recorded", "curation.hypothesis.proposed", "curation.hypothesis.contested", "curation.lesson.promoted",
@@ -387,7 +388,7 @@ func TestCapabilityVocabulary(t *testing.T) {
 		}
 	}
 	// Ungoverned verbs need active standing only, on both sides.
-	for _, verb := range []string{"message.sent", "system.genesis", "request.filed"} {
+	for _, verb := range []string{"message.sent", "system.genesis", "request.filed", "approval.requested"} {
 		if got := keyring.AcceptedCapabilities(verb); got != nil {
 			t.Errorf("%s must need active standing only, got %v", verb, got)
 		}

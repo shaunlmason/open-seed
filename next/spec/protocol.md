@@ -276,6 +276,12 @@ admission).
 - `message.*` — `sent`, `acked`.
 - `request.*` — inbound proposals from projection surfaces (mirror edits,
   dashboard actions).
+- `approval.*` — `requested` (the request an actor's governed act waits
+  on: the verb, the actor that will act, one line of reason; a fact
+  that changes no state and grants nothing), `granted` and `denied`
+  (the operator's attributable answers, citing the request), the
+  require-approval mode of per-verb policy ("Per-verb approval" below;
+  charter §II.14), additive catalog growth active from `seed/1`.
 - `curation.*` — `deadend.recorded` (the holder's candidate
   observation, on the contract), `hypothesis.proposed` (the curator's,
   on the subject its claim and exceptions derive),
@@ -295,6 +301,83 @@ admission).
   proposal's PR landed the file in the registry, on the shape, citing
   the file and the PR), both from [`flywheel.md`](flywheel.md) as
   additive catalog growth, active from `seed/1`.
+
+## Per-verb approval
+
+Per-verb policy on the machine-protocol surface has three modes
+(charter §II.14, III.L row 4): **allow** and **deny** are the grant
+table ([`actors.md`](actors.md), "Capabilities") and the declaration's
+ceiling and routing rules ([`postures.md`](postures.md), "The
+guardrails are enforced"); **require-approval** is this section
+(plans/os-5781a026.md).
+
+**The declaration names the verbs.** `guardrails.approvals` is a list
+of `{"verb", "actors"?, "kinds"?, "min_tier"?}`: an act of `verb` by a
+key the entry reaches on a contract whose tier is at or above
+`min_tier` (absent means every tier; a `system` subject has no tier
+and is governed whenever the verb is; a birth's tier is its filing's)
+requires an open grant. An entry reaches the fingerprints `actors`
+names and the keys whose roster kind `kinds` names, and every
+non-human kind when it names neither, so the policy varies by actor
+(one agent allowed while another of the same kind needs an approval)
+and by risk class (the kind and the tier). A key with no asserted kind
+(a governance root) is reached by no kind selector, only by its
+fingerprint. A floor outside the tier vocabulary fails closed, the
+ceiling's posture. `seed preseed check` holds each entry to the
+catalog's verbs, fingerprint shape, the roster kinds and the tier
+vocabulary (`preseed_incomplete`). The three approval verbs are never
+governed. Policy, never chain validity: no declaration, no rule; a
+raw-pushed governed act folds as filed and every chain verifies byte
+for byte.
+
+**Three fact verbs, additive from `seed/1`.** `approval.requested`
+`{"verb", "actor", "reason"}` on the contract the act concerns or on
+`system`: the actor named is the key that will act, the requester
+whoever files it (the actor itself in the loop's case, or a lane on
+its behalf), active standing only, like `request.filed`, since asking
+grants nothing; the verb a catalog verb that is not an approval verb,
+the actor an enrolled key, the reason one line of at most 200 bytes.
+`approval.granted` `{"request"}` and `approval.denied` `{"request",
+"reason"}`, operator only with no fallback (`decision.recorded`'s
+row), cite an `approval.requested` on the same subject not yet
+answered; a request is answered once. The shapes and citations hold
+regardless of declaration (`approval_refused`, exit 3), so a
+raw-pushed grant citing nothing folds as an anomaly and admits nothing.
+
+**The fold keeps the facts and spends the grants.** A request is open
+once granted and until the first record on its subject naming its verb
+and actor, which spends it at that record's position: one approval
+admits one act, and a second act needs a second request. An unanswered
+or denied request admits nothing.
+
+**The admission rule.** A record whose verb the declaration governs,
+by a key the entry reaches, on a subject at or above the floor,
+refuses `approval_required` (exit 3, beside `tier_above_ceiling`)
+unless a valid open grant names the verb and the actor; the message
+names the request to file (`seed approval request --subject <s> --verb
+<v> --reason <why>`) and, once one stands, the grant that answers it
+(`seed approval grant --subject <s> --request <position>`). Valid is
+the laundering countermeasure the tree fixes the shape of
+(`admit.ApprovalValid`, the `RunStartValid` posture): the tolerant fold
+records any well-shaped raw push, so before an open grant is trusted
+its request is re-parsed at its position, its answer re-parsed at its,
+and the keyring replayed to the answer's position to hold the answerer
+to active operator standing and the named actor to enrollment; a grant
+that fails any of these is a fact that authorizes nothing, and the act
+refuses as if none stood. The verbs `seed approval request | grant | deny` are loop
+verbs in the shared transport shape (the actor defaults to the
+requesting key; the request to the oldest open one on the subject,
+refused as a choice when several stand), the group `approval` joins
+the registry, and `serve` carries the three as methods.
+
+**The inbox.** An unanswered request is `approval.pending` in the
+obligations projection ([`obligations.md`](obligations.md)), owed by
+`lane:operator`, one row per subject carrying the oldest open request's
+position and timestamp, discharged by either answer; the situation
+read carries it with its age. The affordances draft the request for
+any standing key on a subject the chain knows, the two answers for the
+operator while a request is pending, and a governed act for its actor
+exactly while an open grant stands.
 
 ## Data classification (summary)
 

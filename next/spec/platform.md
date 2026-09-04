@@ -169,3 +169,23 @@ drills pass there.
   `TestFilesystemPathsUseFilepath`, `TestEverySkipNamesItsReason`,
   `TestCRLFSegmentIsRefusedNotNormalized`, `TestDoctorReportsThePlatform`,
   `internal/platform`'s posture table drill.
+- III.L row 4 (per-verb policy governs the machine-protocol surface
+  with attributable approvals; plans/os-5781a026.md): the surface
+  authenticates nobody and consults the boundary alone, so the policy
+  that governs a verb here is admission's, in its three modes, and the
+  only attribution an approval landed here can have is the chain's
+  signature. The require-approval mode ([`protocol.md`](protocol.md),
+  "Per-verb approval") is drilled by
+  `TestServeApprovalsAreAttributableAndAnsweredOnce` (the agent's
+  request landed through `serve` reads back through `serve`'s
+  `ledger.show` with `actor` equal to the requesting key, surfaces as
+  `approval.pending` owed by the operator lane, a claim-granted key's
+  grant refuses `out_of_grant`, the operator's grant reads back with the
+  operator's fingerprint, a request is answered once, and the CLI
+  refuses the same argv with the same codes) and
+  `TestServeGovernsAnActByApproval` (against a remote, where claiming is
+  legal: the agent's governed claim refuses `approval_required` naming
+  the request to file and then the operator's turn, admits under the
+  grant, spends it and refuses again; a contract under the floor and
+  an undeclared deployment admit as today), both in
+  `cmd/seed/approval_cli_test.go`.
