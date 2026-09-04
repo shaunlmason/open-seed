@@ -3717,3 +3717,84 @@ subset: it carries `offer.published` and `claim.taken` but neither
 failed on two verbs the protocol does define. The amendment (#304)
 records the correction rather than quietly widening the drill.
 
+## The unreserved-spend bar judges the run's citation (os-88df7ab2)
+
+**A start is fenced to the reservation it named, not to any open
+one.** The bar kept a boolean set by any `budget.reserve` and cleared
+only by the next claim, so a settled or released reservation went on
+covering later spend, and a reservation admission would have refused
+counted like an admitted one. A start cites one reservation
+(`RunStartFact.Reservation`) and `admit.RunStartValid` judges that
+citation at the start's own position, so the bar asks that predicate
+rather than keeping state of its own. Asking "was some reservation
+open" is weaker than the protocol: a start citing a closed or absent
+reservation passes it whenever an unrelated reservation is open, which
+is the fencing the bar exists to check (review finding on plan #309).
+
+**A start the fold could not place is unfenced, not unjudged.**
+`transition` records a `RunStartFact` only where the payload named a
+fence and a reservation it could read. Counting `run.started` records
+against those facts is what keeps a malformed raw start visible;
+without it the bar would close only half the hole, since the threat
+model is a chain pushed past the boundary.
+
+**The fixtures had to become admission-grade, and that is the finding
+under the finding.** Every synthetic `{}` chain in the drills read as
+unreserved spend under the corrected rule, correctly: no admission
+would have taken them. The covered arm now audits a chain
+`internal/history.Generate` wrote, which carries reservations, runs
+and settles under enrolled lane keys. A bar that judges admission can
+only be exercised by chains admission would take.
+
+**The cost is a number, not a claim.** Each `RunStartValid` replays
+the keyring and the table over the start's prefix and derives a budget
+view there, so the audit is not linear in the chain. The drill audits
+a 40-contract chain of the shadow window's shape and records the
+reading: 410 records in about 130 ms, far inside the ten-second
+ceiling the plan set, so no memoization was added.
+
+## The guardrail bar counts what admission guards (os-aaec6a3c)
+
+**A bar reports what the boundary refuses.** The bar named any
+`claim.taken` that did not follow an `offer.published`. Admission holds
+no such rule: its claim arms are authoring isolation and the lifecycle
+transition, and `LiveOffers` has only two callers, both scheduling
+reads. So a chain the boundary took reported guardrail breaches, which
+is how `internal/history`'s admission-grade fixture tripped the bar on
+every subject while os-88df7ab2 was being implemented.
+
+**The charter's §II.9 binds the supervisor, not the claim.** "Offers
+that get claimed or expire" and "the claim settles at admission"
+describe the scheduling model, and III.H's wakeless poll-only proof
+turns on workers claiming what they find. The other reading, that the
+offer is a precondition and admission has a gap, was rejected: it
+would invalidate the perf history, the migration fixture and every
+drill that claims without offering, and it is written into the plan so
+a reviewer can take it in one place.
+
+**Correcting a bar is not emptying it.** `GuardrailBreaches` had
+exactly one source, so dropping the offer rule alone would have left a
+bar that can never fire and a III.R row 5 guarantee no drill can
+break. Admission does guard the claim path, and the guard is
+chain-visible: it refuses a claim whose actor sealed that subject's
+checks, and the fold carries `Sealed.Signer` and `Sealed.Pos`. The bar
+counts that instead, so it keeps a violation a drill can plant.
+
+**The clauses the bar cannot carry, said once instead of implied.**
+`plans/os-16e55c11.md` D5 worded the bar as "no refusal followed by a
+blind retry; every claim within its ceiling once item 4 lands", and
+neither clause was ever the offer rule, so removing that rule loses no
+coverage: there was none. Neither is reachable here. The ceiling is
+admission policy, not chain validity: the rule reads
+`Context.Declaration` from `seed.json`, so a claim above the ceiling
+folds as filed and the chain verifies byte for byte, while
+`simulate.Audit` takes records alone, which is III.R row 5's own
+contract that the ledger justifies everything. Two byte-identical
+chains would be compliant or not depending on a file the ledger does
+not carry. The blind-retry clause is further out of reach: a refused
+append never lands, so a refusal followed by a retry leaves only the
+retry. Both are carded as os-b5051f2e, which owns the choice between
+threading the declaration through the verb and correcting the row's
+wording. Writing this down is the point: the offer rule most likely
+grew from a bar whose contract named something else and whose
+something else was unreachable.

@@ -2067,8 +2067,43 @@ written by the two implementing sessions, one voice.
   which is the plan's acceptance criterion and something covergate
   cannot supply, since its re-collection engages only below the gate)
 
-## Frontier
+## The audit's budget model (os-88df7ab2)
 
+- the unreserved-spend bar counted a reservation's occurrence, not an
+  open valid one — os-88df7ab2 — **in review** (task PR against plan
+  #309 with amendment #310: the bar asks `admit.RunStartValid` per
+  folded start, so a run is fenced to the reservation it cited and not
+  to whichever one happens to be open, and a start the fold could not
+  place is unfenced by construction; the drills' synthetic `{}` chains
+  gave way to an admission-grade chain from `internal/history`,
+  because a bar that judges admission can only be exercised by chains
+  admission would take; the cost is measured rather than asserted, 410
+  records in about 130 ms against the plan's ten-second ceiling)
+
+## The audit's guardrail bar (os-aaec6a3c)
+
+- the bar required an offer the boundary does not — os-aaec6a3c —
+  **in review** (task PR against plan #312: admission's claim arms are
+  authoring isolation and the lifecycle transition and none reads the
+  subject's offers, so an unoffered claim is no breach and
+  `internal/history`'s admission-grade chains stop tripping the bar;
+  the bar is corrected rather than emptied, since that was its only
+  source, and it now counts the guardrail admission does enforce, a
+  claim by the key that sealed the subject's checks, which the fold
+  makes chain-visible; found while implementing os-88df7ab2, #311)
+- the bar carries neither clause `plans/os-16e55c11.md` D5 contracted
+  for it: no ceiling arm, no blind-retry arm — os-b5051f2e —
+  **backlog** (filed from review on #312, which read the offer rule's
+  removal as losing ceiling coverage. The bar never had any: the
+  ceiling is admission policy, read from `seed.json` through
+  `Context.Declaration`, so a claim above it folds as filed and the
+  chain verifies byte for byte, while `simulate.Audit` takes records
+  alone, which is III.R row 5's own contract. The blind-retry clause is
+  further out of reach, since a refused append never lands. The card
+  owns the choice: thread the declaration through the verb, mirroring
+  admission, or keep the bar ledger-only and correct the row's wording)
+
+## Frontier
 
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,

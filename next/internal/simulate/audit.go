@@ -6,6 +6,9 @@ package simulate
 // that violate it; a clean run leaves every list empty.
 
 import (
+	"sort"
+
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
@@ -74,9 +77,8 @@ func Audit(records []*event.Record) AuditResult {
 	// Per-subject: silent abandonment (a window opened by claim.taken
 	// and never closed by a deliberate exit) and unreserved spend.
 	type window struct {
-		open     bool
-		reserved bool
-		offered  bool
+		open   bool
+		starts []int
 	}
 	subj := map[string]*window{}
 	get := func(s string) *window {
@@ -87,26 +89,27 @@ func Audit(records []*event.Record) AuditResult {
 		}
 		return w
 	}
-	for _, rec := range records {
+	for pos, rec := range records {
 		s := rec.Event.Subject
 		switch rec.Event.Verb {
-		case transition.OfferPublishedVerb:
-			get(s).offered = true
 		case ClaimTakenVerb:
+			// A claim rides a published offer in the scheduling model
+			// (SEED-NEXT.md II.9), but admission does not require one:
+			// its claim arms are authoring isolation and the lifecycle
+			// transition, and nothing there reads the subject's offers.
+			// So an unoffered claim is not a guardrail breach; the bar
+			// reports what the boundary refuses, and the scheduling
+			// concern is internal/eval's ready-with-no-live-offers read
+			// (plans/os-aaec6a3c.md D1, D3).
 			w := get(s)
-			// A claim must ride a published offer: claiming work the
-			// supervisor never offered is a guardrail breach.
-			if !w.offered {
-				res.GuardrailBreaches = append(res.GuardrailBreaches, s)
-			}
 			w.open = true
-			w.reserved = false
 		case transition.BudgetReserveVerb:
-			get(s).reserved = true
+			// Read below, against the protocol's own rule rather than a
+			// boolean kept here (plans/os-88df7ab2.md D1).
+			get(s)
 		case transition.RunStartedVerb:
-			if w := get(s); !w.reserved {
-				res.UnreservedSpend = append(res.UnreservedSpend, s)
-			}
+			w := get(s)
+			w.starts = append(w.starts, pos)
 		}
 		// The deliberate exits are the protocol's, not a copy of them
 		// (D2): transition.IsExit names the four verbs that legally end
@@ -115,6 +118,8 @@ func Audit(records []*event.Record) AuditResult {
 			get(s).open = false
 		}
 	}
+	res.GuardrailBreaches = append(res.GuardrailBreaches, sealedAuthorClaims(tbl, records)...)
+
 	// A subject still open (claim taken, no deliberate exit) is a silent
 	// abandonment; a done contract is closed by construction.
 	for s, w := range subj {
@@ -122,11 +127,128 @@ func Audit(records []*event.Record) AuditResult {
 			res.SilentAbandonments = append(res.SilentAbandonments, s)
 		}
 	}
+	starts := make(map[string][]int, len(subj))
+	for s, w := range subj {
+		starts[s] = w.starts
+	}
+	res.UnreservedSpend = append(res.UnreservedSpend, unreservedSpend(tbl, records, starts)...)
 
 	res.Clean = len(res.ChainViolations) == 0 && len(res.LostUpdates) == 0 &&
 		len(res.SilentAbandonments) == 0 && len(res.GuardrailBreaches) == 0 &&
 		len(res.UnreservedSpend) == 0
 	return res
+}
+
+// unreservedSpend names every subject whose run was not fenced to an
+// open, valid reservation of its own (plans/os-88df7ab2.md D1, D7).
+//
+// A start is fenced only if BOTH halves hold, because the fold and
+// admission answer different questions:
+//
+//   - The fold recorded it. transition records a RunStartFact only
+//     where the payload named a fence and a reservation it could read,
+//     so a run.started the fold did not record cited nothing checkable
+//     and is spend with no fence at all (D7). Counting records against
+//     facts is what keeps a malformed raw start visible.
+//   - admit.RunStartValid accepts it. A start cites ONE reservation
+//     (RunStartFact.Reservation) and that predicate judges the citation
+//     at the start's own position: the strict payload, the fence
+//     against the active claim, the cited reservation's validity, and
+//     BudgetViewAt proving it was not already closed there. Asking
+//     instead "was some reservation open" is weaker than the protocol
+//     and misses the fencing the bar exists to check: a start citing a
+//     closed or absent reservation passes it whenever an unrelated
+//     reservation is open (review finding on plan #309).
+//
+// The cost is the protocol's too, and it is not linear: each
+// RunStartValid replays the keyring and the table over the start's
+// prefix and derives a budget view there, so a chain of n records with
+// r runs and k reservations costs about O(r*k*n) per subject (D6).
+//
+// Where the table could not be built the bar reports nothing: the
+// chain-violation arm has already named that, and a bar cannot judge a
+// chain it cannot fold (D4).
+func unreservedSpend(tbl *transition.Table, records []*event.Record, starts map[string][]int) []string {
+	if tbl == nil {
+		return nil
+	}
+	subjects := make([]string, 0, len(starts))
+	for s := range starts {
+		subjects = append(subjects, s)
+	}
+	// Map iteration is unordered and this list is evidence: one order
+	// on every run.
+	sort.Strings(subjects)
+	var out []string
+	for _, s := range subjects {
+		if len(starts[s]) == 0 {
+			continue
+		}
+		state, ok := tbl.StateAt(records, s)
+		if !ok {
+			// The fold placed no state for a subject that started a
+			// run: nothing fenced any of them.
+			for range starts[s] {
+				out = append(out, s)
+			}
+			continue
+		}
+		// The fold's facts by the position of the record each came
+		// from, so a raw start is judged against its own fact rather
+		// than against a count (D1).
+		fact := make(map[int]transition.RunStartFact, len(state.RunStarts))
+		for _, st := range state.RunStarts {
+			fact[st.Pos] = st
+		}
+		for _, pos := range starts[s] {
+			st, folded := fact[pos]
+			if !folded {
+				// The fold read no fence and no reservation from this
+				// record, so there is no citation to judge: spend with
+				// no fence, named before any citation check (D1).
+				out = append(out, s)
+				continue
+			}
+			if !admit.RunStartValid(records, tbl, s, st) {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
+}
+
+// sealedAuthorClaims names every subject claimed by the key that
+// sealed its checks (plans/os-aaec6a3c.md D1). This is the guardrail
+// admission actually enforces on the claim path — "the key that sealed
+// the subject's checks never implements against them" — and it is
+// visible in the chain alone, because the fold carries the sealing
+// position and signer. A raw push is the case that matters: the
+// boundary would have refused the claim, so a chain that holds one is
+// a chain where the guardrail was bypassed.
+func sealedAuthorClaims(tbl *transition.Table, records []*event.Record) []string {
+	if tbl == nil {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, rec := range records {
+		if rec.Event.Verb != ClaimTakenVerb {
+			continue
+		}
+		s := rec.Event.Subject
+		if seen[s] {
+			continue
+		}
+		state, ok := tbl.StateAt(records, s)
+		if !ok || state.Sealed == nil {
+			continue
+		}
+		if state.Sealed.Signer == rec.Event.Actor {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // foldAll replays the lifecycle verbs through the table, tracking each
