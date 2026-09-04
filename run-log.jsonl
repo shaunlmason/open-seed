@@ -1576,3 +1576,4 @@
 {"actor":"","data":{"title":"next: III.L row 4 — per-verb policy on the machine-protocol surface is not drilled by #273"},"task":"os-8ecef90f","ts":"2026-09-04T15:02:51Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-b74265a5","kind":"comment"},"task":"os-d63c7441","ts":"2026-09-04T15:05:54Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"title":"next: promotion packet — criterion 4 met-by-accelerated-simulation; III.R ledger filled with the simulation's honest measurements"},"task":"os-f79bc5a0","ts":"2026-09-04T15:16:58Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-f79bc5a0","ts":"2026-09-04T15:17:16Z","verb":"promote"}
