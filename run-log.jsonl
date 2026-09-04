@@ -1584,3 +1584,4 @@
 {"actor":"","data":{"title":"engine: receipt verify's mismatch message does not name the field that disagreed"},"task":"os-77a6b376","ts":"2026-09-04T15:46:22Z","verb":"create"}
 {"actor":"","data":{"title":"CI: a pull request can be opened and silently receive no check runs at all"},"task":"os-6fd8d63b","ts":"2026-09-04T15:46:42Z","verb":"create"}
 {"actor":"","data":{"title":"next: III.R rows 4 and 5 flip on the accepted simulation's measurements (follow-up to os-f79bc5a0)"},"task":"os-16a60297","ts":"2026-09-04T16:22:58Z","verb":"create"}
+{"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-88df7ab2","ts":"2026-09-04T16:28:27Z","verb":"transition"}
