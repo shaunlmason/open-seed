@@ -1624,3 +1624,4 @@
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-db5cd353","ts":"2026-09-04T21:09:18Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: the packet and the frontier after the substitution — the deployment as the cutover's precondition, the questions re-derived, the stale ledger lines corrected"},"task":"os-4fde2bdf","ts":"2026-09-04T21:18:57Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-4fde2bdf","ts":"2026-09-04T21:19:15Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T22:19:19Z"},"task":"os-4fde2bdf","ts":"2026-09-04T21:19:19Z","verb":"claim"}
