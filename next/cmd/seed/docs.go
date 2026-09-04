@@ -5,7 +5,10 @@ package main
 // from the tables the machinery reads and writes them under
 // next/docs/generated/; `docs check` regenerates and diffs, failing
 // docs_drift (a refinement of exit 28) when the committed output no
-// longer matches the table it came from.
+// longer matches the table it came from. `docs check` then holds every
+// relative markdown citation in the tree to the tree (card
+// os-5fe43832), failing broken_citation on the same exit when a
+// document names a path that is not there.
 //
 // Read/write of checked-in files, not the ledger: like `lane`, it
 // opens no ledger, journals no attempt and carries no position stamp —
@@ -68,5 +71,22 @@ func runDocsCheck(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitDrift, envelope.CodeDocsDrift,
 			fmt.Sprintf("generated docs are stale — run `seed docs generate`: %s", strings.Join(drift, ", "))), stdout, stderr)
 	}
-	return render(envelope.OK(map[string]any{"checked": true, "drift": []any{}}), stdout, stderr)
+	// The citation stage (card os-5fe43832) runs after the drift stage
+	// and never instead of it: a stale generated document is the older
+	// failure and the cheaper fix, and reporting a citation inside a
+	// file the generator is about to rewrite would name a line that is
+	// already gone.
+	held, broken, err := docs.CheckCitations(*root)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	if len(broken) > 0 {
+		named := make([]string, len(broken))
+		for i, b := range broken {
+			named[i] = b.String()
+		}
+		return render(envelope.Fail(envelope.ExitDrift, envelope.CodeBrokenCitation,
+			fmt.Sprintf("broken citations: %s", strings.Join(named, "; "))), stdout, stderr)
+	}
+	return render(envelope.OK(map[string]any{"checked": true, "drift": []any{}, "citations": held}), stdout, stderr)
 }
