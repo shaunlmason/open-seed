@@ -3646,3 +3646,30 @@ deviation the build plan says must be accepted as such.
 `not measured`: no measurement exists before the shadow run, and a
 packet that reported one would be inventing it. Follow-up cards revise
 the rows and flip the conformance table with the packet as evidence.
+
+## The audit's vocabulary (os-b86dab4c)
+
+**A bar counts what the protocol emits, or it never fires.** The
+unreserved-spend bar counted `budget.reserved`; the protocol emits
+`budget.reserve`. Every drill agreed with the typo because the bar's
+own fixture repeated it, and nothing else exercised the bar: the
+simulation's deployment never files a reservation, and no drill asserts
+its audit is clean. So the defect was invisible until `seed ledger
+audit` (os-7599c27d) pointed the bar at a real chain, where a covered
+run reads as unreserved spend.
+
+**The fix is to stop restating the protocol.** The bars name the
+constants `transition` publishes, so a rename fails to compile rather
+than mis-counting; the deliberate exits come from `transition.IsExit`
+rather than the audit's third copy of the same four verbs; and the set
+of verbs the bars read is held to `admit.CatalogVerbs()` by a drill,
+so a verb the boundary never drafts fails the suite whatever put it
+there.
+
+**The authority is the catalog, not the lifecycle table.** The plan
+first named `transition.Table.Verbs()`. That list is the lifecycle
+subset: it carries `offer.published` and `claim.taken` but neither
+`budget.reserve` nor `run.started`, so the guard written against it
+failed on two verbs the protocol does define. The amendment (#304)
+records the correction rather than quietly widening the drill.
+

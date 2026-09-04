@@ -1741,3 +1741,19 @@ the assertions read, and there is no copy to go stale.
   first: a `t.Skip` after twelve git processes is twelve chances to
   race the harness's cleanup, and on macOS it lost, reporting a
   skipped drill as a failed one on a PR that touched neither.
+
+## A bar that counted a verb the protocol does not emit (os-b86dab4c)
+
+- A fixture that repeats the code's mistake proves nothing, and reads
+  like proof. The unreserved-spend bar counted `budget.reserved` and
+  its own drill filed `budget.reserved`, so the bar passed for as long
+  as it was only ever read through that fixture. When a drill and the
+  code it checks can share a typo, hold the code to an authority
+  outside both: the protocol's constants, and a drill over the
+  boundary's verb catalog.
+- Ask which list is the authority before holding anything to it. The
+  transition table's `Verbs()` looks like "every protocol verb" and is
+  the lifecycle subset; `admit.CatalogVerbs()` is every verb the
+  boundary drafts. Writing the guard against the wrong one failed on
+  `budget.reserve` and `run.started`, verbs the protocol does define.
+
