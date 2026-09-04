@@ -15,10 +15,11 @@ row 7 (self-hosting is total once bootstrapped) and III.R (the
 autonomy end-state) both route here through the conformance table
 (plans/os-83bc3d84.md D5), and the Phase 13 exit record
 (plans/os-d63c7441.md D4) re-derives the Frontier from this packet.
-Deps: Phase 13's items on `main` (their drills are evidence);
-the conformance report (os-83bc3d84) for criterion 6's doctor
-half. Tier: trivial in code, plan-first because the packet is what
-the promotion gate reads.
+Deps: Phases 0 through 12 on `main` (their drills are the
+evidence; build plan §5 puts promotion before Phase 13, so no Phase
+13 item is a prerequisite of the packet) and the conformance report
+(os-83bc3d84) for criterion 6's doctor half. Tier: trivial in code,
+plan-first because the packet is what the promotion gate reads.
 
 ## What the tree actually shows
 
@@ -84,23 +85,31 @@ the promotion gate reads.
   does not exist fails by name. A packet that cites what the tree no
   longer holds is a stale claim at the gate, which is the rot this
   drill exists to refuse.
-- **D3 — the packet presents and never decides.** The shadow run and
-  both cutovers are `reserved`; each carries the one question the
-  operator must answer and the options with their costs stated
-  honestly (for the shadow run's posture: enforced self-hosted on a
-  server the operator runs for the ledger alone, forge-hosted with
-  the admission service deployed under a credential the operator
-  holds, or cooperative with the invariant it forfeits named in the
-  doctor's own words). The packet proposes a shadow-run protocol
-  (the declaration for this repository under `next/deploy/`, the
-  slice: this workstream's own `next:` cards, the window: seven
-  days, the reconciliation: v1 stays authoritative, each v1
-  transition on a sliced card mirrored to the ledger by the same
-  actor, a daily diff of v1 card states against the folded contract
-  states recorded in the packet, every divergence reconciled toward
-  v1 and written down, the evidence: the five-bar audit over the
-  real chain) as a proposal, in the build plan's own words for what
-  criterion 4 requires.
+- **D3 — the packet presents and never decides, and the shadow run
+  runs at the posture the criteria name.** Build plan §5 evaluates
+  every criterion "at the enforced self-hosted posture" and reserves
+  the two cutovers, not the shadow run; so the protocol the packet
+  proposes runs under enforced self-hosted admission (a POSIX git
+  server executing the `seed-admit` hook, hosting the ledger ref
+  alone while the code stays on GitHub, charter III.N row 2), and
+  the one reserved thing about the run is what only the operator
+  can supply: that server. The packet states the other two postures
+  for what they are, not as options: forge-hosted needs a deployment
+  and a credential the autonomy contract reserves, and cooperative
+  forfeits the invariant the run must demonstrate, so a shadow run
+  under either produces no criterion-4 evidence and would be the
+  distinct supervised milestone the build plan says must be accepted
+  as the deviation it is. The two cutovers stay `reserved` with their
+  questions. The protocol itself (the declaration for this repository
+  under `next/deploy/`, the slice: this workstream's own `next:`
+  cards, the window: seven days, the reconciliation: v1 stays
+  authoritative, each v1 transition on a sliced card mirrored to the
+  ledger by the same actor, a daily diff of v1 card states against
+  the folded contract states recorded in the packet, every
+  divergence reconciled toward v1 and written down, the evidence:
+  the five-bar audit over the real chain) is a proposal in the build
+  plan's own words for what criterion 4 requires, and it blocks only
+  on the server.
 - **D4 — criterion 5 is met by writing it.** The packet carries the
   cutover-and-rollback section in the build plan's three clauses:
   which entry point flips when (`scripts/seed` to the Seed binary,
@@ -170,8 +179,10 @@ Nothing else. NOT `next/spec/**`, NOT `next/internal/admit/**`, NOT
    citation.
 3. **The reserved decisions are questions, not choices.** The
    shadow run and the two cutovers are `reserved`, each with one
-   question and its options; the packet contains no sentence that
-   selects a posture, starts the run or flips an entry point.
+   question; the shadow run's question is the server the enforced
+   self-hosted posture needs, never a choice of posture, and the
+   packet contains no sentence that starts the run or flips an entry
+   point.
 4. **Criterion 5 is written.** The cutover and rollback section
    answers the build plan's three clauses by name.
 5. **The measurement ledger covers III.R.** Seven rows, one per R
