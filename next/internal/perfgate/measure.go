@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -42,7 +43,13 @@ func (m Measurer) Measure() (Reading, error) {
 	}
 	defer os.RemoveAll(work)
 	ledgerDir := filepath.Join(work, "ledger")
-	res, err := history.Generate(history.Spec{Seed: m.Seed, Contracts: m.Contracts, Dir: ledgerDir})
+	writers := m.Writers
+	if writers <= 0 {
+		writers = 1
+	}
+	// One enrolled actor per writer (plans/os-a00d3f34.md D1): the
+	// storm's concurrent actors are keypairs, not one key used N times.
+	res, err := history.Generate(history.Spec{Seed: m.Seed, Contracts: m.Contracts, Dir: ledgerDir, Writers: writers})
 	if err != nil {
 		return nil, fmt.Errorf("generating the history: %w", err)
 	}
@@ -135,7 +142,9 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 	if writers <= 0 {
 		writers = 1
 	}
-	fp, _ := event.Fingerprint(res.Keys.Root.Public().(ed25519.PublicKey))
+	if len(res.Keys.Writers) < writers {
+		return 0, 0, fmt.Errorf("the history enrolled %d writer keys for %d writers", len(res.Keys.Writers), writers)
+	}
 	var attempts int64
 	var failed int64
 	var errMu sync.Mutex
@@ -156,11 +165,13 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 				errMu.Unlock()
 				return
 			}
+			key := res.Keys.Writers[w]
+			fp, _ := event.Fingerprint(key.Public().(ed25519.PublicKey))
 			out, err := c.AppendLoop(gitref.Draft{
 				V: version.Seed1, TS: "2026-09-02T00:00:00Z", Actor: fp,
 				Verb: "intent.filed", Subject: fmt.Sprintf("s-%04d", w),
 				Payload: json.RawMessage(`{"intent": "storm", "tier": "trivial", "budget": "small", "routing": "core"}`),
-			}, func(e event.Event) (*event.Record, error) { return event.Sign(e, res.Keys.Root) }, res.Resolve, admit.Validate(), writers*4)
+			}, func(e event.Event) (*event.Record, error) { return event.Sign(e, key) }, res.Resolve, admit.Validate(), writers*4)
 			if err != nil {
 				atomic.AddInt64(&failed, 1)
 				errMu.Lock()
@@ -198,12 +209,23 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 	if err != nil {
 		return 0, 0, err
 	}
-	rep, err := final.VerifyFromGenesis(res.Resolve)
+	// Every append landed exactly once, and each from its own actor
+	// (plans/os-a00d3f34.md D1): the storm's records are signed by as
+	// many distinct keys as there were writers.
+	actors := map[string]bool{}
+	rep, err := final.VerifyFromGenesis(res.Resolve, ledger.WithObserver(func(_ int, rec *event.Record) {
+		if rec.Event.Verb == "intent.filed" && strings.HasPrefix(rec.Event.Subject, "s-") {
+			actors[rec.Event.Actor] = true
+		}
+	}))
 	if err != nil {
 		return 0, 0, fmt.Errorf("the stormed chain must verify: %w", err)
 	}
 	if rep.Count != res.Records+writers {
 		return 0, 0, fmt.Errorf("the chain holds %d records, %d expected: a lost or doubled update", rep.Count, res.Records+writers)
+	}
+	if len(actors) != writers {
+		return 0, 0, fmt.Errorf("the storm's records carry %d distinct actors for %d writers", len(actors), writers)
 	}
 	return wall, float64(attempts) / float64(writers), nil
 }

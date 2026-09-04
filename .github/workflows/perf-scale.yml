@@ -1,0 +1,40 @@
+# perf-scale (live, deterministic, no model secrets; plans/os-a00d3f34.md).
+# The contention benchmark at the target scale (charter III.C row 4):
+# the same gate `make check-next` runs at 24 writers, run weekly at the
+# scale profile's hundreds of writers against the same representative
+# history, with no lost or doubled update asserted. Read-only on
+# purpose: a scheduled identity is least-privilege (III.L row 5), and
+# the gate writes nothing but its reading, which is attached as an
+# artifact whether the gate passed or not. A miss fails the run; the
+# red run is the signal, and the next agent reads the artifact.
+name: perf-scale
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: perf-scale
+
+jobs:
+  storm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/go-env
+      - name: 'The gate at the scale profile (next/perf/budgets-scale.json)'
+        run: go run ./cmd/perfgate -budgets perf/budgets-scale.json -last perf/last-scale.json
+        working-directory: next
+      - name: 'Attach the reading, pass or fail'
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-scale-reading
+          path: next/perf/last-scale.json
+          if-no-files-found: warn

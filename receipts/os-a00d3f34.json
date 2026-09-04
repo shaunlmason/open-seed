@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "task": "os-a00d3f34",
+  "merge_base": "345c94a5078473eaf572529e7e8c1b397819f834",
+  "head": "eb718dc4166925600eceb61f11c594b49192e414",
+  "plan_path": "plans/os-a00d3f34.md",
+  "plan_sha256": "c07c454d2c4e7084c86623e33f3ba0590284102ff85a8123e3d785e56a16b3df",
+  "diff_files": [
+    ".github/workflows/perf-scale.yml",
+    "memory/LEARNINGS.md",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/history/history.go",
+    "next/internal/perfgate/actors_test.go",
+    "next/internal/perfgate/measure.go",
+    "next/internal/perfgate/scale_test.go",
+    "next/internal/protections/tree_workflows_test.go",
+    "next/perf/budgets-scale.json",
+    "next/spec/checkpoints.md"
+  ],
+  "diff_sha256": "279388f43f17957a367f6ab8e3493c8c697d467da62e3779e8b1be59816a2218",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/perfgate/ ./internal/protections/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
