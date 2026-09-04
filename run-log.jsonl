@@ -1472,3 +1472,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: at 200 writers, one storm pushed a chain whose new record cited a stale tip (bad_prev refused by the hook, not retried), once in three runs, across midnight UTC"},"task":"os-5063e8ba","ts":"2026-09-04T00:07:33Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-5063e8ba","ts":"2026-09-04T00:26:33Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T02:26:37Z"},"task":"os-5063e8ba","ts":"2026-09-04T00:26:37Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-5063e8ba","ts":"2026-09-04T00:29:25Z","verb":"transition"}
