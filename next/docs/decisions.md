@@ -3452,10 +3452,15 @@ knowingly non-conformant tree complete while rows stayed `partial` or
 `routed` (review finding on the plan PR; the charter admits a
 conformance claim only when every criterion holds). The doctor now
 lists every row not met, by status, and reports `complete` only when
-none remains at an enforced posture. An enforced-only row cannot be
-met at the cooperative posture, so the doctor sets those rows aside
-there as the documentation the charter asks a cooperative deployment
-to keep, and never reports Part III complete on one.
+none remains. An enforced-only row cannot be met at the cooperative
+posture, so the doctor sets those rows aside there as the
+documentation the charter asks a cooperative deployment to keep; and
+because the charter defines conformance at the declared posture, a
+cooperative deployment whose applicable rows all hold is complete at
+its posture (review finding on the task PR; the plan's D4 had read
+that as never complete, and the charter is the authority). The build
+plan's exit line reads the report at the enforced posture, where
+every row applies.
 
 **A marker inside a row is a clause, not the row.** III.A row 4 and
 III.L row 5 carry the enforced-only marker on one clause among

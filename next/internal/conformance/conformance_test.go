@@ -157,16 +157,26 @@ func TestParseIsStrict(t *testing.T) {
 	if _, err := conformance.Parse([]byte(`{"pillars": []} {}`)); err == nil {
 		t.Fatal("trailing bytes are refused")
 	}
+	// A stray closing delimiter is trailing bytes too: More would not
+	// see it (review finding on the task PR).
+	if _, err := conformance.Parse([]byte(`{"pillars": []}]`)); err == nil || !strings.Contains(err.Error(), "bytes follow") {
+		t.Fatalf("a stray closing delimiter is refused: %v", err)
+	}
+	if _, err := conformance.Parse([]byte(`{"pillars": []}
+`)); err != nil {
+		t.Fatalf("a trailing newline is not trailing bytes: %v", err)
+	}
 	if _, err := conformance.ParseCharter([]byte("# nothing here\n")); err == nil {
 		t.Fatal("a charter without Part III is refused")
 	}
 }
 
-// conformance: D4, AC4 — complete means every row judged at the
-// enforced posture is met: open, partial and routed rows are all
-// outstanding, named by pillar and row with their status; the
-// cooperative posture sets the enforced-only rows aside, judges the
-// mixed rows while naming them, and is never complete.
+// conformance: D4, AC4 — complete means every applicable row is met:
+// open, partial and routed rows are all outstanding, named by pillar
+// and row with their status; the cooperative posture sets the
+// enforced-only rows aside as documented-not-holding, judges the mixed
+// rows while naming them, and is complete when what applies is met
+// (the charter defines conformance at the declared posture).
 func TestAssessJudgesAtThePosture(t *testing.T) {
 	tb := conformance.Table{Pillars: []conformance.Pillar{{ID: "B", Title: "The Admission Boundary", Rows: []conformance.Row{
 		{Row: 1, Text: "x", Posture: conformance.PostureEnforcedOnly, Status: conformance.StatusMet, Evidence: "#1"},
@@ -195,8 +205,13 @@ func TestAssessJudgesAtThePosture(t *testing.T) {
 		t.Fatalf("enforced with every row met: complete: %+v", rep)
 	}
 	rep = conformance.Assess(tb, false)
-	if rep.Complete || len(rep.NotApplicable) != 1 || rep.NotApplicable[0] != "B.1" || len(rep.MixedHere) != 1 || rep.MixedHere[0] != "B.4" || rep.Counts.Met != 3 || !strings.Contains(rep.Because, "cooperative") {
-		t.Fatalf("cooperative: the enforced-only row is set aside, the mixed row judged and named, and Part III is not complete here: %+v", rep)
+	if !rep.Complete || len(rep.NotApplicable) != 1 || rep.NotApplicable[0] != "B.1" || len(rep.MixedHere) != 1 || rep.MixedHere[0] != "B.4" || rep.Counts.Met != 3 || !strings.Contains(rep.Because, "cooperative") || !strings.Contains(rep.Because, "1 enforced-only rows documented") {
+		t.Fatalf("cooperative with every applicable row met: complete, the enforced-only row documented as not holding, the mixed row judged and named: %+v", rep)
+	}
+	tb.Pillars[0].Rows[3].Status = conformance.StatusPartial
+	tb.Pillars[0].Rows[3].Note = "half"
+	if rep := conformance.Assess(tb, false); rep.Complete || len(rep.Outstanding) != 1 || rep.Outstanding[0].ID != "B.4" {
+		t.Fatalf("cooperative with a mixed row partial: not complete, the row outstanding: %+v", rep)
 	}
 	b, _ := json.Marshal(rep)
 	if !strings.Contains(string(b), `"outstanding_rows":[]`) {

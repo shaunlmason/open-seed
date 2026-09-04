@@ -161,7 +161,7 @@ func TestDoctorReportsConformanceAtThePosture(t *testing.T) {
 	na, _ := section["not_applicable_here"].([]any)
 	mixed, _ := section["mixed_here"].([]any)
 	if len(na) == 0 || len(mixed) == 0 || section["complete"] != false || !strings.Contains(section["because"].(string), "cooperative") {
-		t.Fatalf("cooperative: enforced-only rows are not applicable, mixed rows are named, and the table is not complete here: %+v", section)
+		t.Fatalf("cooperative: enforced-only rows are documented as not holding, mixed rows are named, and with rows outstanding the table is not complete here either: %+v", section)
 	}
 
 	// A tree without the table has no section; a tree whose table

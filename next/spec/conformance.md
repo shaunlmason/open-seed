@@ -86,8 +86,8 @@ table is the source and the exit records are the evidence.
 
 The counts are over the rows judged at the declared posture. The
 charter admits a conformance claim only when every criterion holds,
-so `complete` is true exactly when every judged row is `met` at an
-enforced posture: `open`, `partial` and `routed` rows are all
+so `complete` is true exactly when every row judged at the declared
+posture is `met`: `open`, `partial` and `routed` rows are all
 `outstanding_rows`, each with its status and note, and that list is
 what the build plan's Phase 13 preamble asks for, which criteria
 remain open by pillar and row with the phase that last judged them.
@@ -95,7 +95,12 @@ At the cooperative posture the enforced-only rows are set aside as
 `not_applicable_here`, which is the documentation the charter's Part
 III preamble requires of a cooperative deployment (the criteria that
 do not hold for it), the mixed rows are judged and named under
-`mixed_here`, and Part III is never complete there. A table that does not hold against the charter is an
+`mixed_here`, and `complete` is true when every applicable row is met:
+the charter defines conformance at the declared posture, so a
+cooperative deployment whose applicable rows all hold is complete at
+its posture, with the enforced-only rows documented rather than held
+against it. The build plan's Phase 13 exit line reads the report at
+the enforced self-hosted posture, where every row applies. A table that does not hold against the charter is an
 operational failure (`unavailable`, exit 5), never a silently absent
 section; a tree without the table has no section.
 

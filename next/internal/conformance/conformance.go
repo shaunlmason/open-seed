@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -172,7 +173,11 @@ func Parse(b []byte) (Table, error) {
 	if err := dec.Decode(&t); err != nil {
 		return Table{}, fmt.Errorf("the conformance table is the strict object {pillars: [{id, title, rows: [{row, text, posture, status, phase, evidence, note}]}]}: %v", err)
 	}
-	if dec.More() {
+	// One object and nothing after it: a second decode must hit EOF,
+	// since More reports only further array or object elements and
+	// would accept a stray closing delimiter (review finding on the
+	// task PR).
+	if err := dec.Decode(new(json.RawMessage)); err != io.EOF {
 		return Table{}, errors.New("the conformance table is one object, and bytes follow it")
 	}
 	return t, nil
@@ -298,8 +303,11 @@ type OutstandingRow struct {
 // enforced-only rows a cooperative deployment cannot judge (the
 // charter asks such a deployment to document exactly these), the
 // mixed rows whose enforced clause that posture does not exercise,
-// and whether Part III is complete here: every row judged at an
-// enforced posture met.
+// and whether Part III is complete at this posture: every applicable
+// row met. The charter defines conformance at the declared posture
+// and asks a cooperative deployment only to document the
+// enforced-only criteria that do not hold for it, so those rows are
+// listed, not counted against it (review finding on the task PR).
 type Report struct {
 	Counts        Counts           `json:"counts"`
 	Outstanding   []OutstandingRow `json:"outstanding_rows"`
@@ -310,12 +318,11 @@ type Report struct {
 }
 
 // Assess judges the table at a posture: enforced reads every row;
-// cooperative sets the enforced-only rows aside as not applicable,
-// which by itself keeps Part III from being complete there, and
+// cooperative sets the enforced-only rows aside as not applicable and
 // judges the mixed rows while naming them. Complete means every
-// judged row is met: partial and routed rows are outstanding, since
-// the charter admits a conformance claim only when every criterion
-// holds (review finding on the plan PR).
+// applicable row is met: partial and routed rows are outstanding,
+// since the charter admits a conformance claim only when every
+// criterion holds (review finding on the plan PR).
 func Assess(t Table, enforced bool) Report {
 	var rep Report
 	var judged []Row
@@ -338,16 +345,17 @@ func Assess(t Table, enforced bool) Report {
 	rep.Counts = Count(judged)
 	sort.Strings(rep.NotApplicable)
 	sort.Strings(rep.MixedHere)
+	posture := "the enforced posture"
+	if !enforced {
+		posture = fmt.Sprintf("the cooperative posture, with %d enforced-only rows documented as not holding here", len(rep.NotApplicable))
+	}
 	switch {
-	case !enforced:
-		rep.Complete = false
-		rep.Because = fmt.Sprintf("%d enforced-only rows cannot be judged at the cooperative posture and %d judged rows are not met; Part III is complete only at an enforced posture with every row met", len(rep.NotApplicable), len(rep.Outstanding))
 	case len(rep.Outstanding) > 0:
 		rep.Complete = false
-		rep.Because = fmt.Sprintf("%d rows are not met (%d open, %d partial, %d routed)", len(rep.Outstanding), rep.Counts.Open, rep.Counts.Partial, rep.Counts.Routed)
+		rep.Because = fmt.Sprintf("%d applicable rows are not met (%d open, %d partial, %d routed) at %s", len(rep.Outstanding), rep.Counts.Open, rep.Counts.Partial, rep.Counts.Routed, posture)
 	default:
 		rep.Complete = true
-		rep.Because = "every row is met at the enforced posture"
+		rep.Because = "every applicable row is met at " + posture
 	}
 	if rep.Outstanding == nil {
 		rep.Outstanding = []OutstandingRow{}
