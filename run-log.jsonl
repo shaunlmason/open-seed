@@ -1505,3 +1505,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-29e9a568","kind":"pr"},"task":"os-5063e8ba","ts":"2026-09-04T05:14:58Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-de0e1b40","kind":"receipt"},"task":"os-5063e8ba","ts":"2026-09-04T05:15:02Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-5063e8ba","ts":"2026-09-04T05:15:05Z","verb":"transition"}
+{"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:292","to":"ready"},"task":"os-f262585a","ts":"2026-09-04T05:27:27Z","verb":"plan-unblock"}
