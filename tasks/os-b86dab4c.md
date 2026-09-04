@@ -1,16 +1,12 @@
 ---
 id: os-b86dab4c
 title: 'next: the five-bar audit counts budget.reserved, a verb the protocol does not define, so a real chain audits as unreserved spend (III.R row 5)'
-state: in_progress
+state: review
 priority: P1
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-ee8d594b1723ccda
-    claimed_at: "2026-09-04T07:42:12Z"
-    lease_expires: "2026-09-04T08:42:12Z"
+author: seed-next-implementer
 created_at: "2026-09-04T06:43:23Z"
-updated_at: "2026-09-04T07:47:18Z"
+updated_at: "2026-09-04T07:47:22Z"
 ---
 
 simulate.Audit's unreserved-spend bar counts a reservation under the verb `budget.reserved` (next/internal/simulate/audit.go, the case at line 93). The protocol defines and emits `budget.reserve` (transition.BudgetReserveVerb; every cmd/seed drill that files one uses that name). So a real chain whose run.started is covered by an admitted budget.reserve is reported as unreserved spend, and `seed ledger audit` (os-7599c27d, #296) cannot measure III.R row 5 over the shadow run, which is the one thing it exists for.
