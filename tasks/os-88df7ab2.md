@@ -5,7 +5,7 @@ state: ready
 priority: P2
 squad: core
 created_at: "2026-09-04T09:52:36Z"
-updated_at: "2026-09-04T16:28:27Z"
+updated_at: "2026-09-04T16:33:52Z"
 ---
 
 simulate.Audit's unreserved-spend bar sets one boolean on any `budget.reserve` record and clears it only on `claim.taken` (next/internal/simulate/audit.go). Two consequences, both on the chains `seed ledger audit` is pointed at:
@@ -20,3 +20,7 @@ Found by review on #306 (chatgpt-codex-connector, 2026-09-04). Out of that card'
 ## Comment cm-86311f52 (seed-next-implementer, 2026-09-04T11:55:27Z)
 
 Dependency, since the queue would not take a second blocked_on entry (the engine refuses blocked -> blocked, so the card carries plan:309 alone): this card also waits on os-b86dab4c. Its fix (#306) renames the verb this bar counts to the protocol's budget.reserve and adds the exported verb set the switch reads, so implementing here before that is on main would rewrite the same switch and conflict. The plan states it (amendment on #309, 'The base is #306, not main as it stands'). Order: #306 merges, then #309, then this card's implementation.
+
+## Evidence ev-64fd7b40 (pr, seed-next-implementer, 2026-09-04T16:33:52Z)
+
+https://github.com/shaunlmason/open-seed/pull/311
