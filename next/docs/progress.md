@@ -1964,8 +1964,11 @@ reports complete, which III.R's rows make reachable after the shadow
 run and the cutovers, not before. The build plan's §3 backlog is
 filed now that the items are exhausted: the target-scale contention
 benchmark (os-a00d3f34, III.C row 4, the one conformance-relevant
-extra), sharded intake (os-7953612b) and dashboard tiers
-(os-f17567a6); the coverage floor card (os-f262585a) is planned in
+extra; plan #293, draft task PR #297 with two clean 200-writer
+readings and the defect it found carded as os-5063e8ba), sharded
+intake (os-7953612b) and dashboard tiers (os-f17567a6); the shadow
+run's tooling, `seed ledger audit` (os-7599c27d, plan #295, draft
+task PR #296); the coverage floor card (os-f262585a) is planned in
 #292; the macOS cleanup race in the flywheel drill's skip path is
 carded (os-222189a3).
 
@@ -1974,9 +1977,10 @@ carded (os-222189a3).
 §5: 1, 2, 3, 5 and 7 met, 6 partial until #289 merges, 4 reserved on
 one question, the shadow ledger's remote and posture, with three
 costed options. Until that answer the agent-side work is to merge the
-open PRs as they clear review (#287 then #289; #291 then #294; #290;
-#292), implement the scale benchmark (os-a00d3f34) so III.C row 4 can
-flip, and keep the packet's citations true. After the answer: the
+open PRs as they clear review (#289 now that #287 has merged; #291
+then #294; #293 then #297; #295 then #296; #290; #292), fix the
+scale defect (os-5063e8ba) so the weekly run can be green and III.C
+row 4 can flip, and keep the packet's citations true. After the answer: the
 shadow run per the packet's protocol, its measurements recorded into
 the packet by follow-up cards, the two escalated cutovers, and only
 then the Phase 13 exit record. The derivation, stated rather than
