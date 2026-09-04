@@ -30,6 +30,19 @@ accepts). Deps: none.
   verify and pass the `seed-admit` hook: they are the perf gate's
   history and the migration and start drills' fixture. So the bar
   reports breaches on the closest thing the tree has to a real chain.
+- **The unoffered claim is the bar's only source.** `GuardrailBreaches`
+  is appended in exactly one place, the `claim.taken` arm. So dropping
+  the offer rule alone would leave a bar that can never fire, which is
+  the failure this family keeps finding at the other end: a bar that
+  counts nothing reports nothing, and III.R row 5 would carry a
+  guarantee no drill can break (measured while planning).
+- **Admission does guard the claim path, and the guard is chain-
+  visible.** The rule set refuses a `claim.taken` whose actor sealed
+  the subject's checks: "the key that sealed the subject's checks
+  never implements against them". The fold already carries what that
+  needs, `SubjectState.Sealed` with its `Pos` and `Signer`, so a
+  raw-pushed claim by the sealing key is a guardrail breach the audit
+  can name from the chain alone.
 - **The charter makes offers the model, not a per-claim precondition.**
   §II.9 is normative about the supervisor: "the supervisor publishes
   offers; workers pull and claim; the claim settles at admission",
@@ -41,14 +54,19 @@ accepts). Deps: none.
 
 ## Design decisions (binding for this task)
 
-- **D1 — the boundary is the authority; the bar follows it.** The
-  guardrail bar stops naming an unoffered claim. A bar in the
-  five-bar audit reports what the boundary would have refused, and
-  admission takes an unoffered claim today, so calling it a breach
-  reports a violation the system does not hold. This is the same
-  correction os-b86dab4c made to the bar's verb names and os-88df7ab2
-  made to its budget model: the bar and the boundary must not
-  disagree about what the chain means.
+- **D1 — the bar counts what the boundary guards, not what it does
+  not.** Two halves, and the second is why this is a correction
+  rather than a deletion:
+  - The offer rule goes. Admission takes an unoffered claim, so
+    naming it a breach reports a violation the system does not hold.
+  - The sealed-author rule arrives. Admission refuses a `claim.taken`
+    whose actor sealed that subject's checks, and the fold carries
+    `Sealed.Signer` and `Sealed.Pos`, so a raw-pushed claim by the
+    sealing key is a breach the bar can name from the chain: the
+    subject, with the sealing position, in the evidence list.
+  The bar therefore keeps counting, and counts something the boundary
+  actually enforces. This is the same correction os-b86dab4c made to
+  the bar's verb names and os-88df7ab2 made to its budget model.
 - **D2 — the rejected reading, stated so a reviewer can take it.**
   The alternative is that the offer IS a precondition and admission
   has a gap: then the fix is an admission rule refusing a claim that
@@ -68,14 +86,15 @@ accepts). Deps: none.
   read. The bar's removal is paired with one sentence in
   `next/spec/simulation.md` saying where the concern now lives, so a
   later reader does not restore the bar from memory.
-- **D4 — the drills pin both directions.** The existing
+- **D4 — the drills pin both halves, so the bar cannot go dead.**
   `TestAuditCatchesUnofferedClaim` inverts: a chain claiming without
-  an offer is not a guardrail breach, and the drill names why. A new
-  drill audits an admission-grade chain from `internal/history` and
-  asserts the guardrail list is empty, which is the case that found
-  this and the one that regresses if the rule returns. The other
-  guardrail-shaped violations the bar catches keep their drills
-  unchanged.
+  an offer is not a guardrail breach, and the drill says admission
+  takes it. A new drill plants the sealed-author claim and asserts the
+  bar names the subject, so the bar has a violation that fails when it
+  is removed. A third audits an admission-grade chain from
+  `internal/history` and asserts the guardrail list is empty, which is
+  the case that found this card. Together they hold the bar to
+  firing on what admission refuses and only that.
 - **D5 — bounds.** No admission change, no transition-table change,
   no new verb, no change to the other four bars, and no change to
   `internal/history`. `seed ledger audit`'s envelope, exit codes and
@@ -84,8 +103,9 @@ accepts). Deps: none.
 
 ## Steps
 
-1. D1 in `internal/simulate/audit.go`: the `offered` tracking and the
-   breach removed, with the reason in the comment.
+1. D1 in `internal/simulate/audit.go`: the `offered` tracking and its
+   breach removed, the sealed-author arm added, both reasons in the
+   comment.
 2. D4's two drills in `internal/simulate/audit_test.go` and the
    admitted-chain assertion beside os-88df7ab2's.
 3. D3's sentence in `next/spec/simulation.md`;
@@ -110,13 +130,17 @@ Nothing else. NOT `next/internal/admit/**`, NOT
 1. **An admitted chain has no guardrail breach.** A chain from
    `internal/history.Generate` audits with `guardrail_breaches`
    empty, through `simulate.Audit`.
-2. **The rule is gone, not weakened.** A chain claiming with no offer
-   at all reports no guardrail breach, and the drill states that
+2. **The offer rule is gone, not weakened.** A chain claiming with no
+   offer at all reports no guardrail breach, and the drill states that
    admission takes such a claim.
-3. **The other bars are untouched.** The unreserved-spend,
+3. **The bar still fires on what admission refuses.** A raw claim by
+   the key that sealed the subject's checks is named a guardrail
+   breach, and removing the new arm fails that drill; the bar is never
+   left counting nothing.
+4. **The other bars are untouched.** The unreserved-spend,
    silent-abandonment, chain-violation and lost-update arms pass
    unchanged, `seed ledger audit`'s drills included.
-4. `make check` green; no model identifiers in any committed artifact.
+5. `make check` green; no model identifiers in any committed artifact.
 
 **Retention set (existing, shown unharmed):**
 
