@@ -1,12 +1,17 @@
 ---
 id: os-88df7ab2
 title: 'next: the unreserved-spend bar counts a reservation''s occurrence, not an open valid one (III.R row 5)'
-state: review
+state: done
 priority: P2
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: seed-maintenance
+    reviewed_at: "2026-09-04T20:26:21Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/311
 created_at: "2026-09-04T09:52:36Z"
-updated_at: "2026-09-04T16:34:25Z"
+updated_at: "2026-09-04T20:26:21Z"
 ---
 
 simulate.Audit's unreserved-spend bar sets one boolean on any `budget.reserve` record and clears it only on `claim.taken` (next/internal/simulate/audit.go). Two consequences, both on the chains `seed ledger audit` is pointed at:
