@@ -118,11 +118,36 @@ func CheckCitations(root string) (int, []BrokenCitation, error) {
 	return held, broken, nil
 }
 
-// linkRE matches an inline markdown link. The destination excludes
-// parentheses so an unbalanced one cannot run the match to the end of
-// the document; a destination that genuinely contains one is not read,
-// which loses a citation rather than inventing a refusal.
-var linkRE = regexp.MustCompile(`\[[^\[\]]*\]\(([^()]*)\)`)
+// linkOpenRE matches a link label and the opening parenthesis of its
+// destination. The destination itself is scanned rather than matched,
+// because markdown permits balanced parentheses inside one and a
+// character class that excluded them would silently drop the citation.
+var linkOpenRE = regexp.MustCompile(`\[[^\[\]]*\]\(`)
+
+// destEnd returns the offset of the parenthesis closing a destination
+// that starts at from, and whether one was found. Depth is counted, so
+// `API_(v2).md` is read whole, and a backslash escapes the character
+// after it. The scan stops at a newline: a destination that does not
+// close on its own line is not a destination this gate reads.
+func destEnd(b []byte, from int) (int, bool) {
+	depth := 1
+	for i := from; i < len(b); i++ {
+		switch b[i] {
+		case '\\':
+			i++
+		case '\n':
+			return 0, false
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return i, true
+			}
+		}
+	}
+	return 0, false
+}
 
 // holdFile reads every citation in one document and returns how many it
 // held and the ones the tree does not hold. dir is the document's own
@@ -131,9 +156,12 @@ func holdFile(root, dir, rel string, src []byte) (int, []BrokenCitation) {
 	masked := mask(src)
 	held := 0
 	var broken []BrokenCitation
-	for _, m := range linkRE.FindAllSubmatchIndex(masked, -1) {
-		raw := string(masked[m[2]:m[3]])
-		target := destination(raw)
+	for _, m := range linkOpenRE.FindAllIndex(masked, -1) {
+		shut, ok := destEnd(masked, m[1])
+		if !ok {
+			continue
+		}
+		target := destination(string(masked[m[1]:shut]))
 		if !isRelative(target) {
 			continue
 		}
@@ -158,19 +186,29 @@ func holdFile(root, dir, rel string, src []byte) (int, []BrokenCitation) {
 
 // destination extracts the link target from what stood between the
 // parentheses: an angle-bracketed destination, or everything up to the
-// whitespace that would begin a title.
+// whitespace that would begin a title. A backslash-escaped parenthesis
+// becomes the character it names, so the target matches the file on
+// disk rather than the markdown that quoted it.
 func destination(raw string) string {
 	s := strings.TrimSpace(raw)
 	if strings.HasPrefix(s, "<") {
 		if i := strings.IndexByte(s, '>'); i > 0 {
-			return s[1:i]
+			return unescapeParens(s[1:i])
 		}
 		return ""
 	}
 	if i := strings.IndexAny(s, " \t"); i >= 0 {
 		s = s[:i]
 	}
-	return s
+	return unescapeParens(s)
+}
+
+// unescapeParens undoes the two escapes destEnd honours.
+func unescapeParens(s string) string {
+	if !strings.Contains(s, "\\") {
+		return s
+	}
+	return strings.NewReplacer(`\(`, "(", `\)`, ")").Replace(s)
 }
 
 // schemeRE matches an absolute URI's scheme, which takes the target out

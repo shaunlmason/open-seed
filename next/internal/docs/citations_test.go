@@ -287,13 +287,43 @@ func TestMissingRootIsAnError(t *testing.T) {
 	}
 }
 
-// A destination carrying a parenthesis is not read rather than
-// half-read: the regex stops at the parenthesis, which loses a citation
-// and never invents a refusal.
-func TestParenthesisedDestinationIsNotRead(t *testing.T) {
-	root := tree(t, map[string]string{"a.md": "[x](a(1).md)\n"})
-	if _, broken := held(t, root); len(broken) != 0 {
-		t.Fatalf("want no invented refusal, got %v", broken)
+// Markdown permits balanced parentheses in a destination, so a
+// character class that excluded them would drop the citation and let a
+// broken link through green (review finding on #305).
+func TestBalancedParenthesesInADestination(t *testing.T) {
+	root := tree(t, map[string]string{
+		"a.md":         "[here](API_(v2).md) and [gone](API_(v3).md)\n",
+		"API_(v2).md":  "v2\n",
+		"unrelated.md": "u\n",
+	})
+	n, broken := held(t, root)
+	if n != 2 {
+		t.Fatalf("held %d: both parenthesised destinations are citations", n)
+	}
+	if len(broken) != 1 || broken[0].Target != "API_(v3).md" {
+		t.Fatalf("want only the missing one refused, got %v", broken)
+	}
+}
+
+// A backslash escapes the parenthesis after it, so the depth count is
+// not thrown off and the target names the file rather than the markdown
+// that quoted it.
+func TestEscapedParenthesisInADestination(t *testing.T) {
+	root := tree(t, map[string]string{
+		"a.md":   "[x](a\\(1.md)\n",
+		"a(1.md": "one\n",
+	})
+	if n, broken := held(t, root); n != 1 || len(broken) != 0 {
+		t.Fatalf("held %d, broken %v: the escaped target resolves", n, broken)
+	}
+}
+
+// A destination that never closes on its line is not read: the scan
+// stops at the newline rather than running to the end of the document.
+func TestUnclosedDestinationIsNotRead(t *testing.T) {
+	root := tree(t, map[string]string{"a.md": "[x](missing.md\nnext line)\n"})
+	if n, broken := held(t, root); n != 0 || len(broken) != 0 {
+		t.Fatalf("held %d, broken %v", n, broken)
 	}
 }
 
