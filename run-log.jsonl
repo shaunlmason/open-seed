@@ -1502,3 +1502,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-3488ea4e","kind":"pr"},"task":"os-7599c27d","ts":"2026-09-04T05:09:42Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-cb666723","kind":"receipt"},"task":"os-7599c27d","ts":"2026-09-04T05:09:45Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-7599c27d","ts":"2026-09-04T05:09:48Z","verb":"transition"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-29e9a568","kind":"pr"},"task":"os-5063e8ba","ts":"2026-09-04T05:14:58Z","verb":"attach-evidence"}
