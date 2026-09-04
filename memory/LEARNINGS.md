@@ -1650,6 +1650,17 @@ the assertions read, and there is no copy to go stale.
   it protects, never as a budget: a clean run reads zero, and a
   non-zero reading points at the kept evidence.
 
+## seed ledger audit (os-7599c27d)
+
+- A verb that reads an invariant over a chain verifies the chain
+  first and only then reads: a bar over an unverified chain is a bar
+  over nothing, and the ordering makes the "empty chain" arm of the
+  library's audit unreachable through the verb, which is correct
+  rather than a gap.
+- `ledger append` is the cooperative posture's self-validating client,
+  not a raw seam; a drill that needs a chain admission would refuse
+  signs with the root and appends through the library.
+
 ## The contention benchmark at target scale (os-a00d3f34)
 
 - When a gate is parameterized by size, scale is a data change: a

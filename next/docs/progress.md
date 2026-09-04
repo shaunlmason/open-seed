@@ -1946,6 +1946,22 @@ written by the two implementing sessions, one voice.
   tree, so the cause stays open and the next occurrence is a
   directory to read; `checkpoints.md` "The seventh race shape")
 
+## Shadow-run tooling (the promotion evidence packet's protocol, os-98ce6f8a)
+
+- `seed ledger audit`, the five-bar audit over any ledger, the shadow
+  run's evidence for charter III.R row 5 — os-7599c27d — **in
+  review** (task PR against plan #295: verify from genesis first, an
+  invalid chain refusing `chain_invalid` before any bar is read; the
+  unchanged `simulate.Audit` over the verified records; one envelope
+  with the five bars verbatim, stamped at the tip, `clean` on a clean
+  chain and `audit_violated` refining exit 28 on a violated one, the
+  message naming each bar with its records; `audit` in the registry
+  and the usage message, so `seed serve` carries `ledger.audit`;
+  drilled through the CLI with each plantable violation, the
+  corrupted and the genesis-less chain refusing before any bar;
+  `envelope.md`'s row and `simulation.md`'s sentence; the packet's
+  clause naming the verb follows once #294 is on `main`)
+
 ## Backlog — true extras (docs/next-build-plan.md §3; filed when Phase 13's items were on `main`)
 
 - the contention benchmark at target scale (III.C row 4, routed here

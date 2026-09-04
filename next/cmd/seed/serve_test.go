@@ -189,6 +189,7 @@ func TestServeReturnsTheCLIEnvelopeVerbatim(t *testing.T) {
 	}{
 		{"a flags-only verb", []string{"version"}, "version", ``},
 		{"a read", []string{"ledger", "verify", "--ledger", ld}, "ledger.verify", `{"ledger": ` + jsonString(ld) + `}`},
+		{"an audit", []string{"ledger", "audit", "--ledger", ld}, "ledger.audit", `{"ledger": ` + jsonString(ld) + `}`},
 		{"a read with argv params", []string{"situation", "--ledger", ld}, "situation", `["--ledger", ` + jsonString(ld) + `]`},
 		{"a write", []string{"ledger", "append", "--ledger", ld, "--key", priv, "--verb", "system.protocol.upgraded", "--subject", "system", "--payload", `{"to": "seed/1"}`}, "ledger.append",
 			`{"ledger": ` + jsonString(ld) + `, "key": ` + jsonString(priv) + `, "verb": "system.protocol.upgraded", "subject": "system", "payload": "{\"to\": \"seed/1\"}"}`},
