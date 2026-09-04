@@ -238,8 +238,8 @@ flowchart LR
     C["card (state ref)<br/>untrusted work order"] -->|claim: unplanned card<br/>authorizes PLANNING ONLY| P1["plan PR<br/>seed/&lt;id&gt;-plan<br/>touches ONLY plans/&lt;id&gt;.md"]
     P1 -->|review + merge| MB["merge-base blob<br/>= the approved plan<br/>(sha256 pinned)"]
     MB --> P2["task PR<br/>seed/&lt;id&gt;<br/>NEVER touches plans/**"]
-    P2 -->|implementer generates| R1["receipts/&lt;id&gt;.json<br/>local = advisory claim"]
-    R1 --> CI["CI verify (author of record)<br/>regenerates from the merge-base plan,<br/>re-runs Validation Commands,<br/>purity + stale-plan + receipt match"]
+    P2 -->|implementer commits| R1["receipts/&lt;id&gt;.json<br/>the CLAIM: task + plan pin<br/>+ authorized commands<br/>(stable under rebase)"]
+    R1 --> CI["CI verify (author of record)<br/>regenerates from the merge-base plan,<br/>re-runs Validation Commands,<br/>purity + stale-plan + claim match<br/>emits the ATTESTATION per run"]
     CI -->|green required check| M["merge (server gates:<br/>branch protection + CODEOWNERS<br/>+ D4.5 reviewer ≠ implementer)"]
     M --> CL["maintenance: seed task close<br/>accept + blocker-cascade"]
     CL --> D["done · dependents auto-ready"]
@@ -248,9 +248,14 @@ flowchart LR
 The rules that make it checkable:
 
 - **PR purity (D3)**: plan PRs touch exactly one plan file; task PRs touch no
-  `plans/**` at all: a task PR burying an edit to another task's plan would
-  launder plan tampering through an unrelated review. CI classifies by head
-  branch and *fails* on class violation.
+  `plans/**` at all and no receipt but their own: a task PR burying an edit to
+  another task's plan would launder plan tampering through an unrelated review,
+  and an edit to another task's receipt would launder a forged evidence record
+  the same way. CI classifies by head branch and *fails* on class violation.
+  Purity is checked over the branch's **full** changed-file list, not the
+  hashed one: the diff hash excludes `receipts/**` so that committing a receipt
+  cannot change its own hash, which would otherwise hide the second case from
+  every gate.
 - **Stale-plan**: `seed receipt verify` fails when the merge-base plan blob
   differs from the plan blob at the current default head: a superseded plan is
   revocable; amending means a new plan PR + rebase. Enforced per-PR, not via
@@ -264,10 +269,26 @@ The rules that make it checkable:
 - **No self-approval**: `plans/**` and the control surface can never appear in
   the auto-merge allowlist (the validator enforces the intersection rule).
 
-The receipt records `merge_base`, `head`, `plan_path` + `plan_sha256`,
-`diff_files` + `diff_sha256` (the diff excludes `receipts/**`, so committing
-the receipt doesn't change its own hash), and the re-run validation commands:
-see any `receipts/os-*.json` in this repo for the concrete shape.
+### The claim and the attestation (schema 2.0)
+
+The evidence record is two things, and conflating them made the required check
+a treadmill. What gets committed is the **claim**: `task`, `plan_path` +
+`plan_sha256`, and the `validation_commands` that plan authorizes. Every field
+is a function of the approved plan alone, so a claim survives rebases, review
+fixes and merges of the base, and goes stale only when the plan changes: the
+one event that must force re-verification.
+
+What CI produces is the **attestation**: the claim plus the snapshot it was
+verified against (`merge_base`, `head`, `diff_files` + `diff_sha256`,
+`changed_files`, validation results, `verified_by`). `seed receipt verify
+--emit` writes it, the workflow uploads it as a run artifact and renders it
+into the run summary, and **nothing commits it**. A committed snapshot
+describes a merge base and a diff that the next push invalidates, which is why
+verify no longer compares those bytes: D4.5 already holds that the local copy
+is advisory and CI regeneration is the truth (R11), so comparing them bought
+an ordering constraint (no push may follow receipt generation) and no
+integrity. Schema 1.0 receipts are still read; `seed receipt migrate` rewrites
+them.
 
 ## 6. The execution surface
 
@@ -336,7 +357,7 @@ evidence trail, branch/HEAD/dirty-file anchors from git: to
 
 | Workflow | State | What it does |
 |---|---|---|
-| `check-validate` | **live** | `make check` + all validators + fan-out drift + skills `install --frozen` + read-only state lint. On PRs and `merge_group`: the **verify gate**: `seed receipt verify` (purity, stale-plan, regeneration) + D4.5 reviewer-identity check. Re-runs on `pull_request_review` so a post-last-push review can't leave verify stale. |
+| `check-validate` | **live** | `make check` + all validators + fan-out drift + skills `install --frozen` + read-only state lint. On PRs and `merge_group`: the **verify gate**: `seed receipt verify` (purity, stale-plan, regeneration, claim match) + D4.5 reviewer-identity check, which runs even when verify failed so one run reports both. The run-scoped attestation is uploaded as an artifact and rendered into the run summary. Re-runs on `pull_request_review` so a post-last-push review can't leave verify stale. |
 | `seed-maintenance` | **live** | Deterministic, no model secrets. Order matters: reap expired leases → state-shaped plan-unblock (plan PR merged or closed) → close merged task PRs (only on a **green verify check**) → conformance lint (writes HALT on failure, stops the job before anchoring) → prune acked mail → anchor checkpoint tag → report. |
 | `seed-close-no-pr` | **live** | `workflow_dispatch`: the `--no-pr` close path whose actor and run URL are recorded server-side: the done-consistency lint validates against that artifact, never card text. The engine additionally requires the actor in the operator roster. |
 | `seed-dispatch` | inert → live with secrets | Label router (`scripts/seed-dispatch-route`, contract-tested in `validate.sh`): `cmd:*` labels map to port verbs with label removal + provenance; mirror-label edits become *requests*, never state writes. |
