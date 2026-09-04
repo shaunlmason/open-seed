@@ -1572,3 +1572,4 @@
 {"actor":"implementer","data":{"evidence_id":"ev-82aa9a60","kind":"merge"},"task":"os-5fe43832","ts":"2026-09-04T14:49:59Z","verb":"attach-evidence"}
 {"actor":"implementer","data":{"comment_id":"cm-edd423b5","kind":"comment"},"task":"os-5fe43832","ts":"2026-09-04T14:50:12Z","verb":"comment"}
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-beee44ec","kind":"comment"},"task":"os-d63c7441","ts":"2026-09-04T14:55:29Z","verb":"comment"}
+{"actor":"","data":{"title":"next: III.A row 7 — erasure is surfaced but not attributable; the protocol defines no erasure verb"},"task":"os-db5cd353","ts":"2026-09-04T15:02:31Z","verb":"create"}
