@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-04T20:43:29Z"
     lease_expires: "2026-09-04T21:43:29Z"
 created_at: "2026-09-04T13:15:10Z"
-updated_at: "2026-09-04T20:43:29Z"
+updated_at: "2026-09-04T20:48:01Z"
 ---
 
 plans/os-2e34f66a.md line 130 writes ([`obligations.md`](obligations.md)) inside a plan file, so the target resolves against plans/, where no such file is. The document it means is next/spec/obligations.md, and the correction is one link target: `](obligations.md)` becomes `](../next/spec/obligations.md)`. The plan's substance does not change.
@@ -20,3 +20,7 @@ Why it is a card and not a line in someone's task PR: AGENTS.md binds a plan fil
 Found by the sweep that filed os-5fe43832: 7 of 570 relative markdown links in the tree did not resolve. Five are fixed on PR #305, one was a false positive (a regex in a code span), and this is the seventh.
 
 Bounds: one file, one line, one target. Tier: trivial. Not conformance-blocking.
+
+## Evidence ev-c3966047 (pr, seed-next-implementer, 2026-09-04T20:48:01Z)
+
+https://github.com/shaunlmason/open-seed/pull/319
