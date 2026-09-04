@@ -3517,3 +3517,45 @@ root signed.
 is on #294, not on `main`, so the one clause the plan names lands in
 this branch's merge-forward once the packet merges, never by stacking
 a task PR on another.
+
+## The promotion evidence packet (os-98ce6f8a)
+
+**The packet is a document with a parser, not a projection.** The
+promotion gate reads prose the operator can amend; what it needs from
+the machinery is the assurance that the prose cites what the tree
+holds. `internal/promotion` parses the packet strictly (the seven
+criteria in order, one status each from a closed vocabulary, evidence
+rows in one shape, a question on every reserved decision, a missing
+sentence on every criterion that is not met, seven ledger rows) and
+`Check` holds every cited drill to its cited file under `make check`.
+No projection, no verb, no admission change.
+
+**Criterion 5 is met by the packet itself.** The build plan asks for
+the cutover and its rollback written down in three clauses; the packet
+writes them, and its own drill holds the section to that shape, so the
+evidence row for the criterion cites the packet's drill rather than a
+claim about a document elsewhere.
+
+**Criterion 6 cites what has merged.** The doctor's conformance
+section is os-83bc3d84's (#289); while it was in review the packet
+said `partial` and cited the exit records alone, and it moved to
+`met` citing #289's drills the day the report merged, never before.
+
+**The shadow run runs at the posture the criteria name; the server
+is the question.** Build plan §5 evaluates every criterion at the
+enforced self-hosted posture and reserves the two cutovers, not the
+shadow run (review finding on the plan: a packet offering the other
+postures as options could leave criterion 4 without valid evidence).
+So the protocol runs under enforced self-hosted admission, a POSIX
+git server executing the hook and hosting the ledger ref alone, and
+the one reserved thing is that server, which this repository's forge
+cannot be. Forge-hosted (a deployment and a credential the autonomy
+contract reserves) and cooperative (forfeiting the invariant the run
+must demonstrate) are stated for what they are: a shadow run under
+either produces no criterion-4 evidence and would be the supervised
+deviation the build plan says must be accepted as such.
+
+**The III.R ledger records measures, not readings.** Every row is
+`not measured`: no measurement exists before the shadow run, and a
+packet that reported one would be inventing it. Follow-up cards revise
+the rows and flip the conformance table with the packet as evidence.
