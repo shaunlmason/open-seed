@@ -1887,6 +1887,27 @@ os-9e9ae30c's task PR (an administrative card, not a Phase 12 item),
 written by the two implementing sessions, one voice.
 
 
+## Defects the scale benchmark found (os-a00d3f34's storms)
+
+- at 200 writers, one storm pushed a chain whose new record cited a
+  stale tip (`bad_prev` at the hook, classified as policy and not
+  retried), once in three runs, the one across midnight UTC —
+  os-5063e8ba — **in review** (task PR against plan #299: the seventh
+  race shape, a hook's `bad_prev` at or beyond the position the
+  client appended, re-linked from a fresh fetch and counted as
+  `Result.Relinked`; the refused tree and the hook's message kept
+  under the client's state dir (`refused/<commit>/`) before the
+  retry; `Client.WithClock` as the test seam for a segment day;
+  `seed perf run --keep` and `cmd/perfgate -keep` keeping a storm's
+  work dir, `relinked` in the reading beside the five budgeted
+  metrics; drilled with the planted refusal (re-links, lands, keeps
+  the tree, counts one), a `bad_prev` below the append surfacing
+  unchanged, the storm through the CLI with a planted refusal, and
+  two writers across an injected midnight, which land every append
+  and re-link zero times: the drill does not reproduce the storm's
+  tree, so the cause stays open and the next occurrence is a
+  directory to read; `checkpoints.md` "The seventh race shape")
+
 ## Frontier
 
 

@@ -8,8 +8,11 @@ package gitref
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -36,11 +39,41 @@ type Signer func(e event.Event) (*event.Record, error)
 // (Phase 2 wires the full rule set through this seam).
 type Validate func(store *ledger.Store, rec *event.Record) error
 
-// Result reports a won race.
+// Result reports a won race. Relinked counts the attempts a hook
+// refused as bad_prev at or beyond the position this client appended
+// (plans/os-5063e8ba.md D1): zero on a clean loop, and never a budget.
 type Result struct {
 	Position int
 	Commit   string
 	Attempts int
+	Relinked int
+}
+
+// ErrStaleTree is the seventh race shape (plans/os-5063e8ba.md D1): the
+// hook refused the pushed chain as bad_prev at or beyond the position
+// this attempt appended, which is either a tip that moved in a way the
+// loop did not see or a tree the client built wrong, and re-linking
+// from a fresh fetch is the loop's answer to both. The refused tree is
+// kept under the client's RefusedDir before the retry.
+var ErrStaleTree = errors.New("push refused: the pushed chain cites a stale tip at or beyond this append (re-linking)")
+
+// badPrevRE reads the hook's verification refusal: "position N: bad_prev".
+var badPrevRE = regexp.MustCompile(`position (\d+): bad_prev`)
+
+// staleTreeRefusal reports whether a push rejection is the seventh shape
+// for a record appended at pos: a bad_prev the hook found at pos or
+// beyond it. A bad_prev below pos is the fetched prefix failing, which
+// the client's own verification should have caught, and stays a refusal.
+func staleTreeRefusal(err error, pos int) bool {
+	if !errors.Is(err, ErrRemoteRejected) {
+		return false
+	}
+	m := badPrevRE.FindStringSubmatch(err.Error())
+	if m == nil {
+		return false
+	}
+	n, convErr := strconv.Atoi(m[1])
+	return convErr == nil && n >= pos
 }
 
 // AppendLoop lands one draft on the remote ref, retrying non-fast-forward
@@ -57,6 +90,7 @@ func (c *Client) AppendLoop(draft Draft, sign Signer, resolve ledger.Resolver, v
 		maxAttempts = 1
 	}
 	var lastErr error
+	relinked := 0
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		tipCommit, err := c.Fetch()
 		if err != nil {
@@ -70,7 +104,13 @@ func (c *Client) AppendLoop(draft Draft, sign Signer, resolve ledger.Resolver, v
 		os.RemoveAll(workDir)
 		if err == nil {
 			res.Attempts = attempt
+			res.Relinked = relinked
 			return res, nil
+		}
+		if errors.Is(err, ErrStaleTree) {
+			relinked++
+			lastErr = err
+			continue
 		}
 		if errors.Is(err, ErrNonFastForward) {
 			lastErr = err
@@ -86,7 +126,11 @@ func (c *Client) attempt(draft Draft, sign Signer, resolve ledger.Resolver, vali
 	if err := c.Materialize(tipCommit, storeDir); err != nil {
 		return nil, err
 	}
-	store, err := ledger.Open(storeDir)
+	var openOpts []ledger.Option
+	if c.clock != nil {
+		openOpts = append(openOpts, ledger.WithClock(c.clock))
+	}
+	store, err := ledger.Open(storeDir, openOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -160,12 +204,52 @@ func (c *Client) attempt(draft Draft, sign Signer, resolve ledger.Resolver, vali
 		}
 		return res, nil
 	}
-	commit, err := c.CommitAndPush(storeDir, tipCommit, "ledger: "+draft.Verb)
+	commit, err := c.Commit(storeDir, tipCommit, "ledger: "+draft.Verb)
 	if err != nil {
+		return nil, err
+	}
+	if err := c.Push(commit); err != nil {
+		if staleTreeRefusal(err, pos) {
+			if keepErr := c.keepRefused(commit, storeDir, err); keepErr != nil {
+				return nil, fmt.Errorf("%w; and the refused tree could not be kept: %v", err, keepErr)
+			}
+			return nil, fmt.Errorf("%w: %v", ErrStaleTree, err)
+		}
 		return nil, err
 	}
 	if err := c.persistHead(commit); err != nil {
 		return nil, err
 	}
 	return &Result{Position: pos, Commit: commit}, nil
+}
+
+// keepRefused copies the committed tree and the hook's message under
+// RefusedDir()/<commit>/ (plans/os-5063e8ba.md D2). The copy is the
+// store directory as pushed: the segments and HEAD, byte for byte.
+func (c *Client) keepRefused(commit, storeDir string, refusal error) error {
+	dst := filepath.Join(c.RefusedDir(), commit)
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(dst, "message.txt"), []byte(refusal.Error()+"\n"), 0o644); err != nil {
+		return err
+	}
+	return filepath.WalkDir(storeDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(storeDir, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, "tree", rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, b, 0o644)
+	})
 }

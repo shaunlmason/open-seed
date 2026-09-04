@@ -28,8 +28,9 @@ func runPerf(args []string, stdout, stderr io.Writer) int {
 	history := fs.Int("history", 0, "contracts in the generated history (default: the budget file's, else 20)")
 	writers := fs.Int("writers", 0, "concurrent appenders in the storm (default: the budget file's, else 8)")
 	hook := fs.String("hook", "", "seed-admit binary the storm's remote enforces with (default: built from ./cmd/seed-admit; 'none' for no hook)")
+	keep := fs.String("keep", "", "keep the storm's work dir (the remote, every writer's state dir with any refused tree) under this directory")
 	if err := fs.Parse(args[1:]); err != nil || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "perf run [--budgets <file>] [--history <n>] [--writers <n>] [--hook <path>|none]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "perf run [--budgets <file>] [--history <n>] [--writers <n>] [--hook <path>|none] [--keep <dir>]"), stdout, stderr)
 	}
 	var b *perfgate.Budgets
 	if *budgets != "" {
@@ -65,11 +66,14 @@ func runPerf(args []string, stdout, stderr io.Writer) int {
 	} else if hookBin == "none" {
 		hookBin = ""
 	}
-	reading, err := perfgate.Measurer{Seed: 1, Contracts: *history, Writers: *writers, HookBin: hookBin}.Measure()
+	reading, err := perfgate.Measurer{Seed: 1, Contracts: *history, Writers: *writers, HookBin: hookBin, Keep: *keep}.Measure()
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
-	result := map[string]any{"history": *history, "writers": *writers, "enforced": hookBin != ""}
+	result := map[string]any{"history": *history, "writers": *writers, "enforced": hookBin != "", "relinked": reading[perfgate.MetricRelinked]}
+	if *keep != "" {
+		result["kept"] = *keep
+	}
 	metrics := map[string]any{}
 	over := []string{}
 	for _, m := range perfgate.Required() {

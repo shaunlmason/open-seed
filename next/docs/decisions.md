@@ -3430,3 +3430,28 @@ refusal needed a code; `ranking_empty` refines exit 4 `not_found`
 `envelope.md` is where every such code is recorded, so the row went
 there beside `trust_undeclared`. No new exit number.
 
+
+## The seventh race shape (os-5063e8ba)
+
+**A bad_prev at or beyond the append is re-linked, below it is
+surfaced.** The storm's refusal named the position one beyond the
+client's own append: the pushed tree held a record the client's store
+had not reconciled, so the client's record sat a position later than
+it expected. The shape is therefore "at or beyond", not "at"; a
+`bad_prev` below the append is the fetched prefix failing at the
+hook, which the client's own verification should have caught, and
+stays the refusal it is.
+
+**The evidence is kept before the retry, in the client's state dir.**
+The refused tree is the store as pushed, byte for byte, with the
+hook's message beside it under `refused/<commit>/`; a temp dir would
+be gone with the attempt, and the state dir is where a writer's own
+history already lives. `--keep` on both binaries keeps the storm
+around it.
+
+**The midnight drill does not reproduce the tree.** Two writers
+racing across an injected segment split land every append and
+re-link zero times, three runs of three. The drill stays as the
+regression for the one condition the failing storm had; the cause
+is open, and the seventh shape means the next occurrence costs a
+re-link and leaves a directory to read rather than a lost append.
