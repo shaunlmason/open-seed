@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-7599c27d",
   "merge_base": "44f70e6f3b8df3676a91891dafb6e0eb4d63a964",
-  "head": "b2e35c1516e4eeea8b1ce2a4c36991cc357552cd",
+  "head": "686af70352b90436e77a02a7e92873d04af4acd2",
   "plan_path": "plans/os-7599c27d.md",
   "plan_sha256": "1cc233ecfd7fb03c918b7a95bac56cda04daaded94239f65c42c2712e997813d",
   "diff_files": [
@@ -17,7 +17,7 @@
     "next/spec/envelope.md",
     "next/spec/simulation.md"
   ],
-  "diff_sha256": "28be547ae0dd41ad828facd82da647745f953e8cc7a209437e7be993ad2b430d",
+  "diff_sha256": "6574bd9c931a6bb11bacc7c56b03065e06f0bda6b097112346d9237e02c25735",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Ledger|Registry|Serve|Audit' -count=1",
