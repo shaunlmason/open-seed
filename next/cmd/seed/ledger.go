@@ -181,6 +181,13 @@ func runLedgerAudit(args []string, stdout, stderr io.Writer) int {
 		{"guardrail_breaches", a.GuardrailBreaches},
 		{"unreserved_spend", a.UnreservedSpend},
 	}
+	// The audit fills some lists from map iteration, so the refusal
+	// and the result name their records in one order on every run
+	// (plans/os-7599c27d.md D6): evidence that varies between two
+	// readings of the same chain is not evidence.
+	for _, b := range bars {
+		sort.Strings(b.list)
+	}
 	if !a.Clean {
 		var violated []string
 		for _, b := range bars {

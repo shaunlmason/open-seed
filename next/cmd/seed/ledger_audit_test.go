@@ -121,3 +121,33 @@ func TestLedgerAuditVerifiesBeforeAnyBar(t *testing.T) {
 		t.Fatalf("the supported-version discipline is verify's: %d %+v", code, e)
 	}
 }
+
+// conformance: plans/os-7599c27d.md D6 — a refusal naming several
+// records names them in one order on every run. The audit fills the
+// silent-abandonment list from map iteration; three windows left
+// open, appended in reverse, come back sorted five times over.
+func TestLedgerAuditRefusalOrderIsDeterministic(t *testing.T) {
+	dir, priv, _ := writeKeys(t)
+	ld := filepath.Join(dir, "ledger")
+	if e, code := runEnv(t, "init", "--ledger", ld, "--key", priv); code != 0 || !e.OK {
+		t.Fatalf("init: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv, "--verb", "system.protocol.upgraded", "--subject", "system", "--payload", `{"to": "`+version.Seed1+`"}`); code != 0 || !e.OK {
+		t.Fatalf("upgrade: %d %+v", code, e)
+	}
+	for _, subject := range []string{"c-3", "c-2", "c-1"} {
+		for _, v := range []string{"intent.filed", "contract.specified", "offer.published", "claim.taken"} {
+			rawAppend(t, ld, fixturePriv(t), v, subject, `{}`)
+		}
+	}
+	for i := 0; i < 5; i++ {
+		e, code := runEnv(t, "ledger", "audit", "--ledger", ld)
+		if code != 28 || e.Error == nil || e.Error.Code != "audit_violated" {
+			t.Fatalf("run %d: must refuse 28 audit_violated, got %d %+v", i, code, e)
+		}
+		msg := e.Error.Message
+		if !strings.Contains(msg, "silent_abandonments") || !(strings.Index(msg, "c-1") < strings.Index(msg, "c-2") && strings.Index(msg, "c-2") < strings.Index(msg, "c-3")) {
+			t.Fatalf("run %d: the records are named in one order: %q", i, msg)
+		}
+	}
+}
