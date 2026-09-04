@@ -5,7 +5,7 @@ state: ready
 priority: P2
 squad: core
 created_at: "2026-09-04T09:52:36Z"
-updated_at: "2026-09-04T16:33:52Z"
+updated_at: "2026-09-04T16:33:56Z"
 ---
 
 simulate.Audit's unreserved-spend bar sets one boolean on any `budget.reserve` record and clears it only on `claim.taken` (next/internal/simulate/audit.go). Two consequences, both on the chains `seed ledger audit` is pointed at:
@@ -24,3 +24,7 @@ Dependency, since the queue would not take a second blocked_on entry (the engine
 ## Evidence ev-64fd7b40 (pr, seed-next-implementer, 2026-09-04T16:33:52Z)
 
 https://github.com/shaunlmason/open-seed/pull/311
+
+## Evidence ev-2bcd1361 (receipt, seed-next-implementer, 2026-09-04T16:33:56Z)
+
+receipts/os-88df7ab2.json
