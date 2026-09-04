@@ -1578,6 +1578,24 @@ record's own position through one derivation, `curation.AuthenticPass`
   the verbs and the projection, with the mutation evidence D4 names;
   `ranking.md` new, `offers.md`, `qualification.md` (the deferral
   closed), `evals.md`, `projections.md` and `envelope.md` following)
+- the conformance report (Phase 13's exit line: "the conformance report
+  shows Part III complete at the enforced self-hosted posture"; the
+  preamble's "the doctor reports which Phase 13 criteria remain open")
+  — os-83bc3d84 — **in review** (task PR against plan #287:
+  `next/spec/conformance.json`, the charter's 128 Part III rows
+  verbatim with the status the exit records gave each (`met` with
+  evidence, `partial` or `routed` with a note, `open`), the posture
+  read off the enforced-only marker; `internal/conformance` parsing
+  Part III out of `SEED-NEXT.md` and holding the table to it row for
+  row in both directions, the vocabulary validated; `seed docs
+  generate` rendering `next/docs/generated/conformance.md` under the
+  drift gate; `seed doctor --repo` reporting the counts, every row not
+  yet met by pillar, row and status, the enforced-only rows set aside
+  at the cooperative posture and the mixed rows named there, and
+  `complete` only when every row is met at an enforced posture; Phase
+  13's rows `open` until its exit record flips them, III.R's routed
+  to promotion's measures; `next/spec/conformance.md` new, the
+  handbook following)
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
