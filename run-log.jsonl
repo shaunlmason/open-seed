@@ -1517,3 +1517,4 @@
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-5063e8ba","ts":"2026-09-04T07:29:24Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-7599c27d","ts":"2026-09-04T07:29:27Z","verb":"close"}
 {"actor":"implementer","data":{"comment_id":"cm-65cc4f9b","kind":"comment"},"task":"os-5fe43832","ts":"2026-09-04T07:33:50Z","verb":"comment"}
+{"actor":"implementer","data":{"evidence_id":"ev-06eae7b9","kind":"branch"},"task":"os-5fe43832","ts":"2026-09-04T07:34:03Z","verb":"attach-evidence"}
