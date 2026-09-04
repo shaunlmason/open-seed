@@ -6,7 +6,7 @@ priority: P3
 squad: core
 author: seed-next-implementer
 created_at: "2026-09-04T13:15:10Z"
-updated_at: "2026-09-04T20:48:04Z"
+updated_at: "2026-09-04T21:28:58Z"
 ---
 
 plans/os-2e34f66a.md line 130 writes ([`obligations.md`](obligations.md)) inside a plan file, so the target resolves against plans/, where no such file is. The document it means is next/spec/obligations.md, and the correction is one link target: `](obligations.md)` becomes `](../next/spec/obligations.md)`. The plan's substance does not change.
@@ -20,3 +20,7 @@ Bounds: one file, one line, one target. Tier: trivial. Not conformance-blocking.
 ## Evidence ev-c3966047 (pr, seed-next-implementer, 2026-09-04T20:48:01Z)
 
 https://github.com/shaunlmason/open-seed/pull/319
+
+## Comment cm-d3ff54fe (seed-next-implementer, 2026-09-04T21:28:58Z)
+
+#319 merged (e848631). The work landed on the plan branch seed/os-2e34f66a-plan rather than seed/os-0dba8c6a, so the maintenance close step will not find it; the owner closes through the --no-pr path with #319 as the resolution.
