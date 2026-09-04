@@ -1946,6 +1946,46 @@ written by the two implementing sessions, one voice.
   tree, so the cause stays open and the next occurrence is a
   directory to read; `checkpoints.md` "The seventh race shape")
 
+## Backlog — true extras (docs/next-build-plan.md §3; filed when Phase 13's items were on `main`)
+
+- the contention benchmark at target scale (III.C row 4, routed here
+  by the Phase 12 exit record; the one conformance-relevant extra) —
+  os-a00d3f34 — **in review** (task PR against plan #293:
+  `next/perf/budgets-scale.json`, 200 writers against the same
+  40-contract history, each writer its own enrolled actor (the
+  history enrolls a key per writer, the storm signs with it, the
+  measurer holds the chain to as many actors as writers), the timing
+  ceilings measured with those identities on the
+  implementing host and the attempts ceiling at twice the loop's
+  expected writers/2, provenance on every ceiling; the weekly
+  read-only `perf-scale` workflow running the unchanged `cmd/perfgate`
+  at that profile and attaching the reading pass or fail;
+  `TestScaleProfileIsHundredsOfWriters` pinning the profile and
+  `TestTreeWorkflowsHaveNoScheduledWriters` holding the tree's
+  scheduled workflows to `contents: read` outside v1's maintenance
+  lane; `checkpoints.md` "The scale profile"; the C.4 row stays
+  `partial`: the run demonstrates the scale without lost updates,
+  tracked in CI, and the row's "without unrelated writes racing each
+  other's admissions pathologically" is what sharded intake
+  (os-7953612b) would demonstrate, so the exit record cites the run
+  for what it shows and flips nothing on it; the run is red on a lost
+  append until os-5063e8ba's re-link lands, which is the carded
+  defect, not a regression)
+- sharded admission intake (III.B row 6, MAY) — os-7953612b —
+  **backlog** (filed; not conformance-blocking)
+- dashboard tiers beyond the report — os-f17567a6 — **backlog**
+  (filed; not conformance-blocking)
+- the flywheel engine drill's skip path racing TempDir cleanup on
+  macOS — os-222189a3 — **done** (#302 against plan #301; tests
+  only)
+- at 200 writers, one storm pushed a chain whose new record cited a
+  stale tip (`bad_prev` at the hook, classified as policy and not
+  retried), once in three runs, the one that crossed midnight UTC —
+  os-5063e8ba — **planned** (plan #299 open, draft task PR #300;
+  filed from the scale benchmark's second measurement; P1: a lost append is what III.C row 4 forbids; the
+  drill first, then the fix, and the loop re-linking on a `bad_prev`
+  whose cited tip is not the tip it fetched)
+
 ## A fixture that escaped the hardening guard (os-222189a3)
 
 - the flywheel engine drill's skip path races `t.TempDir`'s cleanup on
