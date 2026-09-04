@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-5063e8ba",
   "merge_base": "44f70e6f3b8df3676a91891dafb6e0eb4d63a964",
-  "head": "b2ef87733c507b1e8ad0854c6af8afdca3513854",
+  "head": "3d440815339f4c63099c5ddb5df735314a7f9b3c",
   "plan_path": "plans/os-5063e8ba.md",
   "plan_sha256": "45a5a00455f29f357564867679e560b602945ed2dd4ecacf84bd60d7f1f78067",
   "diff_files": [
@@ -19,7 +19,7 @@
     "next/internal/perfgate/measure.go",
     "next/spec/checkpoints.md"
   ],
-  "diff_sha256": "f12ab7ddea6d27c409f9b402fdb840a7211f8a5cd6c706291bc0706c06bcf19d",
+  "diff_sha256": "d88e41d61d9b73f5c71e7cf3ad3ebb042b7f46be42d3b7d71209b19b0821ae51",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/gitref/ ./internal/perfgate/ -count=1 \u0026\u0026 go test ./cmd/seed/ -run 'Perf' -count=1",
@@ -27,7 +27,7 @@
     },
     {
       "cmd": "make check",
-      "exit": 0
+      "exit": 2
     }
   ],
   "generated_by": "local"
