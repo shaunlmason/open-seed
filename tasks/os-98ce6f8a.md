@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-04T02:53:33Z"
     lease_expires: "2026-09-04T03:53:33Z"
 created_at: "2026-09-03T17:59:39Z"
-updated_at: "2026-09-04T02:59:31Z"
+updated_at: "2026-09-04T02:59:35Z"
 ---
 
 Build plan section 5 lists seven criteria for the self-hosting cutover — a HUMAN decision the plan says agents drive up to and STOP at (never autonomously decidable). This card produces the evidence document the operator reads at that gate: one place mapping each of the seven criteria to the evidence already on main, and naming what is still missing.
@@ -24,3 +24,7 @@ Tier: trivial in code (a document + any read-only survey helper), plan-first bec
 ## Evidence ev-5cab638e (pr, seed-next-implementer, 2026-09-04T02:59:31Z)
 
 https://github.com/shaunlmason/open-seed/pull/294
+
+## Evidence ev-65d240c7 (receipt, seed-next-implementer, 2026-09-04T02:59:35Z)
+
+receipts/os-98ce6f8a.json
