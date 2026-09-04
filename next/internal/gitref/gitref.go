@@ -9,10 +9,12 @@
 package gitref
 
 import (
+	"archive/tar"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -135,7 +137,14 @@ var noAutoGC = [][2]string{
 // cost less than a stat-and-branch that could drift from what the
 // drill asserts. A write that fails is the client's error, named by
 // key: a git that cannot configure its own repository cannot be
-// trusted to fetch from it either.
+// trusted to fetch from it either. The writes run git's own writer,
+// not an in-process parser of the existing file: a partial parser
+// drifts from git's resolution (a concatenated value like auto = "0"1
+// reads as 01 in git, not 0), and the drift would skip the very write
+// that disarms the collector (plans/os-711b3028.md D1; review on
+// #298). Three spawns per construction is the price of that
+// guarantee; the suite's other spawn cuts land on the fetch and the
+// unpack (next/spec/platform.md).
 func hardenGitDir(gitDir string) error {
 	for _, kv := range noAutoGC {
 		cmd := exec.Command("git", "--git-dir", gitDir, "config", "--local", kv[0], kv[1])
@@ -225,13 +234,22 @@ func (c *Client) persistHead(commit string) error {
 // monotonic-head rule: a fetched tip that does not contain the persisted
 // verified head refuses with ErrHeadRegression naming both commits. An
 // absent remote ref yields an empty commit id (a fresh ledger).
+//
+// The common path is one git process: the fetch itself, with the tip
+// read back from the tracking ref it wrote. The ls-remote that used to
+// precede every fetch is spent only when the fetch refuses, to tell an
+// absent ref (a fresh ledger) from an unreachable remote. Each spawn is
+// cheap on Linux and dear on Windows, and every append pays this path
+// at least once (next/spec/platform.md, the cmd/seed residual).
 func (c *Client) Fetch() (commit string, err error) {
-	out, lsErr := runGit(c.gitDir, "ls-remote", c.Remote, c.Ref)
-	if lsErr != nil {
-		return "", fmt.Errorf("%w: %v", ErrUnavailable, lsErr)
-	}
-	fields := strings.Fields(out)
-	if len(fields) == 0 {
+	if _, fetchErr := runGit(c.gitDir, "fetch", "-q", "--force", c.Remote, c.Ref+":"+localTracking); fetchErr != nil {
+		out, lsErr := runGit(c.gitDir, "ls-remote", c.Remote, c.Ref)
+		if lsErr != nil {
+			return "", fmt.Errorf("%w: %v", ErrUnavailable, lsErr)
+		}
+		if len(strings.Fields(out)) != 0 {
+			return "", fmt.Errorf("%w: %v", ErrUnavailable, fetchErr)
+		}
 		// An absent ref is a fresh ledger only for a client that never
 		// verified a head. After a verified head, a vanished ref is the
 		// deepest possible regression: refusing here keeps AppendLoop from
@@ -245,8 +263,8 @@ func (c *Client) Fetch() (commit string, err error) {
 		}
 		return "", nil
 	}
-	tip := fields[0]
-	if _, err := runGit(c.gitDir, "fetch", "-q", "--force", c.Remote, c.Ref+":"+localTracking); err != nil {
+	tip, err := c.trackingTip()
+	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
 	persisted, have, err := c.PersistedHead()
@@ -261,8 +279,41 @@ func (c *Client) Fetch() (commit string, err error) {
 	return tip, nil
 }
 
+// trackingTip reads the commit the tracking ref names. A fetch writes
+// the ref loose, so the common path is one file read and no process;
+// a ref stored any other way (a packed or reftable store) is resolved
+// by git itself.
+func (c *Client) trackingTip() (string, error) {
+	if b, err := os.ReadFile(filepath.Join(c.gitDir, filepath.FromSlash(localTracking))); err == nil {
+		if id := strings.TrimSpace(string(b)); isObjectID(id) {
+			return id, nil
+		}
+	}
+	out, err := runGit(c.gitDir, "rev-parse", "--verify", localTracking)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// isObjectID reports whether s is a full hex object id (SHA-1 or SHA-256).
+func isObjectID(s string) bool {
+	if len(s) != 40 && len(s) != 64 {
+		return false
+	}
+	for _, r := range s {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+			return false
+		}
+	}
+	return true
+}
+
 // Materialize extracts the fetched ledger tree into dir (which must be
-// empty or absent). An empty commit id materializes an empty dir.
+// empty or absent). An empty commit id materializes an empty dir. The
+// archive git writes is read by this process: the tar that used to
+// unpack it was a second spawn per materialization, and every append
+// materializes at least once.
 func (c *Client) Materialize(commit, dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -270,20 +321,79 @@ func (c *Client) Materialize(commit, dir string) error {
 	if commit == "" {
 		return nil
 	}
-	archive := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", c.gitDir, "archive", commit)
-	untar := exec.Command("tar", "-x", "-C", dir)
+	archive := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", c.gitDir, "archive", "--format=tar", commit)
+	var stderr strings.Builder
+	archive.Stderr = &stderr
 	pipe, err := archive.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	untar.Stdin = pipe
-	if err := untar.Start(); err != nil {
+	if err := archive.Start(); err != nil {
 		return err
 	}
-	if err := archive.Run(); err != nil {
-		return fmt.Errorf("git archive %.12s: %w", commit, err)
+	extractErr := untar(pipe, dir)
+	// Drain what is left so git can exit whatever the extraction did.
+	io.Copy(io.Discard, pipe)
+	if err := archive.Wait(); err != nil {
+		return fmt.Errorf("git archive %.12s: %w: %s", commit, err, strings.TrimSpace(stderr.String()))
 	}
-	return untar.Wait()
+	if extractErr != nil {
+		return fmt.Errorf("git archive %.12s: %w", commit, extractErr)
+	}
+	return nil
+}
+
+// untar unpacks a tar stream under dir: directories, regular files
+// with their permission bits, and symbolic links, which is what a git
+// tree holds. An entry that would land outside dir is refused by name.
+func untar(r io.Reader, dir string) error {
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if hdr.Typeflag == tar.TypeXGlobalHeader {
+			continue
+		}
+		target := filepath.Join(dir, filepath.FromSlash(hdr.Name))
+		if rel, err := filepath.Rel(dir, target); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return fmt.Errorf("entry %q escapes the target directory", hdr.Name)
+		}
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0o755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return err
+			}
+			f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, hdr.FileInfo().Mode().Perm())
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(f, tr); err != nil {
+				f.Close()
+				return err
+			}
+			if err := f.Close(); err != nil {
+				return err
+			}
+		case tar.TypeSymlink:
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return err
+			}
+			if err := os.Symlink(hdr.Linkname, target); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("entry %q has unsupported type %q", hdr.Name, hdr.Typeflag)
+		}
+	}
 }
 
 // CommitAndPush commits dir's tree on top of parent and pushes it to the
