@@ -8,9 +8,9 @@ claim:
     actor: seed-next-implementer
     token: c-2f402ed251956eeb
     claimed_at: "2026-09-04T13:33:05Z"
-    lease_expires: "2026-09-04T15:13:30Z"
+    lease_expires: "2026-09-04T15:19:10Z"
 created_at: "2026-09-04T09:52:36Z"
-updated_at: "2026-09-04T14:13:30Z"
+updated_at: "2026-09-04T14:19:10Z"
 ---
 
 simulate.Audit's unreserved-spend bar sets one boolean on any `budget.reserve` record and clears it only on `claim.taken` (next/internal/simulate/audit.go). Two consequences, both on the chains `seed ledger audit` is pointed at:
