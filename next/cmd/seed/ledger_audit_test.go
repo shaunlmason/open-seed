@@ -63,7 +63,13 @@ func TestLedgerAuditCleanAndEachBar(t *testing.T) {
 	}{
 		{"an unclosed window", []string{"intent.filed", "contract.specified", "offer.published", "claim.taken", "budget.reserve"}, "silent_abandonments"},
 		{"an unreserved run", []string{"intent.filed", "contract.specified", "offer.published", "claim.taken", "run.started", "submission.made"}, "unreserved_spend"},
-		{"an unoffered claim", []string{"intent.filed", "contract.specified", "claim.taken", "budget.reserve", "run.started", "submission.made"}, "guardrail_breaches"},
+		// The guardrail bar's case is the sealed author claiming the
+		// subject it sealed, which admission refuses; an unoffered
+		// claim is not a breach, because admission takes one
+		// (plans/os-aaec6a3c.md D1). The raw appends here carry no
+		// readable seal, so that arm is drilled at the library in
+		// internal/simulate, and this table keeps the bars a raw chain
+		// can show.
 		{"an illegal transition", []string{"claim.taken", "intent.filed"}, "chain_violations"},
 	}
 	for _, c := range cases {

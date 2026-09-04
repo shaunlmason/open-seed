@@ -62,7 +62,14 @@ run leaves every list empty:
 2. **Lost updates** — the materialized chain is non-empty and contiguous.
 3. **Silent abandonments** — every `in_progress` window ended by one of
    the four deliberate exits.
-4. **Guardrail breaches** — every `claim.taken` rides a published offer.
+4. **Guardrail breaches** — every `claim.taken` respects the guardrail
+   admission enforces on the claim path: the key that sealed a
+   subject's checks never claims it. An unoffered claim is **not** a
+   breach, because admission takes one: the scheduling model publishes
+   offers (`SEED-NEXT.md` §II.9) but no admission rule reads them, and
+   a bar must report what the boundary refuses. The scheduling concern
+   (work ready with no live offer) is `internal/eval`'s read, not this
+   bar's (plans/os-aaec6a3c.md D1, D3).
 5. **Unreserved spend** — every `run.started` sits inside a reservation.
 
 The same audit runs over any ledger through `seed ledger audit

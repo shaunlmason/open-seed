@@ -2032,6 +2032,18 @@ written by the two implementing sessions, one voice.
   showed that is the lifecycle subset, carrying neither
   `budget.reserve` nor `run.started`)
 
+## The audit's guardrail bar (os-aaec6a3c)
+
+- the bar required an offer the boundary does not — os-aaec6a3c —
+  **in review** (task PR against plan #312: admission's claim arms are
+  authoring isolation and the lifecycle transition and none reads the
+  subject's offers, so an unoffered claim is no breach and
+  `internal/history`'s admission-grade chains stop tripping the bar;
+  the bar is corrected rather than emptied, since that was its only
+  source, and it now counts the guardrail admission does enforce, a
+  claim by the key that sealed the subject's checks, which the fold
+  makes chain-visible; found while implementing os-88df7ab2, #311)
+
 ## Frontier
 
 

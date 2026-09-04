@@ -3673,3 +3673,29 @@ subset: it carries `offer.published` and `claim.taken` but neither
 failed on two verbs the protocol does define. The amendment (#304)
 records the correction rather than quietly widening the drill.
 
+## The guardrail bar counts what admission guards (os-aaec6a3c)
+
+**A bar reports what the boundary refuses.** The bar named any
+`claim.taken` that did not follow an `offer.published`. Admission holds
+no such rule: its claim arms are authoring isolation and the lifecycle
+transition, and `LiveOffers` has only two callers, both scheduling
+reads. So a chain the boundary took reported guardrail breaches, which
+is how `internal/history`'s admission-grade fixture tripped the bar on
+every subject while os-88df7ab2 was being implemented.
+
+**The charter's §II.9 binds the supervisor, not the claim.** "Offers
+that get claimed or expire" and "the claim settles at admission"
+describe the scheduling model, and III.H's wakeless poll-only proof
+turns on workers claiming what they find. The other reading, that the
+offer is a precondition and admission has a gap, was rejected: it
+would invalidate the perf history, the migration fixture and every
+drill that claims without offering, and it is written into the plan so
+a reviewer can take it in one place.
+
+**Correcting a bar is not emptying it.** `GuardrailBreaches` had
+exactly one source, so dropping the offer rule alone would have left a
+bar that can never fire and a III.R row 5 guarantee no drill can
+break. Admission does guard the claim path, and the guard is
+chain-visible: it refuses a claim whose actor sealed that subject's
+checks, and the fold carries `Sealed.Signer` and `Sealed.Pos`. The bar
+counts that instead, so it keeps a violation a drill can plant.
