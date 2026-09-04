@@ -1539,3 +1539,4 @@
 {"actor":"implementer","data":{"evidence_id":"ev-2564850c","kind":"pr"},"task":"os-5fe43832","ts":"2026-09-04T12:44:16Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-b563718e","kind":"pr"},"task":"os-9ef9ab34","ts":"2026-09-04T12:53:28Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-bc4fd6f7","kind":"receipt"},"task":"os-9ef9ab34","ts":"2026-09-04T12:55:26Z","verb":"attach-evidence"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:307","to":"ready"},"task":"os-9ef9ab34","ts":"2026-09-04T12:55:43Z","verb":"plan-unblock"}
