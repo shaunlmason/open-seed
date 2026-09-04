@@ -1,11 +1,16 @@
 ---
 id: os-aaec6a3c
 title: 'next: the guardrail bar requires an offer the boundary does not, so an admitted chain trips it'
-state: ready
+state: in_progress
 priority: P2
 squad: core
+claim:
+    actor: seed-next-implementer
+    token: c-dd36cdd23c500025
+    claimed_at: "2026-09-04T20:43:39Z"
+    lease_expires: "2026-09-04T21:43:39Z"
 created_at: "2026-09-04T13:12:49Z"
-updated_at: "2026-09-04T17:23:19Z"
+updated_at: "2026-09-04T20:43:39Z"
 ---
 
 simulate.Audit's guardrail-breach bar names any subject whose claim.taken did not follow an offer.published (next/internal/simulate/audit.go). Admission does not hold that rule: internal/history.Generate writes an admission-grade chain that stages intent.filed, contract.specified and claim.taken with no offer at all, and that chain verifies and passes the seed-admit hook. So auditing a chain the boundary took reports guardrail breaches for every subject.
