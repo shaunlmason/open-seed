@@ -1663,3 +1663,10 @@ the assertions read, and there is no copy to go stale.
   N actors'. Enroll a key per writer and have the measurer count the
   distinct actors in the landed chain, so the number in the row is the
   number the chain proves.
+- Quote a charter row verbatim in the plan and in the spec that
+  claims it. A paraphrase ("without lost updates") stood in for the
+  row's clause ("without unrelated writes racing each other's
+  admissions pathologically") and would have flipped a conformance row
+  on a run that demonstrates the pathology bounded, not absent; the
+  task PR's review caught it, and the fix was to state the claim
+  against the row's own words and leave the row partial.

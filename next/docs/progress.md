@@ -1922,8 +1922,14 @@ written by the two implementing sessions, one voice.
   `TestScaleProfileIsHundredsOfWriters` pinning the profile and
   `TestTreeWorkflowsHaveNoScheduledWriters` holding the tree's
   scheduled workflows to `contents: read` outside v1's maintenance
-  lane; `checkpoints.md` "The scale profile"; the C.4 row flips at
-  the Phase 13 exit citing the first green scheduled run)
+  lane; `checkpoints.md` "The scale profile"; the C.4 row stays
+  `partial`: the run demonstrates the scale without lost updates,
+  tracked in CI, and the row's "without unrelated writes racing each
+  other's admissions pathologically" is what sharded intake
+  (os-7953612b) would demonstrate, so the exit record cites the run
+  for what it shows and flips nothing on it; the run is red on a lost
+  append until os-5063e8ba's re-link lands, which is the carded
+  defect, not a regression)
 - sharded admission intake (III.B row 6, MAY) — os-7953612b —
   **backlog** (filed; not conformance-blocking)
 - dashboard tiers beyond the report — os-f17567a6 — **backlog**

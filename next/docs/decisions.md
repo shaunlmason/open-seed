@@ -3514,10 +3514,17 @@ holds every scheduled workflow in the tree but v1's maintenance lane
 lint the doctor already runs on a declaration now runs on the tree
 under `make check`.
 
-**The conformance row flips at the exit, not here.** The table's
-C.4 note names the scheduled run; the Phase 13 exit record flips the
-row citing the first green run (plans/os-d63c7441.md D2). This card
-makes the run exist.
+**The conformance row stays partial; the run is cited for what it
+shows.** The plan quoted the row as "without lost updates"; the
+charter's row reads "without unrelated writes racing each other's
+admissions pathologically" (review finding on the task PR), and a
+single-ref storm of two hundred unrelated appends is that pathology
+held to a ceiling, not its absence. The charter outranks the plan, so
+this card makes the run exist and states its claim against the row's
+own words: hundreds of enrolled actors at the target scale with no
+lost or doubled update, tracked in CI. The clause the row states is
+sharded intake's (III.B row 6, os-7953612b), and the Phase 13 exit
+record cites the first green run without flipping C.4 on it.
 
 **The benchmark found what it exists to find.** Of three 200-writer
 storms on the implementing host signed with one key, two landed every
