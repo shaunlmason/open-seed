@@ -9,6 +9,7 @@ package docs
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -85,6 +86,21 @@ func mirrorRoot(t *testing.T) string {
 		if err := os.Symlink(filepath.Join(real, "next", d), filepath.Join(nextTmp, d)); err != nil {
 			t.Fatal(err)
 		}
+	}
+	// The conformance rendering reads the charter and the table: the
+	// charter is linked, the table copied so a drill can perturb it.
+	if err := os.Symlink(filepath.Join(real, "SEED-NEXT.md"), filepath.Join(tmp, "SEED-NEXT.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(nextTmp, "spec"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	table, err := os.ReadFile(filepath.Join(real, "next", "spec", "conformance.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nextTmp, "spec", "conformance.json"), table, 0o644); err != nil {
+		t.Fatal(err)
 	}
 	// Copy the committed generated tree into the temp root.
 	src := filepath.Join(real, GenDir)
@@ -210,5 +226,37 @@ func TestRenderExitCodesErrorsOnMissingSource(t *testing.T) {
 func TestRenderLanesErrorsOnMissingDir(t *testing.T) {
 	if _, err := renderLanes(filepath.Join(t.TempDir(), "nope")); err == nil {
 		t.Error("renderLanes must fail when the lanes directory is absent")
+	}
+}
+
+// conformance: plans/os-83bc3d84.md D3, AC3 — the Part III table
+// renders from the table alone: every pillar, the summary, the
+// status vocabulary, and no instant of any kind.
+func TestConformanceRendersFromTheTableWithoutAClock(t *testing.T) {
+	docs, err := Generate(repoRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := docs[filepath.Join(GenDir, "conformance.md")]
+	if conf == "" {
+		t.Fatal("conformance.md is generated")
+	}
+	for _, want := range []string{"## Summary", "| A. The Ledger |", "## R. The autonomy end-state", "| **all** |", "`open`"} {
+		if !strings.Contains(conf, want) {
+			t.Errorf("conformance.md must carry %q", want)
+		}
+	}
+	if regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}`).MatchString(conf) {
+		t.Fatal("the rendering carries no instant: the table is the source and the records the evidence")
+	}
+	// A table that drifted from the charter never renders.
+	tmp := mirrorRoot(t)
+	p := filepath.Join(tmp, "next", "spec", "conformance.json")
+	b, _ := os.ReadFile(p)
+	if err := os.WriteFile(p, []byte(strings.Replace(string(b), `"status": "open"`, `"status": "done"`, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Generate(tmp); err == nil || !strings.Contains(err.Error(), "vocabulary") {
+		t.Fatalf("a status outside the vocabulary refuses to render: %v", err)
 	}
 }
