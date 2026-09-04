@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-04T20:43:39Z"
     lease_expires: "2026-09-04T21:43:39Z"
 created_at: "2026-09-04T13:12:49Z"
-updated_at: "2026-09-04T20:44:39Z"
+updated_at: "2026-09-04T20:44:42Z"
 ---
 
 simulate.Audit's guardrail-breach bar names any subject whose claim.taken did not follow an offer.published (next/internal/simulate/audit.go). Admission does not hold that rule: internal/history.Generate writes an admission-grade chain that stages intent.filed, contract.specified and claim.taken with no offer at all, and that chain verifies and passes the seed-admit hook. So auditing a chain the boundary took reports guardrail breaches for every subject.
@@ -28,3 +28,7 @@ The task PR #313 merged on 2026-09-04 while this card's lease had expired, so th
 ## Evidence ev-da0b95f7 (pr, seed-next-implementer, 2026-09-04T20:44:39Z)
 
 https://github.com/shaunlmason/open-seed/pull/313
+
+## Evidence ev-f43c60fa (receipt, seed-next-implementer, 2026-09-04T20:44:42Z)
+
+receipts/os-aaec6a3c.json
