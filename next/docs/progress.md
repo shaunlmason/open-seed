@@ -2032,6 +2032,35 @@ written by the two implementing sessions, one voice.
   showed that is the lifecycle subset, carrying neither
   `budget.reserve` nor `run.started`)
 
+## The coverage floor the receipt gate keeps drawing from (os-f262585a)
+
+- `seed receipt verify --run` takes its own cold `make check`, and cold
+  collection swings a few tenths, so at a 0.1 margin above the 90 gate a
+  receipt green when written could verify red as a `receipt mismatch`
+  — os-f262585a — **in review** (task PR against plan #292: tests only,
+  no gate, ceiling or behavior change. Measuring first showed the plan's
+  premise had already moved: the tree read 90.99 cold, not the ~90.1 the
+  plan describes, because os-ad610334 and the cards after it landed. The
+  work still went in, for the margin the plan asks for and because the
+  packages it names were genuinely thin: `internal/protections` 85.9 to
+  91.3 (the GitHub adapter's bypass-identity grammar, its rule
+  translation and Apply's refusals; Plan and Apply's CODEOWNERS and
+  forge-refusal arms), `internal/artifact` 62.1 to 80.3 (every refusal
+  the content-addressed store makes, and the failed-rename path),
+  `internal/posture` 92.8 to 99.0 (the declaration's accessors and their
+  undeclared answers, and the preseed validator's refusals),
+  `internal/perfgate`'s gate to 100 (the cache it cannot clean and the
+  second measurement that fails), `internal/history` 69.4 to 76.5, and
+  `internal/imported` 70 to 100, which shipped with no drill at all
+  while `-coverpkg` counted its statements.
+  Ranking off each package's own tests would have spent the effort in
+  the wrong places, since `cmd/seed`'s drills alone cover 72% of the
+  internal tree; the targets came from the gate's own merged profile.
+  Three readings on the shipped tree, all 91.5: covergate warm, and two
+  explicitly cold `-p 1` collections with the cache cleaned before each,
+  which is the plan's acceptance criterion and something covergate
+  cannot supply, since its re-collection engages only below the gate)
+
 ## Frontier
 
 
@@ -2094,8 +2123,9 @@ readings and the defect it found carded as os-5063e8ba), sharded
 intake (os-7953612b) and dashboard tiers (os-f17567a6); the shadow
 run's tooling, `seed ledger audit` (os-7599c27d, merged as #296
 against plan #295; its reservation-verb defect carded as os-b86dab4c,
-plan #304); the coverage floor card (os-f262585a) is planned in
-#292; the macOS cleanup race in the flywheel drill's skip path is
+plan #304); the coverage floor card (os-f262585a) is in review
+against plan #292, the tree measured cold at the reading its section
+above records; the macOS cleanup race in the flywheel drill's skip path is
 merged (#301, then #302; os-222189a3).
 
 **Next action: the operator's answer at the promotion gate.**
