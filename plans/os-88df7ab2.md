@@ -20,7 +20,12 @@ chain, so a bar that can be satisfied by a settled or inadmissible
 reservation cannot carry that measurement. Found by review on #306
 (chatgpt-codex-connector); out of that card's bounds by its plan D5
 (no bar changes meaning), so it was filed rather than folded in. Tier:
-standard (it changes what a conformance bar counts). Deps: none.
+standard (it changes what a conformance bar counts). Deps:
+**os-b86dab4c**, whose fix (#306) is the base this builds on: it
+renames the verb the bar counts to the protocol's `budget.reserve`
+and adds `AuditedVerbs` with the catalog guard. Implementing this
+card before that one is on `main` would rewrite the same switch and
+conflict, so the card waits on it as well as on this plan.
 
 ## What the tree actually shows
 
@@ -48,6 +53,10 @@ standard (it changes what a conformance bar counts). Deps: none.
   `internal/simulate`; `internal/simulate` imports `transition`
   today, and the audit's own drills already import `admit` (the
   catalog guard from os-b86dab4c).
+- **The base is #306, not `main` as it stands.** On `main` today the
+  bar still counts `budget.reserved`; os-b86dab4c corrects that and
+  introduces the exported verb set this card's switch reads. This
+  plan is written against the tree once that merges.
 
 ## Design decisions (binding for this task)
 
