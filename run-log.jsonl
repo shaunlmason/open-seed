@@ -1482,3 +1482,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T03:53:33Z"},"task":"os-98ce6f8a","ts":"2026-09-04T02:53:33Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:293","to":"ready"},"task":"os-a00d3f34","ts":"2026-09-04T02:53:38Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T03:53:42Z"},"task":"os-a00d3f34","ts":"2026-09-04T02:53:42Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-5cab638e","kind":"pr"},"task":"os-98ce6f8a","ts":"2026-09-04T02:59:31Z","verb":"attach-evidence"}
