@@ -1500,3 +1500,4 @@
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:299","to":"ready"},"task":"os-5063e8ba","ts":"2026-09-04T05:02:15Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T06:02:18Z"},"task":"os-5063e8ba","ts":"2026-09-04T05:02:18Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-3488ea4e","kind":"pr"},"task":"os-7599c27d","ts":"2026-09-04T05:09:42Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-cb666723","kind":"receipt"},"task":"os-7599c27d","ts":"2026-09-04T05:09:45Z","verb":"attach-evidence"}
