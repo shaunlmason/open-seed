@@ -1544,3 +1544,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-b7843ce5","kind":"pr"},"task":"os-9ef9ab34","ts":"2026-09-04T12:55:56Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-1f3e6bbc","kind":"receipt"},"task":"os-9ef9ab34","ts":"2026-09-04T12:55:59Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-9ef9ab34","ts":"2026-09-04T12:56:02Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"next: the guardrail bar requires an offer the boundary does not, so an admitted chain trips it"},"task":"os-aaec6a3c","ts":"2026-09-04T13:12:50Z","verb":"create"}
