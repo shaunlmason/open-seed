@@ -2043,6 +2043,17 @@ written by the two implementing sessions, one voice.
   source, and it now counts the guardrail admission does enforce, a
   claim by the key that sealed the subject's checks, which the fold
   makes chain-visible; found while implementing os-88df7ab2, #311)
+- the bar carries neither clause `plans/os-16e55c11.md` D5 contracted
+  for it: no ceiling arm, no blind-retry arm — os-b5051f2e —
+  **backlog** (filed from review on #312, which read the offer rule's
+  removal as losing ceiling coverage. The bar never had any: the
+  ceiling is admission policy, read from `seed.json` through
+  `Context.Declaration`, so a claim above it folds as filed and the
+  chain verifies byte for byte, while `simulate.Audit` takes records
+  alone, which is III.R row 5's own contract. The blind-retry clause is
+  further out of reach, since a refused append never lands. The card
+  owns the choice: thread the declaration through the verb, mirroring
+  admission, or keep the bar ledger-only and correct the row's wording)
 
 ## Frontier
 

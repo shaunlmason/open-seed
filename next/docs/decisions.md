@@ -3699,3 +3699,22 @@ break. Admission does guard the claim path, and the guard is
 chain-visible: it refuses a claim whose actor sealed that subject's
 checks, and the fold carries `Sealed.Signer` and `Sealed.Pos`. The bar
 counts that instead, so it keeps a violation a drill can plant.
+
+**The clauses the bar cannot carry, said once instead of implied.**
+`plans/os-16e55c11.md` D5 worded the bar as "no refusal followed by a
+blind retry; every claim within its ceiling once item 4 lands", and
+neither clause was ever the offer rule, so removing that rule loses no
+coverage: there was none. Neither is reachable here. The ceiling is
+admission policy, not chain validity: the rule reads
+`Context.Declaration` from `seed.json`, so a claim above the ceiling
+folds as filed and the chain verifies byte for byte, while
+`simulate.Audit` takes records alone, which is III.R row 5's own
+contract that the ledger justifies everything. Two byte-identical
+chains would be compliant or not depending on a file the ledger does
+not carry. The blind-retry clause is further out of reach: a refused
+append never lands, so a refusal followed by a retry leaves only the
+retry. Both are carded as os-b5051f2e, which owns the choice between
+threading the declaration through the verb and correcting the row's
+wording. Writing this down is the point: the offer rule most likely
+grew from a bar whose contract named something else and whose
+something else was unreachable.
