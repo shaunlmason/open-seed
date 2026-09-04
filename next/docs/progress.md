@@ -2199,9 +2199,10 @@ record flips, C.4 and Q.7 routed to the backlog's scale run and to
 promotion, and III.R's seven, none of which an agent act can supply.
 What stands between the packet and the Self-hosting question is the
 deployment, which the autonomy contract reserves to the operator: a
-ledger remote whose `pre-receive` is the `seed-admit` binary (or the
-admission service and its credential under the forge-hosted posture),
-the operator's key as the governance root, one enrolled key per lane,
+ledger remote whose `pre-receive` is the `seed-admit` binary (the
+criteria name the self-hosted posture, so the forge-hosted service
+would be a second recorded deviation, not an alternative), the
+operator's key as the governance root, one enrolled key per lane,
 declared in the block the packet's "The deployment" carries and
 `TestPacketDeclarationLints` holds to `seed preseed check`. After the
 deployment: the v1 state anchored and imported at the flip, the

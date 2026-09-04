@@ -54,11 +54,13 @@ agent work. No Seed deployment for this repository exists: no
 `seed-admit` hook on a git server, no root key at a genesis. Standing
 one up is the operator's, because the autonomy contract reserves
 credentials and infrastructure to a human: the ledger remote whose
-`pre-receive` is the `seed-admit` binary (or, under the forge-hosted
-posture, the admission service and the git credential it pushes
-with), the operator's key as the governance root, one enrolled key per
-lane, as "The deployment" below spells out and as the declaration
-block there, linted under `make check`, declares. Once the three cards
+`pre-receive` is the `seed-admit` binary, the operator's key as the
+governance root, one enrolled key per lane, as "The deployment" below
+spells out and as the declaration block there, linted under `make
+check`, declares. The forge-hosted posture is not an alternative here:
+the criteria name the self-hosted posture, and running `seed-admit
+serve` behind a forge's rulesets instead would be a second deviation
+the operator would have to record beside the first. Once the three cards
 in review merge (os-8ecef90f for III.L row 4, os-b5051f2e for the
 audit's ceiling arm, os-db5cd353 for III.A row 7), nothing agent-side
 remains open at this gate: every criterion's evidence is on `main`,
