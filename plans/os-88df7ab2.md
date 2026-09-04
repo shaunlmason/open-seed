@@ -50,6 +50,20 @@ conflict, so the card waits on it as well as on this plan.
   fold, the signer's capability and tuple, `ReservationValid` on the
   cited reservation, and `BudgetViewAt(prefix).ClosedBy` proving it
   was still open at the run's own position (admit.go:2787).
+- **The fold discards what it cannot record.** The run-fact branch
+  records a `RunStartFact` only where the payload unmarshals, the fence
+  is a number in the subject's applied claim positions, the
+  reservation is a number, and any tuple parses
+  (transition.go:1299-1362); a raw `run.started` with a `{}` payload, a
+  missing or malformed fence/reservation, or a tuple the fold cannot
+  parse is dropped at a `continue` and never becomes a fact.
+  Iterating only folded facts
+  therefore never asks admission about such a start: the audit's
+  existing `TestAuditCatchesUnreservedSpend` drives exactly a `{}`
+  start, and under a fold-facts-only reading it names nothing, because
+  there is no fact to judge. That is the class of spend this bar
+  exists to name, so the raw-record scan is a design decision of its
+  own (D1), not an implementation detail of D1's citation check.
 - **The derivation is not linear.** `BudgetViewAt` calls
   `ReservationValid` per reservation fact, and each call replays
   `keyring.StateAt(prefix)` and `table.StateAt(prefix, subject)` from
@@ -68,29 +82,49 @@ conflict, so the card waits on it as well as on this plan.
 
 ## Design decisions (binding for this task)
 
-- **D1 — the bar asks the protocol about the run's own citation.**
-  For each folded `RunStartFact` the audit asks
-  `admit.RunStartValid(records, table, subject, st)`, and a start it
-  refuses names the subject as unreserved spend. That predicate is
-  the fence, the cited reservation's validity and its openness at the
-  run's position, so the bar neither keeps a boolean nor re-derives a
-  view: it asks the same authority admission asks. Deliberately
-  **not** "some valid reservation was open at p" (this plan's first
+- **D1 — the bar judges raw starts, and only then the citation.**
+  The audit scans RAW `run.started` records, not only folded facts.
+  The tolerant fold records a `RunStartFact` only where it could read
+  a fence and a reservation (transition.go:1299-1362); a start with a
+  missing or malformed fence/reservation — a `{}` payload, a
+  non-numeric reservation, a fence that is no applied claim position —
+  is discarded at a `continue` and never becomes a fact. A start with
+  no corresponding valid fact is therefore spend the bar must name,
+  and it is named **before** any citation check: a start with no fact
+  has no citation to judge. The bar thus keeps the raw-record scan the
+  boolean had, and for each raw start asks admission about it: a
+  start is covered only if the `RunStartFact` corresponding to it
+  passes `admit.RunStartValid(records, table, subject, st)` — the
+  fact is looked up at the start's own position (same subject), and
+  `RunStartValid` verifies the correspondence by re-parsing the
+  record's payload and matching the fact's fence and reservation to
+  it. A start with no such fact — folded or not — names the subject
+  as unreserved spend; only a start with a corresponding fact
+  reaches the citation check, where `RunStartValid` is that whole
+  question: the fence, the cited reservation's validity and its
+  openness at the run's position. The bar neither keeps a boolean
+  nor re-derives a view: it asks the same authority admission asks.
+  Deliberately **not** "some valid reservation was open at p" (this
+  plan's first
   reading, corrected by review on #309): a start citing a closed or
   absent reservation while another is open would pass that and fail
   admission, which is the fencing the bar exists to check.
 - **D2 — a run before any reservation is still unreserved spend.**
   The existing arm keeps its meaning: a `run.started` with no
   preceding valid reservation names the subject. This card only adds
-  the two cases the boolean could not see (closed, inadmissible), and
-  the drill asserts the old arm unchanged so the fix is not a
-  loosening.
-- **D3 — the drills are the three arms, each failing on the boolean.**
+  the cases the boolean could not see (closed, inadmissible, and the
+  discarded raw start of D1), and the drill asserts the old arm
+  unchanged so the fix is not a loosening.
+- **D3 — the drills are the four arms, each failing on the boolean.**
   A settled reservation followed by a second run, a released
-  reservation followed by a run, and a reservation admission rejects
-  followed by a run: each reads as unreserved spend naming the
-  subject, and each passes today (wrongly) if D1 is reverted, which
-  the PR shows. A covered run still audits clean, through
+  reservation followed by a run, a reservation admission rejects
+  followed by a run, and a raw start the fold never recorded
+  (missing or malformed fence/reservation; the audit's existing
+  `TestAuditCatchesUnreservedSpend` already drives a `{}` payload):
+  each reads as unreserved spend naming the subject, and each passes
+  today (wrongly) if D1 is reverted — the fourth passes vacuously
+  under a fold-facts-only reading, because there is no fact to judge —
+  which the PR shows. A covered run still audits clean, through
   `simulate.Audit` and through `seed ledger audit`.
 - **D4 — the audit stays a reader.** It refuses nothing new, adds no
   verb, and keeps its five bars and their names; `seed ledger audit`'s
@@ -104,13 +138,13 @@ conflict, so the card waits on it as well as on this plan.
   moves: the row is met by the shadow run's evidence card, not here.
 
 - **D7 — the fixtures become admission-grade, because the rule
-  demands it.** Measured while implementing D1: the bar can only judge
-  a start the fold recorded, and `transition` records a
-  `RunStartFact` only where the payload named a fence and a
+  demands it.** Measured while implementing D1: the bar judges the
+  start's raw record, not what the fold recorded, and `transition`
+  records a `RunStartFact` only where the payload named a fence and a
   reservation it could read. So a `run.started` the fold did not
-  record cited nothing checkable and is spend with no fence, which the
-  bar must name (else a malformed raw start is invisible, the hole
-  this card exists to close). That makes every synthetic `{}` fixture
+  record is spend with no fence, which the bar must name (else a
+  malformed raw start is invisible, the hole this card exists to
+  close). That makes every synthetic `{}` fixture
   in `internal/simulate/audit_test.go` and the `auditLedger` histories
   in `cmd/seed/ledger_audit_test.go` read as unreserved spend, and
   correctly so: they are not chains any admission would have taken.
@@ -135,8 +169,9 @@ conflict, so the card waits on it as well as on this plan.
   correctness rule does not move either way.
 ## Steps
 
-1. D1 in `internal/simulate/audit.go`: `RunStartValid` per folded
-   start, the boolean removed.
+1. D1 in `internal/simulate/audit.go`: the raw `run.started` scan,
+   the fold-facts lookup and `RunStartValid` per matching fact, the
+   boolean removed.
 2. D3's drills in `internal/simulate/audit_test.go` (including the
    cited-reservation arm: a start citing a closed reservation while
    another is open), the covered arm through the CLI in
@@ -171,9 +206,17 @@ Nothing else. NOT `next/internal/transition/**`, NOT
    claim window leaves `unreserved_spend` empty and `clean` true,
    through `simulate.Audit` and through `seed ledger audit`.
 4. **The fix is what makes the difference.** Reverting D1 to the
-   boolean fails the three drills of AC1 and AC2 by name (shown in
-   the PR).
-5. `make check` green; no model identifiers in any committed artifact.
+   boolean fails the drills of AC1-AC2 by name (shown in the PR);
+   reverting D1 to a fold-facts-only scan additionally lets AC5 pass
+   vacuously (no fact to judge), shown the same way.
+5. **A raw start the fold discards is named.** A `run.started`
+   whose payload carries a missing or malformed fence or reservation
+   (a `{}` payload) reads as unreserved spend naming the subject:
+   the fold records no `RunStartFact` for it, and the raw scan names
+   it before any citation check. The retention drill
+   `TestAuditCatchesUnreservedSpend` asserts this against the
+   boolean's raw scan and must keep passing unchanged in meaning.
+6. `make check` green; no model identifiers in any committed artifact.
 
 **Retention set (existing, shown unharmed):**
 
@@ -187,7 +230,9 @@ Nothing else. NOT `next/internal/transition/**`, NOT
 
 ## Validation Commands
 
-- Boundary: `cd next && go test ./internal/simulate/ -count=1`
+- Boundary: `cd next && go test ./internal/simulate/ -count=1` (the
+  raw-malformed arm asserts alongside the closed, released and
+  inadmissible drills)
 - Boundary: `cd next && go test ./cmd/seed/ -run 'LedgerAudit' -count=1`
 - Retention: `make check` (exit checked separately from any pipe)
 
