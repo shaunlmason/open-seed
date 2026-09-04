@@ -3675,6 +3675,22 @@ not sweep for "optional": III.H row 7 says the meter is
 caller-optional while naming where the rest lives, and that is a
 routed row doing its job, not a row parked forever.
 
+**Abstention is a property of the tree, so the drill reads the tree.**
+Reading the committed row's status and note proves only that the
+table still says what it said: the tree could start sharding and the
+doctor would keep reporting complete without the semantics-equivalence
+evidence the note demands. So a second drill reads the admission
+surface and holds it to what the evidence claims. Sharded intake
+cannot be built without a per-shard admission context or a second rule
+set, since a shard applying the same rules over the same whole prefix
+is not a shard, and both are visible in the syntax: the drill names
+the exported functions returning `*Context` (exactly `ContextAt` and
+`ContextOver`, both whole-chain) and returning `[]Rule` (exactly
+`Default`), and refuses any `admit.Context*` the boundary reaches for
+beyond those. Planting either shape fails all three arms. The row's
+evidence cites the drill, so a reader arriving at the table finds what
+defends it.
+
 ## The audit's vocabulary (os-b86dab4c)
 
 **A bar counts what the protocol emits, or it never fires.** The

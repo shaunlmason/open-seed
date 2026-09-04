@@ -1756,6 +1756,15 @@ the assertions read, and there is no copy to go stale.
   never report complete, and the promotion packet and the exit record
   both depend on it. When a plan says a gate waits on a report, check
   that the report can ever say yes.
+- A row met by abstention needs a drill over the thing abstained from,
+  not over the row. Asserting the committed status, text and note only
+  proves the table is unedited; the claim was about the tree, so the
+  guard has to read the tree and fail when the abstention ends. Look
+  for the surface a change would have to add: sharding intake needs a
+  per-shard context or a second rule set, because a shard judging the
+  same records by the same rules is not a shard, and an AST scan for
+  the constructors that return those types is a cheaper and more exact
+  guard than a grep for the word.
 
 ## A bar that counted a verb the protocol does not emit (os-b86dab4c)
 
