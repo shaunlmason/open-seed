@@ -2103,6 +2103,25 @@ written by the two implementing sessions, one voice.
   owns the choice: thread the declaration through the verb, mirroring
   admission, or keep the bar ledger-only and correct the row's wording)
 
+## The Seed release workflow (os-2e46aa2f)
+
+- the distribution step's precondition, a released Seed binary with
+  checksums and provenance (charter III.P row 1's residual) —
+  os-2e46aa2f — **in review** (task PR against plan #328:
+  `.github/workflows/seed-release.yml`, dispatch-only so a release stays
+  the operator's act and the CI-identity lint's scheduled-writer rule
+  is untouched; the tag `seed/v<version>` minted at HEAD in-runner, in a
+  namespace apart from the template's `v*` and the `seed-anchor/*`
+  anchors; `seed` and `seed-admit` built from `next/` for six targets
+  with the version stamped into `internal/version` (now a var);
+  archives, `checksums.txt`, a GitHub Release and
+  `actions/attest-build-provenance`; held by
+  `TestSeedReleaseWorkflowIsDispatchOnly` beside the scheduled-writer
+  drill and `TestVersionIsStampableAndPreReleaseFromSource`; the
+  handbook's Install section names the release and how to verify one.
+  No release is cut: III.P row 1's residual closes when the operator
+  cuts the first at the distribution step)
+
 ## Frontier
 
 

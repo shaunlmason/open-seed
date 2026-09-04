@@ -24,6 +24,17 @@ one command:
 seed version
 ```
 
+Seed itself is released by `.github/workflows/seed-release.yml`, run by
+the operator at the distribution step (`docs/next-build-plan.md` §5):
+the tag `seed/v<version>` is minted at HEAD in-runner, `seed` and
+`seed-admit` are built for linux, darwin and windows on amd64 and arm64
+with the version stamped, and each archive ships beside `checksums.txt`
+with a build-provenance attestation. To verify an archive before running
+it, check its sha256 against `checksums.txt` and its provenance with
+`gh attestation verify <archive> --repo <owner>/<repo>`. Until the first
+release is cut the binary is built from source (`go run ./next/cmd/seed`)
+and `seed version` prints the pre-release default.
+
 ## 2. Initialise a ledger
 
 The genesis event is signed by the operator key and always joins the

@@ -1933,3 +1933,14 @@ failed step skips the rest of the job.
   bar, and the question was never "which is broken" but "which is the
   authority": the boundary decides what a chain may contain, and a
   conformance bar that disagrees is the thing that moves.
+
+## The release workflow (os-2e46aa2f)
+
+- When a promotion precondition is a human act, separate the act from
+  its instrument: the operator cuts the release, the workflow that
+  cuts it is agent work and can be built, drilled and reviewed before
+  anyone is ready to publish.
+- Check a tool's assumptions about tag shape before adopting it for a
+  namespaced tag; a matrix build in bash was shorter than the
+  workaround.
+

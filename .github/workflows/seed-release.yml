@@ -1,0 +1,97 @@
+# seed-release (dispatch-only; plans/os-2e46aa2f.md; docs/next-build-plan.md
+# section 5, the distribution step). Cuts a release of Seed, the successor
+# under next/: the tag is minted at HEAD in-runner, so the tag and the
+# released commit can never disagree and no contributor needs tag-push
+# rights (the engine repository's discipline); the binaries are built
+# from next/ for six targets with the version stamped; the archives and
+# their sha256 sums are published as a GitHub Release and the checksums
+# are attested with build provenance. No schedule and no push trigger: a
+# release is the operator's act at the distribution step, and the
+# CI-identity lint (next/internal/protections) holds scheduled workflows
+# to read-only. Seed's tags live under seed/v*, apart from the template's
+# v* releases and the seed-anchor/* state anchors.
+name: seed-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Seed version to release (semver without the v, e.g. 0.1.0); the tag is seed/v<version> at HEAD"
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency: seed-release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mint the tag at HEAD (seed/v<version>, refusing a version that is not semver or already released)
+        run: |
+          case "$VERSION" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "version must be semver without the v: $VERSION"; exit 1 ;;
+          esac
+          tag="seed/v$VERSION"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "tag $tag already exists: a release is cut once"; exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$tag"
+          git push origin "refs/tags/$tag"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+
+      - uses: ./.github/actions/go-env
+
+      - name: Build seed and seed-admit for six targets, the version stamped
+        working-directory: next
+        run: |
+          set -eu
+          mkdir -p ../dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os="${target%/*}"; arch="${target#*/}"
+            out="../dist/seed_${VERSION}_${os}_${arch}"
+            mkdir -p "$out"
+            ext=""; [ "$os" = windows ] && ext=".exe"
+            for cmd in seed seed-admit; do
+              CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -trimpath \
+                -ldflags "-s -w -X github.com/shaunlmason/open-seed/next/internal/version.Version=$VERSION" \
+                -o "$out/$cmd$ext" "./cmd/$cmd"
+            done
+            cp ../LICENSE "$out/"
+            if [ "$os" = windows ]; then
+              (cd ../dist && zip -qr "seed_${VERSION}_${os}_${arch}.zip" "seed_${VERSION}_${os}_${arch}")
+            else
+              tar -C ../dist -czf "$out.tar.gz" "seed_${VERSION}_${os}_${arch}"
+            fi
+            rm -r "$out"
+          done
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum seed_*.tar.gz seed_*.zip > checksums.txt && cat checksums.txt
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          protocol=$(grep -o 'seed/[0-9]*' next/internal/version/version.go | sort -t/ -k2 -n | tail -1)
+          gh release create "$TAG" dist/seed_*.tar.gz dist/seed_*.zip dist/checksums.txt \
+            --repo "$GITHUB_REPOSITORY" --title "Seed $VERSION" \
+            --notes "Seed $VERSION at $GITHUB_SHA, protocol register up to $protocol. Binaries: seed and seed-admit for linux, darwin and windows on amd64 and arm64, built with -trimpath from next/. Verify an archive against checksums.txt and its provenance with: gh attestation verify <archive> --repo $GITHUB_REPOSITORY"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-checksums: dist/checksums.txt

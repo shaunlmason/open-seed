@@ -3798,3 +3798,32 @@ threading the declaration through the verb and correcting the row's
 wording. Writing this down is the point: the offer rule most likely
 grew from a bar whose contract named something else and whose
 something else was unreachable.
+
+## The release is the operator's act; the workflow is the agent's (os-2e46aa2f)
+
+**Dispatch-only.** Build plan §5 reserves publishing to a human, and
+the CI-identity lint holds scheduled writers to read-only, so the Seed
+release workflow triggers on `workflow_dispatch` alone with the version
+as its one input. Nothing in the tree can cut a release on its own.
+
+**The tag is minted at HEAD, in its own namespace.** The engine
+repository's discipline: the workflow tags the commit it builds, so
+the tag and the released commit cannot disagree and no contributor
+needs tag-push rights. Seed's tags are `seed/v<version>`, apart from
+the template's `v*` releases (immutable under the tag rule) and the
+`seed-anchor/*` state anchors, so a Seed tag can never be read as a
+template release.
+
+**A plain matrix build, no goreleaser.** goreleaser derives the version
+from an unprefixed semver tag and its monorepo prefix is a paid
+feature; the namespace above is cheaper to keep in twenty lines of
+bash than to work around. `internal/version.Version` is a var so the
+`-ldflags -X` stamp lands; from source it stays the pre-release
+default, and a drill pins both.
+
+**Attested, and verifiable from the handbook.** `checksums.txt` is
+attested with `actions/attest-build-provenance`, the attestation the
+engine ships, and the handbook says how an adopter verifies an archive
+before running it, which is the half of III.R row 7 that a README can
+carry before any release exists.
+

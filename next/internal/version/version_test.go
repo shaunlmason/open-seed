@@ -56,3 +56,18 @@ func TestSeed4GatesAreNamedLists(t *testing.T) {
 		t.Fatal("the request ingress is defined at seed/7 alone, as a named list")
 	}
 }
+
+// conformance: III.P row 1 — the release workflow stamps the version
+// with -ldflags -X (plans/os-2e46aa2f.md D3), which needs a var; from
+// source it is the pre-release default.
+func TestVersionIsStampableAndPreReleaseFromSource(t *testing.T) {
+	if Version != "0.0.0-dev" {
+		t.Fatalf("from source the version is the pre-release default, got %q", Version)
+	}
+	saved := Version
+	Version = "0.1.0"
+	if Version != "0.1.0" {
+		t.Fatal("the version is assignable, as the ldflags stamp requires")
+	}
+	Version = saved
+}

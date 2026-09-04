@@ -8,9 +8,12 @@ package version
 // Name is the binary name: the successor claims the name (SEED-NEXT.md).
 const Name = "seed"
 
-// Version is the module version during incubation: pre-release until
-// spin-out cuts the first tagged release.
-const Version = "0.0.0-dev"
+// Version is the module version: pre-release from source, and the
+// released version when the release workflow stamps it
+// (.github/workflows/seed-release.yml sets it with -ldflags -X at
+// build time; plans/os-2e46aa2f.md D3). A var rather than a const for
+// exactly that reason, and nothing else assigns it.
+var Version = "0.0.0-dev"
 
 // Protocol is the protocol version minted at genesis (build-plan fixed
 // default). The bump discipline is recorded in next/spec/protocol.md.
