@@ -62,14 +62,32 @@ run leaves every list empty:
 2. **Lost updates** — the materialized chain is non-empty and contiguous.
 3. **Silent abandonments** — every `in_progress` window ended by one of
    the four deliberate exits.
-4. **Guardrail breaches** — every `claim.taken` respects the guardrail
+4. **Guardrail breaches** — every `claim.taken` respects the guardrails
    admission enforces on the claim path: the key that sealed a
-   subject's checks never claims it. An unoffered claim is **not** a
-   breach, because admission takes one: the scheduling model publishes
-   offers (`SEED-NEXT.md` §II.9) but no admission rule reads them, and
-   a bar must report what the boundary refuses. The scheduling concern
-   (work ready with no live offer) is `internal/eval`'s read, not this
-   bar's (plans/os-aaec6a3c.md D1, D3).
+   subject's checks never claims it, and, **under the deployment's
+   declaration when the audit is given one**, an agent-kind key never
+   claims a contract above its squad's agent ceiling. The ceiling is
+   admission policy read from `seed.json` and never carried by the
+   chain, so the arm mirrors admission's rule only under a declaration
+   (`simulate.AuditUnder`; `seed ledger audit --config`, below): the
+   claiming key's kind from the keyring replayed to the claim's
+   position, the tier and squad from the fold, the ceiling from the
+   declaration; a ceiling outside the tier vocabulary is a breach, as
+   admission fails closed there; a human key, an undeclared squad or
+   no declaration is silence (plans/os-b5051f2e.md D1). An unoffered
+   claim is **not** a breach, because admission takes one: the
+   scheduling model publishes offers (`SEED-NEXT.md` §II.9) but no
+   admission rule reads them, and a bar must report what the boundary
+   refuses. The scheduling concern (work ready with no live offer) is
+   `internal/eval`'s read, not this bar's (plans/os-aaec6a3c.md D1,
+   D3). The bar's other contracted clause, **no refusal followed by a
+   blind retry**, is not the chain's to show and this bar does not
+   pretend to: a refused append never lands, so a refusal and its
+   retry leave only the retry. What sees refusals is the client's
+   refusal journal and the report's refusal-rate metric
+   ([`refusals.md`](refusals.md)), which count what the boundary
+   refused a lane and how often, and never read the chain
+   (plans/os-b5051f2e.md D4).
 5. **Unreserved spend** — every `run.started` is fenced to the
    reservation it cited. The bar asks admission's own predicate,
    `admit.RunStartValid`, which judges the start's cited reservation
@@ -82,10 +100,17 @@ run leaves every list empty:
    while an unrelated one stands open (plans/os-88df7ab2.md D1, D7).
 
 The same audit runs over any ledger through `seed ledger audit
---ledger <dir>` (plans/os-7599c27d.md): the chain is verified from
-genesis first, then the five bars are read from the verified records,
-a clean chain answering with every list empty and a violated bar
-refusing `audit_violated` (exit 28) naming the bar and the records.
+--ledger <dir> [--config <declaration>]` (plans/os-7599c27d.md): the
+chain is verified from genesis first, then the five bars are read from
+the verified records, a clean chain answering with every list empty
+and a violated bar refusing `audit_violated` (exit 28) naming the bar
+and the records. The declaration is found by the remote verbs' own
+lookup (`--config`, else `$SEED_CONFIG`, else `./seed.json` when
+present, else none), so an audit and the admission it judges read one
+file by one rule; a clean reading names the declaration it was judged
+under (`declaration`, or `null`), and a declaration that exists and
+does not parse refuses `posture_invalid` before any bar
+(plans/os-b5051f2e.md D3).
 This is how the shadow run's real chain is measured against charter
 III.R row 5 (`next/docs/promotion.md`).
 

@@ -1933,3 +1933,23 @@ failed step skips the rest of the job.
   bar, and the question was never "which is broken" but "which is the
   authority": the boundary decides what a chain may contain, and a
   conformance bar that disagrees is the thing that moves.
+
+## The audit's ceiling arm (os-b5051f2e)
+
+- When a bar's contract names something the chain cannot show, the
+  honest moves are to take the missing input explicitly (the
+  declaration, by the same lookup admission uses, named in the
+  reading) or to say where the clause is observable instead (the
+  refusal journal). Silently narrowing the bar's description to what
+  was reachable is the move to avoid: a later reader restores the
+  clause from memory.
+- Mirror a policy rule by replaying the same inputs the rule read at
+  the same position (the keyring to the claim, the fold for the
+  subject), not by re-deriving the facts from the payloads. The
+  keyring package's own replay loop is short enough to inline and
+  exact enough to trust.
+- The local `ledger append` reads no declaration and `ledger audit`
+  did not either; a drill that plants a claim above the ceiling on a
+  local ledger therefore lands it raw under the agent's key, which is
+  the case the bar exists for.
+

@@ -3798,3 +3798,39 @@ threading the declaration through the verb and correcting the row's
 wording. Writing this down is the point: the offer rule most likely
 grew from a bar whose contract named something else and whose
 something else was unreachable.
+
+## The audit's ceiling arm reads the declaration admission read (os-b5051f2e)
+
+**A bar over the chain cannot see a file beside it, so the audit takes
+the file.** The ceiling is admission policy, not chain validity: a
+claim above it folds as filed and the chain verifies byte for byte.
+Rather than leave III.R row 5's "every claim within its ceiling"
+unmeasurable, `simulate.AuditUnder(records, declaration)` judges the
+ceiling arm under a declaration the caller gives, mirroring admission's
+rule arm for arm (the kind from the keyring replayed to the claim's
+position, the tier and squad from the fold, the ceiling from the
+declaration, fail-closed on a ceiling outside the vocabulary, silence
+for a human key, an undeclared squad or no declaration).
+`Audit(records)` is `AuditUnder(records, nil)`, so every existing
+reading, the simulation's included, is unchanged.
+
+**The verb reads the declaration by the one lookup that exists.**
+`seed ledger audit --config` goes through `deploymentDeclaration`, the
+remote verbs' `--config`, `$SEED_CONFIG`, `./seed.json` rule, so an
+audit and the admission it judges read one file by one rule; a
+reading names the declaration it was judged under, or `null`, so a
+policy the lookup found implicitly is explicit in the envelope; a
+declaration that exists and does not parse refuses `posture_invalid`
+before any bar.
+
+**The blind-retry clause is stated, not faked.** A refused append
+never lands, so no bar over the chain can see a refusal or its retry.
+The clause belongs to the refusal journal and the report's refusal
+rate (`refusals.md`), which never read the chain, and `simulation.md`
+says so in the bar's own description. The charter's row is untouched.
+
+**A chain whose roster does not replay is silence, not a guess.** The
+arm needs a kind to judge; where the keyring cannot be replayed it
+reports nothing, which is admission's `Keyring == nil` posture, and
+verification refuses such a chain before the audit reads it anyway.
+
