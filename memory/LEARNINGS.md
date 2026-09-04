@@ -1933,3 +1933,19 @@ failed step skips the rest of the job.
   bar, and the question was never "which is broken" but "which is the
   authority": the boundary decides what a chain may contain, and a
   conformance bar that disagrees is the thing that moves.
+
+## The blind-retry measurement (os-a9e715dc)
+
+- When a metric needs to say "the same thing again", hash the thing,
+  not the record of it: a record carries the coordinates of its
+  attempt (instant, tip, version), and those are exactly what a retry
+  changes. Canonicalize the act alone.
+- A field added to a declared input needs a load rule for inputs
+  written before it existed; "strict" cannot mean "every old journal is
+  now garbage". Load the absent field, refuse the malformed one, and
+  report how many lines could not be judged.
+- Bump a projection's version in one place and expect four drills to
+  pin it: the version register in the spec and the pins in the
+  flywheel, knowledge, lanes and refusals report drills all name the
+  number and what each increment added.
+

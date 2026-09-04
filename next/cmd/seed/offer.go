@@ -149,7 +149,7 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot sign the offer: %v", err)), stdout, stderr)
 	}
 	if err := admit.Check(ctx, rec); err != nil {
-		return render(journalAttempt(stampTip(stampAffordances(remoteFailureEnvelope(err), *dir, signer, *subject), ctx.Count), *dir, signer, "offer.published", *subject), stdout, stderr)
+		return render(journalAttempt(stampTip(stampAffordances(remoteFailureEnvelope(err), *dir, signer, *subject), ctx.Count), *dir, signer, "offer.published", *subject, []byte(payload)), stdout, stderr)
 	}
 	pos, err := store.Append(rec, ctx.Resolve)
 	if err != nil {
@@ -158,7 +158,7 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	return render(journalAttempt(stampTip(stampAffordances(envelope.OK(map[string]any{
 		"subject": *subject,
 		"expires": *expires,
-	}), *dir, signer, *subject), pos+1), *dir, signer, "offer.published", *subject), stdout, stderr)
+	}), *dir, signer, *subject), pos+1), *dir, signer, "offer.published", *subject, []byte(payload)), stdout, stderr)
 }
 
 // offerAuthorized replays the keyring to the offer's own position and

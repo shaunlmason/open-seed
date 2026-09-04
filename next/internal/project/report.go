@@ -114,6 +114,21 @@ type ReportRefusals struct {
 	ByVerb   map[string]int       `json:"by_verb"`
 	Span     *ReportRefusalsSpan  `json:"span"`
 	Rate     string               `json:"rate"`
+	// BlindRetries is III.R row 5's blind-retry clause measured
+	// (plans/os-a9e715dc.md D3), by the definition next/spec/modes.md
+	// gives the loop drills: a refused attempt followed by the same
+	// actor's next attempt on the same subject with the same act
+	// digest, refused with the same code from the same stamped
+	// position (the view did not advance), counted once per refusal.
+	// An admitted next attempt is convergence, and a refusal with
+	// another code or from an advanced position is a new answer to a
+	// new state; neither is blind. BlindRetriesByCode splits the count
+	// by the code, so the optimistic loop's contention spins read
+	// apart from a fenced or invalid act re-sent unchanged; Undigested
+	// is the lines that carry no digest and could not be judged.
+	BlindRetries       int            `json:"blind_retries"`
+	BlindRetriesByCode map[string]int `json:"blind_retries_by_code"`
+	Undigested         int            `json:"undigested"`
 }
 
 // ReportView is the report.json shape. Observation is null when the
@@ -265,7 +280,9 @@ type ReportReconciliation struct {
 // republishes under a new build id rather than keeping a tree without
 // it (review finding on the item 3 PR). Version "12" moves with the
 // section again: the retired and stale counts, the latter judged at
-// the declared instant (plans/os-0d537fbd.md D4). Version "17" adds the
+// the declared instant (plans/os-0d537fbd.md D4). Version "18" adds the
+// blind-retry counts to the refusals section (plans/os-a9e715dc.md D3),
+// which only a build declaring a journal carries. Version "17" adds the
 // per-adapter section from the run.started tuples (plans/os-083112ac.md
 // D2), present only when a run.started with a harness is carried; "16"
 // was the planner's strongest (plans/os-c7554f18.md D3), which landed
@@ -278,7 +295,7 @@ type ReportReconciliation struct {
 // other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "17", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "18", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -542,10 +559,35 @@ func refusalsSection(j *refusals.Journal) (*ReportRefusals, error) {
 		return nil, err
 	}
 	section := &ReportRefusals{
-		Inputs: ReportRefusalsInputs{Digest: digest, Entries: len(j.Entries)},
-		ByCode: map[string]int{},
-		ByVerb: map[string]int{},
-		Rate:   "0.0000",
+		Inputs:             ReportRefusalsInputs{Digest: digest, Entries: len(j.Entries)},
+		ByCode:             map[string]int{},
+		ByVerb:             map[string]int{},
+		Rate:               "0.0000",
+		BlindRetriesByCode: map[string]int{},
+	}
+	// The blind-retry pass (plans/os-a9e715dc.md D3): for each refused
+	// line with a digest, the same actor's next line on the same
+	// subject, in journal order, is a blind retry when it is the same
+	// act (the digest), refused with the same code, from the same
+	// position.
+	for i, e := range j.Entries {
+		if e.Digest == "" {
+			section.Undigested++
+			continue
+		}
+		if e.Outcome != refusals.OutcomeRefused {
+			continue
+		}
+		for _, next := range j.Entries[i+1:] {
+			if next.Actor != e.Actor || next.Subject != e.Subject {
+				continue
+			}
+			if next.Digest == e.Digest && next.Outcome == refusals.OutcomeRefused && next.Code == e.Code && next.Position == e.Position {
+				section.BlindRetries++
+				section.BlindRetriesByCode[e.Code]++
+			}
+			break
+		}
 	}
 	for _, e := range j.Entries {
 		pos, err := strconv.Atoi(e.Position)

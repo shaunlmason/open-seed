@@ -88,7 +88,7 @@ func TestReportLanesSection(t *testing.T) {
 	// the flywheel section (plans/os-9075c308.md D5) took "14" when
 	// the two cards met in the merge. The pin is on the derivation's
 	// current version, never on the number this section introduced.
-	if v := project.Report().Version; v != "17" {
+	if v := project.Report().Version; v != "18" {
 		t.Fatalf("the report's version moves with its sections: %s", v)
 	}
 	// The by_kind split (plans/os-0d4f2af3.md D6) partitions the

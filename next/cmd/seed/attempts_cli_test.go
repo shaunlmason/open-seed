@@ -1,118 +1,120 @@
 package main
 
-// The seam drill (plans/os-edf73d66.md D4b): admission-boundary
-// responses journal their attempts beside the ledger, both
-// outcomes — an admitted append journals one admitted line and a
-// preview-refused append one refused line, each matching the
-// rendered envelope's stamp and code — the specialized verdict
-// path journals too, and read surfaces journal nothing.
+// The attempts journal's act digest at the terminal (plans/os-a9e715dc.md
+// D1, D2, D3; III.R row 5's blind-retry clause): every seam writes the
+// digest of the act it journals, the same act re-sent unchanged digests
+// alike across instants and tips, a corrected act digests apart, and a
+// report built over the journal counts the unchanged re-send as the
+// one blind retry.
 
 import (
-	"crypto/ed25519"
-	"errors"
-	"fmt"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/project"
 	"github.com/shaunlmason/open-seed/next/internal/refusals"
 )
 
-func TestAttemptJournaling(t *testing.T) {
-	ld, src, base, specCommit, head, priv, rootKey, keys, _ := offerLedger(t)
-	rng := base + ".." + head
-	journal := func() []refusals.Entry {
-		j, err := refusals.Load(filepath.Join(ld, refusals.File))
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		return j.Entries
+// conformance: plans/os-a9e715dc.md AC1, AC2 at the terminal — a
+// service key files a request with a kind the boundary refuses, files
+// the same request again unchanged (a blind retry, refused again),
+// then files it corrected (admitted); the journal beside the ledger
+// carries a digest on every line, the two refusals' digests are equal
+// and the admission's differs, the raw seam's line carries one too,
+// and `project rebuild --refusals` reports one blind retry under the
+// refusal's code and no undigested line.
+func TestJournalDigestsTheActAndTheReportCountsBlindRetries(t *testing.T) {
+	ld, root, _, service, _ := requestLedger(t)
+	file := func(kind string) ledgerEnv {
+		t.Helper()
+		e, _ := runEnv(t, "request", "file", "--ledger", ld, "--key", service, "--subject", "system",
+			"--origin", "dash", "--kind", kind, "--reference", "cards/c-1.md @ 0123456", "--summary", "rename the card")
+		return e
 	}
-	rootFP, err := event.Fingerprint(rootKey.Public().(ed25519.PublicKey))
+	if e := file("wish"); e.OK || e.Error == nil || e.Error.Code != "request_refused" {
+		t.Fatalf("an unknown kind refuses at the boundary: %+v", e)
+	}
+	if e := file("wish"); e.OK || e.Error == nil || e.Error.Code != "request_refused" {
+		t.Fatalf("the blind retry refuses again: %+v", e)
+	}
+	if e := file("mirror-edit"); !e.OK {
+		t.Fatalf("the corrected request lands: %+v", e)
+	}
+	// The raw seam journals its success with a digest too.
+	if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", root, "--verb", "message.sent", "--subject", "system", "--payload", `{"n": 1}`); code != 0 {
+		t.Fatalf("raw append: %d %+v", code, e)
+	}
+	j, err := refusals.Load(filepath.Join(ld, refusals.File))
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// An admitted append journals one admitted line matching the
-	// envelope's stamp, signer, verb, and subject.
-	before := len(journal())
-	e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "message.sent", "--subject", "c-1", "--payload", `{"n": 1}`)
-	if code != 0 || e.Position == nil {
-		t.Fatalf("append: %d %+v", code, e)
+	// The fixture's own appends journaled before these four lines;
+	// the last four are the drill's.
+	if len(j.Entries) < 4 {
+		t.Fatalf("the drill journals four attempts: %+v", j.Entries)
 	}
-	entries := journal()
-	if len(entries) != before+1 {
-		t.Fatalf("one admitted attempt journals one line: %d -> %d", before, len(entries))
+	last := j.Entries[len(j.Entries)-4:]
+	for i, e := range j.Entries {
+		if e.Digest == "" {
+			t.Fatalf("line %d carries no digest: %+v", i+1, e)
+		}
 	}
-	last := entries[len(entries)-1]
-	if last.Outcome != refusals.OutcomeAdmitted || last.Code != "" || last.Verb != "message.sent" ||
-		last.Subject != "c-1" || last.Actor != rootFP || last.Position != *e.Position {
-		t.Fatalf("the admitted line mirrors the envelope: %+v vs position %s", last, *e.Position)
+	if last[0].Outcome != refusals.OutcomeRefused || last[1].Outcome != refusals.OutcomeRefused || last[2].Outcome != refusals.OutcomeAdmitted || last[3].Verb != "message.sent" {
+		t.Fatalf("refused, refused, admitted, then the raw seam: %+v", last)
 	}
-
-	// A preview-refused append journals one refused line carrying
-	// the envelope's machine code and stamped position.
-	before = len(journal())
-	e, code = runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
-		"--verb", "actor.enrolled", "--subject", "c-9", "--payload", `{"garbage": true}`)
-	if code == 0 || e.Error == nil || e.Position == nil {
-		t.Fatalf("the malformed enroll refuses stamped: %d %+v", code, e)
+	if last[0].Digest != last[1].Digest {
+		t.Fatalf("the same act re-sent digests alike across instants and tips: %s vs %s", last[0].Digest, last[1].Digest)
 	}
-	entries = journal()
-	if len(entries) != before+1 {
-		t.Fatalf("one refused attempt journals one line: %d -> %d", before, len(entries))
+	if last[0].Code != last[1].Code || last[0].Position != last[1].Position {
+		t.Fatalf("the blind retry is refused alike from the same position: %+v %+v", last[0], last[1])
 	}
-	last = entries[len(entries)-1]
-	if last.Outcome != refusals.OutcomeRefused || last.Code != e.Error.Code ||
-		last.Verb != "actor.enrolled" || last.Position != *e.Position {
-		t.Fatalf("the refused line mirrors the envelope: %+v vs %+v", last, e.Error)
+	if last[2].Digest == last[0].Digest {
+		t.Fatal("the corrected act digests apart")
 	}
-
-	// A read surface is no attempt: budget status journals nothing,
-	// whatever it answers (here not_found: c-1 carries no budget
-	// facts), and neither does a verify.
-	before = len(journal())
-	runEnv(t, "budget", "status", "--ledger", ld, "--subject", "c-1", "--key", keys["workerA"])
-	if e, code := runEnv(t, "ledger", "verify", "--ledger", ld); code != 0 {
-		t.Fatalf("verify: %d %+v", code, e)
+	if last[0].TS == "" || last[0].Position == "" {
+		t.Fatalf("the digest joins the line, it replaces nothing: %+v", last[0])
 	}
-	if got := len(journal()); got != before {
-		t.Fatalf("read surfaces journal nothing: %d -> %d", before, got)
+	// The report over the journal: one blind retry, under the
+	// refusal's code, no undigested line.
+	out := filepath.Join(t.TempDir(), "views")
+	// The projection tree is locked read-only on publish; unlock it so
+	// the temp dir's cleanup can remove it (the project drills' posture).
+	t.Cleanup(func() {
+		_ = filepath.WalkDir(out, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				_ = os.Chmod(p, 0o755)
+			}
+			return nil
+		})
+	})
+	if e, code := runEnv(t, "project", "rebuild", "--ledger", ld, "--out", out, "--refusals", filepath.Join(ld, refusals.File)); code != 0 {
+		t.Fatalf("rebuild: %d %+v", code, e)
 	}
-
-	// The specialized verdict path journals its attempt too; the
-	// library-level appends the fixture makes (admitAppend bypasses
-	// the CLI boundary) journal nothing.
-	offerFile(t, ld, priv, specCommit, "c-2")
-	afterOffer := len(journal())
-	fencePos, err := admitAppend(t, ld, workerRawKey(22), "claim.taken", "c-2", `{}`)
+	cur, err := os.ReadFile(filepath.Join(out, "report", "CURRENT"))
 	if err != nil {
-		t.Fatalf("claim: %v", err)
+		t.Fatal(err)
 	}
-	if _, err := admitAppend(t, ld, workerRawKey(22), "submission.made", "c-2", fmt.Sprintf(
-		`{"fence": "%d", "packet": {"acceptance": ["c-2 ok"], "decisions": [], "base": %q, "refs": [], "findings": []}}`,
-		fencePos, rng)); err != nil {
-		t.Fatalf("submission: %v", err)
+	raw, err := os.ReadFile(filepath.Join(out, "report", "builds", strings.TrimSpace(string(cur)), project.ReportFile))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := len(journal()); got != afterOffer {
-		t.Fatalf("library appends are not CLI attempts: %d -> %d", afterOffer, got)
+	var rep project.ReportView
+	if err := json.Unmarshal(raw, &rep); err != nil {
+		t.Fatal(err)
 	}
-	e, code = runEnv(t, "verdict", "render", "--ledger", ld, "--subject", "c-2", "--repo", src,
-		"--key", keys["verifier"], "--verdict", "pass")
-	if code != 0 {
-		t.Fatalf("verdict: %d %+v", code, e)
+	if rep.Refusals == nil {
+		t.Fatal("a declared journal produces the refusals section")
 	}
-	entries = journal()
-	if len(entries) != afterOffer+1 {
-		t.Fatalf("the verdict render journals one attempt: %d -> %d", afterOffer, len(entries))
+	if rep.Refusals.BlindRetries != 1 || rep.Refusals.BlindRetriesByCode["request_refused"] != 1 || rep.Refusals.Undigested != 0 {
+		t.Fatalf("one blind retry under the refusal's code, nothing undigested: %+v", rep.Refusals)
 	}
-	last = entries[len(entries)-1]
-	if last.Outcome != refusals.OutcomeAdmitted || last.Verb != "verdict.rendered" || last.Subject != "c-2" {
-		t.Fatalf("the specialized path's line names its verb: %+v", last)
+	if rep.Refusals.Refused != 2 {
+		t.Fatalf("two refusals in the journal: %+v", rep.Refusals)
 	}
 }

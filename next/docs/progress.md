@@ -2103,6 +2103,39 @@ written by the two implementing sessions, one voice.
   owns the choice: thread the declaration through the verb, mirroring
   admission, or keep the bar ledger-only and correct the row's wording)
 
+## The refusal journal tells a blind retry from a corrected one (os-a9e715dc)
+
+`plans/os-16e55c11.md` D5 words the five-bar audit's guardrail bar as
+"no refusal followed by a blind retry; every claim within its
+ceiling". The ceiling clause is os-b5051f2e's. Review on #322 found
+the blind-retry clause measurable by no surface: a refused append
+never lands, and the attempts journal kept no digest of the attempted
+payload, so an unchanged retry and a corrected one wrote
+indistinguishable lines. Plan #332. What landed:
+
+- **The act digest.** `refusals.AttemptDigest` is the SHA-256 of the
+  canonical `{actor, verb, subject, payload}`, excluding `ts`, `prev`
+  and the version (the boundary's coordinates, which a retry changes by
+  construction); the entry gains `digest`, written at every seam
+  (`journalAttempt` takes the payload; the eight seams in `loop.go`,
+  `ledger.go`, `offer.go` and `seal.go` pass it, a derivation refusal
+  with no payload journals without one). A journal from before the
+  field loads; a malformed digest refuses naming the line.
+- **The count.** The report's `refusals` section gains
+  `blind_retries`, by the definition `modes.md` gives the loop drills
+  (a refusal followed by the same actor's next attempt on the same
+  subject with the same digest, refused with the same code from the
+  same position, once per refusal; an admitted next attempt is
+  convergence, a refusal with another code or from an advanced
+  position a new answer), `blind_retries_by_code` (by the code, so the
+  optimistic loop's `contention` spins read apart from a `fenced_out`
+  act re-sent unchanged) and `undigested`; report version "18" (the
+  register was at "17", which the plan's review corrected).
+- **The description.** `simulation.md`'s guardrail bar names the count
+  as the clause's evidence, says the audit keeps reading records alone,
+  and that the accelerated simulation journals nothing (remote posture)
+  so the clause is read on local deployments' journals.
+
 ## Frontier
 
 
@@ -2176,7 +2209,9 @@ that branch's to repair: one is a regex in a code span, which the stage
 masks rather than the document changes, and one is in
 `plans/os-2e34f66a.md`, which a plan file's own single-file gate owns,
 so the stage does not read `plans/` at all and the correction is carded
-as os-0dba8c6a for a plan PR.
+as os-0dba8c6a for a plan PR. The guardrail bar's blind-retry clause,
+which no surface could measure, is measured by the report over the
+attempts journal (os-a9e715dc, plan #332; the section above).
 
 **Next action: the operator's answer at the promotion gate.**
 `next/docs/promotion.md` presents the seven criteria of build plan

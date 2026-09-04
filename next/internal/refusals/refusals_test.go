@@ -122,3 +122,60 @@ func TestDigestKeyedByContent(t *testing.T) {
 		t.Fatal("equal journals must digest equally")
 	}
 }
+
+// conformance: plans/os-a9e715dc.md D1, AC1 — the digest identifies
+// the act: two attempts of one act by one key digest alike whatever
+// the instant or the tip (neither is an input), and a changed
+// payload, verb, subject or actor digests differently; a non-object
+// payload still digests, apart from any object's.
+func TestAttemptDigestIdentifiesTheAct(t *testing.T) {
+	a := AttemptDigest("aa11", "claim.taken", "c-1", []byte(`{"fence": "3"}`))
+	if len(a) != 64 || !digestShape(a) {
+		t.Fatalf("a sha256 in lowercase hex: %q", a)
+	}
+	if b := AttemptDigest("aa11", "claim.taken", "c-1", []byte(` {"fence":"3"} `)); b != a {
+		t.Fatalf("the canonical form ignores whitespace: %s vs %s", a, b)
+	}
+	for name, other := range map[string]string{
+		"payload": AttemptDigest("aa11", "claim.taken", "c-1", []byte(`{"fence": "4"}`)),
+		"verb":    AttemptDigest("aa11", "claim.released", "c-1", []byte(`{"fence": "3"}`)),
+		"subject": AttemptDigest("aa11", "claim.taken", "c-2", []byte(`{"fence": "3"}`)),
+		"actor":   AttemptDigest("bb22", "claim.taken", "c-1", []byte(`{"fence": "3"}`)),
+	} {
+		if other == a {
+			t.Errorf("a changed %s must digest differently", name)
+		}
+	}
+	bad := AttemptDigest("aa11", "claim.taken", "c-1", []byte(`[1]`))
+	if bad == "" || bad == a || bad != AttemptDigest("aa11", "claim.taken", "c-1", []byte(`[1]`)) {
+		t.Fatalf("a non-object payload digests as itself, stably: %q", bad)
+	}
+	if AttemptDigest("aa11", "claim.taken", "c-1", nil) != AttemptDigest("aa11", "claim.taken", "c-1", []byte(`{}`)) {
+		t.Fatal("an empty payload digests as an empty object")
+	}
+}
+
+// conformance: plans/os-a9e715dc.md D1 — a journal written before the
+// field existed still loads; a present digest that is no sha256
+// refuses naming the line; a noted digest round-trips.
+func TestLoadHoldsTheDigestShape(t *testing.T) {
+	dir := t.TempDir()
+	with := entry(OutcomeRefused, "fenced_out")
+	with.Digest = AttemptDigest(with.Actor, with.Verb, with.Subject, []byte(`{}`))
+	Note(dir, entry(OutcomeAdmitted, ""))
+	Note(dir, with)
+	j, err := Load(filepath.Join(dir, File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(j.Entries) != 2 || j.Entries[0].Digest != "" || j.Entries[1].Digest != with.Digest {
+		t.Fatalf("lines with and without a digest load: %+v", j.Entries)
+	}
+	path := filepath.Join(t.TempDir(), File)
+	if err := os.WriteFile(path, []byte(`{"ts": "2026-09-01T02:30:00Z", "position": "7", "actor": "aa11", "verb": "message.sent", "subject": "c-1", "outcome": "admitted", "digest": "not-a-digest"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "line 1") || !strings.Contains(err.Error(), "sha256") {
+		t.Fatalf("a malformed digest refuses naming the line: %v", err)
+	}
+}
