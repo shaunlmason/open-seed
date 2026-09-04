@@ -9,10 +9,12 @@
 package gitref
 
 import (
+	"archive/tar"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -111,22 +113,117 @@ var noAutoGC = [][2]string{
 	{"receive.autoGC", "false"},
 }
 
-// hardenGitDir writes noAutoGC into the git dir on every construction,
-// not only at init: a state dir an older build created is hardened the
-// first time a new build opens it, and three idempotent config writes
-// cost less than a stat-and-branch that could drift from what the
-// drill asserts. A write that fails is the client's error, named by
-// key: a git that cannot configure its own repository cannot be
-// trusted to fetch from it either.
+// hardenGitDir ensures noAutoGC is set in the git dir's own config on
+// every construction, not only at init: a state dir an older build
+// created is hardened the first time a new build opens it. The write
+// is in-process, in git's own file format, and touches only the
+// repository's config file: three `git config --local` processes per
+// construction were the largest single source of spawns in the CLI
+// suite, and a spawn is dear on Windows (next/spec/platform.md). A key
+// already carrying its value is left alone, so the file never grows
+// with repeated opens; a file that cannot be read or written is the
+// client's error, named by key. GIT_CONFIG, which selects the file a
+// `git config` invocation reads and writes (review finding on #232),
+// no longer enters into it: no git process runs here.
 func hardenGitDir(gitDir string) error {
-	for _, kv := range noAutoGC {
-		cmd := exec.Command("git", "--git-dir", gitDir, "config", "--local", kv[0], kv[1])
-		cmd.Env = withoutGitConfigSelection(os.Environ())
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("harden %s: git config: %w: %s", kv[0], err, strings.TrimSpace(string(out)))
-		}
+	return ensureConfig(gitDir, noAutoGC)
+}
+
+// ensureConfig appends every key of kvs whose value the git dir's
+// config does not already carry, grouped under section headers in the
+// format git itself writes. Keys are `section.key`; a subsection is
+// not a shape this needs. For a single-valued key the last occurrence
+// wins, so a differing value is superseded by appending, never by
+// rewriting what an operator or git wrote.
+func ensureConfig(gitDir string, kvs [][2]string) error {
+	path := filepath.Join(gitDir, "config")
+	existing, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("harden: read %s: %w", path, err)
 	}
-	return nil
+	have := configValues(existing)
+	var buf strings.Builder
+	if len(existing) > 0 && existing[len(existing)-1] != '\n' {
+		buf.WriteByte('\n')
+	}
+	lastSection := ""
+	for _, kv := range kvs {
+		section, key, ok := strings.Cut(kv[0], ".")
+		if !ok || strings.Contains(key, ".") {
+			return fmt.Errorf("harden %s: a key is section.key", kv[0])
+		}
+		if have[strings.ToLower(section)+"."+strings.ToLower(key)] == kv[1] {
+			continue
+		}
+		if section != lastSection {
+			fmt.Fprintf(&buf, "[%s]\n", section)
+			lastSection = section
+		}
+		fmt.Fprintf(&buf, "\t%s = %s\n", key, kv[1])
+	}
+	if lastSection == "" {
+		return nil
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o644)
+	if err != nil {
+		return fmt.Errorf("harden: open %s: %w", path, err)
+	}
+	if _, err := f.WriteString(buf.String()); err != nil {
+		f.Close()
+		return fmt.Errorf("harden: write %s: %w", path, err)
+	}
+	return f.Close()
+}
+
+// configValues reads a git config file far enough to answer which
+// `section.key` (or `section.subsection.key`) holds which value:
+// section and key names fold to lower case, a subsection is kept
+// verbatim, and the last occurrence of a key wins, as in git. Includes
+// are not followed; a value that only an include supplies reads as
+// absent, and the explicit append that follows still wins in git's own
+// resolution, since it comes later in the file.
+func configValues(b []byte) map[string]string {
+	vals := map[string]string{}
+	section := ""
+	for _, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line[0] == '#' || line[0] == ';' {
+			continue
+		}
+		if line[0] == '[' {
+			end := strings.IndexByte(line, ']')
+			if end < 0 {
+				section = ""
+				continue
+			}
+			name, sub, hasSub := strings.Cut(line[1:end], " ")
+			section = strings.ToLower(strings.TrimSpace(name))
+			if hasSub {
+				section += "." + strings.Trim(strings.TrimSpace(sub), "\"")
+			}
+			continue
+		}
+		if section == "" {
+			continue
+		}
+		key, value, _ := strings.Cut(line, "=")
+		key = strings.ToLower(strings.TrimSpace(key))
+		if key == "" {
+			continue
+		}
+		// A trailing comment ends the value; quotes around it are git's
+		// own way of keeping leading or trailing blanks.
+		value = strings.TrimSpace(value)
+		if strings.HasPrefix(value, "\"") {
+			if end := strings.IndexByte(value[1:], '"'); end >= 0 {
+				value = value[1 : 1+end]
+			}
+		} else if i := strings.IndexAny(value, "#;"); i >= 0 {
+			value = strings.TrimSpace(value[:i])
+		}
+		vals[section+"."+key] = value
+	}
+	return vals
 }
 
 // withoutGitConfigSelection drops GIT_CONFIG from an environment. The
@@ -134,10 +231,11 @@ func hardenGitDir(gitDir string) error {
 // unqualified write under it lands in whatever file the operator
 // named, and `--local` under it refuses ("only one config file at a
 // time") rather than overriding it (review finding on #232). The
-// hardening therefore names its target explicitly AND runs without
-// the variable, so the repository's own config is the only file it
-// touches and a file the operator selected is never mutated by Seed.
-// internal/verdict carries the same filter for its workspace clone.
+// hardening no longer runs git at all (ensureConfig writes the
+// repository's own file directly), so this filter now serves the
+// drill that reads the hardened values back with --local under a
+// planted GIT_CONFIG. internal/verdict carries the same filter for
+// its workspace clone.
 func withoutGitConfigSelection(env []string) []string {
 	out := make([]string, 0, len(env))
 	for _, kv := range env {
@@ -207,13 +305,22 @@ func (c *Client) persistHead(commit string) error {
 // monotonic-head rule: a fetched tip that does not contain the persisted
 // verified head refuses with ErrHeadRegression naming both commits. An
 // absent remote ref yields an empty commit id (a fresh ledger).
+//
+// The common path is one git process: the fetch itself, with the tip
+// read back from the tracking ref it wrote. The ls-remote that used to
+// precede every fetch is spent only when the fetch refuses, to tell an
+// absent ref (a fresh ledger) from an unreachable remote. Each spawn is
+// cheap on Linux and dear on Windows, and every append pays this path
+// at least once (next/spec/platform.md, the cmd/seed residual).
 func (c *Client) Fetch() (commit string, err error) {
-	out, lsErr := runGit(c.gitDir, "ls-remote", c.Remote, c.Ref)
-	if lsErr != nil {
-		return "", fmt.Errorf("%w: %v", ErrUnavailable, lsErr)
-	}
-	fields := strings.Fields(out)
-	if len(fields) == 0 {
+	if _, fetchErr := runGit(c.gitDir, "fetch", "-q", "--force", c.Remote, c.Ref+":"+localTracking); fetchErr != nil {
+		out, lsErr := runGit(c.gitDir, "ls-remote", c.Remote, c.Ref)
+		if lsErr != nil {
+			return "", fmt.Errorf("%w: %v", ErrUnavailable, lsErr)
+		}
+		if len(strings.Fields(out)) != 0 {
+			return "", fmt.Errorf("%w: %v", ErrUnavailable, fetchErr)
+		}
 		// An absent ref is a fresh ledger only for a client that never
 		// verified a head. After a verified head, a vanished ref is the
 		// deepest possible regression: refusing here keeps AppendLoop from
@@ -227,8 +334,8 @@ func (c *Client) Fetch() (commit string, err error) {
 		}
 		return "", nil
 	}
-	tip := fields[0]
-	if _, err := runGit(c.gitDir, "fetch", "-q", "--force", c.Remote, c.Ref+":"+localTracking); err != nil {
+	tip, err := c.trackingTip()
+	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
 	persisted, have, err := c.PersistedHead()
@@ -243,8 +350,41 @@ func (c *Client) Fetch() (commit string, err error) {
 	return tip, nil
 }
 
+// trackingTip reads the commit the tracking ref names. A fetch writes
+// the ref loose, so the common path is one file read and no process;
+// a ref stored any other way (a packed or reftable store) is resolved
+// by git itself.
+func (c *Client) trackingTip() (string, error) {
+	if b, err := os.ReadFile(filepath.Join(c.gitDir, filepath.FromSlash(localTracking))); err == nil {
+		if id := strings.TrimSpace(string(b)); isObjectID(id) {
+			return id, nil
+		}
+	}
+	out, err := runGit(c.gitDir, "rev-parse", "--verify", localTracking)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// isObjectID reports whether s is a full hex object id (SHA-1 or SHA-256).
+func isObjectID(s string) bool {
+	if len(s) != 40 && len(s) != 64 {
+		return false
+	}
+	for _, r := range s {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+			return false
+		}
+	}
+	return true
+}
+
 // Materialize extracts the fetched ledger tree into dir (which must be
-// empty or absent). An empty commit id materializes an empty dir.
+// empty or absent). An empty commit id materializes an empty dir. The
+// archive git writes is read by this process: the tar that used to
+// unpack it was a second spawn per materialization, and every append
+// materializes at least once.
 func (c *Client) Materialize(commit, dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -252,20 +392,79 @@ func (c *Client) Materialize(commit, dir string) error {
 	if commit == "" {
 		return nil
 	}
-	archive := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", c.gitDir, "archive", commit)
-	untar := exec.Command("tar", "-x", "-C", dir)
+	archive := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", c.gitDir, "archive", "--format=tar", commit)
+	var stderr strings.Builder
+	archive.Stderr = &stderr
 	pipe, err := archive.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	untar.Stdin = pipe
-	if err := untar.Start(); err != nil {
+	if err := archive.Start(); err != nil {
 		return err
 	}
-	if err := archive.Run(); err != nil {
-		return fmt.Errorf("git archive %.12s: %w", commit, err)
+	extractErr := untar(pipe, dir)
+	// Drain what is left so git can exit whatever the extraction did.
+	io.Copy(io.Discard, pipe)
+	if err := archive.Wait(); err != nil {
+		return fmt.Errorf("git archive %.12s: %w: %s", commit, err, strings.TrimSpace(stderr.String()))
 	}
-	return untar.Wait()
+	if extractErr != nil {
+		return fmt.Errorf("git archive %.12s: %w", commit, extractErr)
+	}
+	return nil
+}
+
+// untar unpacks a tar stream under dir: directories, regular files
+// with their permission bits, and symbolic links, which is what a git
+// tree holds. An entry that would land outside dir is refused by name.
+func untar(r io.Reader, dir string) error {
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if hdr.Typeflag == tar.TypeXGlobalHeader {
+			continue
+		}
+		target := filepath.Join(dir, filepath.FromSlash(hdr.Name))
+		if rel, err := filepath.Rel(dir, target); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return fmt.Errorf("entry %q escapes the target directory", hdr.Name)
+		}
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0o755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return err
+			}
+			f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, hdr.FileInfo().Mode().Perm())
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(f, tr); err != nil {
+				f.Close()
+				return err
+			}
+			if err := f.Close(); err != nil {
+				return err
+			}
+		case tar.TypeSymlink:
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return err
+			}
+			if err := os.Symlink(hdr.Linkname, target); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("entry %q has unsupported type %q", hdr.Name, hdr.Typeflag)
+		}
+	}
 }
 
 // CommitAndPush commits dir's tree on top of parent and pushes it to the
