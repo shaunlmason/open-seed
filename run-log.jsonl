@@ -1509,3 +1509,4 @@
 {"actor":"shim","data":{"auto_path":"dep_cascade","removed":"dep:os-98ce6f8a","to":"ready"},"task":"os-d63c7441","ts":"2026-09-04T05:27:33Z","verb":"blocker_resolved"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-98ce6f8a","ts":"2026-09-04T05:27:33Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-a00d3f34","ts":"2026-09-04T06:41:33Z","verb":"close"}
+{"actor":"shaunlmason","data":{"title":"next: the five-bar audit counts budget.reserved, a verb the protocol does not define, so a real chain audits as unreserved spend (III.R row 5)"},"task":"os-b86dab4c","ts":"2026-09-04T06:43:25Z","verb":"create"}
