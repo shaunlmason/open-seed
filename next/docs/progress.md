@@ -1997,8 +1997,9 @@ git server that hosts the shadow ledger with the hook, the run at the
 enforced self-hosted posture the criteria name. Until that answer the agent-side work is to merge the
 open PRs as they clear review (#291 then #294; #293 then #297; #295
 then #296; #299 then #300; #301 then #302; #290; #292), fix the
-scale defect (os-5063e8ba) so the weekly run can be green and III.C
-row 4 can flip, and keep the packet's citations true. After the answer: the
+scale defect (os-5063e8ba) so the weekly run can be green (III.C
+row 4 stays `partial` on it: the charter's clause is sharded
+intake's, os-7953612b), and keep the packet's citations true. After the answer: the
 shadow run per the packet's protocol, its measurements recorded into
 the packet by follow-up cards, the two escalated cutovers, and only
 then the Phase 13 exit record. The derivation, stated rather than
