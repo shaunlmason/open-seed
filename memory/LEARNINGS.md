@@ -1772,6 +1772,30 @@ the assertions read, and there is no copy to go stale.
   race the harness's cleanup, and on macOS it lost, reporting a
   skipped drill as a failed one on a PR that touched neither.
 
+## A permission left open (os-9ef9ab34)
+
+- A completeness rule that admits no exceptions turns any row parked
+  "not claimed" into a permanent block. Where a gate reads "every row
+  met", a criterion the system is allowed not to exercise still needs
+  a status that can be reached: mark it met by abstention with the
+  evidence that actually holds, and say in the note what a future
+  system would have to show to keep it.
+- Look for the deadlock at the seam between two documents, not inside
+  either. The completeness rule and the row's note were each
+  defensible; only reading them together showed that the doctor could
+  never report complete, and the promotion packet and the exit record
+  both depend on it. When a plan says a gate waits on a report, check
+  that the report can ever say yes.
+- A row met by abstention needs a drill over the thing abstained from,
+  not over the row. Asserting the committed status, text and note only
+  proves the table is unedited; the claim was about the tree, so the
+  guard has to read the tree and fail when the abstention ends. Look
+  for the surface a change would have to add: sharding intake needs a
+  per-shard context or a second rule set, because a shard judging the
+  same records by the same rules is not a shard, and an AST scan for
+  the constructors that return those types is a cheaper and more exact
+  guard than a grep for the word.
+
 ## A bar that counted a verb the protocol does not emit (os-b86dab4c)
 
 - A fixture that repeats the code's mistake proves nothing, and reads
@@ -1836,3 +1860,46 @@ the assertions read, and there is no copy to go stale.
   delimited region by counting depth rather than excluding the
   delimiter, and be suspicious of a test that asserts the gate
   deliberately does not look at something.
+
+## An evidence file that hashes a moving target is a cache, not a check
+
+Verify was the whole failure surface: sixteen of the last sixteen
+`check-validate` failures on task PRs were its one step, twelve of them
+receipt bookkeeping (nine mismatch, three missing) and four a plan that
+had merged after the branch was cut. Purity caught nothing; validation
+caught nothing; the reviewer-identity check never even ran, because a
+failed step skips the rest of the job.
+
+- **Ask what a comparison proves before enforcing it.** The receipt
+  committed `merge_base`, `head`, `diff_files` and `diff_sha256`, and
+  verify compared those bytes. But D4.5 already says the local receipt
+  is advisory and CI regeneration is the truth (R11): a forged snapshot
+  loses to regeneration either way, so the comparison added no
+  integrity. What it added was an ordering constraint, that no push may
+  follow receipt generation, which review fixes and base merges make
+  impossible to satisfy. A rule nobody can hold and nothing needs is a
+  bottleneck wearing a gate's clothes.
+- **Split what an author can assert from what a verifier finds.** The
+  committed file is now the *claim*: task, plan pin, authorized
+  commands, all functions of the approved plan alone, so it survives
+  rebases and base merges and goes stale only when the plan changes,
+  which is exactly when re-verification is warranted. The snapshot
+  became the *attestation*, emitted per CI run and committed by nobody.
+  The file stopped describing a diff it could not know at authoring
+  time, which is also why agents kept regenerating it.
+- **One error message for two conditions with different remedies costs
+  a run every time.** "No approved plan at merge-base" meant either an
+  unplanned branch (a D3 violation) or a branch cut before its own plan
+  PR merged (one `git merge`). Naming the remedy in the message, and
+  checking it at worktree creation instead, turns a full red matrix
+  into a one-second refusal.
+- **A gate with no local counterpart trains people to discover it in
+  CI.** `pre-merge.d/` ran `make check` and nothing else, so the rule
+  that failed every red build had no way to fail fast. It runs the same
+  `seed receipt verify` now, in about a second.
+- **Excluding a path from a hash excludes it from every check that
+  reads the hash.** `receipts/**` is out of the diff so that committing
+  a receipt cannot change its own hash, which also meant purity never
+  saw a task PR editing another task's receipt. Purity runs over the
+  full changed-file list now. When you exclude something for one
+  computation, go and look at what else was reading that list.

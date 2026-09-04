@@ -160,20 +160,51 @@ jobs:
             branch="$HEAD_REF"
           fi
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "base=origin/${{ github.base_ref || 'main' }}" >> "$GITHUB_OUTPUT"
           # classify prints "class=X task=Y" on one line; GITHUB_OUTPUT is
           # parsed per line, so split before appending.
           cls=$(scripts/seed pr classify "$branch")
           echo "$cls"
           echo "$cls" | tr ' ' '\n' >> "$GITHUB_OUTPUT"
       - name: Verify task PR (receipt + purity + stale-plan)
+        id: verify
         if: steps.head.outputs.class == 'task'
         env:
           BRANCH: ${{ steps.head.outputs.branch }}
+          BASE: ${{ steps.head.outputs.base }}
+          TASK: ${{ steps.head.outputs.task }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          scripts/seed receipt verify "$TASK" --base "$BASE" --branch "$BRANCH" --run \
+            --emit "attestation-$TASK.json" --by "ci:$RUN_URL"
+      - name: Attestation (what CI verified, run-scoped; nothing commits it)
+        # Written on red runs too, so a failure says what it was checked
+        # against. This is the author-of-record record (R11): the committed
+        # receipt is the implementer's claim, this is CI's finding.
+        if: ${{ !cancelled() && steps.verify.outcome != 'skipped' }}
+        env:
           TASK: ${{ steps.head.outputs.task }}
         run: |
-          scripts/seed receipt verify "$TASK" --base origin/main --branch "$BRANCH" --run
+          f="attestation-$TASK.json"
+          [ -f "$f" ] || { echo "no attestation emitted (the gate stopped before it could build one)"; exit 0; }
+          {
+            echo "### Receipt attestation: \`$TASK\`"
+            echo
+            echo '```json'
+            cat "$f"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.verify.outcome != 'skipped' }}
+        with:
+          name: attestation-${{ steps.head.outputs.task }}-${{ github.run_attempt }}
+          path: attestation-${{ steps.head.outputs.task }}.json
+          if-no-files-found: ignore
       - name: 'Reviewer identity (D4.5: reviewer differs from implementer)'
-        if: github.event_name == 'pull_request_review' && steps.head.outputs.class == 'task'
+        # Not gated on verify passing: a run that reports the receipt gate
+        # and the identity gate together costs one round trip, and the two
+        # are independent findings.
+        if: ${{ !cancelled() && github.event_name == 'pull_request_review' && steps.head.outputs.class == 'task' }}
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
@@ -191,7 +222,8 @@ jobs:
         env:
           BRANCH: ${{ steps.head.outputs.branch }}
           TASK: ${{ steps.head.outputs.task }}
+          BASE: ${{ steps.head.outputs.base }}
         run: |
-          files=$(git diff --name-only "origin/${{ github.base_ref || 'main' }}...HEAD" | paste -sd, -)
+          files=$(git diff --name-only "$BASE...HEAD" | paste -sd, -)
           scripts/seed pr classify "$BRANCH" --files "$files"
           scripts/seed plan lint "plans/$TASK.md"

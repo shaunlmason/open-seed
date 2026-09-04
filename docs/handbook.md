@@ -61,10 +61,15 @@ scripts/seed task claim os-1a2b --actor agent-1 --lease 60m  # → in_progress
   when the plan PR merges. The **approved plan is the blob at your task PR's
   merge-base**: amending a plan means a new plan PR, then rebasing your
   task branch (CI's stale-plan check forces exactly this).
-- **Implement on `seed/<task-id>`** in a worktree. Task PRs never touch
-  `plans/**` (CI rejects them). Generate your receipt
-  (`seed receipt generate <id> --base origin/main --run --write`), commit
-  it, push, open the PR.
+- **Implement on `seed/<task-id>`** in a worktree, cut from a base that already
+  carries your plan (`git fetch origin main` first; the post-create hook checks
+  this and says so in a second rather than letting CI find it). Task PRs never
+  touch `plans/**`, nor any receipt but their own (CI rejects both). Generate
+  your receipt (`seed receipt generate <id> --base origin/main --write`) and
+  commit it: it pins the plan you implemented against and nothing volatile, so
+  you write it once and later pushes cannot invalidate it. Before pushing, run
+  the local gate: `.seed/hooks/pre-merge.d/*`, which is `make check` plus the
+  same `seed receipt verify` CI runs.
 - **Finish:** `transition --to review` with your token, attach evidence.
   A human (or the reviewer lane, once activated) reviews; the PR merges
   through the server gates; maintenance closes the card and unblocks

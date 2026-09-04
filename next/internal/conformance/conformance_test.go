@@ -2,8 +2,15 @@ package conformance_test
 
 import (
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"go/types"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -216,5 +223,201 @@ func TestAssessJudgesAtThePosture(t *testing.T) {
 	b, _ := json.Marshal(rep)
 	if !strings.Contains(string(b), `"outstanding_rows":[]`) {
 		t.Fatalf("the outstanding rows render as an empty list, never null: %s", b)
+	}
+}
+
+// notClaimed matches a note that parks a row on the grounds that its
+// criterion was never claimed, rather than naming outstanding work or
+// a measurement. It is deliberately the phrase and not the idea: a
+// note may say a capability is caller-optional (III.H row 7) while
+// still naming where the rest lives, and that is not this shape.
+var notClaimed = regexp.MustCompile(`(?i)\bnot claimed\b|\bunclaimed\b`)
+
+// conformance: os-9ef9ab34 D2 — a row is never left outstanding on the
+// grounds that nobody claimed its criterion. Assess reports complete
+// only when every applicable row is met, so a row parked that way can
+// never be flipped by any later record and makes complete unreachable
+// forever: III.B row 6, a permission, sat open with the note "not
+// claimed: MAY" and would have blocked the Phase 13 exit record and
+// promotion with it. A permission is met by abstention, and the table
+// says so.
+func TestNoRowIsOutstandingBecauseNobodyClaimedIt(t *testing.T) {
+	tb := table(t)
+	for _, p := range tb.Pillars {
+		for _, r := range p.Rows {
+			if r.Status != conformance.StatusMet && notClaimed.MatchString(r.Note) {
+				t.Errorf("%s.%d is %s and its note excuses the criterion as unclaimed: %q\n"+
+					"    a row parked this way can never be met, and Assess needs every row met to report complete",
+					p.ID, r.Row, r.Status, r.Note)
+			}
+		}
+	}
+	// The guard fails on the shape it exists to catch, so it cannot
+	// pass by matching nothing.
+	planted := table(t)
+	planted.Pillars[0].Rows[0].Status = conformance.StatusOpen
+	planted.Pillars[0].Rows[0].Note = "not claimed: MAY; nobody has exercised it"
+	found := false
+	for _, r := range planted.Pillars[0].Rows {
+		if r.Status != conformance.StatusMet && notClaimed.MatchString(r.Note) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("the guard does not fire on a planted unclaimed row")
+	}
+}
+
+// conformance: os-9ef9ab34 D1 — the one permission-shaped row in Part
+// III is met by abstention, with its evidence naming what holds: a
+// single intake path and ordering derived from the admitted chain.
+func TestThePermissionRowIsMetByAbstention(t *testing.T) {
+	tb := table(t)
+	for _, p := range tb.Pillars {
+		if p.ID != "B" {
+			continue
+		}
+		for _, r := range p.Rows {
+			if r.Row != 6 {
+				continue
+			}
+			if !strings.Contains(r.Text, "may shard proposal intake") {
+				t.Fatalf("III.B row 6 is no longer the permission this drill reads: %q", r.Text)
+			}
+			if r.Status != conformance.StatusMet {
+				t.Errorf("the permission row is %s; a permission is met by abstention (os-9ef9ab34)", r.Status)
+			}
+			if !strings.Contains(r.Note, "abstention") {
+				t.Errorf("the row's note states the reading: %q", r.Note)
+			}
+			return
+		}
+	}
+	t.Fatal("III.B row 6 not found in the table")
+}
+
+// admissionFiles parses a package directory's non-test sources. It
+// fails rather than returning nothing, so a drill reading the surface
+// cannot pass because the surface moved out from under it.
+func admissionFiles(t *testing.T, dir string) []*ast.File {
+	t.Helper()
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fset := token.NewFileSet()
+	var files []*ast.File
+	for _, e := range ents {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		f, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, f)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no non-test sources under %s: this drill would pass vacuously", dir)
+	}
+	return files
+}
+
+// constructorsReturning names the exported functions whose result list
+// holds want, written as it appears in the source. It reads the syntax
+// only: no type checking, so it works on a planted file too.
+func constructorsReturning(files []*ast.File, want string) []string {
+	var names []string
+	for _, f := range files {
+		for _, d := range f.Decls {
+			fn, ok := d.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil || !fn.Name.IsExported() || fn.Type.Results == nil {
+				continue
+			}
+			for _, r := range fn.Type.Results.List {
+				if types.ExprString(r.Type) == want {
+					names = append(names, fn.Name.Name)
+					break
+				}
+			}
+		}
+	}
+	sort.Strings(names)
+	return names
+}
+
+// conformance: os-9ef9ab34 D1 — the row's evidence, not just the row.
+// III.B row 6 is a permission met by abstention, and abstention is a
+// property of the tree rather than of the table: the row is earned by
+// intake being single-path, so a drill that reads only the committed
+// status can keep saying `met` after the tree starts sharding, and
+// `seed doctor` would report complete without the semantics-equivalence
+// evidence the note demands. This reads the admission surface instead.
+// Sharded intake cannot be built without a per-shard admission context
+// or a second rule set, because a shard applying the same rules over
+// the same whole prefix is not a shard; both are visible in the syntax.
+func TestIntakeIsSinglePathAsTheRowsEvidenceStates(t *testing.T) {
+	const reEarn = "\n    III.B row 6 is met by abstention, and its evidence is that intake is single-path.\n" +
+		"    A tree that shards re-earns the row by showing semantics unchanged (the row's note), or restates that evidence."
+
+	admitPkg := admissionFiles(t, filepath.Join(root, "next", "internal", "admit"))
+	// Two context constructors, both whole-chain: one over a store's
+	// materialized tip, one over a complete record prefix. A third that
+	// selects a subset is what sharding needs.
+	if got, want := constructorsReturning(admitPkg, "*Context"), []string{"ContextAt", "ContextOver"}; !slices.Equal(got, want) {
+		t.Errorf("admission builds its context through %v, not the whole-prefix %v;"+reEarn, got, want)
+	}
+	// One rule set. A second is a second intake by definition: two
+	// paths judging by different rules is the semantics change the
+	// charter's clause is about.
+	if got, want := constructorsReturning(admitPkg, "[]Rule"), []string{"Default"}; !slices.Equal(got, want) {
+		t.Errorf("admission draws its rules from %v, not %v;"+reEarn, got, want)
+	}
+
+	// The boundary agrees: cmd/seed-admit's two intake paths (the
+	// pre-receive hook and the propose service) reach admission through
+	// those same constructors and nothing else.
+	var refs []string
+	seen := map[string]bool{}
+	for _, f := range admissionFiles(t, filepath.Join(root, "next", "cmd", "seed-admit")) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			sel, ok := n.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			pkg, ok := sel.X.(*ast.Ident)
+			if !ok || pkg.Name != "admit" || !strings.HasPrefix(sel.Sel.Name, "Context") {
+				return true
+			}
+			if !seen[sel.Sel.Name] {
+				seen[sel.Sel.Name] = true
+				refs = append(refs, sel.Sel.Name)
+			}
+			return true
+		})
+	}
+	sort.Strings(refs)
+	if len(refs) == 0 {
+		t.Error("cmd/seed-admit names no admission context: this arm would pass vacuously")
+	}
+	for _, name := range refs {
+		switch name {
+		case "Context", "ContextAt", "ContextOver":
+		default:
+			t.Errorf("the boundary reaches admission through admit.%s, which is neither whole-prefix constructor;"+reEarn, name)
+		}
+	}
+
+	// The guard has teeth: the shape it exists to catch fails it.
+	planted, err := parser.ParseFile(token.NewFileSet(), "shard.go", `package admit
+
+func ContextForShard(shard int, records []*event.Record) (*Context, error) { return nil, nil }
+`, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := constructorsReturning([]*ast.File{planted}, "*Context"); !slices.Equal(got, []string{"ContextForShard"}) {
+		t.Fatalf("the scanner does not see a planted per-shard constructor, got %v", got)
 	}
 }
