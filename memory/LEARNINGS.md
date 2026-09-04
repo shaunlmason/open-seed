@@ -1632,6 +1632,20 @@ the assertions read, and there is no copy to go stale.
   bridge for never-qualified workers (admission never judges an
   offer's scope) survives a policy that sends work to the strongest,
   and a first eval's offer stays the one unscoped door.
+- A cross-platform CI leg that is an order of magnitude slower is
+  measured, not guessed at: the per-package `go test` lines in the job
+  log name the package, and a counting shim ahead of `git` on PATH
+  names the spawns. The Windows `platform` leg was one serial package
+  (`cmd/seed`) spawning seventeen thousand git processes, and the
+  largest bucket was three `git config` writes per client
+  construction, not the fetch or the push. That bucket stays: the
+  hardening is bound to git's own writer on every construction
+  (plans/os-711b3028.md D1), and the in-process parser that would have
+  skipped the writes was refused in review on #298 for drifting from
+  git's resolution (a concatenated value like auto = "0"1 reads as 01
+  in git, not 0). Cut spawns where the counts are, shard the serial
+  package, and only then reach for a longer timeout.
+
 ## The conformance report (os-83bc3d84)
 
 - A conformance claim is only as good as its provenance: keep the

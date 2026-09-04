@@ -131,14 +131,25 @@ than papered over:
   flipped sealed outcome on Windows (the recompute reports the sealed
   check green after the marker flip); the drill skips there naming
   this, and the row stays open until it runs green.
-- The `cmd/seed` suite runs about three times slower on the Windows
-  runner; the matrix gives it forty minutes.
+- The `cmd/seed` suite runs several times slower on the Windows
+  runner, because it spawns git thousands of times and process
+  creation there costs about ten times what it costs on Linux
+  (measured at eight times slower, twenty minutes against two and a
+  half, before the client's fetch and materialize paths shed two
+  spawns per append: an ls-remote and a tar; the hardening's three
+  config writes stay on git's own writer, plans/os-711b3028.md D1).
+  The matrix
+  answers in kind: the Windows leg runs the suite in three shards
+  (every Nth top-level test by sorted name, so a new test lands in a
+  shard without an edit), turns Defender's real-time scanning off for
+  the run, and gives each shard forty minutes.
 
 ## Tested, not asserted (normative)
 
 CI runs the Go suites on Linux, macOS and Windows (`platform` in
-`.github/workflows/check-validate.yml`); the path lint and the CRLF
-drill run on each; `make check` and the coverage gate run on Linux.
+`.github/workflows/check-validate.yml`, the Windows leg in three
+shards); the path lint and the CRLF drill run on each; `make check`
+and the coverage gate run on Linux.
 Every platform-gated skip names its reason (a lint over every test
 source refuses a bare `t.Skip()`), so a platform never passes
 vacuously. A posture is marked available on a platform when its
