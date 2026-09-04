@@ -189,3 +189,16 @@ advancing while admission reads no clock:
 ```sh
 seed simulate --lanes lanes --intents 5 --days 7 --posture enforced-self-hosted
 ```
+
+## 12. The promotion gate
+
+Promotion is two human cutovers (this repository's own development
+moving to Seed, then Seed becoming what new users clone), gated by the
+seven criteria in `docs/next-build-plan.md` §5. `next/docs/promotion.md`
+is what the operator reads there: each criterion's status and the
+drills on `main` that back it, the shadow run proposed as a protocol,
+the cutover and its rollback written down, the two cutovers named as
+the reserved decisions they are, and the ledger of the III.R
+measurements the shadow run supplies. `make check` holds every drill
+the packet cites to the tree, so the packet cannot claim what the tree
+no longer holds.
