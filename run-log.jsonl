@@ -1582,3 +1582,4 @@
 {"actor":"shaunlmason","data":{"evidence_id":"ev-314c18fc","kind":"pr"},"task":"os-f79bc5a0","ts":"2026-09-04T15:31:13Z","verb":"attach-evidence"}
 {"actor":"shaunlmason","data":{"to":"review","transitioned":true},"task":"os-f79bc5a0","ts":"2026-09-04T15:31:18Z","verb":"transition"}
 {"actor":"","data":{"title":"engine: receipt verify's mismatch message does not name the field that disagreed"},"task":"os-77a6b376","ts":"2026-09-04T15:46:22Z","verb":"create"}
+{"actor":"","data":{"title":"CI: a pull request can be opened and silently receive no check runs at all"},"task":"os-6fd8d63b","ts":"2026-09-04T15:46:42Z","verb":"create"}
