@@ -55,11 +55,17 @@ protected surface, owner review regardless). Deps: none.
   so the namespace D2 needs is cheaper to keep in twenty lines of bash
   than to work around. `internal/version.Version` becomes a `var` so
   the stamp lands; its default stays `0.0.0-dev`.
-- **D4 — published and attested.** `gh release create` on the tag with
-  the archives and `checksums.txt`, then
-  `actions/attest-build-provenance@v2` over `checksums.txt`, the same
-  attestation the engine ships. The release notes name the commit and
-  the protocol version register's newest entry.
+- **D4 — published and attested, every action hash-pinned.** `gh
+  release create` on the tag with the archives and `checksums.txt`,
+  then `actions/attest-build-provenance` over `checksums.txt`, the same
+  attestation the engine ships. Every third-party action the workflow
+  uses is pinned to a full commit SHA with the tag it resolves from in
+  a trailing comment (charter §II.17: everything executable
+  hash-pinned; a job holding OIDC, attestation and write privileges
+  must not resolve its provenance step through a mutable tag), and the
+  drill refuses any `uses:` that is not a local path or a 40-hex SHA.
+  The release notes name the commit and the protocol version
+  register's newest entry.
 - **D5 — held by a drill.** `TestSeedReleaseWorkflowIsDispatchOnly`
   (`internal/protections/tree_workflows_test.go`) reads the workflow
   and asserts: the only trigger is `workflow_dispatch`; the permissions
@@ -75,6 +81,17 @@ protected surface, owner review regardless). Deps: none.
   `.seed/engine.lock` are untouched (they are the template's and the
   engine's), the template's `v*` tags and the anchors are untouched,
   no other workflow changes.
+- **D8 — the namespace is protected before it is used.** The hook
+  posture already refuses an update or deletion of any tag
+  (`cmd/seed-admit/coderef.go`, every `refs/tags/*`), but the forge
+  reconciler's `seed-release-tags` ruleset named `refs/tags/v*` alone,
+  so under the forge-hosted posture a `seed/v*` tag would inherit no
+  immutability and a credential with ordinary tag-write access could
+  retarget a released tag, breaking the release, source and provenance
+  binding §II.14 requires. The ruleset gains `refs/tags/seed/v*`
+  (`internal/protections.Desired`), the reconciler drills and the
+  `postures.md` table follow, and the release drill asserts the
+  namespace it tags is one the desired state protects.
 
 ## Steps
 
@@ -88,8 +105,9 @@ protected surface, owner review regardless). Deps: none.
 ## File Scope
 
 - `.github/workflows/seed-release.yml` (new)
-- `next/internal/version/version.go`
-- `next/internal/protections/tree_workflows_test.go`
+- `next/internal/version/version.go`, `next/internal/version/version_test.go`
+- `next/internal/protections/protections.go`, `next/internal/protections/*_test.go`
+- `next/spec/postures.md` (the rulesets table)
 - `next/docs/handbook.md`
 - `next/docs/progress.md`, `next/docs/decisions.md`, `memory/*`
 - `receipts/os-2e46aa2f.json`
@@ -105,8 +123,11 @@ NOT `VERSION`, NOT `.seed/**`, NOT `next/spec/**`, NOT
 1. The workflow exists, triggers on `workflow_dispatch` alone, mints
    `seed/v<version>` at HEAD, builds the six targets with the version
    stamped, publishes the archives and `checksums.txt` as a release,
-   and attests provenance; `TestSeedReleaseWorkflowIsDispatchOnly`
-   holds each of those to the file and fails on a planted schedule.
+   and attests provenance with every third-party action pinned to a
+   commit SHA; `TestSeedReleaseWorkflowIsDispatchOnly` holds each of
+   those to the file, fails on a planted schedule and on a planted tag
+   reference, and asserts the tag namespace is one the reconciled
+   desired state protects.
 2. `seed version` still prints `0.0.0-dev` from source, and a build
    with the ldflag prints the stamped version (drilled).
 3. The handbook's Install section names the release and how to verify
