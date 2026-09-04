@@ -161,6 +161,17 @@ check, and the governed-docs drift check. Keep it green.
 seed docs check --root .
 ```
 
+**The conformance report.** Part III of the charter is a checked-in
+table, `next/spec/conformance.json`, one row per charter criterion with
+the status the phase exit records gave it; `seed docs generate` renders
+it as `next/docs/generated/conformance.md` under the same drift check,
+and `seed doctor --config <declaration> --repo .` reports it at the
+declared posture: the counts by status, every row not yet met by
+pillar and row with its status, the enforced-only rows a cooperative
+deployment must document as not holding for it, and `complete` only
+when every row is met at an enforced posture
+([`conformance.md`](../spec/conformance.md)).
+
 ## 11. Simulation mode
 
 The whole system runs end to end against synthetic intents with a mock
