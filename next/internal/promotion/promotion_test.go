@@ -82,6 +82,24 @@ func TestPacketWritesTheCutoverDown(t *testing.T) {
 			t.Errorf("criterion %d is reserved and its question does not end in a question mark: %q", c.Number, c.Question)
 		}
 	}
+	// Both cutovers stand as questions the parser models, so a deleted
+	// or answered one is a parse failure and not prose read past.
+	if len(p.Escalations) != len(EscalationNames) {
+		t.Fatalf("the packet presents %d cutovers as questions, want %v", len(p.Escalations), EscalationNames)
+	}
+	for i, e := range p.Escalations {
+		if e.Name != EscalationNames[i] || !strings.HasSuffix(e.Question, "?") {
+			t.Errorf("escalation %d: %+v", i, e)
+		}
+	}
+	for _, mutation := range []string{
+		strings.Replace(doc, "**Distribution.** Question:", "**Distribution.** Answer:", 1),
+		strings.Replace(doc, "**Self-hosting.** Question:", "**Self-hosting.** Decided:", 1),
+	} {
+		if _, err := Parse(mutation); err == nil || !strings.Contains(err.Error(), "presents no question") {
+			t.Errorf("a cutover answered in place must fail the parse: %v", err)
+		}
+	}
 	for _, m := range p.Ledger {
 		if m.Status != "not measured" {
 			t.Errorf("ledger row %s claims %q; no measurement exists before the shadow run (D5)", m.Row, m.Status)
@@ -157,6 +175,9 @@ Status: met
 | R.5 | m | s | not measured |
 | R.6 | m | s | not measured |
 | R.7 | m | s | measured |
+## The two cutovers are escalations
+**Self-hosting.** Question: move now?
+**Distribution.** Question: publish where?
 `
 
 // TestParseIsStrict pins the shape: each departure from the plan's
@@ -164,8 +185,8 @@ Status: met
 func TestParseIsStrict(t *testing.T) {
 	if p, err := Parse(minimal); err != nil {
 		t.Fatalf("the minimal packet must parse: %v", err)
-	} else if len(p.Citations) != 5 || len(p.Ledger) != 7 || p.Criteria[3].Question != "which?" {
-		t.Fatalf("parsed shape: %d citations, %d ledger rows, question %q", len(p.Citations), len(p.Ledger), p.Criteria[3].Question)
+	} else if len(p.Citations) != 5 || len(p.Ledger) != 7 || p.Criteria[3].Question != "which?" || len(p.Escalations) != 2 || p.Escalations[1].Question != "publish where?" {
+		t.Fatalf("parsed shape: %d citations, %d ledger rows, question %q, escalations %+v", len(p.Citations), len(p.Ledger), p.Criteria[3].Question, p.Escalations)
 	}
 	cases := []struct{ name, from, to, want string }{
 		{"status outside the vocabulary", "Status: not started", "Status: mostly", "outside the vocabulary"},
@@ -185,6 +206,16 @@ func TestParseIsStrict(t *testing.T) {
 		{"evidence row short", "| `TestA` | `x/a_test.go` | #1 |", "| `TestA` | #1 |", "this one has 2 cells"},
 		{"evidence row malformed", "| `TestA` | `x/a_test.go` | #1 |", "| `TestA` | x/a_test.go | #1 |", "an evidence row is"},
 		{"evidence row not a test file", "| `TestA` | `x/a_test.go` | #1 |", "| `TestA` | `x/a.go` | #1 |", "not a test file"},
+		{"evidence row climbs out of next", "| `TestA` | `x/a_test.go` | #1 |", "| `TestA` | `../x/a_test.go` | #1 |", "not a clean relative path under next/"},
+		{"evidence row absolute", "| `TestA` | `x/a_test.go` | #1 |", "| `TestA` | `/x/a_test.go` | #1 |", "not a clean relative path under next/"},
+		{"evidence row unclean", "| `TestA` | `x/a_test.go` | #1 |", "| `TestA` | `x//a_test.go` | #1 |", "not a clean relative path under next/"},
+		{"evidence row dot element", "| `TestA` | `x/a_test.go` | #1 |", "| `TestA` | `./x/a_test.go` | #1 |", "not a clean relative path under next/"},
+		{"escalation deleted", "**Distribution.** Question: publish where?\n", "", "presents no question for the Distribution cutover"},
+		{"escalation answered", "**Self-hosting.** Question: move now?", "**Self-hosting.** Yes, at the position the window closed.", "presents no question for the Self-hosting cutover"},
+		{"escalation not a question", "**Self-hosting.** Question: move now?", "**Self-hosting.** Question: move now.", "does not end in a question mark"},
+		{"escalation twice", "**Distribution.** Question: publish where?", "**Self-hosting.** Question: publish where?", "presented twice"},
+		{"escalation unknown", "**Distribution.** Question: publish where?", "**Renaming.** Question: publish where?", "not one of the two cutovers"},
+		{"escalations section missing", "## The two cutovers are escalations\n", "## The two cutovers\n", "presents no question for the Self-hosting cutover"},
 	}
 	for _, c := range cases {
 		mutated := strings.Replace(minimal, c.from, c.to, 1)

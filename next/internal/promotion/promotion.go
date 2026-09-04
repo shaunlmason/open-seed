@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -42,6 +43,14 @@ var Statuses = []string{"met", "partial", "not started", "reserved"}
 // MeasureStatuses is the closed vocabulary of the III.R measurement
 // ledger: a measure is measured or it is not.
 var MeasureStatuses = []string{"not measured", "measured"}
+
+// EscalationsHeading is the section that presents the two cutovers as
+// reserved decisions, and EscalationNames are the two the build plan
+// reserves (section 5): each must stand in that section as one
+// question, never as an answer.
+const EscalationsHeading = "## The two cutovers are escalations"
+
+var EscalationNames = []string{"Self-hosting", "Distribution"}
 
 // Criterion is one numbered section of the packet.
 type Criterion struct {
@@ -70,11 +79,20 @@ type Measure struct {
 	Status  string
 }
 
+// Escalation is one of the two cutovers, presented as the question the
+// operator answers (plans/os-98ce6f8a.md D3).
+type Escalation struct {
+	Name     string // one of EscalationNames
+	Question string
+	Line     int
+}
+
 // Packet is the parsed document.
 type Packet struct {
-	Criteria  []Criterion
-	Citations []Citation // every evidence row in the packet, criterion sections and others alike
-	Ledger    []Measure
+	Criteria    []Criterion
+	Citations   []Citation // every evidence row in the packet, criterion sections and others alike
+	Ledger      []Measure
+	Escalations []Escalation
 }
 
 var (
@@ -86,7 +104,11 @@ var (
 	fileCellRE  = regexp.MustCompile("^`([A-Za-z0-9_./-]+)`$")
 	prCellRE    = regexp.MustCompile(`^#\d+$`)
 	ledgerRowRE = regexp.MustCompile(`^R\.([1-7])$`)
-	funcRE      = regexp.MustCompile(`(?m)^func (Test[A-Za-z0-9_]+)\(`)
+	// An escalation is one physical line: its name in bold, then the
+	// question, so a deleted or answered question is a parse error and
+	// not prose the gate reads past.
+	escalationRE = regexp.MustCompile(`^\*\*([A-Za-z-]+)\.\*\* Question: (.+)$`)
+	funcRE       = regexp.MustCompile(`(?m)^func (Test[A-Za-z0-9_]+)\(`)
 )
 
 // Parse reads the packet's text. It refuses a packet whose shape drifts
@@ -97,6 +119,7 @@ func Parse(content string) (*Packet, error) {
 	var cur *Criterion
 	var errs []error
 	seen := map[int]bool{}
+	inEscalations := false
 	sc := bufio.NewScanner(strings.NewReader(content))
 	sc.Buffer(make([]byte, 1<<20), 1<<20)
 	line := 0
@@ -105,6 +128,7 @@ func Parse(content string) (*Packet, error) {
 		text := strings.TrimRight(sc.Text(), " \t")
 		if strings.HasPrefix(text, "## ") {
 			cur = nil
+			inEscalations = text == EscalationsHeading
 			if m := sectionRE.FindStringSubmatch(text); m != nil {
 				n, _ := strconv.Atoi(m[1])
 				if seen[n] {
@@ -114,6 +138,12 @@ func Parse(content string) (*Packet, error) {
 				seen[n] = true
 				p.Criteria = append(p.Criteria, Criterion{Number: n, Title: strings.TrimSpace(m[2])})
 				cur = &p.Criteria[len(p.Criteria)-1]
+			}
+			continue
+		}
+		if inEscalations {
+			if m := escalationRE.FindStringSubmatch(text); m != nil {
+				p.Escalations = append(p.Escalations, Escalation{Name: m[1], Question: strings.TrimSpace(m[2]), Line: line})
 			}
 			continue
 		}
@@ -195,7 +225,26 @@ func parseCitation(cells []string, line int) (Citation, error) {
 	if !strings.HasSuffix(f[1], "_test.go") {
 		return Citation{}, fmt.Errorf("line %d: %s cites %s, which is not a test file", line, d[1], f[1])
 	}
+	if !underNext(f[1]) {
+		return Citation{}, fmt.Errorf("line %d: %s cites %s, which is not a clean relative path under next/", line, d[1], f[1])
+	}
 	return Citation{Drill: d[1], File: f[1], PR: cells[2], Line: line}, nil
+}
+
+// underNext reports whether a cited file is a clean relative path
+// whose every element names a directory or file: no leading slash, no
+// "." or ".." element, nothing filepath.Join would clean into a read
+// outside next/.
+func underNext(file string) bool {
+	if file == "" || strings.HasPrefix(file, "/") || path.Clean(file) != file {
+		return false
+	}
+	for _, el := range strings.Split(file, "/") {
+		if el == "" || el == "." || el == ".." {
+			return false
+		}
+	}
+	return true
 }
 
 func (p *Packet) validate() []error {
@@ -241,6 +290,26 @@ func (p *Packet) validate() []error {
 	for i := 1; i <= 7; i++ {
 		if !rows["R."+strconv.Itoa(i)] {
 			errs = append(errs, fmt.Errorf("the III.R measurement ledger lacks row R.%d", i))
+		}
+	}
+	questions := map[string]string{}
+	for _, e := range p.Escalations {
+		if _, dup := questions[e.Name]; dup {
+			errs = append(errs, fmt.Errorf("line %d: the %s cutover is presented twice", e.Line, e.Name))
+			continue
+		}
+		if !contains(EscalationNames, e.Name) {
+			errs = append(errs, fmt.Errorf("line %d: %q is not one of the two cutovers %v", e.Line, e.Name, EscalationNames))
+			continue
+		}
+		questions[e.Name] = e.Question
+		if !strings.HasSuffix(e.Question, "?") {
+			errs = append(errs, fmt.Errorf("line %d: the %s cutover's question does not end in a question mark: %q", e.Line, e.Name, e.Question))
+		}
+	}
+	for _, name := range EscalationNames {
+		if _, ok := questions[name]; !ok {
+			errs = append(errs, fmt.Errorf("the section %q presents no question for the %s cutover (a **%s.** Question: line)", EscalationsHeading, name, name))
 		}
 	}
 	return errs

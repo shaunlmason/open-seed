@@ -1650,3 +1650,11 @@ the assertions read, and there is no copy to go stale.
   run or flips an entry point is the decision the build plan reserves,
   and the drill checks the reserved criteria carry a question rather
   than a choice.
+- A gate over a document holds only what its parser models: the two
+  cutover questions lived in prose the parser skipped, so deleting one
+  or answering it in place passed the gate that claimed to keep them
+  questions. Model every claim the gate is said to protect, one
+  physical line each, so an absence is a parse error and not prose
+  read past; and confine every cited path before joining it, since
+  `filepath.Join` cleans `..` into a read outside the tree the gate
+  promises.

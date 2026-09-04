@@ -395,7 +395,11 @@ closed with its divergences reconciled and the seven criteria all
 `met`: the root `AGENTS.md` section "How work happens" is rewritten
 around the Seed loop verbs (`seed situation`, `seed claim take`,
 `seed submission make`, `seed claim release|park`, `seed escalation
-raise`, `seed message send`) and the lane fragments under
+raise`, `seed message read`, and mail sent as a `message.sent` append
+through `seed ledger append --verb message.sent`, the one loop act
+without a verb of its own today: the cutover pull request names that
+form or adds the verb, and this packet assumes neither) and the lane
+fragments under
 `next/lanes/`, the Seed binary built into `next/bin/seed` becomes the
 verb every role file names, and `scripts/seed task` is retired from
 every role file and the dispatch and maintenance workflows in the
@@ -442,20 +446,20 @@ is the entry-point switch, and renaming the later publish does not
 authorize the earlier authority switch. Agents drive the work up to
 each gate, present this packet, and stop.
 
-**Self-hosting.** Question: does this repository's own development
-move to Seed at the position the shadow window closed, on the terms
-in "The cutover and the rollback"? Its preconditions are the seven
-criteria all `met`, the shadow window closed with every divergence
-reconciled, and the compromised-actor drill green on the commit that
-carries the cutover.
+**Self-hosting.** Question: does this repository's own development move to Seed at the position the shadow window closed, on the terms in "The cutover and the rollback"?
 
-**Distribution.** Question: does Seed become what new users clone,
-and from which repository? Its preconditions are self-hosting held
-for a stated period without a rollback, a released Seed binary with
-checksums and provenance (charter III.P row 1's one residual today:
-the binary is built from source and is not yet a released artifact),
-and a README a team that has never spoken to the authors can adopt
-from in under an hour (III.R row 7).
+Its preconditions are the seven criteria all `met`, the shadow window
+closed with every divergence reconciled, and the compromised-actor
+drill green on the commit that carries the cutover.
+
+**Distribution.** Question: does Seed become what new users clone, and from which repository?
+
+Its preconditions are self-hosting held for a stated period without a
+rollback, a released Seed binary with checksums and provenance
+(charter III.P row 1's one residual today: the binary is built from
+source and is not yet a released artifact), and a README a team that
+has never spoken to the authors can adopt from in under an hour (III.R
+row 7).
 
 ## The III.R measurement ledger
 
