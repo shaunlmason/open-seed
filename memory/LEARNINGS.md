@@ -686,6 +686,36 @@ Consequence for any card landing near the gate: measure cold, several
 times, and leave headroom for the full observed swing (1.4 points here)
 rather than for the best reading.
 
+## The coverage a package's own tests report is not what the gate reads (os-f262585a)
+
+`go test ./internal/... -cover` ranks packages by what their OWN tests
+reach, and the gate's profile is `./...` with `-coverpkg=./internal/...`,
+where `cmd/seed`'s tests alone cover 72% of the internal tree. The two
+rankings disagree wildly: `internal/reconcile` reads 31% own-test and
+92% in the gate's profile, because the CLI drills drive it. Picking
+targets off the own-test ranking spends the effort where it moves
+nothing.
+
+Rank off the merged profile instead, by uncovered statements rather than
+by percentage: `go tool cover -func` on the gate's own profile, or a
+per-block max rollup of it (the raw profile carries one block set per
+test binary, so summing it without taking the max per block reports
+nonsense). The packages that actually moved the number here were the
+ones no CLI path drives: `internal/protections`'s forge adapters,
+`internal/artifact`, `internal/posture`'s accessors and preseed
+validator, and `internal/imported`, which had no `_test.go` at all
+while `-coverpkg` counted its statements: check for that case directly,
+because a package with no test binary reports nothing and reads like a
+package nobody needed to test.
+
+Two mechanical notes from the same measurement. This module's toolchain
+has no `covdata`, so a `-coverpkg` run over a package with no test files
+(`internal/imported`) prints `go: no such tool "covdata"` and `go test`
+exits 1 under `-p 1` while still writing a mergeable profile: the
+reading is valid, the exit code is the toolchain gap, not a suite
+failure. And covergate cannot supply a cold acceptance reading at a
+passing number, because its re-collection engages only below the gate.
+
 ## Running the thing finds what reading it cannot
 
 Two gaps in os-abb206c8 were invisible to inspection and immediate once
