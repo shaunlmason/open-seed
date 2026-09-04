@@ -57,8 +57,13 @@ type Result struct {
 // kept under the client's RefusedDir before the retry.
 var ErrStaleTree = errors.New("push refused: the pushed chain cites a stale tip at or beyond this append (re-linking)")
 
-// badPrevRE reads the hook's verification refusal: "position N: bad_prev".
-var badPrevRE = regexp.MustCompile(`position (\d+): bad_prev`)
+// badPrevRE reads the hook's verification refusal as seed-admit prints
+// it: "seed-admit: rule verify: position N: bad_prev". The prefix is
+// part of the shape (review finding on #300): a push rejection is
+// unstructured text any hook can write, and a policy refusal that
+// merely echoes "position N: bad_prev" is not the verifier's finding
+// and stays the refusal it is.
+var badPrevRE = regexp.MustCompile(`seed-admit: rule verify: position (\d+): bad_prev`)
 
 // staleTreeRefusal reports whether a push rejection is the seventh shape
 // for a record appended at pos: a bad_prev the hook found at pos or

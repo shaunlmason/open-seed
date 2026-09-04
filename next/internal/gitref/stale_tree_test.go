@@ -27,8 +27,19 @@ func refusingHook(t *testing.T, remote string, n int) string {
 	if runtime.GOOS == "windows" {
 		t.Skip("the pre-receive hook needs a POSIX git server; a bare Windows checkout runs the cooperative or forge-hosted posture (next/spec/platform.md)")
 	}
+	return decliningHook(t, remote, fmt.Sprintf("seed-admit: rule verify: position %d: bad_prev: prev b692fec4bc38 does not cite tip 2492338b3552", n))
+}
+
+// decliningHook installs a pre-receive hook that declines the first
+// push with the given message and admits every later one, counting
+// invocations in a file.
+func decliningHook(t *testing.T, remote, message string) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the pre-receive hook needs a POSIX git server; a bare Windows checkout runs the cooperative or forge-hosted posture (next/spec/platform.md)")
+	}
 	counter := filepath.Join(t.TempDir(), "invocations")
-	hook := fmt.Sprintf("#!/bin/sh\nif [ ! -f %[1]s ]; then\n  echo x > %[1]s\n  echo 'seed-admit: rule verify: position %[2]d: bad_prev: prev b692fec4bc38 does not cite tip 2492338b3552' >&2\n  exit 1\nfi\necho x >> %[1]s\nexit 0\n", counter, n)
+	hook := fmt.Sprintf("#!/bin/sh\nif [ ! -f %[1]s ]; then\n  echo x > %[1]s\n  echo '%[2]s' >&2\n  exit 1\nfi\necho x >> %[1]s\nexit 0\n", counter, message)
 	if err := os.WriteFile(filepath.Join(remote, "hooks", "pre-receive"), []byte(hook), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +146,35 @@ func TestHookBadPrevBelowOwnPositionSurfaces(t *testing.T) {
 	}
 	if staleTreeRefusal(errors.New("unrelated"), 1) || staleTreeRefusal(fmt.Errorf("%w: position x: bad_prev", ErrRemoteRejected), 1) {
 		t.Fatal("only a parseable bad_prev position at or beyond the append is the shape")
+	}
+	if staleTreeRefusal(fmt.Errorf("%w: custom-hook: position 7: bad_prev", ErrRemoteRejected), 1) {
+		t.Fatal("a bad_prev without the verifier's prefix is not the verifier's finding")
+	}
+}
+
+// A policy hook that echoes the verifier's words without being the
+// verifier (review finding on #300): "position N: bad_prev" at or
+// beyond the append, but not under "seed-admit: rule verify:", is an
+// unrelated refusal, surfaced without a retry and with nothing kept.
+func TestHookEchoingBadPrevWithoutTheVerifierPrefixSurfaces(t *testing.T) {
+	remote := bareRemote(t)
+	signer := fixtureKey(t, 1)
+	resolve := seedGenesis(t, remote, signer)
+	counter := decliningHook(t, remote, "custom-hook: refused: position 9: bad_prev echoed from a pushed payload")
+	c, err := NewClient(t.TempDir(), remote, ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.AppendLoop(milestoneDraft(t, signer, 1),
+		func(e event.Event) (*event.Record, error) { return event.Sign(e, signer) }, resolve, nil, 5)
+	if !errors.Is(err, ErrRemoteRejected) || errors.Is(err, ErrStaleTree) {
+		t.Fatalf("an echoed bad_prev surfaces as the refusal it is: %v", err)
+	}
+	if b, err := os.ReadFile(counter); err != nil || strings.Count(string(b), "x") != 1 {
+		t.Fatalf("no retry: hook ran %q (%v)", b, err)
+	}
+	if _, err := os.Stat(c.RefusedDir()); !os.IsNotExist(err) {
+		t.Fatal("nothing is kept for a refusal that is not the verifier's")
 	}
 }
 
