@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "task": "os-9ef9ab34",
+  "merge_base": "2c918dd40ecc480249937766cab3e806aa863fcc",
+  "head": "08717482b486a3ac23e4b8b9eb18818435994de5",
+  "plan_path": "plans/os-9ef9ab34.md",
+  "plan_sha256": "2ebf53eee0fb0e7375d2c5b853767739c297f5f1e3b703621a4017cc6e3b8736",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/decisions.md",
+    "next/docs/generated/conformance.md",
+    "next/docs/progress.md",
+    "next/internal/conformance/conformance_test.go",
+    "next/spec/conformance.json"
+  ],
+  "diff_sha256": "17d6b324185a6a45e4db195d43df40983f65d858568eeed9df93f3785ea77f41",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/conformance/ ./internal/docs/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Doctor|Docs' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
