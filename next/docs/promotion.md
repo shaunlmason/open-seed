@@ -293,7 +293,11 @@ A proposal for criterion 4, in the build plan's words: "Seed
 coordinates a declared slice of this repository's own cards beside v1
 for a stated window, with any divergence reconciled and recorded."
 Every line below is a default the operator can amend; none of it is
-in force until the operator says so.
+in force until the operator says so. This section presents; it does
+not schedule. No window opens, no slice is declared and no deployment
+is created until the operator accepts or amends what is written here,
+which is what build plan §5 asks of the packet: present the evidence
+and stop.
 
 **The deployment.** A declaration for this repository, kept under
 `next/deploy/` and passed to every verb by `--config` (or
@@ -461,7 +465,12 @@ flips to `met` when this packet records it. No measurement exists
 before the shadow run, so every row is `not measured`; a follow-up
 card revises this table with the reading, the position it was read
 at, and the surface it was read from, and flips the conformance row
-with the packet as evidence.
+with the packet as evidence. III.R stays open by construction until
+the reserved steps run: the shadow run supplies R.1 through R.5, the
+cutovers R.6, the distribution step R.7, and the Phase 13 exit record
+(plans/os-d63c7441.md) does not close while any row is outstanding.
+`not measured` is the packet re-deriving the frontier toward
+promotion, not an omission in it.
 
 | row | measure | surface | status |
 |---|---|---|---|
