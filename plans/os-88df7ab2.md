@@ -103,6 +103,27 @@ conflict, so the card waits on it as well as on this plan.
   `Audit` call site is unchanged. Nothing about III.R row 5's status
   moves: the row is met by the shadow run's evidence card, not here.
 
+- **D7 — the fixtures become admission-grade, because the rule
+  demands it.** Measured while implementing D1: the bar can only judge
+  a start the fold recorded, and `transition` records a
+  `RunStartFact` only where the payload named a fence and a
+  reservation it could read. So a `run.started` the fold did not
+  record cited nothing checkable and is spend with no fence, which the
+  bar must name (else a malformed raw start is invisible, the hole
+  this card exists to close). That makes every synthetic `{}` fixture
+  in `internal/simulate/audit_test.go` and the `auditLedger` histories
+  in `cmd/seed/ledger_audit_test.go` read as unreserved spend, and
+  correctly so: they are not chains any admission would have taken.
+  The covered arm therefore needs a real chain, and the tree already
+  builds one: `internal/history.Generate` writes an admission-grade
+  ledger carrying `budget.reserve`, `run.started`, `run.settled` and
+  `submission.made` under enrolled lane keys, and `internal/history`
+  does not import `internal/simulate`, so the drills read their
+  records back through `ledger.OpenReadOnly` and
+  `VerifyFromGenesis`. The violation arms are then raw appends onto
+  that chain, which is what they model. This is scope the first
+  reading did not carry, and it is why the file scope below gains the
+  two test files' fixtures rather than a line each.
 - **D6 — the cost is measured, not asserted.** The audit gains no
   cache in this card; the drill set carries one measurement instead: a
   chain of the shadow window's shape (the perf history's 40 contracts,
