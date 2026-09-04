@@ -57,9 +57,15 @@ precedent). Deps: none.
   criteria's own terms and the packet does not pretend otherwise; and
   what remains before the Self-hosting question can be put is not
   agent work: a deployment at the enforced self-hosted posture, which
-  only the operator can stand up (the ledger remote with the hook, or
-  the service and its credential; the root key; the lane keys), named
-  by reference to "The deployment". Nothing agent-side remains open
+  only the operator can stand up (the ledger remote whose `pre-receive`
+  is the `seed-admit` hook; the root key; the lane keys), named by
+  reference to "The deployment". The forge-hosted posture is not
+  offered as an alternative: build plan §5 and D2 require the
+  self-hosted posture, `postures.md` assigns `seed-admit serve` to
+  `enforced-forge-hosted` and the declaration refuses its admission
+  block elsewhere, so running the service instead would be a second
+  deviation the operator would have to record as such, and the packet
+  says so in one clause rather than presenting it as a choice. Nothing agent-side remains open
   once the three cards in review merge, and the paragraph says so.
 - **D2 — the Self-hosting question is asked at a position the operator
   records.** "Does this repository's own development move to Seed at
