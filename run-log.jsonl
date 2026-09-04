@@ -1512,3 +1512,4 @@
 {"actor":"shaunlmason","data":{"title":"next: the five-bar audit counts budget.reserved, a verb the protocol does not define, so a real chain audits as unreserved spend (III.R row 5)"},"task":"os-b86dab4c","ts":"2026-09-04T06:43:25Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-b86dab4c","ts":"2026-09-04T06:43:37Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T07:43:41Z"},"task":"os-b86dab4c","ts":"2026-09-04T06:43:41Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-b86dab4c","ts":"2026-09-04T06:46:14Z","verb":"transition"}
