@@ -144,7 +144,12 @@ file. The last reading is written to `next/perf/last.json`
 **The scale profile.** The same gate runs at two sizes
 (plans/os-a00d3f34.md D1). `next/perf/budgets-scale.json` has the
 shape of `budgets.json` with the same representative history and 200
-writers, the smallest count that is hundreds, and `.github/workflows/perf-scale.yml`
+writers, the smallest count that is hundreds; every writer is its own
+enrolled actor (the history enrolls one agent key per writer with the
+grant `intent.filed` accepts, and the storm signs each writer's append
+with its key, holding the landed chain to as many distinct actors as
+writers), since the charter's row counts actors and an actor is a
+keypair. `.github/workflows/perf-scale.yml`
 runs `cmd/perfgate -budgets perf/budgets-scale.json` weekly (and on
 dispatch), read-only, attaching `perf/last-scale.json` as an artifact
 whether the gate passed or not; a miss fails the run, and the red run

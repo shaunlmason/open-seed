@@ -1893,7 +1893,10 @@ written by the two implementing sessions, one voice.
   by the Phase 12 exit record; the one conformance-relevant extra) —
   os-a00d3f34 — **in review** (task PR against plan #293:
   `next/perf/budgets-scale.json`, 200 writers against the same
-  40-contract history, the timing ceilings measured on the
+  40-contract history, each writer its own enrolled actor (the
+  history enrolls a key per writer, the storm signs with it, the
+  measurer holds the chain to as many actors as writers), the timing
+  ceilings measured on the
   implementing host and the attempts ceiling at twice the loop's
   expected writers/2, provenance on every ceiling; the weekly
   read-only `perf-scale` workflow running the unchanged `cmd/perfgate`

@@ -1652,3 +1652,8 @@ the assertions read, and there is no copy to go stale.
   --full-index fix (open-seed-engine, receipt: hash the diff with
   full blob ids), fetch every ref and repack before generating a
   receipt, so the local clone abbreviates as CI's does.
+- A benchmark's claim is only as strong as its identities: a storm that
+  signs every writer with one key measures one actor's contention, not
+  N actors'. Enroll a key per writer and have the measurer count the
+  distinct actors in the landed chain, so the number in the row is the
+  number the chain proves.

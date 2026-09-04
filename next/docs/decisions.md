@@ -3441,10 +3441,18 @@ scale run is a second budget file read by the same `cmd/perfgate`,
 and `internal/perfgate`'s code changes by nothing. A second measurer
 would have been a second definition of the same metric.
 
-**200 writers, the same history.** Hundreds means the plural, and 200
-is the smallest such count; the history stays at the per-PR profile's
-40 contracts so the admission, replay and rebuild ceilings are copied
-rather than re-derived and the two readings are about the same chain.
+**200 writers, the same history, one actor each.** Hundreds means
+the plural, and 200 is the smallest such count; the history stays at
+the per-PR profile's 40 contracts so the admission, replay and
+rebuild ceilings are copied rather than re-derived and the two
+readings are about the same chain. A review finding on the plan
+caught the storm signing every writer's append with the governance
+root's key, one actor issuing 200 writes; the charter's row counts
+actors and an actor is a keypair, so the history now enrolls one
+agent key per writer (`dispatch`, the grant `intent.filed` accepts),
+the storm signs with it, and the measurer refuses a landed chain
+whose storm records carry fewer distinct actors than writers. The
+per-PR storm's 24 writers are 24 actors by the same change.
 
 **The schedule is read-only and its red is the signal.** The workflow
 declares `contents: read` alone, uploads the reading whether the gate

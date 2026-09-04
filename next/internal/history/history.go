@@ -28,11 +28,16 @@ type Spec struct {
 	Seed      int64
 	Contracts int
 	Dir       string // the ledger directory to write (created if absent)
+	Writers   int    // agent identities enrolled for a storm, one per writer (plans/os-a00d3f34.md D1); zero enrolls none
 }
 
-// Keys are the identities the history is signed by.
+// Keys are the identities the history is signed by. Writers are the
+// storm's actors, one enrolled key each with the grant intent.filed
+// accepts, so a storm of N writers is N keypairs, which is what the
+// charter means by N concurrent actors.
 type Keys struct {
 	Root, Holder, Supervisor, Verifier, Observer ed25519.PrivateKey
+	Writers                                      []ed25519.PrivateKey
 }
 
 // Result reports what was generated.
@@ -87,12 +92,18 @@ func Generate(spec Spec) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	if spec.Writers < 0 {
+		return nil, fmt.Errorf("writers must be zero or more, got %d", spec.Writers)
+	}
 	keys := Keys{
 		Root:       keyFrom(spec.Seed, "root"),
 		Holder:     keyFrom(spec.Seed, "holder"),
 		Supervisor: keyFrom(spec.Seed, "supervisor"),
 		Verifier:   keyFrom(spec.Seed, "verifier"),
 		Observer:   keyFrom(spec.Seed, "observer"),
+	}
+	for w := 0; w < spec.Writers; w++ {
+		keys.Writers = append(keys.Writers, keyFrom(spec.Seed, fmt.Sprintf("writer-%04d", w)))
 	}
 	gen, err := genesis.Build(keys.Root, nil, epoch)
 	if err != nil {
@@ -107,11 +118,13 @@ func Generate(spec Spec) (*Result, error) {
 		return nil, err
 	}
 	lanes := []ed25519.PrivateKey{keys.Holder, keys.Supervisor, keys.Verifier, keys.Observer}
+	byFP := map[string]ed25519.PublicKey{}
+	for _, p := range append(append([]ed25519.PrivateKey{}, lanes...), keys.Writers...) {
+		byFP[fpOf(p)] = p.Public().(ed25519.PublicKey)
+	}
 	resolve := func(fp string) (ed25519.PublicKey, bool) {
-		for _, p := range lanes {
-			if fpOf(p) == fp {
-				return p.Public().(ed25519.PublicKey), true
-			}
+		if pub, ok := byFP[fp]; ok {
+			return pub, true
 		}
 		return rootResolve(fp)
 	}
@@ -156,6 +169,16 @@ func Generate(spec Spec) (*Result, error) {
 			return nil, err
 		}
 		if _, err := sign(keys.Root, version.Seed1, keyring.VerbGranted, fpOf(lane.key), `{"capability": "`+lane.cap+`"}`); err != nil {
+			return nil, err
+		}
+	}
+	for w, key := range keys.Writers {
+		pub := key.Public().(ed25519.PublicKey)
+		enroll := fmt.Sprintf(`{"key": %q, "kind": "agent", "name": %q}`, hex.EncodeToString(pub), fmt.Sprintf("writer-%04d", w))
+		if _, err := sign(keys.Root, version.Seed1, keyring.VerbEnrolled, fpOf(key), enroll); err != nil {
+			return nil, err
+		}
+		if _, err := sign(keys.Root, version.Seed1, keyring.VerbGranted, fpOf(key), `{"capability": "`+keyring.CapDispatch+`"}`); err != nil {
 			return nil, err
 		}
 	}
