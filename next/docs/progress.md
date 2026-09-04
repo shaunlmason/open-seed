@@ -1578,6 +1578,26 @@ record's own position through one derivation, `curation.AuthenticPass`
   the verbs and the projection, with the mutation evidence D4 names;
   `ranking.md` new, `offers.md`, `qualification.md` (the deferral
   closed), `evals.md`, `projections.md` and `envelope.md` following)
+- the promotion evidence packet (build plan §5: the seven self-hosting
+  criteria mapped to evidence on `main`, the shadow run and the two
+  cutovers named as the reserved decisions they are; feeds the Phase
+  13 exit record) — os-98ce6f8a — **in review** (task PR against plan
+  #291: `next/docs/promotion.md`, one section per criterion with a
+  status from a closed vocabulary (`met`, `partial`, `not started`,
+  `reserved`) and its evidence as drill, file and PR rows; criteria 1,
+  2, 3, 5, 6 and 7 met (6 by the conformance report, #289, merged),
+  4 reserved on one question, the POSIX git server that hosts the
+  shadow ledger with the hook, the run itself at the enforced
+  self-hosted posture the criteria name; `internal/promotion` parsing the packet
+  strictly and holding every citation to the tree under `make check`
+  (`TestPacketCitesRealDrills`, a planted bogus citation failing by
+  name); criterion 5 met by writing the cutover and the rollback in
+  the build plan's three clauses; the shadow-run protocol as a
+  proposal (the declaration, the slice, the seven-day window, the
+  dual-run rule, the daily divergence diff, the five-bar audit at the
+  end); the III.R measurement ledger, seven rows, every one `not
+  measured`; the divergence log, empty until the window opens; the
+  handbook pointing at the packet)
 - the conformance report (Phase 13's exit line: "the conformance report
   shows Part III complete at the enforced self-hosted posture"; the
   preamble's "the doctor reports which Phase 13 criteria remain open")
@@ -2003,31 +2023,45 @@ against plans #241, #244, #246, #247, #248, #249), with the reap arm
 by their items; the Phase 12 exit record above is card os-9e9ae30c's
 task PR (this card), which closes the phase.
 
-Phase 13 declares `deps: 12`, so its gate opens when this record
-merges; its items stand as their cards do. Item 1, racing mode
-(os-56bee171), is merged in #269 against plan #256. Item 4, request
-ingress and federation as read remotes (os-48df10a2), is merged in
-#270 against plan #257, closing III.J row 2. Item 5, the A2A-shaped
-cross-organization boundary (os-40ed0ca0), is in review in #279
-against plan #258. Item 6, the machine-protocol surface and platform
-parity (os-b55e5647), is in review in #273 against plan #261 and its
-amendment #278, the three-platform matrix green. Item 2, the
-remaining executor adapters (os-083112ac), is planned in #274 with a
-draft implementation in #282; item 3, the non-primary forge adapter
-(os-ad610334), is planned in #275 with a draft implementation in
-#281; item 7, tuple ranking as supervisor policy (os-c7554f18), is
-planned in #276. The two routed gaps (#265, #266) are merged.
+Phase 13 declares `deps: 12`, so its gate opened when the Phase 12
+exit record merged (#284), and every numbered item has a merged PR: 1
+in #269, 2 in #282, 3 in #281, 4 in #270, 5 in #279 (its
+canonicalization follow-up os-1c284ba8 merged, #290), 6 in #273, 7
+in #286; the two routed gaps (#265, #266) are merged. The conformance report
+(os-83bc3d84, #289) is merged, so the doctor reports the open rows;
+the promotion evidence packet (os-98ce6f8a, plan #291 open, task PR
+#294 in review) is the other thing the phase's exit line needs. The exit record (os-d63c7441, plan #288 merged) is parked
+on the packet: its plan writes the record only when the doctor
+reports complete, which III.R's rows make reachable after the shadow
+run and the cutovers, not before. The build plan's §3 backlog is
+filed now that the items are exhausted: the target-scale contention
+benchmark (os-a00d3f34, III.C row 4, the one conformance-relevant
+extra; plan #293, draft task PR #297 with two clean 200-writer
+readings and the defect it found carded as os-5063e8ba), sharded
+intake (os-7953612b) and dashboard tiers (os-f17567a6); the shadow
+run's tooling, `seed ledger audit` (os-7599c27d, plan #295, draft
+task PR #296); the coverage floor card (os-f262585a) is planned in
+#292; the macOS cleanup race in the flywheel drill's skip path is
+merged (#301, then #302; os-222189a3).
 
-**Next action: land Phase 13 — merge #279 and #273 as they clear
-review, then implement items 2, 3 and 7 as their plans merge (#274,
-#275, #276), the drafts un-drafted and receipted at that point** —
-and write the Phase 13 exit record when every item has a merged PR.
-The derivation, stated rather than read off a summary: every Phase 12
-item has a merged PR and the exit record above walks III.B, III.O and
-III.P with III.C, III.L, III.M and III.Q and routes what it found
-unmet (III.C row 4, III.L row 4, III.Q row 7), so nothing in Phase 12
-remains to claim; Phase 13's items 1 and 4 are merged, 5 and 6 are in
-review, and 2, 3 and 7 are planned.
+**Next action: the operator's answer at the promotion gate.**
+`next/docs/promotion.md` presents the seven criteria of build plan
+§5: 1, 2, 3, 5, 6 and 7 met, 4 reserved on one question, the POSIX
+git server that hosts the shadow ledger with the hook, the run at the
+enforced self-hosted posture the criteria name. Until that answer the agent-side work is to merge the
+open PRs as they clear review (#294; #297; #295 then #296; #299
+then #300; #292), fix the
+scale defect (os-5063e8ba) so the weekly run can be green (III.C
+row 4 stays `partial` on it: the charter's clause is sharded
+intake's, os-7953612b), and keep the packet's citations true. After the answer: the
+shadow run per the packet's protocol, its measurements recorded into
+the packet by follow-up cards, the two escalated cutovers, and only
+then the Phase 13 exit record. The derivation, stated rather than
+read off a summary: every Phase 13 item has a merged PR; the exit
+line's remaining criterion, the conformance report showing Part III
+complete, cannot be met by any agent act, because the table routes
+III.R's rows to measurements the shadow run supplies and the shadow
+run needs a deployment only the operator can authorize.
 
 **The destination is promotion (spin-out)**, defined in
 `docs/next-build-plan.md` §5 (merged #169, card os-768361cc) as two

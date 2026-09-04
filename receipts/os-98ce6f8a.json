@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "task": "os-98ce6f8a",
+  "merge_base": "3710a419f1eaef247c43ba9e5f2723c250cf3490",
+  "head": "987198927d5edba28975983b5cb2c36150406f88",
+  "plan_path": "plans/os-98ce6f8a.md",
+  "plan_sha256": "d96d859fa44e497bbd88b31ceeae07bbb62d965113328338ef3968477f361b30",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/decisions.md",
+    "next/docs/handbook.md",
+    "next/docs/progress.md",
+    "next/docs/promotion.md",
+    "next/internal/promotion/promotion.go",
+    "next/internal/promotion/promotion_test.go"
+  ],
+  "diff_sha256": "4b453a05834353f4d232ba665ec39c9f22f6c5b3ea644da09fbce21014fbec9e",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/promotion/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
