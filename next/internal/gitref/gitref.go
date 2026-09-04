@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 )
@@ -38,6 +39,7 @@ type Client struct {
 	Ref      string
 	gitDir   string
 	cacheDir string
+	clock    func() time.Time // nil: the ledger's own clock; tests inject a segment day
 	proposer Proposer
 }
 
@@ -77,6 +79,22 @@ func (c *Client) WithProposer(p Proposer) *Client {
 // GitDir is the client's private git dir: the objects it fetched and
 // the commits it built, which the admission service judges in place.
 func (c *Client) GitDir() string { return c.gitDir }
+
+// WithClock names the clock the per-attempt store stamps its segment
+// files with (ledger.WithClock); the loop's own behavior does not read
+// it. Tests use it to drive two writers across a midnight, the one
+// condition the 200-writer storm that lost an append had
+// (plans/os-5063e8ba.md D4).
+func (c *Client) WithClock(now func() time.Time) *Client {
+	c.clock = now
+	return c
+}
+
+// RefusedDir is where an attempt keeps the tree a hook refused as
+// bad_prev at or beyond the position it appended (plans/os-5063e8ba.md
+// D2): <state dir>/refused/<commit>/ holds the committed tree and the
+// hook's message, so the next occurrence is a directory to read.
+func (c *Client) RefusedDir() string { return filepath.Join(filepath.Dir(c.gitDir), "refused") }
 
 // NewClient prepares the client's git dir under stateDir and uses
 // stateDir/heads as the persisted-head cache.

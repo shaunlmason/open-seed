@@ -21,6 +21,7 @@ func main() {
 	budgets := flag.String("budgets", "perf/budgets.json", "the checked-in budget file")
 	dir := flag.String("dir", ".", "module directory")
 	last := flag.String("last", "perf/last.json", "where the last reading is written (gitignored)")
+	keep := flag.String("keep", "", "keep the storm's work dir (the remote, every writer's state dir with any refused tree) under this directory")
 	flag.Parse()
 	b, err := perfgate.Load(filepath.Join(*dir, *budgets))
 	if err != nil {
@@ -33,7 +34,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer cleanup()
-	m := perfgate.Measurer{Seed: 1, Contracts: b.History, Writers: b.Writers, HookBin: hook}
+	m := perfgate.Measurer{Seed: 1, Contracts: b.History, Writers: b.Writers, HookBin: hook, Keep: *keep}
 	var reading perfgate.Reading
 	verdict, msg, err := perfgate.Run(b, perfgate.Deps{
 		Measure: func() (perfgate.Reading, error) {
