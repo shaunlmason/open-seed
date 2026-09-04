@@ -1925,11 +1925,32 @@ os-9e9ae30c's task PR (an administrative card, not a Phase 12 item),
 written by the two implementing sessions, one voice.
 
 
+## Defects the scale benchmark found (os-a00d3f34's storms)
+
+- at 200 writers, one storm pushed a chain whose new record cited a
+  stale tip (`bad_prev` at the hook, classified as policy and not
+  retried), once in three runs, the one across midnight UTC —
+  os-5063e8ba — **in review** (task PR against plan #299: the seventh
+  race shape, a hook's `bad_prev` at or beyond the position the
+  client appended, re-linked from a fresh fetch and counted as
+  `Result.Relinked`; the rejected commit's own tree beside the work
+  directory it was built from and the hook's message, kept under the
+  client's state dir (`refused/<commit>/`) before the retry; `Client.WithClock` as the test seam for a segment day;
+  `seed perf run --keep` and `cmd/perfgate -keep` keeping a storm's
+  work dir, `relinked` in the reading beside the five budgeted
+  metrics; drilled with the planted refusal (re-links, lands, keeps
+  the tree, counts one), a `bad_prev` below the append surfacing
+  unchanged, the storm through the CLI with a planted refusal, and
+  two writers across an injected midnight, which land every append
+  and re-link zero times: the drill does not reproduce the storm's
+  tree, so the cause stays open and the next occurrence is a
+  directory to read; `checkpoints.md` "The seventh race shape")
+
 ## Shadow-run tooling (the promotion evidence packet's protocol, os-98ce6f8a)
 
 - `seed ledger audit`, the five-bar audit over any ledger, the shadow
-  run's evidence for charter III.R row 5 — os-7599c27d — **in
-  review** (task PR against plan #295: verify from genesis first, an
+  run's evidence for charter III.R row 5 — os-7599c27d — **done** (#296
+  against plan #295: verify from genesis first, an
   invalid chain refusing `chain_invalid` before any bar is read; the
   unchanged `simulate.Audit` over the verified records; one envelope
   with the five bars verbatim, stamped at the tip, `clean` on a clean
@@ -2055,8 +2076,9 @@ benchmark (os-a00d3f34, III.C row 4, the one conformance-relevant
 extra; merged as #297 against plan #293, two clean 200-writer
 readings and the defect it found carded as os-5063e8ba), sharded
 intake (os-7953612b) and dashboard tiers (os-f17567a6); the shadow
-run's tooling, `seed ledger audit` (os-7599c27d, plan #295 merged,
-task PR #296 in review); the coverage floor card (os-f262585a) is planned in
+run's tooling, `seed ledger audit` (os-7599c27d, merged as #296
+against plan #295; its reservation-verb defect carded as os-b86dab4c,
+plan #304); the coverage floor card (os-f262585a) is planned in
 #292; the macOS cleanup race in the flywheel drill's skip path is
 merged (#301, then #302; os-222189a3); the citation stage of `docs
 check` (os-5fe43832) holds every relative markdown link in the tree to
@@ -2072,8 +2094,7 @@ code span, which the stage masks rather than the document changes.
 §5: 1, 2, 3, 5, 6 and 7 met, 4 reserved on one question, the POSIX
 git server that hosts the shadow ledger with the hook, the run at the
 enforced self-hosted posture the criteria name. Until that answer the agent-side work is to merge the
-open PRs as they clear review (#296 with its plan amendment #303;
-#300; #292), fix the
+open PRs as they clear review (#300; #304 then its fix; #292), fix the
 scale defect (os-5063e8ba) so the weekly run can be green (III.C
 row 4 stays `partial` on it: the charter's clause is sharded
 intake's, os-7953612b), and keep the packet's citations true. After the answer: the

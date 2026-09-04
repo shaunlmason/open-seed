@@ -131,3 +131,18 @@ filing), which review caught. What stayed is a rehearsal: the same
 transform over a dry chain whose fold is incremental (the table's
 transition check plus the claim and submission bookkeeping), so the
 verbs are exact and the pass costs its git lookups, not a re-fold.
+
+## os-5063e8ba — reproducing the stale-prev tree with two writers across midnight
+
+Tried: two `gitref` clients racing across an injected segment split
+(one stamping segments before midnight, one after, the genesis in the
+earlier day's file), six appends each, forty attempts allowed.
+
+Why it does not reproduce: every append lands and no attempt is
+refused as `bad_prev`; the split is scanned in order, the reconciled
+tip is the stream's, and `git add -A` re-reads a segment whose inode
+changed. Whatever built the 200-writer storm's tree (a record beyond
+the client's reconciled tip inside the pushed 2026-09-04.jsonl) needs
+more than the split. The drill stays as a regression; the loop's
+seventh shape keeps the refused tree, so the next occurrence is read
+rather than guessed.
