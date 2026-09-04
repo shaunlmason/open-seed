@@ -169,3 +169,18 @@ drills pass there.
   `TestFilesystemPathsUseFilepath`, `TestEverySkipNamesItsReason`,
   `TestCRLFSegmentIsRefusedNotNormalized`, `TestDoctorReportsThePlatform`,
   `internal/platform`'s posture table drill.
+- III.L row 4 (per-verb policy governs the machine-protocol surface
+  with attributable approvals; plans/os-8ecef90f.md): the surface
+  authenticates nobody and consults the boundary alone, so the policy
+  that governs a verb here is admission's and the only attribution an
+  approval landed here can have is the chain's signature. Drilled by
+  `TestServeRefusesByTheSamePolicyAsTheCLI` (a verb the grant table
+  refuses the caller, a filing the declaration's routing rule refuses
+  and a claim its agent ceiling refuses each come back through `serve`
+  as the failing envelope with the CLI's own code, and each admitted
+  twin lands through the same surface) and
+  `TestServeApprovalsAreAttributableToTheirSigner` (`decision.recorded`
+  and `plan.approved` landed through `serve` read back through `serve`'s
+  `ledger.show` with `actor` equal to the signing key's fingerprint at
+  the reported position, the chain verifying afterward), both in
+  `cmd/seed/serve_policy_test.go`.

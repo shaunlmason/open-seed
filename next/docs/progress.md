@@ -2103,6 +2103,25 @@ written by the two implementing sessions, one voice.
   owns the choice: thread the declaration through the verb, mirroring
   admission, or keep the bar ledger-only and correct the row's wording)
 
+## The machine surface's policy, drilled (os-8ecef90f)
+
+- III.L row 4, per-verb policy on the machine-protocol surface with
+  attributable approvals — os-8ecef90f — **in review** (task PR against
+  plan #320: tests only. The row was routed because #273's three
+  `serve` tests are parity assertions, which is III.I row 3, and the
+  card's determination was that the row is structurally true and needs
+  a drill. `TestServeRefusesByTheSamePolicyAsTheCLI` fires a grant-table
+  refusal, a routing refusal and an agent-ceiling refusal through
+  `serve` and holds each to the CLI's code for the same argv, with each
+  admitted twin landing through the same surface;
+  `TestServeApprovalsAreAttributableToTheirSigner` reads
+  `decision.recorded` and `plan.approved` back through `serve`'s
+  `ledger.show` with the signing key's fingerprint as `actor` and the
+  chain verifying afterward. The row flips to met with the drills as its
+  evidence, the doctor's outstanding rows falling from 30 to 29, and
+  `platform.md`'s conformance section names the drills; no non-test
+  line moves)
+
 ## Frontier
 
 
@@ -2204,6 +2223,13 @@ through 12 required and Phase 13 alone following, and **neither
 cutover autonomously decidable**: spin-out IS the entry-point
 switch, so both are escalations. That section is the authority; no
 promotion criteria are restated here.
+
+Of the two rows outside III.R that stood open on the tree's own
+account, III.L row 4 is drilled and flipped by os-8ecef90f (plan #320,
+task PR in review) and III.A row 7 (os-db5cd353) remains, so the doctor
+reads 29 outstanding rows once #320's task merges: 21 Phase 13 rows the
+exit record flips, C.4 and Q.7 routed to the backlog run and to
+promotion, and III.R's seven.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
