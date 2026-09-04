@@ -1646,3 +1646,4 @@
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-b97da069","kind":"comment"},"task":"os-5781a026","ts":"2026-09-04T23:16:42Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-a9e715dc","ts":"2026-09-04T23:19:16Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-05T00:19:20Z"},"task":"os-a9e715dc","ts":"2026-09-04T23:19:20Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-d8975524","kind":"pr"},"task":"os-a9e715dc","ts":"2026-09-04T23:22:42Z","verb":"attach-evidence"}
