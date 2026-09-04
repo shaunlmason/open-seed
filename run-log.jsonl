@@ -1477,3 +1477,4 @@
 {"actor":"seed-next-implementer","data":{"id":"msg-20260903230509-4691"},"task":"","ts":"2026-09-04T02:15:21Z","verb":"mail-ack"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-222189a3","ts":"2026-09-04T02:16:34Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T03:17:24Z"},"task":"os-222189a3","ts":"2026-09-04T02:17:24Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-222189a3","ts":"2026-09-04T02:25:08Z","verb":"transition"}
