@@ -1931,7 +1931,7 @@ written by the two implementing sessions, one voice.
 - the flywheel engine drill's skip path races `t.TempDir`'s cleanup on
   macOS (`unlinkat .../.git/objects: directory not empty`), reporting
   a skipped drill as a failed one on #290's macOS leg — os-222189a3 —
-  **in review** (task PR against plan #301: `requireEngine` reads the
+  **done** (#302 against plan #301: `requireEngine` reads the
   pin from the source tree, the same shim and lock `instantiate`
   copies, and runs as the drill's first statement, so a skip builds
   nothing: twelve git spawns on the skip path before, none after;
