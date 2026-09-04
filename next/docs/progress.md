@@ -2085,9 +2085,13 @@ check` (os-5fe43832) holds every relative markdown link in the tree to
 the tree, filed after a sweep found seven that did not resolve, four of
 them in `docs/CONTRIBUTING-AGENTS.md`, which III.Q row 5 cites as the
 authority order's evidence. Its work is on branch
-`claude/cleat-seed-next-eval-535lvf` with the six real links fixed and
-`make check` green, awaiting review; the seventh hit was a regex in a
-code span, which the stage masks rather than the document changes.
+`claude/cleat-seed-next-eval-535lvf` (PR #305) with five of the links
+fixed and `make check` green, awaiting review. Two of the seven are not
+that branch's to repair: one is a regex in a code span, which the stage
+masks rather than the document changes, and one is in
+`plans/os-2e34f66a.md`, which a plan file's own single-file gate owns,
+so the stage does not read `plans/` at all and the correction is carded
+as os-0dba8c6a for a plan PR.
 
 **Next action: the operator's answer at the promotion gate.**
 `next/docs/promotion.md` presents the seven criteria of build plan

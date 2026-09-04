@@ -1775,3 +1775,19 @@ the assertions read, and there is no copy to go stale.
   the base code generalizes, but the fix differs: `seed docs generate`
   repairs drift and cannot repair a citation, so a caller branching on
   the code must be able to tell them apart.
+- Scope a whole-tree gate to what its own trippers may repair. The
+  first cut swept `plans/` too, and the only broken citation left in
+  the tree was in a merged plan: a plan file changes only through its
+  own single-file plan PR, so no branch carrying the gate could carry
+  the fix and no branch carrying the fix could carry the gate. A gate
+  whose only remedy breaks another rule is mis-scoped, not strict, and
+  the tell is that satisfying it took a rule violation in the same
+  change. Ask what a person who trips the gate is allowed to do about
+  it before choosing the walk.
+- A blind spot in a gate is worse than the gate's absence, because it
+  is read as a guarantee. The destination pattern excluded parentheses,
+  which markdown permits when balanced, and the effect was not a skipped
+  link but a dropped citation: unread, uncounted, and green. Scan a
+  delimited region by counting depth rather than excluding the
+  delimiter, and be suspicious of a test that asserts the gate
+  deliberately does not look at something.

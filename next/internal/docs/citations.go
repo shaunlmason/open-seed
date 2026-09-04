@@ -60,9 +60,23 @@ const (
 )
 
 // skipDirs are the directories a documentation sweep must not descend
-// into: git's own object store, and any vendored dependency tree, whose
-// markdown documents the repository does not own and cannot fix.
+// into at any depth: git's own object store, and any vendored
+// dependency tree, whose markdown documents the repository does not own
+// and cannot fix.
 var skipDirs = map[string]bool{".git": true, "node_modules": true}
+
+// governedElsewhere are the top-level directories this gate does not
+// read, because the repository governs their contents through a
+// separate single-file gate. AGENTS.md binds a plan file to change only
+// through its own plan PR, touching that one file and nothing else, so
+// a whole-tree gate refusing a citation under plans/ would be
+// unsatisfiable: no branch that may carry the fix may also carry the
+// gate, and no branch that carries the gate may carry the fix. A gate
+// whose only remedy breaks another rule is a mis-scoped gate, not a
+// strict one. Dangling citations under plans/ stay real and stay
+// carded; they are repaired by a plan PR, which is the surface that
+// owns them.
+var governedElsewhere = map[string]bool{"plans": true}
 
 // CheckCitations walks every markdown document under root and holds each
 // relative inline link to the tree: the target resolves against the
@@ -81,7 +95,16 @@ func CheckCitations(root string) (int, []BrokenCitation, error) {
 			return err
 		}
 		if d.IsDir() {
-			if p != root && skipDirs[d.Name()] {
+			if p == root {
+				return nil
+			}
+			if skipDirs[d.Name()] {
+				return fs.SkipDir
+			}
+			// Scoped to the top level on purpose: a directory named
+			// plans nested inside a package's testdata is ordinary
+			// content, not the governed surface.
+			if at, rerr := filepath.Rel(root, p); rerr == nil && governedElsewhere[filepath.ToSlash(at)] {
 				return fs.SkipDir
 			}
 			return nil

@@ -170,7 +170,10 @@ forge, and nothing else catches it. Both stages share exit 28. Code
 spans and fenced blocks are masked before any link is read, so a
 link-shaped regex in prose is not a citation; external URLs are out of
 scope, because resolving one needs the network and this command must
-stay offline and deterministic.
+stay offline and deterministic; and `plans/` is out of scope, because a
+plan file changes only through its own single-file plan PR, so a
+refusal there would demand a fix no branch carrying this gate may make.
+Dangling citations under `plans/` are repaired by a plan PR.
 
 **The conformance report.** Part III of the charter is a checked-in
 table, `next/spec/conformance.json`, one row per charter criterion with

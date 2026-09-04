@@ -257,6 +257,34 @@ func TestSkippedDirectoriesAreNotWalked(t *testing.T) {
 	}
 }
 
+// plans/ is governed by a separate single-file gate, so this one does
+// not read it: refusing a citation there would demand a fix no branch
+// carrying this gate is allowed to make (review finding on #305).
+func TestTopLevelPlansAreGovernedElsewhere(t *testing.T) {
+	root := tree(t, map[string]string{
+		"plans/os-1.md": "[x](gone.md)\n",
+		"keep.md":       "[x](keep.md)\n",
+	})
+	n, broken := held(t, root)
+	if len(broken) != 0 {
+		t.Fatalf("plans/ is not this gate's surface: %v", broken)
+	}
+	if n != 1 {
+		t.Fatalf("held %d, want only the document outside plans/", n)
+	}
+}
+
+// The exemption is the governed surface, named by its position, not any
+// directory that happens to be called plans.
+func TestANestedPlansDirectoryIsStillRead(t *testing.T) {
+	root := tree(t, map[string]string{
+		"pkg/testdata/plans/a.md": "[x](gone.md)\n",
+	})
+	if _, broken := held(t, root); len(broken) != 1 {
+		t.Fatalf("a nested plans/ is ordinary content, got %v", broken)
+	}
+}
+
 func TestNonMarkdownIsNotRead(t *testing.T) {
 	root := tree(t, map[string]string{"a.txt": "[x](missing.md)\n"})
 	if n, broken := held(t, root); n != 0 || len(broken) != 0 {
