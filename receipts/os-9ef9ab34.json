@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "task": "os-9ef9ab34",
-  "merge_base": "7b246606f03fced5f80ca104c1865b2ca03abfb5",
-  "head": "e892b907e3d3e4a130fcf14b2e93efe01f55520a",
+  "merge_base": "2c918dd40ecc480249937766cab3e806aa863fcc",
+  "head": "79117ca16f7712e8fb7df68cea614fa3a3967eee",
   "plan_path": "plans/os-9ef9ab34.md",
   "plan_sha256": "2ebf53eee0fb0e7375d2c5b853767739c297f5f1e3b703621a4017cc6e3b8736",
   "diff_files": [
@@ -13,7 +13,7 @@
     "next/internal/conformance/conformance_test.go",
     "next/spec/conformance.json"
   ],
-  "diff_sha256": "cba7187f10467d8ca4a8d6424d0f851375609f2d2ce97a0eee24fcec1ba0dad5",
+  "diff_sha256": "17d6b324185a6a45e4db195d43df40983f65d858568eeed9df93f3785ea77f41",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/conformance/ ./internal/docs/ -count=1",
