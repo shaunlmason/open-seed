@@ -3483,6 +3483,64 @@ is why the build plan's critical path puts the shadow run and the two
 cutovers before Phase 13's exit.
 
 
+## The contention benchmark at target scale (os-a00d3f34)
+
+**One gate at two sizes, not a second tool.** `perfgate.Budgets`
+already carries the history size and the writer count beside the
+ceilings, `Load` already refuses a ceiling without provenance, and the
+storm already asserts no lost or doubled update at any count; the
+scale run is a second budget file read by the same `cmd/perfgate`,
+and `internal/perfgate`'s code changes by nothing. A second measurer
+would have been a second definition of the same metric.
+
+**200 writers, the same history, one actor each.** Hundreds means
+the plural, and 200 is the smallest such count; the history stays at
+the per-PR profile's 40 contracts so the admission, replay and
+rebuild ceilings are copied rather than re-derived and the two
+readings are about the same chain. A review finding on the plan
+caught the storm signing every writer's append with the governance
+root's key, one actor issuing 200 writes; the charter's row counts
+actors and an actor is a keypair, so the history now enrolls one
+agent key per writer (`dispatch`, the grant `intent.filed` accepts),
+the storm signs with it, and the measurer refuses a landed chain
+whose storm records carry fewer distinct actors than writers. The
+per-PR storm's 24 writers are 24 actors by the same change.
+
+**The schedule is read-only and its red is the signal.** The workflow
+declares `contents: read` alone, uploads the reading whether the gate
+passed or not, and pages nobody; `TestTreeWorkflowsHaveNoScheduledWriters`
+holds every scheduled workflow in the tree but v1's maintenance lane
+(whose write is the state ref's anchor) to that permission, so the
+lint the doctor already runs on a declaration now runs on the tree
+under `make check`.
+
+**The conformance row stays partial; the run is cited for what it
+shows.** The plan quoted the row as "without lost updates"; the
+charter's row reads "without unrelated writes racing each other's
+admissions pathologically" (review finding on the task PR), and a
+single-ref storm of two hundred unrelated appends is that pathology
+held to a ceiling, not its absence. The charter outranks the plan, so
+this card makes the run exist and states its claim against the row's
+own words: hundreds of enrolled actors at the target scale with no
+lost or doubled update, tracked in CI. The clause the row states is
+sharded intake's (III.B row 6, os-7953612b), and the Phase 13 exit
+record cites the first green run without flipping C.4 on it.
+
+**The benchmark found what it exists to find.** Of three 200-writer
+storms on the implementing host signed with one key, two landed every
+writer and one refused one writer at the hook with `bad_prev` (a
+pushed chain whose new record cited a stale tip), which the loop
+classified as policy and did not retry; the run crossed midnight UTC
+and was the only one whose chain spanned two segments. The failure is
+carded as a defect (os-5063e8ba) with the evidence and the
+reproduction (`seed perf run --writers 200 --history 40`), not
+absorbed into a ceiling, because a lost append is the thing the row
+forbids. The ceilings come from the two later runs with one enrolled
+actor per writer (2065826 and 2071708 ms, 66.8 and 67.3 attempts per
+append, 200 distinct actors in each landed chain); the one-key runs
+(970948 and 955154 ms) are superseded, recorded in the provenance for
+what they measured.
+
 ## The promotion evidence packet (os-98ce6f8a)
 
 **The packet is a document with a parser, not a projection.** The
