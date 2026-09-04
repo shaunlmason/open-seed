@@ -1636,3 +1636,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T22:30:00Z"},"task":"os-2e46aa2f","ts":"2026-09-04T21:30:00Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-2e46aa2f","ts":"2026-09-04T21:32:26Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: the refusal journal cannot tell a blind retry from a corrected one (III.R row 5's blind-retry clause)"},"task":"os-a9e715dc","ts":"2026-09-04T22:15:19Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"next: require-approval per verb on the machine surface — approval requests resolved attributably in the operator's inbox (III.L row 4's third mode)"},"task":"os-5781a026","ts":"2026-09-04T22:20:26Z","verb":"create"}
