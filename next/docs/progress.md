@@ -1887,6 +1887,37 @@ os-9e9ae30c's task PR (an administrative card, not a Phase 12 item),
 written by the two implementing sessions, one voice.
 
 
+## Backlog — true extras (docs/next-build-plan.md §3; filed when Phase 13's items were on `main`)
+
+- the contention benchmark at target scale (III.C row 4, routed here
+  by the Phase 12 exit record; the one conformance-relevant extra) —
+  os-a00d3f34 — **in review** (task PR against plan #293:
+  `next/perf/budgets-scale.json`, 200 writers against the same
+  40-contract history, the timing ceilings measured on the
+  implementing host and the attempts ceiling at twice the loop's
+  expected writers/2, provenance on every ceiling; the weekly
+  read-only `perf-scale` workflow running the unchanged `cmd/perfgate`
+  at that profile and attaching the reading pass or fail;
+  `TestScaleProfileIsHundredsOfWriters` pinning the profile and
+  `TestTreeWorkflowsHaveNoScheduledWriters` holding the tree's
+  scheduled workflows to `contents: read` outside v1's maintenance
+  lane; `checkpoints.md` "The scale profile"; the C.4 row flips at
+  the Phase 13 exit citing the first green scheduled run)
+- sharded admission intake (III.B row 6, MAY) — os-7953612b —
+  **backlog** (filed; not conformance-blocking)
+- dashboard tiers beyond the report — os-f17567a6 — **backlog**
+  (filed; not conformance-blocking)
+- the flywheel engine drill's skip path racing TempDir cleanup on
+  macOS — os-222189a3 — **backlog** (filed from #290's macOS leg;
+  tests only)
+- at 200 writers, one storm pushed a chain whose new record cited a
+  stale tip (`bad_prev` at the hook, classified as policy and not
+  retried), once in three runs, the one that crossed midnight UTC —
+  os-5063e8ba — **backlog** (filed from the scale benchmark's second
+  measurement; P1: a lost append is what III.C row 4 forbids; the
+  drill first, then the fix, and the loop re-linking on a `bad_prev`
+  whose cited tip is not the tip it fetched)
+
 ## Frontier
 
 

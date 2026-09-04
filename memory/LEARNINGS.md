@@ -1633,3 +1633,22 @@ the assertions read, and there is no copy to go stale.
   offer's scope) survives a policy that sends work to the strongest,
   and a first eval's offer stays the one unscoped door.
 
+## The contention benchmark at target scale (os-a00d3f34)
+
+- When a gate is parameterized by size, scale is a data change: a
+  second budget file and a schedule, never a second measurer. The
+  drill that pins the profile's size is what keeps the data change
+  honest.
+- The optimistic append loop costs writers/2 attempts per landed
+  record, so its wall time is quadratic in writers; hundreds of
+  writers belong on a schedule, and the per-PR gate's 24 is a budget
+  on wall clock, not a claim about scale.
+- A receipt's diff hash covers git's default diff text, whose index
+  lines abbreviate blob ids to a length that grows with the clone's
+  object count (seven hex digits below 16384 objects, eight above);
+  CI's full clone crossed that count on 2026-09-03, so a receipt
+  generated in a partial clone mismatches on verify although plan,
+  files and commands agree. Until the engine pin carries the
+  --full-index fix (open-seed-engine, receipt: hash the diff with
+  full blob ids), fetch every ref and repack before generating a
+  receipt, so the local clone abbreviates as CI's does.

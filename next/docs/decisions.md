@@ -3430,3 +3430,42 @@ refusal needed a code; `ranking_empty` refines exit 4 `not_found`
 `envelope.md` is where every such code is recorded, so the row went
 there beside `trust_undeclared`. No new exit number.
 
+
+## The contention benchmark at target scale (os-a00d3f34)
+
+**One gate at two sizes, not a second tool.** `perfgate.Budgets`
+already carries the history size and the writer count beside the
+ceilings, `Load` already refuses a ceiling without provenance, and the
+storm already asserts no lost or doubled update at any count; the
+scale run is a second budget file read by the same `cmd/perfgate`,
+and `internal/perfgate`'s code changes by nothing. A second measurer
+would have been a second definition of the same metric.
+
+**200 writers, the same history.** Hundreds means the plural, and 200
+is the smallest such count; the history stays at the per-PR profile's
+40 contracts so the admission, replay and rebuild ceilings are copied
+rather than re-derived and the two readings are about the same chain.
+
+**The schedule is read-only and its red is the signal.** The workflow
+declares `contents: read` alone, uploads the reading whether the gate
+passed or not, and pages nobody; `TestTreeWorkflowsHaveNoScheduledWriters`
+holds every scheduled workflow in the tree but v1's maintenance lane
+(whose write is the state ref's anchor) to that permission, so the
+lint the doctor already runs on a declaration now runs on the tree
+under `make check`.
+
+**The conformance row flips at the exit, not here.** The table's
+C.4 note names the scheduled run; the Phase 13 exit record flips the
+row citing the first green run (plans/os-d63c7441.md D2). This card
+makes the run exist.
+
+**The benchmark found what it exists to find.** Of three 200-writer
+storms on the implementing host, two landed every writer and one
+refused one writer at the hook with `bad_prev` (a pushed chain whose
+new record cited a stale tip), which the loop classified as policy
+and did not retry; the run crossed midnight UTC and was the only one
+whose chain spanned two segments. The ceilings come from the two
+clean runs; the failure is carded as a defect (os-5063e8ba) with the evidence and
+the reproduction (`seed perf run --writers 200`), not absorbed into a
+ceiling, because a lost append is the thing the row forbids.
+

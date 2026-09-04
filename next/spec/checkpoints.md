@@ -141,6 +141,23 @@ regression or raises the ceiling in the same PR with the reason in the
 file. The last reading is written to `next/perf/last.json`
 (gitignored) and `seed perf run` prints it as an envelope.
 
+**The scale profile.** The same gate runs at two sizes
+(plans/os-a00d3f34.md D1). `next/perf/budgets-scale.json` has the
+shape of `budgets.json` with the same representative history and 200
+writers, the smallest count that is hundreds, and `.github/workflows/perf-scale.yml`
+runs `cmd/perfgate -budgets perf/budgets-scale.json` weekly (and on
+dispatch), read-only, attaching `perf/last-scale.json` as an artifact
+whether the gate passed or not; a miss fails the run, and the red run
+is the signal. The per-PR gate stays at 24 writers, because the
+optimistic loop's cost is quadratic in writers (attempts per landed
+append is writers/2) and a storm at hundreds costs tens of minutes a
+run. `TestScaleProfileIsHundredsOfWriters` (`internal/perfgate`) holds
+the profile at 200 writers or more, at least the per-PR history, and
+an attempts ceiling of at least writers/2; `TestTreeWorkflowsHaveNoScheduledWriters`
+(`internal/protections`) holds every scheduled workflow in the tree
+but v1's maintenance lane (whose write is the state ref's anchor) to
+`contents: read`.
+
 The attempts ratio is stated for what it is: under one optimistic
 ref, `n` writers racing each cost about `n/2` attempts, so the storm's
 total work grows with the square of the writer count. That is the
@@ -174,4 +191,6 @@ to that expectation rather than pretending it is constant.
   representative history) — `next/perf/budgets.json`, `cmd/perfgate`
   under `make check-next`, `internal/history`.
 - III.C row 4 (a contention benchmark at scale, tracked in CI) — the
-  storm metrics, with the single-ref shape stated.
+  storm metrics, with the single-ref shape stated, at 24 writers on
+  every `make check-next` and at the scale profile's 200 writers on
+  the weekly `perf-scale` workflow (plans/os-a00d3f34.md).
