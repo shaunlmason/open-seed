@@ -1593,3 +1593,4 @@
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:312","to":"ready"},"task":"os-aaec6a3c","ts":"2026-09-04T17:23:19Z","verb":"plan-unblock"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-9ef9ab34","ts":"2026-09-04T18:29:29Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-88df7ab2","ts":"2026-09-04T20:26:22Z","verb":"close"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-0dba8c6a","ts":"2026-09-04T20:43:09Z","verb":"promote"}
