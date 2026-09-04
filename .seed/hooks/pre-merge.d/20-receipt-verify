@@ -1,0 +1,33 @@
+#!/bin/sh
+# The local half of the CI verify gate (D3/D4.5). `make check` alone left the
+# receipt gate with no local counterpart, so a stale claim, a missing one, or a
+# branch cut before its plan merged were all first heard about from a CI run
+# that had already paid for the platform matrix. This runs the same command CI
+# runs, in about a second.
+#
+# A pre-check, not the authority: CI regenerates on its own credentials and
+# remains the author of record (R11). Non-task branches pass vacuously, so a
+# human merging an ordinary branch is not stopped by a rule that is not theirs.
+set -eu
+
+branch="${SEED_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
+case "$branch" in
+  seed/*-plan) exit 0 ;;
+  seed/*) task="${SEED_TASK:-${branch#seed/}}" ;;
+  *) exit 0 ;;
+esac
+
+root="${SEED_REPO_ROOT:-$(git rev-parse --show-toplevel)}"
+seed="$root/scripts/seed"
+[ -x "$seed" ] || seed="sh $root/scripts/seed"
+
+# The base the gate judges against is the one CI uses. Prefer the remote's
+# view of the default branch: a local `main` that has not been fetched is the
+# stale base that produces "merged after this branch was cut" in CI.
+base=main
+for ref in "${SEED_TARGET_BRANCH:-}" origin/main main; do
+  [ -n "$ref" ] || continue
+  if git rev-parse --verify --quiet "$ref^{commit}" >/dev/null; then base="$ref"; break; fi
+done
+
+exec $seed receipt verify "$task" --base "$base" --branch "$branch" --run

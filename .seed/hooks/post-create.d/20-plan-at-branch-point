@@ -1,0 +1,36 @@
+#!/bin/sh
+# Fail at branch creation, not after a CI matrix (D3). The approved plan is
+# the blob at the task branch's merge base, so a branch cut from a base that
+# does not carry the plan yet cannot pass verify no matter what is built on
+# it. That is a one-second check here and a full red CI run later.
+#
+# Advisory for anything that is not a task worktree, and silent when the
+# repository has no plan directory at all (a fresh instantiation).
+set -eu
+
+branch="${SEED_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
+case "$branch" in
+  seed/*-plan) exit 0 ;;
+  seed/*) task="${SEED_TASK:-${branch#seed/}}" ;;
+  *) exit 0 ;;
+esac
+plan="plans/$task.md"
+
+base=""
+for ref in "${SEED_TARGET_BRANCH:-}" origin/main main; do
+  [ -n "$ref" ] || continue
+  if git rev-parse --verify --quiet "$ref^{commit}" >/dev/null; then base="$ref"; break; fi
+done
+[ -n "$base" ] || exit 0
+
+mb=$(git merge-base "$base" HEAD 2>/dev/null) || exit 0
+git cat-file -e "$mb:$plan" 2>/dev/null && exit 0
+
+if git cat-file -e "$base:$plan" 2>/dev/null; then
+  echo "post-create: $plan is on $base but not at this branch's point ($(git rev-parse --short "$mb"))." >&2
+  echo "post-create: run \"git merge $base\" here before implementing — the approved plan is the merge-base blob (D3)." >&2
+  exit 1
+fi
+echo "post-create: no approved plan: $plan exists at neither $mb nor $base." >&2
+echo "post-create: an unplanned card authorizes planning only — open the plan PR first (D3)." >&2
+exit 1
