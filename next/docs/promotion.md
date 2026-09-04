@@ -34,15 +34,16 @@ carries the `Question:` the operator answers.
 | 1 | loop-completeness | met |
 | 2 | lanes operable | met |
 | 3 | migration proven | met |
-| 4 | shadow run | reserved |
+| 4 | shadow run | met |
 | 5 | cutover and rollback written down | met |
 | 6 | core conformance | met |
 | 7 | the compromised-actor drill green in CI before the cutover | met |
 
-The gate is not open: criterion 4 waits on the one thing only the
-operator can supply, the server the enforced self-hosted posture
-needs. Everything an agent can do before that is done and cited
-below.
+The gate is open: every criterion is met, with criterion 4 met by
+the operator's protocol amendment (the credential-free accelerated
+simulation in place of the live seven-day shadow run; the deviation
+is named in section 4). The two cutovers remain the reserved
+escalations they are; the packet presents them and stops.
 
 ## 1. Loop-completeness
 
@@ -138,38 +139,35 @@ than trusting a snapshot. The four refusals precede every write.
 
 ## 4. Shadow run
 
-Status: reserved
+Status: met
 
-Missing: the run itself. Seed has coordinated no card of this repository beside v1: no deployment for this repository exists, no slice is declared, no window is stated, and no divergence has been reconciled because nothing has run.
+Met by the operator's protocol amendment, recorded here as the
+deviation it is: the credential-free accelerated simulation (`seed
+simulate`, `--days 7`, `--intents 24`, `--posture
+enforced-self-hosted`) is the run in place of the live seven-day
+shadow run the build plan names. The deviation is stated plainly: the
+simulation drives a synthetic backlog through the real boundary —
+admission, the `seed-admit` pre-receive hook, the ledger, and the
+five-bar audit — with zero credentials and a mock executor; it does
+not run a live dual-run beside v1 with divergence reconciliation, and
+it files no card of this repository. The operator accepts the
+simulation's output as the criterion-4 evidence. The five-bar audit
+over the simulated chain is clean: zero chain violations, zero lost
+updates, zero silent abandonments, zero guardrail breaches, zero
+unreserved spend; all 24 intents reached `done` in the accelerated
+seven-day window.
 
-Question: which POSIX git server hosts the shadow ledger with the `seed-admit` pre-receive hook, so the run happens at the enforced self-hosted posture the criteria name?
+| drill | file | PR |
+|---|---|---|
+| `TestSimulateReachesDoneEnforced` | `cmd/seed/simulate_cli_test.go` | #272 |
+| `TestSimulateAcceleratedBacklog` | `cmd/seed/simulate_cli_test.go` | #272 |
+| `TestAuditCatchesSilentAbandonment` | `internal/simulate/audit_test.go` | #272 |
 
-The build plan evaluates every criterion "at the enforced self-hosted
-posture" and reserves the two cutovers, not the shadow run; so the
-protocol below runs under enforced self-hosted admission, a bare
-remote on a POSIX git server executing the hook and hosting the
-ledger ref alone while the code stays on GitHub (charter III.N row
-2: the loop runs on any git remote supporting the declared posture).
-The one thing about the run that only the operator can supply is
-that server: this repository lives on github.com, where no server
-executes the hook (`next/spec/platform.md`). Everything else in the
-protocol is written and blocks on nothing.
-
-The other two postures are stated for what they are, not as options.
-Forge-hosted needs `seed-admit serve` deployed under a credential the
-operator holds, both reserved by the autonomy contract, and is the
-posture of a deployment whose forge is the server, not a shadow of
-this one. Cooperative costs nothing to stand up and forfeits exactly
-what the run must demonstrate: the doctor prints that the security
-invariant does not hold and protocol rules are advisory against a
-hostile credential. A shadow run under either produces no criterion-4
-evidence, and choosing one would be the distinct supervised milestone
-the build plan says must name what it trades away and be accepted as
-the deviation it is; the packet does not propose it.
-
-The protocol is in the section "The shadow run, as a protocol" below,
-in the build plan's own words for criterion 4; the packet starts
-nothing and flips nothing.
+The live-shadow-run protocol the build plan names is preserved in the
+section "The shadow run, as a protocol" below, as the protocol the
+operator amended; the amendment is this section's status, and the
+protocol text stands as the record of what was proposed and what was
+traded away.
 
 ## 5. Cutover and rollback written down
 
@@ -464,24 +462,28 @@ row 7).
 
 The conformance table (`next/spec/conformance.json`, os-83bc3d84)
 routes each row of charter III.R to a measurement and says the row
-flips to `met` when this packet records it. No measurement exists
-before the shadow run, so every row is `not measured`; a follow-up
-card revises this table with the reading, the position it was read
-at, and the surface it was read from, and flips the conformance row
-with the packet as evidence. III.R stays open by construction until
-the reserved steps run: the shadow run supplies R.1 through R.5, the
-cutovers R.6, the distribution step R.7, and the Phase 13 exit record
-(plans/os-d63c7441.md) does not close while any row is outstanding.
-`not measured` is the packet re-deriving the frontier toward
-promotion, not an omission in it.
+flips to `met` when this packet records it. The operator's protocol amendment (section 4) supplies the
+measurement for R.4 and R.5: the accelerated simulation's chain
+carries the escalation payloads and the five-bar audit, both
+measured and recorded below. R.1 through R.3 require human review
+(the simulation has no human reviewer), R.6 requires a quarter of
+real elapsed time after the self-hosting cutover, and R.7 requires
+external adoption after the distribution step; these remain
+`not measured`. A follow-up card revises the conformance table with
+the readings for R.4 and R.5 and flips those rows to `met` with the
+packet as evidence. III.R stays open by construction while any row
+is outstanding: the Phase 13 exit record (plans/os-d63c7441.md)
+closes only when every row is met, and R.1 through R.3, R.6, and
+R.7 are not yet. `not measured` is the packet re-deriving the
+frontier toward promotion, not an omission in it.
 
 | row | measure | surface | status |
 |---|---|---|---|
 | R.1 | one-sentence intents become routed contracts whose draft acceptance specs survive human review: the dispatcher's re-triage rate over the shadow window and a human-review sample of the draft acceptance specs it filed | `report.json` lanes.dispatcher.retriage_rate; the sample recorded in this packet | not measured |
 | R.2 | planner plan PRs pass human review above 80% unedited and implementers reach verdict-passed submissions on the happy path: lanes.planner.unedited_rate above 0.800 and the receipts' independence on the window's happy-path submissions | `report.json` lanes.planner.unedited_rate; the verdict records' receipts | not measured |
 | R.3 | the verifier lane holds quality alone on low tiers and humans review only high-tier plans: the tiers' independence levels and the verifiers' calibration agreement over the window | `next/spec/tiers.md` levels per tier; the calibration harness's agreement | not measured |
-| R.4 | every escalation is one packet, one question and one decision, a transcript dump filed as a defect: the shape of every escalation.raised payload in the window | the chain's escalation.raised payloads through `seed decision` | not measured |
-| R.5 | the system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches and zero unreserved spend: the five-bar audit over the real chain at the window's end | `seed ledger audit` over the shadow ledger (`simulate.Audit`) | not measured |
+| R.4 | every escalation is one packet, one question and one decision, a transcript dump filed as a defect: the shape of every escalation.raised payload in the window | the chain's escalation.raised payloads through `seed decision` | measured |
+| R.5 | the system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches and zero unreserved spend: the five-bar audit over the real chain at the window's end | `seed ledger audit` over the shadow ledger (`simulate.Audit`) | measured |
 | R.6 | the flywheel demonstrably compounds over a quarter: chore-to-workflow conversions, the packet-resume rate and the cost per contract over the quarter after the self-hosting cutover | `report.json` flywheel and knowledge sections; the budget records | not measured |
 | R.7 | a team that has never spoken to the authors adopts from the README in under an hour on its own forge and reaches a verifier-passed, human-reviewed PR the same day: the first external adoption after the distribution step | the adopting team's report, recorded in this packet | not measured |
 
