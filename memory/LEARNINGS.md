@@ -1874,6 +1874,23 @@ failed step skips the rest of the job.
   full changed-file list now. When you exclude something for one
   computation, go and look at what else was reading that list.
 
+## The unreserved-spend bar (os-88df7ab2)
+
+- When a bar judges whether the boundary would have accepted a record,
+  ask the boundary's own predicate. Deriving an equivalent from the
+  fold's facts looks cheaper and was wrong in two ways at once: it
+  dropped the citation (which reservation this start named) and it
+  claimed a linearity the underlying predicates do not have.
+- A fixture that a bar cannot legitimately pass is telling you
+  something. When the corrected rule turned every synthetic `{}` chain
+  into unreserved spend, the fixtures were the error, not the rule:
+  they were chains no admission would have taken, and the tree already
+  had an admission-grade generator (`internal/history`) to replace
+  them with.
+- Measure the cost you are tempted to assert. One drill over a
+  40-contract chain turned "this stays linear" into "410 records in
+  130 ms", which is a number a later reader can re-run.
+
 ## The guardrail bar (os-aaec6a3c)
 
 - Before removing a rule from a checker, count what else the checker

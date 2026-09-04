@@ -3717,6 +3717,42 @@ subset: it carries `offer.published` and `claim.taken` but neither
 failed on two verbs the protocol does define. The amendment (#304)
 records the correction rather than quietly widening the drill.
 
+## The unreserved-spend bar judges the run's citation (os-88df7ab2)
+
+**A start is fenced to the reservation it named, not to any open
+one.** The bar kept a boolean set by any `budget.reserve` and cleared
+only by the next claim, so a settled or released reservation went on
+covering later spend, and a reservation admission would have refused
+counted like an admitted one. A start cites one reservation
+(`RunStartFact.Reservation`) and `admit.RunStartValid` judges that
+citation at the start's own position, so the bar asks that predicate
+rather than keeping state of its own. Asking "was some reservation
+open" is weaker than the protocol: a start citing a closed or absent
+reservation passes it whenever an unrelated reservation is open, which
+is the fencing the bar exists to check (review finding on plan #309).
+
+**A start the fold could not place is unfenced, not unjudged.**
+`transition` records a `RunStartFact` only where the payload named a
+fence and a reservation it could read. Counting `run.started` records
+against those facts is what keeps a malformed raw start visible;
+without it the bar would close only half the hole, since the threat
+model is a chain pushed past the boundary.
+
+**The fixtures had to become admission-grade, and that is the finding
+under the finding.** Every synthetic `{}` chain in the drills read as
+unreserved spend under the corrected rule, correctly: no admission
+would have taken them. The covered arm now audits a chain
+`internal/history.Generate` wrote, which carries reservations, runs
+and settles under enrolled lane keys. A bar that judges admission can
+only be exercised by chains admission would take.
+
+**The cost is a number, not a claim.** Each `RunStartValid` replays
+the keyring and the table over the start's prefix and derives a budget
+view there, so the audit is not linear in the chain. The drill audits
+a 40-contract chain of the shadow window's shape and records the
+reading: 410 records in about 130 ms, far inside the ten-second
+ceiling the plan set, so no memoization was added.
+
 ## The guardrail bar counts what admission guards (os-aaec6a3c)
 
 **A bar reports what the boundary refuses.** The bar named any

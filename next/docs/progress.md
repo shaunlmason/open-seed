@@ -2038,6 +2038,19 @@ written by the two implementing sessions, one voice.
   showed that is the lifecycle subset, carrying neither
   `budget.reserve` nor `run.started`)
 
+## The audit's budget model (os-88df7ab2)
+
+- the unreserved-spend bar counted a reservation's occurrence, not an
+  open valid one — os-88df7ab2 — **in review** (task PR against plan
+  #309 with amendment #310: the bar asks `admit.RunStartValid` per
+  folded start, so a run is fenced to the reservation it cited and not
+  to whichever one happens to be open, and a start the fold could not
+  place is unfenced by construction; the drills' synthetic `{}` chains
+  gave way to an admission-grade chain from `internal/history`,
+  because a bar that judges admission can only be exercised by chains
+  admission would take; the cost is measured rather than asserted, 410
+  records in about 130 ms against the plan's ten-second ceiling)
+
 ## The audit's guardrail bar (os-aaec6a3c)
 
 - the bar required an offer the boundary does not — os-aaec6a3c —
@@ -2062,7 +2075,6 @@ written by the two implementing sessions, one voice.
   admission, or keep the bar ledger-only and correct the row's wording)
 
 ## Frontier
-
 
 
 Phases 0 through 5 are done and closed: every Phase 5 plan (#113–#116,

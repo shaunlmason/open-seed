@@ -70,7 +70,16 @@ run leaves every list empty:
    a bar must report what the boundary refuses. The scheduling concern
    (work ready with no live offer) is `internal/eval`'s read, not this
    bar's (plans/os-aaec6a3c.md D1, D3).
-5. **Unreserved spend** — every `run.started` sits inside a reservation.
+5. **Unreserved spend** — every `run.started` is fenced to the
+   reservation it cited. The bar asks admission's own predicate,
+   `admit.RunStartValid`, which judges the start's cited reservation
+   at the start's own position: the strict payload, the fence against
+   the active claim, that reservation's validity, and that it was not
+   already closed there. A start the fold could not place cited
+   nothing checkable and is unfenced by construction. Asking instead
+   whether some reservation was open is weaker than the protocol,
+   since a start citing a closed or absent reservation would pass
+   while an unrelated one stands open (plans/os-88df7ab2.md D1, D7).
 
 The same audit runs over any ledger through `seed ledger audit
 --ledger <dir>` (plans/os-7599c27d.md): the chain is verified from
