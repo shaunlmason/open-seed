@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "task": "os-f262585a",
+  "merge_base": "7b246606f03fced5f80ca104c1865b2ca03abfb5",
+  "head": "0180debe0bfe37d1eca049ef4dd02e4391c12f3e",
+  "plan_path": "plans/os-f262585a.md",
+  "plan_sha256": "20411a7e92f7583cfeb173123acd3e28a155660995e809fc1c8e31a7b62a58df",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/progress.md",
+    "next/internal/artifact/paths_test.go",
+    "next/internal/history/spec_test.go",
+    "next/internal/imported/imported_test.go",
+    "next/internal/perfgate/run_paths_test.go",
+    "next/internal/posture/accessors_test.go",
+    "next/internal/posture/preseed_validation_test.go",
+    "next/internal/protections/github_paths_test.go",
+    "next/internal/protections/report_paths_test.go"
+  ],
+  "diff_sha256": "e96e72c458b53e8d612a6e0d751df1dc7205968bab7993cd945ea8c78a831472",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go run ./cmd/covergate -gate 90 -dir .",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
