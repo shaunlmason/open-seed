@@ -142,35 +142,34 @@ Status: reserved
 
 Missing: the run itself. Seed has coordinated no card of this repository beside v1: no deployment for this repository exists, no slice is declared, no window is stated, and no divergence has been reconciled because nothing has run.
 
-Question: on which remote and under which posture does the shadow ledger run, given that the build plan's criteria name the enforced self-hosted posture and this repository is hosted on github.com, where no server executes the pre-receive hook?
+Question: which POSIX git server hosts the shadow ledger with the `seed-admit` pre-receive hook, so the run happens at the enforced self-hosted posture the criteria name?
 
-The options, with what each costs, in the words `next/spec/platform.md`
-and `next/spec/postures.md` use:
+The build plan evaluates every criterion "at the enforced self-hosted
+posture" and reserves the two cutovers, not the shadow run; so the
+protocol below runs under enforced self-hosted admission, a bare
+remote on a POSIX git server executing the hook and hosting the
+ledger ref alone while the code stays on GitHub (charter III.N row
+2: the loop runs on any git remote supporting the declared posture).
+The one thing about the run that only the operator can supply is
+that server: this repository lives on github.com, where no server
+executes the hook (`next/spec/platform.md`). Everything else in the
+protocol is written and blocks on nothing.
 
-- **Enforced self-hosted, the ledger on a POSIX git server the
-  operator runs.** The code stays on GitHub; the ledger ref lives on a
-  bare remote whose `pre-receive` hook is `seed-admit` (charter III.N
-  row 2: the loop runs on any git remote supporting the declared
-  posture). This is the posture the criteria name. It costs a server
-  and its upkeep for the window, and it needs no forge credential.
-- **Enforced forge-hosted, the admission service deployed.** `seed-admit
-  serve` runs somewhere the forge can reach, under a credential the
-  operator holds, and the ledger branch on GitHub is protected so that
-  identity alone can update it (`seed protections apply`). This costs
-  a deployment and a credential, both of which the autonomy contract
-  reserves to a human.
-- **Cooperative, on GitHub, for the window only.** Every writer
-  self-validates; nothing enforces at the server. The doctor prints
-  the consequence in full: the security invariant does not hold, and
-  protocol rules are advisory against a hostile credential. It costs
-  nothing to stand up, and what it forfeits is exactly what the
-  criteria ask the shadow run to demonstrate, so a cooperative shadow
-  run measures the loop and not the boundary.
+The other two postures are stated for what they are, not as options.
+Forge-hosted needs `seed-admit serve` deployed under a credential the
+operator holds, both reserved by the autonomy contract, and is the
+posture of a deployment whose forge is the server, not a shadow of
+this one. Cooperative costs nothing to stand up and forfeits exactly
+what the run must demonstrate: the doctor prints that the security
+invariant does not hold and protocol rules are advisory against a
+hostile credential. A shadow run under either produces no criterion-4
+evidence, and choosing one would be the distinct supervised milestone
+the build plan says must name what it trades away and be accepted as
+the deviation it is; the packet does not propose it.
 
-The protocol the packet proposes for whichever option the operator
-chooses is in the section "The shadow run, as a protocol" below. It
-is a proposal in the build plan's own words for criterion 4; the
-packet selects nothing, starts nothing and flips nothing.
+The protocol is in the section "The shadow run, as a protocol" below,
+in the build plan's own words for criterion 4; the packet starts
+nothing and flips nothing.
 
 ## 5. Cutover and rollback written down
 
@@ -283,7 +282,7 @@ in force until the operator says so.
 
 ```json
 {
-  "posture": "<the answer to the question above>",
+  "posture": "enforced-self-hosted",
   "protocol": "seed/7",
   "governance": {
     "root": "declared-at-init",
@@ -311,9 +310,9 @@ in force until the operator says so.
 }
 ```
 
-The ledger remote is the one the posture answer names (a bare remote
-with the hook for the self-hosted posture, the protected branch for
-the forge-hosted one, this repository for the cooperative one); the
+The ledger remote is a bare repository on the server the operator
+names, its `pre-receive` hook the `seed-admit` binary built from this
+tree, the ledger ref `refs/seed/ledger`; the code stays on GitHub. The
 genesis names the operator's key as the governance root; one key per
 lane is enrolled for the identities that will act (the implementer
 lane for the sessions that work cards, the dispatcher lane for the

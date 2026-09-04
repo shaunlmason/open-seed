@@ -3454,15 +3454,19 @@ conformance section is os-83bc3d84's, in review when the packet
 landed; the packet says so and cites the exit records for the phases,
 never a PR that has not merged.
 
-**The shadow run's posture is a question, with three costed
-options.** The criteria name the enforced self-hosted posture and this
-repository lives on github.com, where no server executes the hook.
-The packet lists the ledger on an operator-run POSIX remote (the
-posture the criteria name, at the cost of a server), the forge-hosted
-service (a deployment and a credential, both reserved to a human) and
-cooperative (free, and forfeiting the invariant the run should
-demonstrate), and selects none: a packet that chose would be the
-decision the build plan reserves.
+**The shadow run runs at the posture the criteria name; the server
+is the question.** Build plan §5 evaluates every criterion at the
+enforced self-hosted posture and reserves the two cutovers, not the
+shadow run (review finding on the plan: a packet offering the other
+postures as options could leave criterion 4 without valid evidence).
+So the protocol runs under enforced self-hosted admission, a POSIX
+git server executing the hook and hosting the ledger ref alone, and
+the one reserved thing is that server, which this repository's forge
+cannot be. Forge-hosted (a deployment and a credential the autonomy
+contract reserves) and cooperative (forfeiting the invariant the run
+must demonstrate) are stated for what they are: a shadow run under
+either produces no criterion-4 evidence and would be the supervised
+deviation the build plan says must be accepted as such.
 
 **The III.R ledger records measures, not readings.** Every row is
 `not measured`: no measurement exists before the shadow run, and a

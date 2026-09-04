@@ -1586,8 +1586,9 @@ record's own position through one derivation, `curation.AuthenticPass`
   status from a closed vocabulary (`met`, `partial`, `not started`,
   `reserved`) and its evidence as drill, file and PR rows; criteria 1,
   2, 3, 5 and 7 met, 6 partial until the conformance report merges,
-  4 reserved on one question (the shadow ledger's remote and posture)
-  with three costed options; `internal/promotion` parsing the packet
+  4 reserved on one question, the POSIX git server that hosts the
+  shadow ledger with the hook, the run itself at the enforced
+  self-hosted posture the criteria name; `internal/promotion` parsing the packet
   strictly and holding every citation to the tree under `make check`
   (`TestPacketCitesRealDrills`, a planted bogus citation failing by
   name); criterion 5 met by writing the cutover and the rollback in
@@ -1975,8 +1976,9 @@ carded (os-222189a3).
 **Next action: the operator's answer at the promotion gate.**
 `next/docs/promotion.md` presents the seven criteria of build plan
 §5: 1, 2, 3, 5 and 7 met, 6 partial until #289 merges, 4 reserved on
-one question, the shadow ledger's remote and posture, with three
-costed options. Until that answer the agent-side work is to merge the
+one question, the POSIX git server that hosts the shadow ledger with
+the hook, the run at the enforced self-hosted posture the criteria
+name. Until that answer the agent-side work is to merge the
 open PRs as they clear review (#289 now that #287 has merged; #291
 then #294; #293 then #297; #295 then #296; #290; #292), fix the
 scale defect (os-5063e8ba) so the weekly run can be green and III.C
