@@ -161,6 +161,17 @@ check, and the governed-docs drift check. Keep it green.
 seed docs check --root .
 ```
 
+`docs check` runs two stages. The drift stage regenerates the governed
+documents and diffs them, failing `docs_drift`. The citation stage then
+holds every relative markdown link in the tree to the tree, failing
+`broken_citation` and naming the file, the line and the target: a
+document that cites a path which is not there renders broken on the
+forge, and nothing else catches it. Both stages share exit 28. Code
+spans and fenced blocks are masked before any link is read, so a
+link-shaped regex in prose is not a citation; external URLs are out of
+scope, because resolving one needs the network and this command must
+stay offline and deterministic.
+
 **The conformance report.** Part III of the charter is a checked-in
 table, `next/spec/conformance.json`, one row per charter criterion with
 the status the phase exit records gave it; `seed docs generate` renders

@@ -44,4 +44,5 @@ String codes that refine a base exit with a finer message — same exit, same wi
 
 | Constant | Code |
 |---|---|
+| `CodeBrokenCitation` | `broken_citation` |
 | `CodeDocsDrift` | `docs_drift` |
