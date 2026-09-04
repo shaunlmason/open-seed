@@ -95,6 +95,28 @@ accepts). Deps: none.
   `internal/history` and asserts the guardrail list is empty, which is
   the case that found this card. Together they hold the bar to
   firing on what admission refuses and only that.
+- **D6 — the contract's own words, and the clause this card cannot
+  carry.** `plans/os-16e55c11.md` D5 words the bar as "zero guardrail
+  breaches (no refusal followed by a blind retry; every claim within
+  its ceiling once item 4 lands)". Neither clause is the offer rule
+  the bar shipped, so removing that rule loses no ceiling coverage:
+  the bar never had any. Nor can this card add it. Admission's
+  `ceiling` policy rule reads `Context.Declaration`, the deployment
+  declaration in `seed.json`, and `internal/admit` is explicit that
+  this is "admission policy rather than chain validity ... so a chain
+  never changes meaning because of a file beside it": a raw-pushed
+  claim above the ceiling folds as filed and the chain still verifies
+  byte for byte. `simulate.Audit` takes records only, which is III.R
+  row 5's own contract ("the ledger alone reconstructs and justifies
+  everything"), so two byte-identical chains are compliant or not
+  depending on a file the ledger does not carry. Reaching the ceiling
+  needs the declaration threaded through `simulate.Audit` and
+  `cmd/seed/ledger.go`, both outside D5's bounds, so it is carded:
+  **os-b5051f2e**, which also owns the blind-retry clause (a refused
+  append never lands, so a refusal followed by a retry leaves only the
+  retry in the chain, and no reader can see it). The sealed-author
+  rule D1 adds is the guardrail on the claim path that IS a record
+  fact, which is why it is the one this card can implement.
 - **D5 — bounds.** No admission change, no transition-table change,
   no new verb, no change to the other four bars, and no change to
   `internal/history`. `seed ledger audit`'s envelope, exit codes and
