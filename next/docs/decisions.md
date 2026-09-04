@@ -3520,12 +3520,17 @@ row citing the first green run (plans/os-d63c7441.md D2). This card
 makes the run exist.
 
 **The benchmark found what it exists to find.** Of three 200-writer
-storms on the implementing host, two landed every writer and one
-refused one writer at the hook with `bad_prev` (a pushed chain whose
-new record cited a stale tip), which the loop classified as policy
-and did not retry; the run crossed midnight UTC and was the only one
-whose chain spanned two segments. The ceilings come from the two
-clean runs; the failure is carded as a defect (os-5063e8ba) with the evidence and
-the reproduction (`seed perf run --writers 200`), not absorbed into a
-ceiling, because a lost append is the thing the row forbids.
+storms on the implementing host signed with one key, two landed every
+writer and one refused one writer at the hook with `bad_prev` (a
+pushed chain whose new record cited a stale tip), which the loop
+classified as policy and did not retry; the run crossed midnight UTC
+and was the only one whose chain spanned two segments. The failure is
+carded as a defect (os-5063e8ba) with the evidence and the
+reproduction (`seed perf run --writers 200 --history 40`), not
+absorbed into a ceiling, because a lost append is the thing the row
+forbids. The ceilings come from the two later runs with one enrolled
+actor per writer (2065826 and 2071708 ms, 66.8 and 67.3 attempts per
+append, 200 distinct actors in each landed chain); the one-key runs
+(970948 and 955154 ms) are superseded, recorded in the provenance for
+what they measured.
 
