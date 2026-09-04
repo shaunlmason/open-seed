@@ -6,6 +6,9 @@ package simulate
 // that violate it; a clean run leaves every list empty.
 
 import (
+	"sort"
+
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
@@ -74,9 +77,9 @@ func Audit(records []*event.Record) AuditResult {
 	// Per-subject: silent abandonment (a window opened by claim.taken
 	// and never closed by a deliberate exit) and unreserved spend.
 	type window struct {
-		open     bool
-		reserved bool
-		offered  bool
+		open    bool
+		offered bool
+		starts  int
 	}
 	subj := map[string]*window{}
 	get := func(s string) *window {
@@ -100,13 +103,12 @@ func Audit(records []*event.Record) AuditResult {
 				res.GuardrailBreaches = append(res.GuardrailBreaches, s)
 			}
 			w.open = true
-			w.reserved = false
 		case transition.BudgetReserveVerb:
-			get(s).reserved = true
+			// Read below, against the protocol's own rule rather than a
+			// boolean kept here (plans/os-88df7ab2.md D1).
+			get(s)
 		case transition.RunStartedVerb:
-			if w := get(s); !w.reserved {
-				res.UnreservedSpend = append(res.UnreservedSpend, s)
-			}
+			get(s).starts++
 		}
 		// The deliberate exits are the protocol's, not a copy of them
 		// (D2): transition.IsExit names the four verbs that legally end
@@ -122,11 +124,82 @@ func Audit(records []*event.Record) AuditResult {
 			res.SilentAbandonments = append(res.SilentAbandonments, s)
 		}
 	}
+	starts := make(map[string]int, len(subj))
+	for s, w := range subj {
+		starts[s] = w.starts
+	}
+	res.UnreservedSpend = append(res.UnreservedSpend, unreservedSpend(tbl, records, starts)...)
 
 	res.Clean = len(res.ChainViolations) == 0 && len(res.LostUpdates) == 0 &&
 		len(res.SilentAbandonments) == 0 && len(res.GuardrailBreaches) == 0 &&
 		len(res.UnreservedSpend) == 0
 	return res
+}
+
+// unreservedSpend names every subject whose run was not fenced to an
+// open, valid reservation of its own (plans/os-88df7ab2.md D1, D7).
+//
+// A start is fenced only if BOTH halves hold, because the fold and
+// admission answer different questions:
+//
+//   - The fold recorded it. transition records a RunStartFact only
+//     where the payload named a fence and a reservation it could read,
+//     so a run.started the fold did not record cited nothing checkable
+//     and is spend with no fence at all (D7). Counting records against
+//     facts is what keeps a malformed raw start visible.
+//   - admit.RunStartValid accepts it. A start cites ONE reservation
+//     (RunStartFact.Reservation) and that predicate judges the citation
+//     at the start's own position: the strict payload, the fence
+//     against the active claim, the cited reservation's validity, and
+//     BudgetViewAt proving it was not already closed there. Asking
+//     instead "was some reservation open" is weaker than the protocol
+//     and misses the fencing the bar exists to check: a start citing a
+//     closed or absent reservation passes it whenever an unrelated
+//     reservation is open (review finding on plan #309).
+//
+// The cost is the protocol's too, and it is not linear: each
+// RunStartValid replays the keyring and the table over the start's
+// prefix and derives a budget view there, so a chain of n records with
+// r runs and k reservations costs about O(r*k*n) per subject (D6).
+//
+// Where the table could not be built the bar reports nothing: the
+// chain-violation arm has already named that, and a bar cannot judge a
+// chain it cannot fold (D4).
+func unreservedSpend(tbl *transition.Table, records []*event.Record, starts map[string]int) []string {
+	if tbl == nil {
+		return nil
+	}
+	subjects := make([]string, 0, len(starts))
+	for s := range starts {
+		subjects = append(subjects, s)
+	}
+	// Map iteration is unordered and this list is evidence: one order
+	// on every run.
+	sort.Strings(subjects)
+	var out []string
+	for _, s := range subjects {
+		if starts[s] == 0 {
+			continue
+		}
+		state, ok := tbl.StateAt(records, s)
+		if !ok {
+			// The fold placed no state for a subject that started a
+			// run: nothing fenced it.
+			for i := 0; i < starts[s]; i++ {
+				out = append(out, s)
+			}
+			continue
+		}
+		for i := 0; i < starts[s]-len(state.RunStarts); i++ {
+			out = append(out, s)
+		}
+		for _, st := range state.RunStarts {
+			if !admit.RunStartValid(records, tbl, s, st) {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
 }
 
 // foldAll replays the lifecycle verbs through the table, tracking each

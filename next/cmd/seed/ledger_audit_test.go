@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/shaunlmason/open-seed/next/internal/history"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -33,6 +34,13 @@ func auditLedger(t *testing.T, verbs ...string) (string, string) {
 	return ld, priv
 }
 
+// happyPath drives one subject to a deliberate exit. Every record is
+// raw-appended with a {} payload, so its run.started cites no
+// reservation the fold can read and the unreserved-spend bar names it
+// (plans/os-88df7ab2.md D7): a start nothing fenced is spend nothing
+// fenced, whatever verbs precede it. The covered arm is
+// TestAdmittedChainAuditsCleanThroughTheVerb, which audits a chain
+// admission actually took.
 var happyPath = []string{"intent.filed", "contract.specified", "offer.published", "claim.taken", "budget.reserve", "run.started", "submission.made"}
 
 // conformance: III.R row 5 — the five-bar audit over any ledger
@@ -43,16 +51,21 @@ var happyPath = []string{"intent.filed", "contract.specified", "offer.published"
 func TestLedgerAuditCleanAndEachBar(t *testing.T) {
 	ld, _ := auditLedger(t, happyPath...)
 	e, code := runEnv(t, "ledger", "audit", "--ledger", ld)
-	if code != 0 || !e.OK || e.Result["clean"] != true {
-		t.Fatalf("a clean chain audits clean: %d %+v", code, e)
+	// The shape-reading bars stay quiet on this chain; the
+	// unreserved-spend bar names its unfenced start (D7), so the verb
+	// refuses and the refusal names that bar alone.
+	if code != 28 || e.Error == nil || e.Error.Code != "audit_violated" {
+		t.Fatalf("a raw start that cites no reservation is refused: %d %+v", code, e)
 	}
-	for _, bar := range []string{"chain_violations", "lost_updates", "silent_abandonments", "guardrail_breaches", "unreserved_spend"} {
-		list, ok := e.Result[bar].([]any)
-		if !ok || len(list) != 0 {
-			t.Errorf("%s must be an empty list on a clean chain, got %v", bar, e.Result[bar])
+	if !strings.Contains(e.Error.Message, "unreserved_spend [c-1]") {
+		t.Fatalf("the refusal names the unfenced start: %q", e.Error.Message)
+	}
+	for _, bar := range []string{"chain_violations", "lost_updates", "silent_abandonments", "guardrail_breaches"} {
+		if strings.Contains(e.Error.Message, bar) {
+			t.Errorf("%s must stay quiet on this chain: %q", bar, e.Error.Message)
 		}
 	}
-	if e.Position == nil || *e.Position != "8" || e.Result["count"].(float64) != 9 {
+	if e.Position == nil || *e.Position != "8" {
 		t.Fatalf("the audit is stamped at the tip it audited: %+v", e)
 	}
 
@@ -149,5 +162,32 @@ func TestLedgerAuditRefusalOrderIsDeterministic(t *testing.T) {
 		if !strings.Contains(msg, "silent_abandonments") || !(strings.Index(msg, "c-1") < strings.Index(msg, "c-2") && strings.Index(msg, "c-2") < strings.Index(msg, "c-3")) {
 			t.Fatalf("run %d: the records are named in one order: %q", i, msg)
 		}
+	}
+}
+
+// conformance: plans/os-88df7ab2.md D1, D7 — the covered arm through
+// the verb. A chain admission actually took carries a fence and a
+// cited reservation on every start, so the unreserved-spend bar names
+// nobody. The guardrail bar does name subjects here, because the
+// history stages a claim without publishing an offer and that bar
+// requires one while admission does not; the disagreement is carded
+// on its own and this drill asserts only the bar this card moves.
+func TestAdmittedChainAuditsCleanThroughTheVerb(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "ledger")
+	if _, err := history.Generate(history.Spec{Seed: 11, Contracts: 2, Dir: dir}); err != nil {
+		t.Fatalf("generating an admitted chain: %v", err)
+	}
+	e, code := runEnv(t, "ledger", "audit", "--ledger", dir)
+	if code == 0 {
+		if list, ok := e.Result["unreserved_spend"].([]any); !ok || len(list) != 0 {
+			t.Fatalf("an admitted chain's runs are fenced: %v", e.Result["unreserved_spend"])
+		}
+		return
+	}
+	if e.Error == nil || e.Error.Code != "audit_violated" {
+		t.Fatalf("an admitted chain audits or refuses by a bar, not by an error: %d %+v", code, e)
+	}
+	if strings.Contains(e.Error.Message, "unreserved_spend") {
+		t.Fatalf("an admitted chain's runs cite open reservations: %q", e.Error.Message)
 	}
 }
