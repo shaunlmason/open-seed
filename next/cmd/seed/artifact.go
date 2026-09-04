@@ -79,11 +79,13 @@ func runArtifactErase(args []string, stdout, stderr io.Writer) int {
 		}
 		return out
 	}
-	// An erasure that already stands is finished, not re-recorded: a
-	// second record would attribute an act that did nothing.
+	// An erasure that already stands, on any subject, is finished and
+	// not re-recorded: a second record would attribute an act that did
+	// nothing, and the bytes may remain when a run died between the
+	// append and the removal (plans/os-db5cd353.md D5).
 	if ls.ctx.Lifecycle != nil {
-		if prior, ok := ls.ctx.Lifecycle.Erasure(subject, art); ok {
-			env := envelope.OK(erase(map[string]any{"subject": subject, "artifact": art, "erased_at": fmt.Sprintf("%d", prior.Pos), "by": prior.Signer, "recorded": false}))
+		if prior, ok := ls.ctx.Lifecycle.Erasure(art); ok {
+			env := envelope.OK(erase(map[string]any{"subject": prior.Subject, "artifact": art, "erased_at": fmt.Sprintf("%d", prior.Pos), "by": prior.Signer, "recorded": false}))
 			return render(stampTip(env, ls.ctx.Count), stdout, stderr)
 		}
 	}

@@ -144,9 +144,64 @@ func TestArtifactEraseIsAttributableAndNeverBreaksTheChain(t *testing.T) {
 		t.Fatal("the chain did not grow on the re-run")
 	}
 
-	// c-2's ciphertext deleted with no record: the unattributed
-	// absence stays a finding.
-	if err := os.Remove(sealedPath(c2)); err != nil {
+	// A run that died between the append and the removal (the record
+	// stands, the bytes remain): the next run finishes the removal
+	// without a second record. Planted by landing the record raw on
+	// c-2 and leaving its ciphertext in place.
+	rawPos := rawAppend(t, ld, rootKey, "artifact.erased", "c-2", fmt.Sprintf(`{"artifact": %q, "reason": "the run died after the append"}`, c2))
+	if _, err := os.Stat(sealedPath(c2)); err != nil {
+		t.Fatalf("the bytes remain after the raw record: %v", err)
+	}
+	e, code = erase(priv, "c-2", c2, "finish")
+	if code != 0 || !e.OK || e.Result["recorded"] != false || fmt.Sprint(e.Result["erased_at"]) != fmt.Sprint(rawPos) || fmt.Sprint(e.Result["removed"]) != "[sealed]" {
+		t.Fatalf("a standing record's bytes are removed on the next run without a second record: %d %+v", code, e)
+	}
+	if _, err := os.Stat(sealedPath(c2)); !os.IsNotExist(err) {
+		t.Fatal("the resume removed the ciphertext")
+	}
+	a, code = runEnv(t, "seal", "audit", "--ledger", ld, "--repo", src)
+	if code != 0 || a.Result["clean"] != "true" {
+		t.Fatalf("both erasures are honored: %d %+v", code, a)
+	}
+	if erased, _ := a.Result["erased"].([]any); len(erased) != 2 {
+		t.Fatalf("both erased subjects are listed: %+v", a.Result)
+	}
+
+	// A digest two contracts reference is one object in the store, so
+	// one erasure stands for both: c-3 sealed raw under c-1's
+	// commitment reads as erased, attributed to the record on c-1, and
+	// not as missing evidence.
+	for _, step := range [][]string{
+		{"intent.filed", `{"intent": "shares the seal", "tier": "trivial", "budget": "small", "routing": "core"}`},
+		{"contract.specified", fmt.Sprintf(`{"acceptance": {"ref": "accept.md @ %s", "executable": false}}`, specCommit)},
+	} {
+		if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv, "--verb", step[0], "--subject", "c-3", "--payload", step[1]); code != 0 {
+			t.Fatalf("c-3 %s: %d %+v", step[0], code, e)
+		}
+	}
+	rawAppend(t, ld, workerRawKey(10), "check.sealed", "c-3", fmt.Sprintf(`{"commitment": %q}`, c1))
+	a, code = runEnv(t, "seal", "audit", "--ledger", ld, "--repo", src)
+	if code != 0 || a.Result["clean"] != "true" {
+		t.Fatalf("a shared digest's erasure is attributed to every contract that references it: %d %+v", code, a)
+	}
+	sharedAttributed := false
+	for _, row := range a.Result["erased"].([]any) {
+		r := row.(map[string]any)
+		if r["subject"] == "c-3" && r["commitment"] == c1 && fmt.Sprint(r["position"]) == erasedAt {
+			sharedAttributed = true
+		}
+	}
+	if !sharedAttributed {
+		t.Fatalf("c-3 reads as erased by the record on c-1: %+v", a.Result["erased"])
+	}
+	if e, code := erase(priv, "c-3", c1, "again"); code != 0 || !e.OK || e.Result["recorded"] != false || e.Result["subject"] != "c-1" {
+		t.Fatalf("the tombstone is digest-wide, so c-3's erasure is finished under c-1's record: %d %+v", code, e)
+	}
+
+	// A ciphertext deleted with no record: the unattributed absence
+	// stays a finding.
+	c4 := driveToReview(t, ld, src, sealKey, rootKey, "c-4", specCommit, rng, checks)
+	if err := os.Remove(sealedPath(c4)); err != nil {
 		t.Fatal(err)
 	}
 	a, code = runEnv(t, "seal", "audit", "--ledger", ld, "--repo", src)
@@ -156,8 +211,8 @@ func TestArtifactEraseIsAttributableAndNeverBreaksTheChain(t *testing.T) {
 	if by, _ := a.Result["by_class"].(map[string]any); fmt.Sprint(by["seal_evidence_missing"]) != "1" {
 		t.Fatalf("the unrecorded deletion is seal_evidence_missing: %+v", by)
 	}
-	if erased, _ := a.Result["erased"].([]any); len(erased) != 1 {
-		t.Fatalf("the attributed erasure still stands apart: %+v", a.Result)
+	if erased, _ := a.Result["erased"].([]any); len(erased) != 3 {
+		t.Fatalf("the attributed erasures still stand apart: %+v", a.Result)
 	}
 
 	// A content artifact, referenced from a payload no fold indexes,

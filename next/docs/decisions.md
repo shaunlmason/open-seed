@@ -3824,12 +3824,19 @@ erases on `system`, its attestation being the reference. A stricter
 rule would need a digest index over every payload, which is a
 projection's job and not admission's.
 
-**Operator only, once.** An erasure obligation is a governance act a
-human answers for, the `decision.recorded` posture, and no lane's loop
-erases. An artifact erased once on a subject is not erased there
-again: a second record would attribute an act that did nothing, so
-the verb finishes a standing erasure (removes what remains) rather
-than re-recording it.
+**Operator only, once, digest-wide.** An erasure obligation is a
+governance act a human answers for, the `decision.recorded` posture,
+and no lane's loop erases. The store holds one object per digest, so
+an artifact two contracts reference is erased for both by one act
+(review on #324): the tombstone is looked up by digest wherever it was
+recorded, the audit attributes a shared commitment's absence to the
+one record, and an artifact erased once is not recorded again. A run
+that dies between the append and the removal leaves a standing record
+with the bytes present, and the next run finishes the removal without
+a second record; the drill plants exactly that state. The affordance
+probe offers the first reference no tombstone covers, so the verb is
+drafted while something remains erasable and never for an erased
+digest.
 
 **An honored erasure is not a finding.** The seal audit lists an erased
 ciphertext with its attribution and stays clean; only a deletion with

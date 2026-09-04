@@ -396,7 +396,7 @@ func runSealAudit(args []string, stdout, stderr io.Writer) int {
 		checked++
 		ct, err := store.GetSealed(s.Sealed.Commitment)
 		if err != nil {
-			if fact, ok := st.fold.Erasure(id, s.Sealed.Commitment); ok {
+			if fact, ok := st.fold.Erasure(s.Sealed.Commitment); ok {
 				erased = append(erased, map[string]string{"subject": id, "commitment": s.Sealed.Commitment, "position": fmt.Sprintf("%d", fact.Pos), "by": fact.Signer, "reason": fact.Reason, "ts": fact.TS})
 				continue
 			}

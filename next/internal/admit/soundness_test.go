@@ -63,10 +63,23 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 			// The erasure probe's digest, as the production view
 			// carries it (plans/os-db5cd353.md D6): the sealed
 			// commitment, else the latest receipt.
+			// The first reference not yet erased, so the verb is
+			// drafted exactly while something remains erasable and
+			// never for a tombstoned digest (plans/os-db5cd353.md D6).
+			candidates := []string{}
 			if s.Sealed != nil {
-				v.erasable = s.Sealed.Commitment
-			} else if s.Verdict != nil && s.Verdict.Receipt != "" {
-				v.erasable = s.Verdict.Receipt
+				candidates = append(candidates, s.Sealed.Commitment)
+			}
+			for _, vf := range s.Verdicts {
+				if vf.Receipt != "" {
+					candidates = append(candidates, vf.Receipt)
+				}
+			}
+			for _, d := range candidates {
+				if _, erased := ctx.Lifecycle.Erasure(d); !erased {
+					v.erasable = d
+					break
+				}
 			}
 			if s.Claim != nil {
 				v.fence = fmt.Sprintf("%d", s.Claim.Fence)

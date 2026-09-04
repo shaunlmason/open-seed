@@ -320,9 +320,14 @@ attributable event", is **`artifact.erased`** (plans/os-db5cd353.md):
   does reference. On `system` any well-formed digest admits: the
   operator's attestation is the reference, for an artifact a payload
   cites that no contract's fold indexes by digest.
-- **Once.** An artifact erased on a subject is not erased there again;
-  the refusal names the position and signer of the first record, since
-  a second would attribute an act that did nothing.
+- **Once, digest-wide.** The store holds one object per digest, so an
+  artifact two contracts reference is erased for both by one act: the
+  tombstone is looked up by digest wherever it was recorded, a shared
+  commitment's absence is attributed to that record on every contract
+  that references it, and an artifact erased once is not recorded
+  again; the refusal names the position, signer and subject of the
+  first record, since a second would attribute an act that did
+  nothing.
 - **Grant.** `operator` only ([`actors.md`](actors.md)): an erasure
   obligation is a governance act a human answers for, the
   `decision.recorded` posture; no lane's loop erases.
@@ -337,9 +342,12 @@ attributable event", is **`artifact.erased`** (plans/os-db5cd353.md):
   --repo <dir>` appends the record through the loop seam, then empties
   the store's buckets under the digest (the sealed ciphertext, the
   content, or both) and reports `removed`; an erasure that already
-  stands is finished rather than re-recorded. The order is the point: a
-  record with the bytes still present is a promise the next run keeps,
-  and bytes gone with no record is the silence the row forbids.
+  stands, on any subject, is finished rather than re-recorded
+  (`recorded: false`, the position it finished), which is also the
+  resume path for a run that died between the append and the removal.
+  The order is the point: a record with the bytes still present is a
+  promise the next run keeps, and bytes gone with no record is the
+  silence the row forbids.
 
 ## Data classification (summary)
 

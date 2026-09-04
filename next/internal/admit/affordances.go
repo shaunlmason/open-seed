@@ -735,10 +735,23 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		}
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			v.requestAbout = subject
+			// The first reference not yet erased, so the verb is
+			// drafted exactly while something remains erasable and
+			// never for a tombstoned digest (plans/os-db5cd353.md D6).
+			candidates := []string{}
 			if s.Sealed != nil {
-				v.erasable = s.Sealed.Commitment
-			} else if s.Verdict != nil && s.Verdict.Receipt != "" {
-				v.erasable = s.Verdict.Receipt
+				candidates = append(candidates, s.Sealed.Commitment)
+			}
+			for _, vf := range s.Verdicts {
+				if vf.Receipt != "" {
+					candidates = append(candidates, vf.Receipt)
+				}
+			}
+			for _, d := range candidates {
+				if _, erased := ctx.Lifecycle.Erasure(d); !erased {
+					v.erasable = d
+					break
+				}
 			}
 			if s.Claim != nil {
 				v.fence = fmt.Sprintf("%d", s.Claim.Fence)

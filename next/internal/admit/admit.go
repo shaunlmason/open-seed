@@ -950,8 +950,8 @@ func coreRules() []Rule {
 					return &erasure.Error{Subject: subject, Reason: fmt.Sprintf("artifact %s is not one this contract references: its fold holds %s — erase a referenced artifact on its contract, or an artifact referenced elsewhere on system", p.Artifact, what)}
 				}
 			}
-			if prior, done := c.Lifecycle.Erasure(subject, p.Artifact); done {
-				return &erasure.Error{Subject: subject, Reason: fmt.Sprintf("artifact %s was erased at position %d by %s: an artifact is erased once, and a second record would attribute an act that did nothing", p.Artifact, prior.Pos, prior.Signer)}
+			if prior, done := c.Lifecycle.Erasure(p.Artifact); done {
+				return &erasure.Error{Subject: subject, Reason: fmt.Sprintf("artifact %s was erased at position %d by %s on %s: an artifact is erased once, wherever it was recorded, and a second record would attribute an act that did nothing", p.Artifact, prior.Pos, prior.Signer, prior.Subject)}
 			}
 			return nil
 		}},

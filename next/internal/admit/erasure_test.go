@@ -70,7 +70,7 @@ func TestErasureAdmitsReferencedOnceUnderOperator(t *testing.T) {
 	// Once: the landed erasure is not recorded again, the refusal
 	// naming the first.
 	ctx = step(k.signer, version.Seed1, erasure.Verb, "c-1", erasedBody(testCommitment, "a retention obligation"))
-	fact, ok := ctx.Lifecycle.Erasure("c-1", testCommitment)
+	fact, ok := ctx.Lifecycle.Erasure(testCommitment)
 	if !ok || fact.Signer != fpOf(t, k.signer) || fact.Reason != "a retention obligation" || fact.Pos != ctx.Count-1 {
 		t.Fatalf("the fold keeps the erasure with its signer, reason and position: %+v %v", fact, ok)
 	}
@@ -81,6 +81,16 @@ func TestErasureAdmitsReferencedOnceUnderOperator(t *testing.T) {
 	// The fact changed no lifecycle state.
 	if s, _ := ctx.Lifecycle.State("c-1"); s.State != "ready" {
 		t.Fatalf("an erasure is a fact, never a transition: %s", s.State)
+	}
+	// The tombstone is digest-wide: a second contract sealed under the
+	// same commitment shares the store's one object, so the erasure
+	// stands for it too and it is not recorded again there.
+	ctx = step(k.signer, version.Seed1, "intent.filed", "c-2", filedBody)
+	ctx = step(k.signer, version.Seed1, "contract.specified", "c-2", specBody)
+	ctx = step(k.sealer, version.Seed1, "check.sealed", "c-2", sealBody(testCommitment))
+	err = Check(ctx, draftV(t, k.signer, version.Seed1, erasure.Verb, "c-2", erasedBody(testCommitment, "shared"), ctx.Tip))
+	if !errors.As(err, &refusal) || !strings.Contains(err.Error(), "on c-1") {
+		t.Fatalf("an artifact erased on one contract is erased for every contract that references it: %v", err)
 	}
 }
 

@@ -976,10 +976,14 @@ type ErasureFact struct {
 // Erasures is every erasure the fold applied, in chain order.
 func (f *Fold) Erasures() []ErasureFact { return append([]ErasureFact(nil), f.erasures...) }
 
-// Erasure finds the erasure of an artifact on a subject, if one stands.
-func (f *Fold) Erasure(subject, artifact string) (ErasureFact, bool) {
+// Erasure finds the erasure of an artifact, if one stands, wherever
+// it was recorded: the tombstone is digest-wide (plans/os-db5cd353.md
+// D2, D4), because the store holds one object per digest, so an
+// artifact two contracts reference is erased for both by one act and
+// the attribution must reach both.
+func (f *Fold) Erasure(artifact string) (ErasureFact, bool) {
 	for _, e := range f.erasures {
-		if e.Subject == subject && e.Artifact == artifact {
+		if e.Artifact == artifact {
 			return e, true
 		}
 	}
