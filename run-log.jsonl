@@ -1651,3 +1651,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-948bda6d","kind":"pr"},"task":"os-a9e715dc","ts":"2026-09-04T23:31:38Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-e0c9d8a8","kind":"comment"},"task":"os-a9e715dc","ts":"2026-09-04T23:33:41Z","verb":"comment"}
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-a1fe22d9","kind":"comment"},"task":"os-a9e715dc","ts":"2026-09-04T23:52:44Z","verb":"comment"}
+{"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-db5cd353","ts":"2026-09-04T23:57:56Z","verb":"unblock"}

@@ -7,7 +7,7 @@ squad: core
 blocked_on:
     - plan:324
 created_at: "2026-09-04T15:02:29Z"
-updated_at: "2026-09-04T21:09:18Z"
+updated_at: "2026-09-04T23:57:56Z"
 ---
 
 Found while verifying what the Phase 13 exit record (os-d63c7441) can claim.
