@@ -35,7 +35,7 @@ carrying either, and at `seed/6` positions both stay unknown under a
 - `reference` names what was proposed and never carries it: a
   commit-anchored ref (`path @ commit`, the mirror edit's content in
   the mirror's own history) or an artifact digest. The grammar is
-  [`classification.md`](classification.md)'s reference exemption, so
+  [`packets.md`](packets.md)'s reference exemption, so
   a "reference" with prose in it is not a reference and the shape
   refuses it.
 - `summary` is one line, non-empty, at most 200 bytes: a notice of a
