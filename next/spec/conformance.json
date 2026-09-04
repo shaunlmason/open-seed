@@ -167,10 +167,10 @@
           "row": 6,
           "text": "Admission may shard proposal intake without changing semantics; ordering remains solely the admitted chain.",
           "posture": "any",
-          "status": "open",
+          "status": "met",
           "phase": "12",
-          "evidence": "",
-          "note": "not claimed: MAY; the backlog names sharded intake as a true extra"
+          "evidence": "intake is single-path: one admission boundary (internal/admit behind cmd/seed-admit), no second intake, #94 (the validator the ledger ref's sole writer under enforced); ordering is solely the admitted chain, III.A row 3's claim since Phase 1, #79 (positions derived from admitted ancestry), #85 (position-stamped verify refusals)",
+          "note": "a permission, met by abstention (os-9ef9ab34): the charter's first clause binds a system that shards proposal intake, and this one does not, so it changes no semantics by construction; the second clause is unconditional and is III.A row 3's claim. A system that later shards re-earns the row by showing semantics unchanged (sharded intake is os-7953612b, a true extra whose absence conforms)"
         }
       ]
     },

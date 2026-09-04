@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -217,4 +218,74 @@ func TestAssessJudgesAtThePosture(t *testing.T) {
 	if !strings.Contains(string(b), `"outstanding_rows":[]`) {
 		t.Fatalf("the outstanding rows render as an empty list, never null: %s", b)
 	}
+}
+
+// notClaimed matches a note that parks a row on the grounds that its
+// criterion was never claimed, rather than naming outstanding work or
+// a measurement. It is deliberately the phrase and not the idea: a
+// note may say a capability is caller-optional (III.H row 7) while
+// still naming where the rest lives, and that is not this shape.
+var notClaimed = regexp.MustCompile(`(?i)\bnot claimed\b|\bunclaimed\b`)
+
+// conformance: os-9ef9ab34 D2 — a row is never left outstanding on the
+// grounds that nobody claimed its criterion. Assess reports complete
+// only when every applicable row is met, so a row parked that way can
+// never be flipped by any later record and makes complete unreachable
+// forever: III.B row 6, a permission, sat open with the note "not
+// claimed: MAY" and would have blocked the Phase 13 exit record and
+// promotion with it. A permission is met by abstention, and the table
+// says so.
+func TestNoRowIsOutstandingBecauseNobodyClaimedIt(t *testing.T) {
+	tb := table(t)
+	for _, p := range tb.Pillars {
+		for _, r := range p.Rows {
+			if r.Status != conformance.StatusMet && notClaimed.MatchString(r.Note) {
+				t.Errorf("%s.%d is %s and its note excuses the criterion as unclaimed: %q\n"+
+					"    a row parked this way can never be met, and Assess needs every row met to report complete",
+					p.ID, r.Row, r.Status, r.Note)
+			}
+		}
+	}
+	// The guard fails on the shape it exists to catch, so it cannot
+	// pass by matching nothing.
+	planted := table(t)
+	planted.Pillars[0].Rows[0].Status = conformance.StatusOpen
+	planted.Pillars[0].Rows[0].Note = "not claimed: MAY; nobody has exercised it"
+	found := false
+	for _, r := range planted.Pillars[0].Rows {
+		if r.Status != conformance.StatusMet && notClaimed.MatchString(r.Note) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("the guard does not fire on a planted unclaimed row")
+	}
+}
+
+// conformance: os-9ef9ab34 D1 — the one permission-shaped row in Part
+// III is met by abstention, with its evidence naming what holds: a
+// single intake path and ordering derived from the admitted chain.
+func TestThePermissionRowIsMetByAbstention(t *testing.T) {
+	tb := table(t)
+	for _, p := range tb.Pillars {
+		if p.ID != "B" {
+			continue
+		}
+		for _, r := range p.Rows {
+			if r.Row != 6 {
+				continue
+			}
+			if !strings.Contains(r.Text, "may shard proposal intake") {
+				t.Fatalf("III.B row 6 is no longer the permission this drill reads: %q", r.Text)
+			}
+			if r.Status != conformance.StatusMet {
+				t.Errorf("the permission row is %s; a permission is met by abstention (os-9ef9ab34)", r.Status)
+			}
+			if !strings.Contains(r.Note, "abstention") {
+				t.Errorf("the row's note states the reading: %q", r.Note)
+			}
+			return
+		}
+	}
+	t.Fatal("III.B row 6 not found in the table")
 }

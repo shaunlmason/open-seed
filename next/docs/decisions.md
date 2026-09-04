@@ -3646,3 +3646,32 @@ deviation the build plan says must be accepted as such.
 `not measured`: no measurement exists before the shadow run, and a
 packet that reported one would be inventing it. Follow-up cards revise
 the rows and flip the conformance table with the packet as evidence.
+
+## A permission is met by abstention (os-9ef9ab34)
+
+**Complete admits no unclaimed rows.** `conformance.Assess` reports
+`complete: true` only when every applicable row is `met`, with no
+exemption for a permission, and `plans/os-d63c7441.md` D3 closes
+Phase 13 only when the doctor says complete. III.B row 6 sat `open`
+with the note "not claimed: MAY", so complete was unreachable
+forever: no exit record would have flipped it either, since the row
+is Phase 12's and the Phase 13 record's flips are scoped to Phase
+13's rows. The deadlock was invisible because each half looked
+reasonable alone.
+
+**The charter's clause is conditional.** "Admission may shard
+proposal intake without changing semantics" binds a system that
+shards; this one does not, so it changes no semantics by
+construction, and the row's second half, "ordering remains solely the
+admitted chain", is III.A row 3's claim, met since Phase 1. The row
+is therefore met on what holds today: a single intake path and
+ordering derived from admitted ancestry. A system that later shards
+re-earns the row by showing semantics unchanged.
+
+**The guard is the phrase, not the idea.** The drill refuses any row
+left outstanding whose note excuses the criterion as unclaimed, which
+is the exact shape that produced the deadlock. It deliberately does
+not sweep for "optional": III.H row 7 says the meter is
+caller-optional while naming where the rest lives, and that is a
+routed row doing its job, not a row parked forever.
+

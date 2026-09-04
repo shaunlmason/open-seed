@@ -1741,3 +1741,19 @@ the assertions read, and there is no copy to go stale.
   first: a `t.Skip` after twelve git processes is twelve chances to
   race the harness's cleanup, and on macOS it lost, reporting a
   skipped drill as a failed one on a PR that touched neither.
+
+## A permission left open (os-9ef9ab34)
+
+- A completeness rule that admits no exceptions turns any row parked
+  "not claimed" into a permanent block. Where a gate reads "every row
+  met", a criterion the system is allowed not to exercise still needs
+  a status that can be reached: mark it met by abstention with the
+  evidence that actually holds, and say in the note what a future
+  system would have to show to keep it.
+- Look for the deadlock at the seam between two documents, not inside
+  either. The completeness rule and the row's note were each
+  defensible; only reading them together showed that the doctor could
+  never report complete, and the promotion packet and the exit record
+  both depend on it. When a plan says a gate waits on a report, check
+  that the report can ever say yes.
+
