@@ -32,6 +32,18 @@ func TestPerfRunKeepsTheStormAndReportsRelinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	keep := filepath.Join(dir, "kept")
+	// The kept work dir holds the rebuild's published projections, whose
+	// builds are locked read-only (projections.md), so the harness's
+	// TempDir cleanup could not remove them on a non-root runner:
+	// restore the write bits before it runs.
+	t.Cleanup(func() {
+		_ = filepath.WalkDir(keep, func(path string, d os.DirEntry, err error) error {
+			if err == nil {
+				_ = os.Chmod(path, 0o755)
+			}
+			return nil
+		})
+	})
 	e, code := runEnv(t, "perf", "run", "--history", "1", "--writers", "2", "--hook", hook, "--keep", keep)
 	if code != 0 || !e.OK {
 		t.Fatalf("the storm lands every writer despite the planted refusal: %d %+v", code, e)

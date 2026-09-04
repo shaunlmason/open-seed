@@ -164,7 +164,8 @@ beside the five budgeted metrics and never a budget: a clean storm
 re-links zero times, and a run that re-links is a run whose refused
 trees are worth reading. `--keep <dir>` on `cmd/perfgate` and `seed
 perf run` keeps the storm's work dir (the remote, every writer's
-state dir) for that reading. The 200-writer storm that found the
+state dir, the rebuild's projections, which stay locked read-only as
+every published build is) for that reading. The 200-writer storm that found the
 shape (one lost append across midnight UTC, os-5063e8ba) is the
 reason both exist.
 
