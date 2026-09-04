@@ -1638,6 +1638,10 @@ the assertions read, and there is no copy to go stale.
   names the spawns. The Windows `platform` leg was one serial package
   (`cmd/seed`) spawning seventeen thousand git processes, and the
   largest bucket was three `git config` writes per client
-  construction, not the fetch or the push. Cut spawns where the
-  counts are, shard the serial package, and only then reach for a
-  longer timeout.
+  construction, not the fetch or the push. That bucket stays: the
+  hardening is bound to git's own writer on every construction
+  (plans/os-711b3028.md D1), and the in-process parser that would have
+  skipped the writes was refused in review on #298 for drifting from
+  git's resolution (a concatenated value like auto = "0"1 reads as 01
+  in git, not 0). Cut spawns where the counts are, shard the serial
+  package, and only then reach for a longer timeout.

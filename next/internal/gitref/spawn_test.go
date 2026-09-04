@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -13,109 +12,10 @@ import (
 
 // The client's per-append path spawns git as few times as the work
 // allows (next/spec/platform.md: the cmd/seed suite's Windows residual
-// is process creation). These drills pin the three in-process seams:
-// the hardening write, the tracking-ref read and the archive unpack.
-
-func TestEnsureConfigAppendsOnlyWhatIsMissing(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config")
-	if err := os.WriteFile(path, []byte("[core]\n\tbare = true\n[GC]\n\tAuto = 0\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := ensureConfig(dir, noAutoGC); err != nil {
-		t.Fatal(err)
-	}
-	first, _ := os.ReadFile(path)
-	if strings.Count(string(first), "auto = 0")+strings.Count(string(first), "Auto = 0") != 1 {
-		t.Fatalf("gc.auto was already set (case folds) and must not be written again:\n%s", first)
-	}
-	if !strings.Contains(string(first), "[gc]\n\tautoDetach = false\n[receive]\n\tautoGC = false\n") {
-		t.Fatalf("the missing keys are appended under their sections in git's format:\n%s", first)
-	}
-	if err := ensureConfig(dir, noAutoGC); err != nil {
-		t.Fatal(err)
-	}
-	second, _ := os.ReadFile(path)
-	if !bytes.Equal(first, second) {
-		t.Fatalf("a second open leaves the file byte-identical:\n%s\n---\n%s", first, second)
-	}
-	// A differing value is superseded by a later occurrence, which is
-	// what git resolves for a single-valued key.
-	if err := ensureConfig(dir, [][2]string{{"gc.auto", "7"}}); err != nil {
-		t.Fatal(err)
-	}
-	out, err := exec.Command("git", "config", "--file", path, "--get", "gc.auto").Output()
-	if err != nil {
-		t.Fatalf("git reads the appended file: %v", err)
-	}
-	if got := strings.TrimSpace(string(out)); got != "7" {
-		t.Fatalf("gc.auto = %q, want the later occurrence 7", got)
-	}
-	if err := ensureConfig(dir, [][2]string{{"noSection", "x"}}); err == nil {
-		t.Fatal("a key without a section is refused")
-	}
-	if err := ensureConfig(dir, [][2]string{{"a.b.c", "x"}}); err == nil {
-		t.Fatal("a subsectioned key is not a shape the hardening writes")
-	}
-}
-
-func TestEnsureConfigCreatesAnAbsentFile(t *testing.T) {
-	dir := t.TempDir()
-	if err := ensureConfig(dir, noAutoGC); err != nil {
-		t.Fatal(err)
-	}
-	b, err := os.ReadFile(filepath.Join(dir, "config"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(b) != "[gc]\n\tauto = 0\n\tautoDetach = false\n[receive]\n\tautoGC = false\n" {
-		t.Fatalf("unexpected file:\n%s", b)
-	}
-	// A trailing newline is supplied when the existing file lacks one.
-	if err := os.WriteFile(filepath.Join(dir, "config"), []byte("[core]\n\tbare = true"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := ensureConfig(dir, noAutoGC); err != nil {
-		t.Fatal(err)
-	}
-	b, _ = os.ReadFile(filepath.Join(dir, "config"))
-	if !strings.HasPrefix(string(b), "[core]\n\tbare = true\n[gc]\n") {
-		t.Fatalf("the append starts on its own line:\n%s", b)
-	}
-}
-
-func TestConfigValuesFoldsCaseAndKeepsTheLastOccurrence(t *testing.T) {
-	vals := configValues([]byte(`
-# a comment
-; another
-[Core]
-	Bare = true
-[remote "origin"]
-	url = x
-[gc]
-	auto = 1
-	auto = 0 ; trailing comment
-	autoDetach = "false" # quoted, then a comment
-	broken line without equals
-[unterminated
-	orphan = 1
-`))
-	want := map[string]string{
-		"core.bare":                  "true",
-		"remote.origin.url":          "x",
-		"gc.auto":                    "0",
-		"gc.autodetach":              "false",
-		"gc.brokenlinewithoutequals": "",
-	}
-	for k, v := range want {
-		if vals[k] != v {
-			t.Errorf("%s = %q, want %q", k, vals[k], v)
-		}
-	}
-	if _, ok := vals["orphan"]; ok {
-		t.Error("a key after an unterminated header belongs to no section")
-	}
-}
+// is process creation). These drills pin the two in-process seams: the
+// tracking-ref read and the archive unpack. The hardening write stays
+// on git's own writer (plans/os-711b3028.md D1; review on #298), and
+// its drills live in gitref_test.go.
 
 func TestIsObjectID(t *testing.T) {
 	sha1 := strings.Repeat("a1", 20)
@@ -313,16 +213,5 @@ func TestUntarSurfacesStreamAndFilesystemErrors(t *testing.T) {
 		if err := untar(bytes.NewReader(header(tar.Header{Name: "f/l", Typeflag: tar.TypeSymlink, Linkname: "f", Mode: 0o777})), dir); err == nil {
 			t.Fatal("a file where a symlink's parent must be created is an error")
 		}
-	}
-}
-
-func TestEnsureConfigNamesAnUnreadableFile(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.Mkdir(filepath.Join(dir, "config"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	err := ensureConfig(dir, noAutoGC)
-	if err == nil || !strings.Contains(err.Error(), "harden: read") {
-		t.Fatalf("a config that is a directory is the client's error, named: %v", err)
 	}
 }

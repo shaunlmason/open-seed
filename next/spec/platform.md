@@ -135,9 +135,10 @@ than papered over:
   runner, because it spawns git thousands of times and process
   creation there costs about ten times what it costs on Linux
   (measured at eight times slower, twenty minutes against two and a
-  half, before the client's fetch, hardening and materialize paths
-  shed five spawns per append: an ls-remote, a tar, and three config
-  writes). The matrix
+  half, before the client's fetch and materialize paths shed two
+  spawns per append: an ls-remote and a tar; the hardening's three
+  config writes stay on git's own writer, plans/os-711b3028.md D1).
+  The matrix
   answers in kind: the Windows leg runs the suite in three shards
   (every Nth top-level test by sorted name, so a new test lands in a
   shard without an edit), turns Defender's real-time scanning off for

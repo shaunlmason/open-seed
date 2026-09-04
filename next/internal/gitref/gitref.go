@@ -113,117 +113,29 @@ var noAutoGC = [][2]string{
 	{"receive.autoGC", "false"},
 }
 
-// hardenGitDir ensures noAutoGC is set in the git dir's own config on
-// every construction, not only at init: a state dir an older build
-// created is hardened the first time a new build opens it. The write
-// is in-process, in git's own file format, and touches only the
-// repository's config file: three `git config --local` processes per
-// construction were the largest single source of spawns in the CLI
-// suite, and a spawn is dear on Windows (next/spec/platform.md). A key
-// already carrying its value is left alone, so the file never grows
-// with repeated opens; a file that cannot be read or written is the
-// client's error, named by key. GIT_CONFIG, which selects the file a
-// `git config` invocation reads and writes (review finding on #232),
-// no longer enters into it: no git process runs here.
+// hardenGitDir writes noAutoGC into the git dir on every construction,
+// not only at init: a state dir an older build created is hardened the
+// first time a new build opens it, and three idempotent config writes
+// cost less than a stat-and-branch that could drift from what the
+// drill asserts. A write that fails is the client's error, named by
+// key: a git that cannot configure its own repository cannot be
+// trusted to fetch from it either. The writes run git's own writer,
+// not an in-process parser of the existing file: a partial parser
+// drifts from git's resolution (a concatenated value like auto = "0"1
+// reads as 01 in git, not 0), and the drift would skip the very write
+// that disarms the collector (plans/os-711b3028.md D1; review on
+// #298). Three spawns per construction is the price of that
+// guarantee; the suite's other spawn cuts land on the fetch and the
+// unpack (next/spec/platform.md).
 func hardenGitDir(gitDir string) error {
-	return ensureConfig(gitDir, noAutoGC)
-}
-
-// ensureConfig appends every key of kvs whose value the git dir's
-// config does not already carry, grouped under section headers in the
-// format git itself writes. Keys are `section.key`; a subsection is
-// not a shape this needs. For a single-valued key the last occurrence
-// wins, so a differing value is superseded by appending, never by
-// rewriting what an operator or git wrote.
-func ensureConfig(gitDir string, kvs [][2]string) error {
-	path := filepath.Join(gitDir, "config")
-	existing, err := os.ReadFile(path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("harden: read %s: %w", path, err)
+	for _, kv := range noAutoGC {
+		cmd := exec.Command("git", "--git-dir", gitDir, "config", "--local", kv[0], kv[1])
+		cmd.Env = withoutGitConfigSelection(os.Environ())
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("harden %s: git config: %w: %s", kv[0], err, strings.TrimSpace(string(out)))
+		}
 	}
-	have := configValues(existing)
-	var buf strings.Builder
-	if len(existing) > 0 && existing[len(existing)-1] != '\n' {
-		buf.WriteByte('\n')
-	}
-	lastSection := ""
-	for _, kv := range kvs {
-		section, key, ok := strings.Cut(kv[0], ".")
-		if !ok || strings.Contains(key, ".") {
-			return fmt.Errorf("harden %s: a key is section.key", kv[0])
-		}
-		if have[strings.ToLower(section)+"."+strings.ToLower(key)] == kv[1] {
-			continue
-		}
-		if section != lastSection {
-			fmt.Fprintf(&buf, "[%s]\n", section)
-			lastSection = section
-		}
-		fmt.Fprintf(&buf, "\t%s = %s\n", key, kv[1])
-	}
-	if lastSection == "" {
-		return nil
-	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o644)
-	if err != nil {
-		return fmt.Errorf("harden: open %s: %w", path, err)
-	}
-	if _, err := f.WriteString(buf.String()); err != nil {
-		f.Close()
-		return fmt.Errorf("harden: write %s: %w", path, err)
-	}
-	return f.Close()
-}
-
-// configValues reads a git config file far enough to answer which
-// `section.key` (or `section.subsection.key`) holds which value:
-// section and key names fold to lower case, a subsection is kept
-// verbatim, and the last occurrence of a key wins, as in git. Includes
-// are not followed; a value that only an include supplies reads as
-// absent, and the explicit append that follows still wins in git's own
-// resolution, since it comes later in the file.
-func configValues(b []byte) map[string]string {
-	vals := map[string]string{}
-	section := ""
-	for _, line := range strings.Split(string(b), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || line[0] == '#' || line[0] == ';' {
-			continue
-		}
-		if line[0] == '[' {
-			end := strings.IndexByte(line, ']')
-			if end < 0 {
-				section = ""
-				continue
-			}
-			name, sub, hasSub := strings.Cut(line[1:end], " ")
-			section = strings.ToLower(strings.TrimSpace(name))
-			if hasSub {
-				section += "." + strings.Trim(strings.TrimSpace(sub), "\"")
-			}
-			continue
-		}
-		if section == "" {
-			continue
-		}
-		key, value, _ := strings.Cut(line, "=")
-		key = strings.ToLower(strings.TrimSpace(key))
-		if key == "" {
-			continue
-		}
-		// A trailing comment ends the value; quotes around it are git's
-		// own way of keeping leading or trailing blanks.
-		value = strings.TrimSpace(value)
-		if strings.HasPrefix(value, "\"") {
-			if end := strings.IndexByte(value[1:], '"'); end >= 0 {
-				value = value[1 : 1+end]
-			}
-		} else if i := strings.IndexAny(value, "#;"); i >= 0 {
-			value = strings.TrimSpace(value[:i])
-		}
-		vals[section+"."+key] = value
-	}
-	return vals
+	return nil
 }
 
 // withoutGitConfigSelection drops GIT_CONFIG from an environment. The
@@ -231,11 +143,10 @@ func configValues(b []byte) map[string]string {
 // unqualified write under it lands in whatever file the operator
 // named, and `--local` under it refuses ("only one config file at a
 // time") rather than overriding it (review finding on #232). The
-// hardening no longer runs git at all (ensureConfig writes the
-// repository's own file directly), so this filter now serves the
-// drill that reads the hardened values back with --local under a
-// planted GIT_CONFIG. internal/verdict carries the same filter for
-// its workspace clone.
+// hardening therefore names its target explicitly AND runs without
+// the variable, so the repository's own config is the only file it
+// touches and a file the operator selected is never mutated by Seed.
+// internal/verdict carries the same filter for its workspace clone.
 func withoutGitConfigSelection(env []string) []string {
 	out := make([]string, 0, len(env))
 	for _, kv := range env {
