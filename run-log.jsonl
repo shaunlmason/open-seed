@@ -1581,3 +1581,4 @@
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-9df0f462","kind":"comment"},"task":"os-8ecef90f","ts":"2026-09-04T15:18:04Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"evidence_id":"ev-314c18fc","kind":"pr"},"task":"os-f79bc5a0","ts":"2026-09-04T15:31:13Z","verb":"attach-evidence"}
 {"actor":"shaunlmason","data":{"to":"review","transitioned":true},"task":"os-f79bc5a0","ts":"2026-09-04T15:31:18Z","verb":"transition"}
+{"actor":"","data":{"title":"engine: receipt verify's mismatch message does not name the field that disagreed"},"task":"os-77a6b376","ts":"2026-09-04T15:46:22Z","verb":"create"}
