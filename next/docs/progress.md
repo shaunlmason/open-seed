@@ -1988,7 +1988,7 @@ intake (os-7953612b) and dashboard tiers (os-f17567a6); the shadow
 run's tooling, `seed ledger audit` (os-7599c27d, plan #295, draft
 task PR #296); the coverage floor card (os-f262585a) is planned in
 #292; the macOS cleanup race in the flywheel drill's skip path is
-carded (os-222189a3).
+planned in #301 with its draft task PR #302 (os-222189a3).
 
 **Next action: the operator's answer at the promotion gate.**
 `next/docs/promotion.md` presents the seven criteria of build plan
