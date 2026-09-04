@@ -9,7 +9,9 @@ package simulate
 import (
 	"testing"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
 func rec(verb, subject string) *event.Record {
@@ -23,7 +25,7 @@ func happy(subject string) []*event.Record {
 		rec("contract.specified", subject),
 		rec("offer.published", subject),
 		rec("claim.taken", subject),
-		rec("budget.reserved", subject),
+		rec(transition.BudgetReserveVerb, subject),
 		rec("run.started", subject),
 		rec("submission.made", subject),
 	}
@@ -43,7 +45,7 @@ func TestAuditCatchesSilentAbandonment(t *testing.T) {
 		rec("contract.specified", "c-1"),
 		rec("offer.published", "c-1"),
 		rec("claim.taken", "c-1"),
-		rec("budget.reserved", "c-1"),
+		rec(transition.BudgetReserveVerb, "c-1"),
 	}
 	a := Audit(recs)
 	if len(a.SilentAbandonments) != 1 || a.SilentAbandonments[0] != "c-1" {
@@ -55,7 +57,7 @@ func TestAuditCatchesSilentAbandonment(t *testing.T) {
 }
 
 func TestAuditCatchesUnreservedSpend(t *testing.T) {
-	// run.started with no covering budget.reserved.
+	// run.started with no covering reservation.
 	recs := []*event.Record{
 		rec("intent.filed", "c-1"),
 		rec("contract.specified", "c-1"),
@@ -93,7 +95,7 @@ func TestAuditCatchesUnofferedClaim(t *testing.T) {
 		rec("intent.filed", "c-1"),
 		rec("contract.specified", "c-1"),
 		rec("claim.taken", "c-1"),
-		rec("budget.reserved", "c-1"),
+		rec(transition.BudgetReserveVerb, "c-1"),
 		rec("submission.made", "c-1"),
 	}
 	a := Audit(recs)
@@ -134,5 +136,77 @@ func TestAuditMidChainViolationAndMultiSubject(t *testing.T) {
 	a := Audit(recs)
 	if len(a.ChainViolations) == 0 {
 		t.Fatal("a second birth on an existing subject is a chain violation")
+	}
+}
+
+// conformance: III.R row 5 — the bars read the protocol's vocabulary
+// (plans/os-b86dab4c.md D3). Every verb the audit switches on is a verb
+// the transition table defines: a bar that counts a verb the protocol
+// never emits never fires, which is exactly how the unreserved-spend
+// bar came to count "budget.reserved" against a protocol that emits
+// budget.reserve, silently passing a fixture that repeated the typo.
+func TestAuditedVerbsAreTheProtocols(t *testing.T) {
+	// admit.CatalogVerbs is the authority: it is every verb the
+	// boundary drafts, which is what "a verb the protocol emits"
+	// means. The transition table's Verbs() is the lifecycle subset
+	// and does not carry budget.reserve or run.started, so holding
+	// the audit to it would fail on verbs the protocol does define.
+	defined := map[string]bool{}
+	for _, v := range admit.CatalogVerbs() {
+		defined[v] = true
+	}
+	if len(defined) == 0 {
+		t.Fatal("the catalog drafts no verbs: this drill would pass vacuously")
+	}
+	for _, v := range AuditedVerbs {
+		if !defined[v] {
+			t.Errorf("the audit counts %q, which the boundary never drafts", v)
+		}
+	}
+	// The guard has teeth: a verb the table does not define fails it.
+	if defined["budget.reserved"] {
+		t.Fatal("budget.reserved must not be a protocol verb; this drill's mutation would prove nothing")
+	}
+	// And every exit the audit relies on is the protocol's own.
+	for _, v := range []string{"submission.made", "claim.released", "claim.parked", "claim.reaped"} {
+		if !transition.IsExit(v) || !defined[v] {
+			t.Errorf("%q must be a deliberate exit the boundary drafts", v)
+		}
+	}
+}
+
+// conformance: plans/os-b86dab4c.md D4, AC1 and AC2 — the regression
+// the old drills could not fail, both arms. A run covered by the
+// protocol's reservation audits clean; the same chain with the verb
+// the protocol does not define reads as unreserved spend, naming the
+// subject. Reverting D1 fails the first arm.
+func TestUnreservedSpendCountsTheProtocolsReservation(t *testing.T) {
+	covered := []*event.Record{
+		rec("intent.filed", "c-1"),
+		rec("contract.specified", "c-1"),
+		rec("offer.published", "c-1"),
+		rec("claim.taken", "c-1"),
+		rec(transition.BudgetReserveVerb, "c-1"),
+		rec("run.started", "c-1"),
+		rec("submission.made", "c-1"),
+	}
+	if a := Audit(covered); len(a.UnreservedSpend) != 0 || !a.Clean {
+		t.Fatalf("a run covered by an admitted %s is not unreserved spend: %+v", transition.BudgetReserveVerb, a)
+	}
+	stale := []*event.Record{
+		rec("intent.filed", "c-2"),
+		rec("contract.specified", "c-2"),
+		rec("offer.published", "c-2"),
+		rec("claim.taken", "c-2"),
+		rec("budget.reserved", "c-2"),
+		rec("run.started", "c-2"),
+		rec("submission.made", "c-2"),
+	}
+	a := Audit(stale)
+	if len(a.UnreservedSpend) != 1 || a.UnreservedSpend[0] != "c-2" {
+		t.Fatalf("a chain whose only reservation is a verb the protocol does not define is unreserved spend: %+v", a)
+	}
+	if a.Clean {
+		t.Fatal("a run with unreserved spend is not clean")
 	}
 }
