@@ -1634,3 +1634,4 @@
 {"actor":"shaunlmason","data":{"title":"next: the Seed release workflow — checksummed, provenance-attested binaries, the distribution step's precondition (III.P row 1's residual)"},"task":"os-2e46aa2f","ts":"2026-09-04T21:29:07Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-2e46aa2f","ts":"2026-09-04T21:29:57Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T22:30:00Z"},"task":"os-2e46aa2f","ts":"2026-09-04T21:30:00Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-2e46aa2f","ts":"2026-09-04T21:32:26Z","verb":"transition"}
