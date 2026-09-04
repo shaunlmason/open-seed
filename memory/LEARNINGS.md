@@ -1632,6 +1632,12 @@ the assertions read, and there is no copy to go stale.
   bridge for never-qualified workers (admission never judges an
   offer's scope) survives a policy that sends work to the strongest,
   and a first eval's offer stays the one unscoped door.
+## The conformance report (os-83bc3d84)
+
+- A conformance claim is only as good as its provenance: keep the
+  status beside the criterion's verbatim text and the record that
+  judged it, hold the criteria to the charter by parsing the charter,
+  and let the doctor say what is still open rather than what is done.
 
 ## The promotion evidence packet (os-98ce6f8a)
 

@@ -46,6 +46,11 @@ func Generate(root string) (map[string]string, error) {
 		return nil, fmt.Errorf("exit-codes: %w", err)
 	}
 	out[filepath.Join(GenDir, "exit-codes.md")] = ec
+	conf, err := renderConformance(root)
+	if err != nil {
+		return nil, fmt.Errorf("conformance: %w", err)
+	}
+	out[filepath.Join(GenDir, "conformance.md")] = conf
 	lanes, err := renderLanes(root)
 	if err != nil {
 		return nil, fmt.Errorf("lanes: %w", err)
