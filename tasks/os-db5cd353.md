@@ -1,10 +1,11 @@
 ---
 id: os-db5cd353
 title: 'next: III.A row 7 — erasure is surfaced but not attributable; the protocol defines no erasure verb'
-state: backlog
+state: ready
 priority: P2
 squad: core
 created_at: "2026-09-04T15:02:29Z"
+updated_at: "2026-09-04T20:43:19Z"
 ---
 
 Found while verifying what the Phase 13 exit record (os-d63c7441) can claim.
