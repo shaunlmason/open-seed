@@ -132,9 +132,10 @@ plan-first because the packet is what the promotion gate reads.
   this card records none, because none exists.
 - **D6 — criterion 6 is stated against what has merged.** The
   packet cites the Phase 12 exit record for Phases 0 through 12 and
-  the doctor's conformance section for the open rows; if os-83bc3d84
-  has not merged when the packet lands, the status is `partial` with
-  #289 named, never `met` on a claim about a PR in review.
+  the doctor's conformance section for the open rows. os-83bc3d84
+  merged (#289, 2026-09-04T01:13Z), so the status is `met`, citing
+  #289's drills on `main`; the rule the earlier hedge applied stands:
+  never `met` on a claim about a PR in review.
 - **D7 — bounds.** No admission change, no verb, no projection, no
   deployment created: the survey helper reads the tree and nothing
   else, and the packet's proposed declaration is prose in the packet,
