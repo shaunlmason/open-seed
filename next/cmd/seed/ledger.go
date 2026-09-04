@@ -127,7 +127,7 @@ func runLedgerVerify(args []string, stdout, stderr io.Writer) int {
 // (plans/os-7599c27d.md; simulation.md "The five-bar audit"): verify
 // from genesis first, exactly as ledger verify does, so an invalid
 // chain refuses chain_invalid before a bar is read, then simulate.Audit
-// over the verified records in position order. A clean audit is the
+// over the records that same replay observed, in position order. A clean audit is the
 // bars with every list empty, stamped at the tip audited; a violated
 // bar refuses exit 28 drift refined audit_violated, the message naming
 // each violated bar with the records it names, because the envelope's
@@ -149,7 +149,13 @@ func runLedgerAudit(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
-	var opts []ledger.VerifyOption
+	// The records audited are the ones the verification replay observed
+	// (plans/os-7599c27d.md D1): a writer appending between the replay
+	// and a second scan would hand the audit records the report's count
+	// and tip do not cover, and the envelope's position names the chain
+	// the bars were read from.
+	var records []*event.Record
+	opts := []ledger.VerifyOption{ledger.WithObserver(func(_ int, rec *event.Record) { records = append(records, rec) })}
 	if *supported != "" {
 		opts = append(opts, ledger.WithSupportedVersions(strings.Split(*supported, ",")...))
 	}
@@ -161,12 +167,8 @@ func runLedgerAudit(args []string, stdout, stderr io.Writer) int {
 		}
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
 	}
-	var records []*event.Record
-	if err := store.Records(func(_ int, rec *event.Record) error {
-		records = append(records, rec)
-		return nil
-	}); err != nil {
-		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	if len(records) != rep.Count {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the replay observed %d records and reported %d", len(records), rep.Count)), stdout, stderr)
 	}
 	a := simulate.Audit(records)
 	bars := []struct {

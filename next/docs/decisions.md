@@ -3433,6 +3433,14 @@ there beside `trust_undeclared`. No new exit number.
 
 ## seed ledger audit (os-7599c27d)
 
+**The audit reads what the replay verified, not a second scan.** The
+records handed to the bars are collected by `ledger.WithObserver`
+during `VerifyFromGenesis` (review finding on the plan): a writer
+appending between the replay and a rescan would give the audit
+records the envelope's count and tip do not cover, and a count that
+disagrees with the report refuses `unavailable` rather than auditing
+a chain the position does not name.
+
 **The refusal carries the lists in its message.** The plan asked for
 the audit result beside the error so a reader needs no second call;
 the envelope's `result` and `error` are exclusive by its shape, so
