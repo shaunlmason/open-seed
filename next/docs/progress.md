@@ -2016,6 +2016,22 @@ written by the two implementing sessions, one voice.
   helper name that had kept the fixture outside os-c4e8b57a's
   property while the guard passed; tests only)
 
+## A bar that counted a verb the protocol does not emit (os-b86dab4c)
+
+- the five-bar audit's unreserved-spend bar counted `budget.reserved`
+  against a protocol that emits `budget.reserve` — os-b86dab4c —
+  **in review** (task PR against plan #304: the bars name the
+  protocol's constants, the deliberate exits come from
+  `transition.IsExit` instead of the audit's own copy, and
+  `AuditedVerbs` is held to `admit.CatalogVerbs()` by a drill, which is
+  the guard for the class; the fixtures and the CLI drill's histories
+  move to the protocol's verb and a two-arm regression covers both
+  sides. Found by review on #296 after it merged, so the fix is its own
+  card rather than an amendment to a finished one; the first draft of
+  the plan named `Table.Verbs()` as the authority and implementing it
+  showed that is the lifecycle subset, carrying neither
+  `budget.reserve` nor `run.started`)
+
 ## Frontier
 
 

@@ -21,13 +21,24 @@ type AuditResult struct {
 	Clean              bool     `json:"clean"`
 }
 
-// deliberate exits — the four verbs that legally end an in_progress
-// window (submission, release, park, reap).
-var deliberateExit = map[string]bool{
-	"submission.made": true,
-	"claim.released":  true,
-	"claim.parked":    true,
-	"claim.reaped":    true,
+// ClaimTakenVerb is the one verb the bars read that the protocol
+// publishes no constant for (plans/os-b86dab4c.md D1).
+const ClaimTakenVerb = "claim.taken"
+
+// AuditedVerbs are the verbs the bars switch on. Each must be one the
+// boundary drafts: a bar that counts a verb the protocol never emits
+// is a bar that never fires, which is how the unreserved-spend bar
+// came to count "budget.reserved" against a protocol that emits
+// budget.reserve. The drill holds this list to admit.CatalogVerbs
+// (D3), not to the transition table, whose Verbs() is the lifecycle
+// subset and carries neither budget.reserve nor run.started. The
+// deliberate exits are absent because the audit no longer names them:
+// transition.IsExit is their one authority (D2).
+var AuditedVerbs = []string{
+	transition.OfferPublishedVerb,
+	ClaimTakenVerb,
+	transition.BudgetReserveVerb,
+	transition.RunStartedVerb,
 }
 
 // Audit reconstructs the five bars from the records alone.
@@ -79,9 +90,9 @@ func Audit(records []*event.Record) AuditResult {
 	for _, rec := range records {
 		s := rec.Event.Subject
 		switch rec.Event.Verb {
-		case "offer.published":
+		case transition.OfferPublishedVerb:
 			get(s).offered = true
-		case "claim.taken":
+		case ClaimTakenVerb:
 			w := get(s)
 			// A claim must ride a published offer: claiming work the
 			// supervisor never offered is a guardrail breach.
@@ -90,14 +101,17 @@ func Audit(records []*event.Record) AuditResult {
 			}
 			w.open = true
 			w.reserved = false
-		case "budget.reserved":
+		case transition.BudgetReserveVerb:
 			get(s).reserved = true
-		case "run.started":
+		case transition.RunStartedVerb:
 			if w := get(s); !w.reserved {
 				res.UnreservedSpend = append(res.UnreservedSpend, s)
 			}
 		}
-		if deliberateExit[rec.Event.Verb] {
+		// The deliberate exits are the protocol's, not a copy of them
+		// (D2): transition.IsExit names the four verbs that legally end
+		// an in_progress window.
+		if transition.IsExit(rec.Event.Verb) {
 			get(s).open = false
 		}
 	}
