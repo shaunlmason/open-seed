@@ -73,15 +73,28 @@ reads. Deps: none.
   `ledger verify` is green afterward: a fresh reader attributes the
   approval from the chain, which is what the row's "attributable"
   buys.
-- **D3 — the row flips here, with the drills as its evidence.**
-  `next/spec/conformance.json` III.L row 4 moves from `routed` to
-  `met`, evidence naming the two drills and #273, note naming this
-  card; `next/docs/generated/conformance.md` is regenerated. The
-  precedent is os-9ef9ab34 (#308), which flipped III.B row 6 outside
-  an exit record when the evidence landed; plans/os-d63c7441.md D2
-  governs the Phase 13 rows, and this is a Phase 12 row that plan's
-  own routing table re-routed to this card. The exit record cites the
-  flip rather than making it.
+- **D3 — the row moves to `partial`, not `met`, and names what is
+  missing.** Charter §II.14 defines per-verb policy on the machine
+  surface as "allow/deny/require-approval by actor and risk class;
+  approvals as request events resolved attributably in an operator
+  inbox" (review on #320). The drills above cover allow and deny (the
+  grant table, the declaration's ceiling and routing rules) and show
+  an approval attributable to its signer; nothing in the tree is a
+  require-approval mode: no declaration names a verb that needs
+  approval, no request event asks for one, and nothing consumes an
+  approval at admission. `next/spec/conformance.json` III.L row 4
+  therefore moves from `routed` to `partial`, evidence naming the two
+  drills and #273, note naming the missing mode and the card that
+  builds it, **os-5781a026** (`guardrails.approvals` in the
+  declaration, `approval.requested`, `approval.granted` and
+  `approval.denied` as additive catalog growth, the admission rule
+  that refuses a governed act without an open granted approval and
+  consumes one on the admitted act, `approval.pending` in the
+  operator's inbox, the loop verbs, the machine-surface drill). That
+  card flips the row to `met` on all three modes together;
+  `next/docs/generated/conformance.md` is regenerated here for the
+  `partial`. The precedent for moving a row outside an exit record is
+  os-9ef9ab34 (#308).
 - **D4 — the spec names the drills.** `next/spec/platform.md`'s
   conformance section, the machine surface's spec, gains the two
   drills and a III.L row 4 line, so the surface's own document says
@@ -125,9 +138,10 @@ Nothing else. NOT `next/cmd/seed/*.go` outside `_test.go`, NOT
    through `serve` reads back with `actor` equal to its signer's
    fingerprint at the position the write reported, and the chain
    verifies afterward.
-3. **The row reads met.** `seed doctor` on the fixture deployment no
-   longer lists III.L row 4 among the outstanding rows; `seed docs
-   check` is clean on the regenerated `conformance.md`.
+3. **The row reads partial and says why.** III.L row 4 is `partial`
+   in the table with the require-approval mode named as the missing
+   third and os-5781a026 as its card; `seed docs check` is clean on the
+   regenerated `conformance.md`.
 4. `make check` green; no model identifiers in any committed artifact.
 
 **Retention set (existing, shown unharmed):**
