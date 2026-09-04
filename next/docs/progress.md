@@ -1930,7 +1930,7 @@ written by the two implementing sessions, one voice.
 - the flywheel engine drill's skip path races `t.TempDir`'s cleanup on
   macOS (`unlinkat .../.git/objects: directory not empty`), reporting
   a skipped drill as a failed one on #290's macOS leg — os-222189a3 —
-  **in review** (task PR against plan #301: `requireEngine` reads the
+  **done** (#302 against plan #301: `requireEngine` reads the
   pin from the source tree, the same shim and lock `instantiate`
   copies, and runs as the drill's first statement, so a skip builds
   nothing: twelve git spawns on the skip path before, none after;
@@ -1986,7 +1986,7 @@ task PR (this card), which closes the phase.
 Phase 13 declares `deps: 12`, so its gate opened when the Phase 12
 exit record merged (#284), and every numbered item has a merged PR: 1
 in #269, 2 in #282, 3 in #281, 4 in #270, 5 in #279 (its
-canonicalization follow-up os-1c284ba8 in review, #290), 6 in #273, 7
+canonicalization follow-up os-1c284ba8 merged, #290), 6 in #273, 7
 in #286; the two routed gaps (#265, #266) are merged. The conformance report
 (os-83bc3d84, #289) is merged, so the doctor reports the open rows;
 the promotion evidence packet (os-98ce6f8a, plan #291 open, task PR
@@ -2002,15 +2002,15 @@ intake (os-7953612b) and dashboard tiers (os-f17567a6); the shadow
 run's tooling, `seed ledger audit` (os-7599c27d, plan #295, draft
 task PR #296); the coverage floor card (os-f262585a) is planned in
 #292; the macOS cleanup race in the flywheel drill's skip path is
-planned in #301 with its draft task PR #302 (os-222189a3).
+merged (#301, then #302; os-222189a3).
 
 **Next action: the operator's answer at the promotion gate.**
 `next/docs/promotion.md` presents the seven criteria of build plan
 §5: 1, 2, 3, 5, 6 and 7 met, 4 reserved on one question, the POSIX
 git server that hosts the shadow ledger with the hook, the run at the
 enforced self-hosted posture the criteria name. Until that answer the agent-side work is to merge the
-open PRs as they clear review (#291 then #294; #293 then #297; #295
-then #296; #299 then #300; #301 then #302; #290; #292), fix the
+open PRs as they clear review (#294; #297; #295 then #296; #299
+then #300; #292), fix the
 scale defect (os-5063e8ba) so the weekly run can be green (III.C
 row 4 stays `partial` on it: the charter's clause is sharded
 intake's, os-7953612b), and keep the packet's citations true. After the answer: the
