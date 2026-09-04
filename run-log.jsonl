@@ -1548,3 +1548,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-aaec6a3c","ts":"2026-09-04T13:14:03Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T14:14:07Z"},"task":"os-aaec6a3c","ts":"2026-09-04T13:14:07Z","verb":"claim"}
 {"actor":"dispatcher","data":{"title":"plan PR: os-2e34f66a's dangling obligations.md citation"},"task":"os-0dba8c6a","ts":"2026-09-04T13:15:12Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-aaec6a3c","ts":"2026-09-04T13:15:29Z","verb":"transition"}
