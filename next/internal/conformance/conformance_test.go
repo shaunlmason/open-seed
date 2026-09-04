@@ -201,7 +201,7 @@ func TestAssessJudgesAtThePosture(t *testing.T) {
 		tb.Pillars[0].Rows[i].Note = ""
 	}
 	rep = conformance.Assess(tb, true)
-	if !rep.Complete || len(rep.Outstanding) != 0 || !strings.Contains(rep.Because, "every row is met") {
+	if !rep.Complete || len(rep.Outstanding) != 0 || !strings.Contains(rep.Because, "every applicable row is met") {
 		t.Fatalf("enforced with every row met: complete: %+v", rep)
 	}
 	rep = conformance.Assess(tb, false)
