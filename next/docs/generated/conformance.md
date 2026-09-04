@@ -9,7 +9,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | pillar | met | partial | routed | open |
 |---|---|---|---|---|
 | A. The Ledger | 11 | 0 | 0 | 1 |
-| B. The Admission Boundary | 5 | 0 | 0 | 1 |
+| B. The Admission Boundary | 6 | 0 | 0 | 0 |
 | C. Streams and the hot path | 4 | 1 | 0 | 0 |
 | D. Projections | 5 | 0 | 0 | 3 |
 | E. Identity, threat model, qualification | 7 | 0 | 2 | 0 |
@@ -26,7 +26,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | P. Distribution, supply chain, adoption | 5 | 0 | 0 | 0 |
 | Q. Quality, docs, community | 6 | 1 | 0 | 0 |
 | R. The autonomy end-state | 0 | 0 | 7 | 0 |
-| **all** | 97 | 5 | 15 | 11 |
+| **all** | 98 | 5 | 15 | 10 |
 
 ## A. The Ledger
 
@@ -54,7 +54,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | B.3 | `met` | 12 | All three admission postures are implemented; every deployment declares its posture; cooperative mode's consequences are stated by the preflight tool and the README in plain words; no deployment lands in cooperative mode by default. | #98 (the declaration, the cooperative consequence printed verbatim by seed doctor); #252 (next/spec/postures.md; posture.Load refusing ErrUndeclared, no default) | — |
 | B.4 | `met` | 12 | (*enforced-only*) Actor git credentials cannot write the ledger ref directly — verified by an attempted direct push in the drill. | #250 TestCodeRefProtectedSurface, TestCodeRefNoLedgerAndNoDeclaration (cmd/seed-admit/coderef_test.go); #252 TestDesiredDerivesFromTheDeclaration (internal/protections/protections_test.go) | — |
 | B.5 | `met` | 12 | (*enforced-only*) The compromised-actor drill passes in CI: a valid-key, valid-credential adversary with raw git access cannot claim unauthorized work, approve itself, rewrite history, alter gates, impersonate another actor, exceed its lease, exceed its reservation, or admit an invalid transition. | #250 TestCeilingHoldsAtThePush, TestOneDerivationLedgerAgrees, TestCoverageBothWays, TestResidualsArePinned, TestTablesValidate (internal/redteam/redteam_test.go); TestCodeRefRulesAreLoadBearing (cmd/seed-admit) | — |
-| B.6 | `open` | 12 | Admission may shard proposal intake without changing semantics; ordering remains solely the admitted chain. | — | not claimed: MAY; the backlog names sharded intake as a true extra |
+| B.6 | `met` | 12 | Admission may shard proposal intake without changing semantics; ordering remains solely the admitted chain. | intake is single-path: one admission boundary (internal/admit behind cmd/seed-admit), no second intake, #94 (the validator the ledger ref's sole writer under enforced), and abstention is pinned in the tree rather than in the table by TestIntakeIsSinglePathAsTheRowsEvidenceStates, which reads the admission surface and fails the moment a per-shard context or a second rule set appears; ordering is solely the admitted chain, III.A row 3's claim since Phase 1, #79 (positions derived from admitted ancestry), #85 (position-stamped verify refusals) | a permission, met by abstention (os-9ef9ab34): the charter's first clause binds a system that shards proposal intake, and this one does not, so it changes no semantics by construction; the second clause is unconditional and is III.A row 3's claim. A system that later shards re-earns the row by showing semantics unchanged (sharded intake is os-7953612b, a true extra whose absence conforms) |
 
 ## C. Streams and the hot path
 
