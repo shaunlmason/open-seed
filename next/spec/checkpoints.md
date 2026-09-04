@@ -180,6 +180,26 @@ would, and the conformance table's C.4 row stays `partial` with this
 run cited for what it shows. The budget holds the ratio to the
 quadratic expectation rather than pretending it is constant.
 
+**The seventh race shape, and `relinked`.** The optimistic loop retries
+six push rejections as the races they are (a stale parent, receive
+contention, a moved ref lock) and surfaces every other rejection as
+a refusal. A hook refusing the pushed chain as `bad_prev` at or beyond
+the position the client appended is the seventh (plans/os-5063e8ba.md
+D1): the pushed tree cites a tip the remote does not hold there,
+which is either a tip that moved in a way the loop did not see or a
+tree the client built wrong, and re-linking from a fresh fetch is the
+answer to both. Before the retry the client keeps the refused tree
+and the hook's message under its state dir (`refused/<commit>/`), and
+the storm reports the count as `relinked` in its reading, a number
+beside the five budgeted metrics and never a budget: a clean storm
+re-links zero times, and a run that re-links is a run whose refused
+trees are worth reading. `--keep <dir>` on `cmd/perfgate` and `seed
+perf run` keeps the storm's work dir (the remote, every writer's
+state dir, the rebuild's projections, which stay locked read-only as
+every published build is) for that reading. The 200-writer storm that found the
+shape (one lost append across midnight UTC, os-5063e8ba) is the
+reason both exist.
+
 ## Residuals, stated
 
 - The reader folds every record and skips only the prefix's signature
