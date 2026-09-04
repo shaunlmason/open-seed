@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "task": "os-222189a3",
+  "merge_base": "bffc1572789bacd6f3a7f737fa1d75467dbdc566",
+  "head": "c201214ca8939f9dcdee3e9f8a92131d3d57b034",
+  "plan_path": "plans/os-222189a3.md",
+  "plan_sha256": "8c6d35aca9afc04d69499ecd30ff358ccaad85df97c782277279f6f436ef94ea",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/docs/progress.md",
+    "next/internal/flywheel/flywheel_test.go",
+    "next/internal/gitref/fixture_guard_test.go"
+  ],
+  "diff_sha256": "2a3d7913a8aa7e5503cc5e626da791fc1bd09935d38f2ee7a08139a03fb47c0a",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/flywheel/ ./internal/gitref/ -run 'TestValidationRunsThroughTheEngineFromAStagingWorktree|TestEngineAvailabilityIsDetected|TestEveryFixtureRepositoryIsHardened' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/flywheel/ -count=3",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}

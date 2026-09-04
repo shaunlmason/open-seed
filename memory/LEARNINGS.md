@@ -1645,3 +1645,88 @@ the assertions read, and there is no copy to go stale.
   git's resolution (a concatenated value like auto = "0"1 reads as 01
   in git, not 0). Cut spawns where the counts are, shard the serial
   package, and only then reach for a longer timeout.
+
+## The conformance report (os-83bc3d84)
+
+- A conformance claim is only as good as its provenance: keep the
+  status beside the criterion's verbatim text and the record that
+  judged it, hold the criteria to the charter by parsing the charter,
+  and let the doctor say what is still open rather than what is done.
+
+## seed ledger audit (os-7599c27d)
+
+- A verb that reads an invariant over a chain verifies the chain
+  first and only then reads: a bar over an unverified chain is a bar
+  over nothing, and the ordering makes the "empty chain" arm of the
+  library's audit unreachable through the verb, which is correct
+  rather than a gap.
+- `ledger append` is the cooperative posture's self-validating client,
+  not a raw seam; a drill that needs a chain admission would refuse
+  signs with the root and appends through the library.
+
+## The contention benchmark at target scale (os-a00d3f34)
+
+- When a gate is parameterized by size, scale is a data change: a
+  second budget file and a schedule, never a second measurer. The
+  drill that pins the profile's size is what keeps the data change
+  honest.
+- The optimistic append loop costs writers/2 attempts per landed
+  record, so its wall time is quadratic in writers; hundreds of
+  writers belong on a schedule, and the per-PR gate's 24 is a budget
+  on wall clock, not a claim about scale.
+- A receipt's diff hash covers git's default diff text, whose index
+  lines abbreviate blob ids to a length that grows with the clone's
+  object count (seven hex digits below 16384 objects, eight above);
+  CI's full clone crossed that count on 2026-09-03, so a receipt
+  generated in a partial clone mismatches on verify although plan,
+  files and commands agree. Until the engine pin carries the
+  --full-index fix (open-seed-engine, receipt: hash the diff with
+  full blob ids), fetch every ref and repack before generating a
+  receipt, so the local clone abbreviates as CI's does.
+- A benchmark's claim is only as strong as its identities: a storm that
+  signs every writer with one key measures one actor's contention, not
+  N actors'. Enroll a key per writer and have the measurer count the
+  distinct actors in the landed chain, so the number in the row is the
+  number the chain proves.
+- Quote a charter row verbatim in the plan and in the spec that
+  claims it. A paraphrase ("without lost updates") stood in for the
+  row's clause ("without unrelated writes racing each other's
+  admissions pathologically") and would have flipped a conformance row
+  on a run that demonstrates the pathology bounded, not absent; the
+  task PR's review caught it, and the fix was to state the claim
+  against the row's own words and leave the row partial.
+
+## The promotion evidence packet (os-98ce6f8a)
+
+- Evidence at a gate rots quietly: a document that names drills is
+  only as good as the tree it names, so cite in one machine-readable
+  shape and hold every citation to the tree under the gate that
+  already runs. The parser that reads the shape is the same one that
+  refuses a stale claim.
+- A packet presents; the sentence that selects an option, starts a
+  run or flips an entry point is the decision the build plan reserves,
+  and the drill checks the reserved criteria carry a question rather
+  than a choice.
+- A gate over a document holds only what its parser models: the two
+  cutover questions lived in prose the parser skipped, so deleting one
+  or answering it in place passed the gate that claimed to keep them
+  questions. Model every claim the gate is said to protect, one
+  physical line each, so an absence is a parse error and not prose
+  read past; and confine every cited path before joining it, since
+  `filepath.Join` cleans `..` into a read outside the tree the gate
+  promises.
+
+## The flywheel drill's skip path (os-222189a3)
+
+- A guard over fixture helpers is only as wide as the helper names it
+  knows: os-c4e8b57a's regex held `git(`, `run(` and `gitOut(` to the
+  hardening and never saw the flywheel package's `gitIn(`, so one
+  repository in the tree stayed unhardened while the guard passed.
+  When a package names its helper differently, widen the alternation
+  in the same PR; the property is the tree's, not the three packages'.
+- Decide a skip before building what it abandons. A precondition that
+  needs nothing from the fixture (here, whether the pinned engine is
+  in the cache, answered by the source tree the fixture copies) goes
+  first: a `t.Skip` after twelve git processes is twelve chances to
+  race the harness's cleanup, and on macOS it lost, reporting a
+  skipped drill as a failed one on a PR that touched neither.

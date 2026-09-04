@@ -3429,4 +3429,191 @@ refusal needed a code; `ranking_empty` refines exit 4 `not_found`
 (the policy's answer does not exist), and the refinement table in
 `envelope.md` is where every such code is recorded, so the row went
 there beside `trust_undeclared`. No new exit number.
+## The conformance report (os-83bc3d84, plan #287)
 
+**The table transcribes the records; it does not judge.** Every
+status in `conformance.json` is what a phase exit record already
+states for the row, with the record's own citations as evidence, and
+Phase 13's rows stay `open` until that phase's record flips them. The
+alternative, a table that derives statuses from tests by name, would
+make a test's existence stand for a criterion's satisfaction, which
+is the substitution the exit records exist to refuse.
+
+**The charter is parsed, not copied.** The drill reads Part III out of
+`SEED-NEXT.md` itself and holds the table to it row for row in both
+directions, so the table cannot drift from the charter and the charter
+cannot grow a row the table does not judge. The row text is kept
+verbatim in the table anyway, so a reader of the JSON sees the
+criterion without opening the charter.
+
+**Complete means every row met.** The plan's first draft called Part
+III complete when no row was `open`, which would have reported a
+knowingly non-conformant tree complete while rows stayed `partial` or
+`routed` (review finding on the plan PR; the charter admits a
+conformance claim only when every criterion holds). The doctor now
+lists every row not met, by status, and reports `complete` only when
+none remains. An enforced-only row cannot be met at the cooperative
+posture, so the doctor sets those rows aside there as the
+documentation the charter asks a cooperative deployment to keep; and
+because the charter defines conformance at the declared posture, a
+cooperative deployment whose applicable rows all hold is complete at
+its posture (review finding on the task PR; the plan's D4 had read
+that as never complete, and the charter is the authority). The build
+plan's exit line reads the report at the enforced posture, where
+every row applies.
+
+**A marker inside a row is a clause, not the row.** III.A row 4 and
+III.L row 5 carry the enforced-only marker on one clause among
+several that apply everywhere (review finding on the plan PR); a
+posture model that set the whole row aside at the cooperative posture
+would suppress requirements that hold there. Such rows are `mixed`:
+judged at every posture, and named at the cooperative one so a reader
+knows which clause is not exercised.
+
+**III.R is routed, not abandoned.** Its seven rows are outcomes
+promotion measures (build plan §5), and a table that left them `open`
+forever would make the Phase 13 exit line unachievable (review
+finding on the plan PR). Each row is `routed` to the promotion
+evidence that measures it, the note naming the measure and its owner:
+the report's lanes, flywheel and knowledge sections, the tiers'
+independence levels and the calibration agreement, the shadow run's
+ledger audit, the first external team's outcome. The rows flip to
+`met` when the promotion evidence card records the measurement, which
+is why the build plan's critical path puts the shadow run and the two
+cutovers before Phase 13's exit.
+
+
+## seed ledger audit (os-7599c27d)
+
+**The audit reads what the replay verified, not a second scan.** The
+records handed to the bars are collected by `ledger.WithObserver`
+during `VerifyFromGenesis` (review finding on the plan): a writer
+appending between the replay and a rescan would give the audit
+records the envelope's count and tip do not cover, and a count that
+disagrees with the report refuses `unavailable` rather than auditing
+a chain the position does not name.
+
+**The refusal carries the lists in its message.** The plan asked for
+the audit result beside the error so a reader needs no second call;
+the envelope's `result` and `error` are exclusive by its shape, so
+the message names each violated bar with the records it names
+(`silent_abandonments [c-1]`), the same lists a clean audit renders as
+fields. No second field, no second envelope.
+
+**The lost-updates bar is unreachable through the verb, by design.**
+An empty chain has no genesis and fails verification first; D1 puts
+verification first so a bar is never read over an unverified chain,
+and the drill asserts `chain_invalid` there rather than inventing an
+audit of nothing.
+
+**The drills append past admission with the root key.** The dev tool
+self-validates (the cooperative posture's rule), so a planted
+violation cannot go through it; the drills sign with the governance
+root and append through the library, which is the raw-push posture
+the bars exist to catch, and the chain still verifies because the
+root signed.
+
+**The packet's clause waits for the packet.** `next/docs/promotion.md`
+is on #294, not on `main`, so the one clause the plan names lands in
+this branch's merge-forward once the packet merges, never by stacking
+a task PR on another.
+
+## The contention benchmark at target scale (os-a00d3f34)
+
+**One gate at two sizes, not a second tool.** `perfgate.Budgets`
+already carries the history size and the writer count beside the
+ceilings, `Load` already refuses a ceiling without provenance, and the
+storm already asserts no lost or doubled update at any count; the
+scale run is a second budget file read by the same `cmd/perfgate`,
+and `internal/perfgate`'s code changes by nothing. A second measurer
+would have been a second definition of the same metric.
+
+**200 writers, the same history, one actor each.** Hundreds means
+the plural, and 200 is the smallest such count; the history stays at
+the per-PR profile's 40 contracts so the admission, replay and
+rebuild ceilings are copied rather than re-derived and the two
+readings are about the same chain. A review finding on the plan
+caught the storm signing every writer's append with the governance
+root's key, one actor issuing 200 writes; the charter's row counts
+actors and an actor is a keypair, so the history now enrolls one
+agent key per writer (`dispatch`, the grant `intent.filed` accepts),
+the storm signs with it, and the measurer refuses a landed chain
+whose storm records carry fewer distinct actors than writers. The
+per-PR storm's 24 writers are 24 actors by the same change.
+
+**The schedule is read-only and its red is the signal.** The workflow
+declares `contents: read` alone, uploads the reading whether the gate
+passed or not, and pages nobody; `TestTreeWorkflowsHaveNoScheduledWriters`
+holds every scheduled workflow in the tree but v1's maintenance lane
+(whose write is the state ref's anchor) to that permission, so the
+lint the doctor already runs on a declaration now runs on the tree
+under `make check`.
+
+**The conformance row stays partial; the run is cited for what it
+shows.** The plan quoted the row as "without lost updates"; the
+charter's row reads "without unrelated writes racing each other's
+admissions pathologically" (review finding on the task PR), and a
+single-ref storm of two hundred unrelated appends is that pathology
+held to a ceiling, not its absence. The charter outranks the plan, so
+this card makes the run exist and states its claim against the row's
+own words: hundreds of enrolled actors at the target scale with no
+lost or doubled update, tracked in CI. The clause the row states is
+sharded intake's (III.B row 6, os-7953612b), and the Phase 13 exit
+record cites the first green run without flipping C.4 on it.
+
+**The benchmark found what it exists to find.** Of three 200-writer
+storms on the implementing host signed with one key, two landed every
+writer and one refused one writer at the hook with `bad_prev` (a
+pushed chain whose new record cited a stale tip), which the loop
+classified as policy and did not retry; the run crossed midnight UTC
+and was the only one whose chain spanned two segments. The failure is
+carded as a defect (os-5063e8ba) with the evidence and the
+reproduction (`seed perf run --writers 200 --history 40`), not
+absorbed into a ceiling, because a lost append is the thing the row
+forbids. The ceilings come from the two later runs with one enrolled
+actor per writer (2065826 and 2071708 ms, 66.8 and 67.3 attempts per
+append, 200 distinct actors in each landed chain); the one-key runs
+(970948 and 955154 ms) are superseded, recorded in the provenance for
+what they measured.
+
+## The promotion evidence packet (os-98ce6f8a)
+
+**The packet is a document with a parser, not a projection.** The
+promotion gate reads prose the operator can amend; what it needs from
+the machinery is the assurance that the prose cites what the tree
+holds. `internal/promotion` parses the packet strictly (the seven
+criteria in order, one status each from a closed vocabulary, evidence
+rows in one shape, a question on every reserved decision, a missing
+sentence on every criterion that is not met, seven ledger rows) and
+`Check` holds every cited drill to its cited file under `make check`.
+No projection, no verb, no admission change.
+
+**Criterion 5 is met by the packet itself.** The build plan asks for
+the cutover and its rollback written down in three clauses; the packet
+writes them, and its own drill holds the section to that shape, so the
+evidence row for the criterion cites the packet's drill rather than a
+claim about a document elsewhere.
+
+**Criterion 6 cites what has merged.** The doctor's conformance
+section is os-83bc3d84's (#289); while it was in review the packet
+said `partial` and cited the exit records alone, and it moved to
+`met` citing #289's drills the day the report merged, never before.
+
+**The shadow run runs at the posture the criteria name; the server
+is the question.** Build plan §5 evaluates every criterion at the
+enforced self-hosted posture and reserves the two cutovers, not the
+shadow run (review finding on the plan: a packet offering the other
+postures as options could leave criterion 4 without valid evidence).
+So the protocol runs under enforced self-hosted admission, a POSIX
+git server executing the hook and hosting the ledger ref alone, and
+the one reserved thing is that server, which this repository's forge
+cannot be. Forge-hosted (a deployment and a credential the autonomy
+contract reserves) and cooperative (forfeiting the invariant the run
+must demonstrate) are stated for what they are: a shadow run under
+either produces no criterion-4 evidence and would be the supervised
+deviation the build plan says must be accepted as such.
+
+**The III.R ledger records measures, not readings.** Every row is
+`not measured`: no measurement exists before the shadow run, and a
+packet that reported one would be inventing it. Follow-up cards revise
+the rows and flip the conformance table with the packet as evidence.

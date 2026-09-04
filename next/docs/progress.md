@@ -1578,6 +1578,44 @@ record's own position through one derivation, `curation.AuthenticPass`
   the verbs and the projection, with the mutation evidence D4 names;
   `ranking.md` new, `offers.md`, `qualification.md` (the deferral
   closed), `evals.md`, `projections.md` and `envelope.md` following)
+- the promotion evidence packet (build plan §5: the seven self-hosting
+  criteria mapped to evidence on `main`, the shadow run and the two
+  cutovers named as the reserved decisions they are; feeds the Phase
+  13 exit record) — os-98ce6f8a — **in review** (task PR against plan
+  #291: `next/docs/promotion.md`, one section per criterion with a
+  status from a closed vocabulary (`met`, `partial`, `not started`,
+  `reserved`) and its evidence as drill, file and PR rows; criteria 1,
+  2, 3, 5, 6 and 7 met (6 by the conformance report, #289, merged),
+  4 reserved on one question, the POSIX git server that hosts the
+  shadow ledger with the hook, the run itself at the enforced
+  self-hosted posture the criteria name; `internal/promotion` parsing the packet
+  strictly and holding every citation to the tree under `make check`
+  (`TestPacketCitesRealDrills`, a planted bogus citation failing by
+  name); criterion 5 met by writing the cutover and the rollback in
+  the build plan's three clauses; the shadow-run protocol as a
+  proposal (the declaration, the slice, the seven-day window, the
+  dual-run rule, the daily divergence diff, the five-bar audit at the
+  end); the III.R measurement ledger, seven rows, every one `not
+  measured`; the divergence log, empty until the window opens; the
+  handbook pointing at the packet)
+- the conformance report (Phase 13's exit line: "the conformance report
+  shows Part III complete at the enforced self-hosted posture"; the
+  preamble's "the doctor reports which Phase 13 criteria remain open")
+  — os-83bc3d84 — **in review** (task PR against plan #287:
+  `next/spec/conformance.json`, the charter's 128 Part III rows
+  verbatim with the status the exit records gave each (`met` with
+  evidence, `partial` or `routed` with a note, `open`), the posture
+  read off the enforced-only marker; `internal/conformance` parsing
+  Part III out of `SEED-NEXT.md` and holding the table to it row for
+  row in both directions, the vocabulary validated; `seed docs
+  generate` rendering `next/docs/generated/conformance.md` under the
+  drift gate; `seed doctor --repo` reporting the counts, every row not
+  yet met by pillar, row and status, the enforced-only rows set aside
+  at the cooperative posture and the mixed rows named there, and
+  `complete` only when every row is met at an enforced posture; Phase
+  13's rows `open` until its exit record flips them, III.R's routed
+  to promotion's measures; `next/spec/conformance.md` new, the
+  handbook following)
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
@@ -1887,6 +1925,76 @@ os-9e9ae30c's task PR (an administrative card, not a Phase 12 item),
 written by the two implementing sessions, one voice.
 
 
+## Shadow-run tooling (the promotion evidence packet's protocol, os-98ce6f8a)
+
+- `seed ledger audit`, the five-bar audit over any ledger, the shadow
+  run's evidence for charter III.R row 5 — os-7599c27d — **in
+  review** (task PR against plan #295: verify from genesis first, an
+  invalid chain refusing `chain_invalid` before any bar is read; the
+  unchanged `simulate.Audit` over the verified records; one envelope
+  with the five bars verbatim, stamped at the tip, `clean` on a clean
+  chain and `audit_violated` refining exit 28 on a violated one, the
+  message naming each bar with its records; `audit` in the registry
+  and the usage message, so `seed serve` carries `ledger.audit`;
+  drilled through the CLI with each plantable violation, the
+  corrupted and the genesis-less chain refusing before any bar;
+  `envelope.md`'s row and `simulation.md`'s sentence; the packet's
+  clause naming the verb follows once #294 is on `main`)
+
+## Backlog — true extras (docs/next-build-plan.md §3; filed when Phase 13's items were on `main`)
+
+- the contention benchmark at target scale (III.C row 4, routed here
+  by the Phase 12 exit record; the one conformance-relevant extra) —
+  os-a00d3f34 — **done** (#297 against plan #293:
+  `next/perf/budgets-scale.json`, 200 writers against the same
+  40-contract history, each writer its own enrolled actor (the
+  history enrolls a key per writer, the storm signs with it, the
+  measurer holds the chain to as many actors as writers), the timing
+  ceilings measured with those identities on the
+  implementing host and the attempts ceiling at twice the loop's
+  expected writers/2, provenance on every ceiling; the weekly
+  read-only `perf-scale` workflow running the unchanged `cmd/perfgate`
+  at that profile and attaching the reading pass or fail;
+  `TestScaleProfileIsHundredsOfWriters` pinning the profile and
+  `TestTreeWorkflowsHaveNoScheduledWriters` holding the tree's
+  scheduled workflows to `contents: read` outside v1's maintenance
+  lane; `checkpoints.md` "The scale profile"; the C.4 row stays
+  `partial`: the run demonstrates the scale without lost updates,
+  tracked in CI, and the row's "without unrelated writes racing each
+  other's admissions pathologically" is what sharded intake
+  (os-7953612b) would demonstrate, so the exit record cites the run
+  for what it shows and flips nothing on it; the run is red on a lost
+  append until os-5063e8ba's re-link lands, which is the carded
+  defect, not a regression)
+- sharded admission intake (III.B row 6, MAY) — os-7953612b —
+  **backlog** (filed; not conformance-blocking)
+- dashboard tiers beyond the report — os-f17567a6 — **backlog**
+  (filed; not conformance-blocking)
+- the flywheel engine drill's skip path racing TempDir cleanup on
+  macOS — os-222189a3 — **done** (#302 against plan #301; tests
+  only)
+- at 200 writers, one storm pushed a chain whose new record cited a
+  stale tip (`bad_prev` at the hook, classified as policy and not
+  retried), once in three runs, the one that crossed midnight UTC —
+  os-5063e8ba — **in review** (#300 against plan #299, merged;
+  filed from the scale benchmark's second measurement; P1: a lost append is what III.C row 4 forbids; the
+  drill first, then the fix, and the loop re-linking on a `bad_prev`
+  whose cited tip is not the tip it fetched)
+
+## A fixture that escaped the hardening guard (os-222189a3)
+
+- the flywheel engine drill's skip path races `t.TempDir`'s cleanup on
+  macOS (`unlinkat .../.git/objects: directory not empty`), reporting
+  a skipped drill as a failed one on #290's macOS leg — os-222189a3 —
+  **done** (#302 against plan #301: `requireEngine` reads the
+  pin from the source tree, the same shim and lock `instantiate`
+  copies, and runs as the drill's first statement, so a skip builds
+  nothing: twelve git spawns on the skip path before, none after;
+  `fixtureRepo` hardened right after `init`, written into the
+  repository's config; the guard's alternation gains `gitIn(`, the
+  helper name that had kept the fixture outside os-c4e8b57a's
+  property while the guard passed; tests only)
+
 ## Frontier
 
 
@@ -1931,31 +2039,45 @@ against plans #241, #244, #246, #247, #248, #249), with the reap arm
 by their items; the Phase 12 exit record above is card os-9e9ae30c's
 task PR (this card), which closes the phase.
 
-Phase 13 declares `deps: 12`, so its gate opens when this record
-merges; its items stand as their cards do. Item 1, racing mode
-(os-56bee171), is merged in #269 against plan #256. Item 4, request
-ingress and federation as read remotes (os-48df10a2), is merged in
-#270 against plan #257, closing III.J row 2. Item 5, the A2A-shaped
-cross-organization boundary (os-40ed0ca0), is in review in #279
-against plan #258. Item 6, the machine-protocol surface and platform
-parity (os-b55e5647), is in review in #273 against plan #261 and its
-amendment #278, the three-platform matrix green. Item 2, the
-remaining executor adapters (os-083112ac), is planned in #274 with a
-draft implementation in #282; item 3, the non-primary forge adapter
-(os-ad610334), is planned in #275 with a draft implementation in
-#281; item 7, tuple ranking as supervisor policy (os-c7554f18), is
-planned in #276. The two routed gaps (#265, #266) are merged.
+Phase 13 declares `deps: 12`, so its gate opened when the Phase 12
+exit record merged (#284), and every numbered item has a merged PR: 1
+in #269, 2 in #282, 3 in #281, 4 in #270, 5 in #279 (its
+canonicalization follow-up os-1c284ba8 merged, #290), 6 in #273, 7
+in #286; the two routed gaps (#265, #266) are merged. The conformance report
+(os-83bc3d84, #289) is merged, so the doctor reports the open rows;
+the promotion evidence packet (os-98ce6f8a, plan #291 open, task PR
+#294 in review) is the other thing the phase's exit line needs. The exit record (os-d63c7441, plan #288 merged) is parked
+on the packet: its plan writes the record only when the doctor
+reports complete, which III.R's rows make reachable after the shadow
+run and the cutovers, not before. The build plan's §3 backlog is
+filed now that the items are exhausted: the target-scale contention
+benchmark (os-a00d3f34, III.C row 4, the one conformance-relevant
+extra; merged as #297 against plan #293, two clean 200-writer
+readings and the defect it found carded as os-5063e8ba), sharded
+intake (os-7953612b) and dashboard tiers (os-f17567a6); the shadow
+run's tooling, `seed ledger audit` (os-7599c27d, plan #295 merged,
+task PR #296 in review); the coverage floor card (os-f262585a) is planned in
+#292; the macOS cleanup race in the flywheel drill's skip path is
+merged (#301, then #302; os-222189a3).
 
-**Next action: land Phase 13 — merge #279 and #273 as they clear
-review, then implement items 2, 3 and 7 as their plans merge (#274,
-#275, #276), the drafts un-drafted and receipted at that point** —
-and write the Phase 13 exit record when every item has a merged PR.
-The derivation, stated rather than read off a summary: every Phase 12
-item has a merged PR and the exit record above walks III.B, III.O and
-III.P with III.C, III.L, III.M and III.Q and routes what it found
-unmet (III.C row 4, III.L row 4, III.Q row 7), so nothing in Phase 12
-remains to claim; Phase 13's items 1 and 4 are merged, 5 and 6 are in
-review, and 2, 3 and 7 are planned.
+**Next action: the operator's answer at the promotion gate.**
+`next/docs/promotion.md` presents the seven criteria of build plan
+§5: 1, 2, 3, 5, 6 and 7 met, 4 reserved on one question, the POSIX
+git server that hosts the shadow ledger with the hook, the run at the
+enforced self-hosted posture the criteria name. Until that answer the agent-side work is to merge the
+open PRs as they clear review (#296 with its plan amendment #303;
+#300; #292), fix the
+scale defect (os-5063e8ba) so the weekly run can be green (III.C
+row 4 stays `partial` on it: the charter's clause is sharded
+intake's, os-7953612b), and keep the packet's citations true. After the answer: the
+shadow run per the packet's protocol, its measurements recorded into
+the packet by follow-up cards, the two escalated cutovers, and only
+then the Phase 13 exit record. The derivation, stated rather than
+read off a summary: every Phase 13 item has a merged PR; the exit
+line's remaining criterion, the conformance report showing Part III
+complete, cannot be met by any agent act, because the table routes
+III.R's rows to measurements the shadow run supplies and the shadow
+run needs a deployment only the operator can authorize.
 
 **The destination is promotion (spin-out)**, defined in
 `docs/next-build-plan.md` §5 (merged #169, card os-768361cc) as two

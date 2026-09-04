@@ -65,6 +65,14 @@ run leaves every list empty:
 4. **Guardrail breaches** — every `claim.taken` rides a published offer.
 5. **Unreserved spend** — every `run.started` sits inside a reservation.
 
+The same audit runs over any ledger through `seed ledger audit
+--ledger <dir>` (plans/os-7599c27d.md): the chain is verified from
+genesis first, then the five bars are read from the verified records,
+a clean chain answering with every list empty and a violated bar
+refusing `audit_violated` (exit 28) naming the bar and the records.
+This is how the shadow run's real chain is measured against charter
+III.R row 5 (`next/docs/promotion.md`).
+
 Each bar's violation, planted once, is caught by name (the drills in
 `internal/simulate`).
 

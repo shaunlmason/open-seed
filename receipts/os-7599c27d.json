@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "task": "os-7599c27d",
+  "merge_base": "c1b76f86ea05367e34fdec9791242925374230fc",
+  "head": "6da5ee274229b9a0c55146a33e875859801795c0",
+  "plan_path": "plans/os-7599c27d.md",
+  "plan_sha256": "1cc233ecfd7fb03c918b7a95bac56cda04daaded94239f65c42c2712e997813d",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/catalog.go",
+    "next/cmd/seed/ledger.go",
+    "next/cmd/seed/ledger_audit_test.go",
+    "next/cmd/seed/serve_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/docs/promotion.md",
+    "next/spec/envelope.md",
+    "next/spec/simulation.md"
+  ],
+  "diff_sha256": "86c25b6b487a5026c57fceaf8c6f982d6c975ddab7c94a276d8e4b95ec189c76",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Ledger|Registry|Serve|Audit' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}
