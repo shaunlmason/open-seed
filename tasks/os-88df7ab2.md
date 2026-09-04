@@ -1,13 +1,11 @@
 ---
 id: os-88df7ab2
 title: 'next: the unreserved-spend bar counts a reservation''s occurrence, not an open valid one (III.R row 5)'
-state: blocked
+state: ready
 priority: P2
 squad: core
-blocked_on:
-    - plan:309
 created_at: "2026-09-04T09:52:36Z"
-updated_at: "2026-09-04T11:55:27Z"
+updated_at: "2026-09-04T13:27:00Z"
 ---
 
 simulate.Audit's unreserved-spend bar sets one boolean on any `budget.reserve` record and clears it only on `claim.taken` (next/internal/simulate/audit.go). Two consequences, both on the chains `seed ledger audit` is pointed at:
