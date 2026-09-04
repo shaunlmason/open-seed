@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "task": "os-b86dab4c",
+  "merge_base": "05e904b5764cbd193d0f2d0fecff82ed45bad439",
+  "head": "e14ac36daff4baa8971454d4564b6d1a6db5cbd5",
+  "plan_path": "plans/os-b86dab4c.md",
+  "plan_sha256": "3280a42adbd9a4ed906c0e79399bce13473d89f113be47cd96c38e467dae400f",
+  "diff_files": [
+    "memory/LEARNINGS.md",
+    "next/cmd/seed/ledger_audit_test.go",
+    "next/docs/decisions.md",
+    "next/docs/progress.md",
+    "next/internal/simulate/audit.go",
+    "next/internal/simulate/audit_test.go"
+  ],
+  "diff_sha256": "dae04efa900c086abff19591d6f610e02c4b069579504f27a07e16e1a4bbe859",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/simulate/ -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "cd next \u0026\u0026 go test ./cmd/seed/ -run 'LedgerAudit' -count=1",
+      "exit": 0
+    },
+    {
+      "cmd": "make check",
+      "exit": 0
+    }
+  ],
+  "generated_by": "local"
+}

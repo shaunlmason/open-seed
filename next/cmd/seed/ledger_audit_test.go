@@ -33,7 +33,7 @@ func auditLedger(t *testing.T, verbs ...string) (string, string) {
 	return ld, priv
 }
 
-var happyPath = []string{"intent.filed", "contract.specified", "offer.published", "claim.taken", "budget.reserved", "run.started", "submission.made"}
+var happyPath = []string{"intent.filed", "contract.specified", "offer.published", "claim.taken", "budget.reserve", "run.started", "submission.made"}
 
 // conformance: III.R row 5 — the five-bar audit over any ledger
 // (plans/os-7599c27d.md AC1, AC2). A subject driven cleanly to a
@@ -61,9 +61,9 @@ func TestLedgerAuditCleanAndEachBar(t *testing.T) {
 		verbs []string
 		bar   string
 	}{
-		{"an unclosed window", []string{"intent.filed", "contract.specified", "offer.published", "claim.taken", "budget.reserved"}, "silent_abandonments"},
+		{"an unclosed window", []string{"intent.filed", "contract.specified", "offer.published", "claim.taken", "budget.reserve"}, "silent_abandonments"},
 		{"an unreserved run", []string{"intent.filed", "contract.specified", "offer.published", "claim.taken", "run.started", "submission.made"}, "unreserved_spend"},
-		{"an unoffered claim", []string{"intent.filed", "contract.specified", "claim.taken", "budget.reserved", "run.started", "submission.made"}, "guardrail_breaches"},
+		{"an unoffered claim", []string{"intent.filed", "contract.specified", "claim.taken", "budget.reserve", "run.started", "submission.made"}, "guardrail_breaches"},
 		{"an illegal transition", []string{"claim.taken", "intent.filed"}, "chain_violations"},
 	}
 	for _, c := range cases {
