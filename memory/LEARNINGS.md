@@ -1806,3 +1806,46 @@ the assertions read, and there is no copy to go stale.
   delimited region by counting depth rather than excluding the
   delimiter, and be suspicious of a test that asserts the gate
   deliberately does not look at something.
+
+## An evidence file that hashes a moving target is a cache, not a check
+
+Verify was the whole failure surface: sixteen of the last sixteen
+`check-validate` failures on task PRs were its one step, twelve of them
+receipt bookkeeping (nine mismatch, three missing) and four a plan that
+had merged after the branch was cut. Purity caught nothing; validation
+caught nothing; the reviewer-identity check never even ran, because a
+failed step skips the rest of the job.
+
+- **Ask what a comparison proves before enforcing it.** The receipt
+  committed `merge_base`, `head`, `diff_files` and `diff_sha256`, and
+  verify compared those bytes. But D4.5 already says the local receipt
+  is advisory and CI regeneration is the truth (R11): a forged snapshot
+  loses to regeneration either way, so the comparison added no
+  integrity. What it added was an ordering constraint, that no push may
+  follow receipt generation, which review fixes and base merges make
+  impossible to satisfy. A rule nobody can hold and nothing needs is a
+  bottleneck wearing a gate's clothes.
+- **Split what an author can assert from what a verifier finds.** The
+  committed file is now the *claim*: task, plan pin, authorized
+  commands, all functions of the approved plan alone, so it survives
+  rebases and base merges and goes stale only when the plan changes,
+  which is exactly when re-verification is warranted. The snapshot
+  became the *attestation*, emitted per CI run and committed by nobody.
+  The file stopped describing a diff it could not know at authoring
+  time, which is also why agents kept regenerating it.
+- **One error message for two conditions with different remedies costs
+  a run every time.** "No approved plan at merge-base" meant either an
+  unplanned branch (a D3 violation) or a branch cut before its own plan
+  PR merged (one `git merge`). Naming the remedy in the message, and
+  checking it at worktree creation instead, turns a full red matrix
+  into a one-second refusal.
+- **A gate with no local counterpart trains people to discover it in
+  CI.** `pre-merge.d/` ran `make check` and nothing else, so the rule
+  that failed every red build had no way to fail fast. It runs the same
+  `seed receipt verify` now, in about a second.
+- **Excluding a path from a hash excludes it from every check that
+  reads the hash.** `receipts/**` is out of the diff so that committing
+  a receipt cannot change its own hash, which also meant purity never
+  saw a task PR editing another task's receipt. Purity runs over the
+  full changed-file list now. When you exclude something for one
+  computation, go and look at what else was reading that list.

@@ -172,7 +172,9 @@ open-seed/                     # default branch
 ├── skills/                    # Agent Skills source of truth
 ├── rules/                     # rule fragments synced into AGENTS.md managed block
 ├── plans/                     # plans/<task-id>.md: stable path, pinned by hash (D3)
-├── receipts/                  # <task-id>.json: gated by CI verify (D4.5); the pr-review
+├── receipts/                  # <task-id>.json: the claim (task + plan pin + authorized
+│                              #   commands), gated by CI verify (D4.5); CI's own
+│                              #   attestation is a run artifact, never committed; the pr-review
 │                              #   workflow adds <task-id>.review.md once activated (v1: the
 │                              #   GitHub PR review itself is the review record)
 ├── memory/                    # LEARNINGS.md, DEADENDS.md: appended via task PRs (D5)

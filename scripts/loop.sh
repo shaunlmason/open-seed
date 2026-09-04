@@ -63,9 +63,21 @@ while [ "$iteration" -lt "$max_iterations" ]; do
     exit 0
   fi
 
-  # No approved plan → not this loop's job (the planner role plans); skip.
-  if [ ! -f "plans/$id.md" ]; then
-    say "skipping $id: no approved plan at plans/$id.md (L2 requires one)"
+  # The base every gate judges against: the remote's view of the default
+  # branch where there is one, so a root checkout that has not been fetched
+  # cannot become a branch point that CI later rejects (D3).
+  git fetch --quiet origin main >/dev/null 2>&1 || true
+  base=HEAD
+  for ref in origin/main main; do
+    git rev-parse --verify --quiet "$ref^{commit}" >/dev/null && { base="$ref"; break; }
+  done
+
+  # No approved plan AT THE BASE → not this loop's job (the planner role
+  # plans); skip. Read the base blob, never the working tree: a plan that is
+  # merged but unfetched, or present locally but unmerged, both answer the
+  # working-tree question wrongly.
+  if ! git cat-file -e "$base:plans/$id.md" 2>/dev/null; then
+    say "skipping $id: no approved plan at plans/$id.md on $base (L2 requires one)"
     skipped="$skipped $id"
     continue
   fi
@@ -81,14 +93,27 @@ while [ "$iteration" -lt "$max_iterations" ]; do
   wt="$root/.seed-wt/$id"
   git worktree remove --force "$wt" >/dev/null 2>&1 || true
   git branch -D "seed/$id" >/dev/null 2>&1 || true
-  if ! git worktree add -B "seed/$id" "$wt" HEAD >/dev/null 2>&1; then
+  if ! git worktree add -B "seed/$id" "$wt" "$base" >/dev/null 2>&1; then
     release_card "$id" "$token" "worktree creation failed"
     consecutive_failures=$((consecutive_failures + 1))
     continue
   fi
+  # Post-create hooks gate the worktree: a non-zero exit means it is not fit
+  # to work in (no plan at the branch point, say), which is worth one second
+  # here rather than a red CI run after the work is done.
+  create_rc=0
   for hook in .seed/hooks/post-create.d/*; do
-    [ -x "$hook" ] && (cd "$wt" && SEED_MAIN_CHECKOUT="$root" "$hook") || true
+    [ -x "$hook" ] || continue
+    (cd "$wt" && SEED_MAIN_CHECKOUT="$root" SEED_REPO_ROOT="$root" SEED_WORKTREE="$wt" \
+      SEED_BRANCH="seed/$id" SEED_TARGET_BRANCH="$base" SEED_TASK="$id" "$hook") || create_rc=$?
+    [ "$create_rc" -ne 0 ] && break
   done
+  if [ "$create_rc" -ne 0 ]; then
+    release_card "$id" "$token" "post-create hook refused the worktree (exit $create_rc)"
+    consecutive_failures=$((consecutive_failures + 1))
+    [ "$consecutive_failures" -ge "$breaker_limit" ] && { say "circuit breaker: $consecutive_failures consecutive failures"; exit 1; }
+    continue
+  fi
 
   # Lease renewal at half-lease cadence while the harness runs (§7.1).
   # Fully detached from our stdio so an in-flight sleep can never hold a
@@ -154,18 +179,22 @@ while [ "$iteration" -lt "$max_iterations" ]; do
     "$seed" mail ack --actor "$actor" --id "$m" >/dev/null 2>&1 || true
   done
 
-  # The gate (mechanical, both halves must pass): blocking pre-merge hooks,
-  # then receipt generation executing the merge-base plan's validation
-  # commands. A local green is a pre-check; CI verify remains the authority
-  # (R11).
+  # The gate (mechanical): write the claim, then run the blocking pre-merge
+  # hooks, one of which is the same verify command CI runs. The claim is
+  # written first because verify checks it; it pins the plan this work was
+  # implemented against and nothing else, so no later commit can invalidate
+  # it. A local green is a pre-check; CI verify remains the authority (R11).
   gate_rc=0
-  for hook in .seed/hooks/pre-merge.d/*; do
-    [ -x "$hook" ] && (cd "$wt" && "$hook") || gate_rc=$?
-    [ "$gate_rc" -ne 0 ] && break
-  done
+  (cd "$wt" && "$seed" receipt generate "$id" --base "$base" --write --by "$actor" >/dev/null \
+    && git add receipts \
+    && { git diff --cached --quiet || git commit -q -m "receipt: $id"; }) || gate_rc=$?
   if [ "$gate_rc" -eq 0 ]; then
-    (cd "$wt" && "$seed" receipt generate "$id" --base "$(git -C "$root" rev-parse HEAD)" --run --write --by "$actor" >/dev/null \
-      && git add receipts && git commit -q -m "receipt: $id") || gate_rc=$?
+    for hook in .seed/hooks/pre-merge.d/*; do
+      [ -x "$hook" ] || continue
+      (cd "$wt" && SEED_REPO_ROOT="$root" SEED_WORKTREE="$wt" SEED_BRANCH="seed/$id" \
+        SEED_TARGET_BRANCH="$base" SEED_TASK="$id" "$hook") || gate_rc=$?
+      [ "$gate_rc" -ne 0 ] && break
+    done
   fi
 
   if [ "$gate_rc" -ne 0 ]; then
