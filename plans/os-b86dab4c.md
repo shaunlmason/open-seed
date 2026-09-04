@@ -30,10 +30,10 @@ counts). Deps: none.
   ever been read through fixtures that carry the typo.
 - **The protocol already publishes what the audit is guessing at.**
   `transition` exports the verb constants (`BudgetReserveVerb`,
-  `OfferPublishedVerb`, `RunStartedVerb`), `Table.Verbs()` enumerates
-  every verb the table defines, and `transition.IsExit(verb)` is the
-  deliberate-exit predicate the audit re-implements as its own
-  `deliberateExit` map. Three copies of protocol knowledge, one of
+  `OfferPublishedVerb`, `RunStartedVerb`) and `transition.IsExit(verb)`,
+  the deliberate-exit predicate the audit re-implements as its own
+  `deliberateExit` map, while `admit.CatalogVerbs()` enumerates every
+  verb the boundary drafts. Three copies of protocol knowledge, one of
   which has already drifted.
 
 ## Design decisions (binding for this task)
@@ -48,12 +48,18 @@ counts). Deps: none.
   `deliberateExit` map is replaced by `transition.IsExit`, whose four
   verbs it duplicates exactly today. One authority, so the second copy
   cannot drift the way the first did.
-- **D3 — a drill holds every verb the audit names to the table.** The
-  audit exports the set of verbs it reads; a drill asserts each is in
-  `Table.Verbs()`. That is the guard for the class: it fails on a verb
-  the protocol does not define, whatever the reason, and it is what
-  would have caught this. A verb the table legitimately does not carry
-  is named in the drill with its reason, never skipped silently.
+- **D3 — a drill holds every verb the audit names to the boundary's
+  catalog.** The audit exports the set of verbs it reads; a drill
+  asserts each is in `admit.CatalogVerbs()`, every verb the boundary
+  drafts. That is the guard for the class: it fails on a verb the
+  protocol never emits, whatever the reason, and it is what would have
+  caught this. **Not** `transition.Table.Verbs()`, which the first
+  draft of this plan named: that list is the lifecycle subset and
+  carries neither `budget.reserve` nor `run.started`, so the guard
+  written against it fails on two verbs the protocol does define
+  (measured while implementing; the amendment is this bullet).
+  `internal/admit` does not import `internal/simulate`, so the drill's
+  import is acyclic.
 - **D4 — the fixtures move, and the regression is the one the old
   drills could not fail.** `audit_test.go` and the CLI drill's
   histories file `budget.reserve`; a new drill asserts both arms: a
@@ -70,7 +76,7 @@ counts). Deps: none.
 
 1. D1 and D2 in `internal/simulate/audit.go`; the exported verb set D3
    reads.
-2. D3's table drill and D4's two-arm regression in
+2. D3's catalog drill and D4's two-arm regression in
    `internal/simulate/audit_test.go`; the fixtures moved to the
    protocol's verb.
 3. The CLI drill's histories in `cmd/seed/ledger_audit_test.go`.
@@ -100,8 +106,9 @@ NOT `next/spec/**`, NOT `.seed/**`.
    `budget.reserved` before `run.started` reads as unreserved spend
    naming the subject; reverting D1 fails this drill by name.
 3. **The audit's vocabulary is the protocol's.** A drill holds every
-   verb the audit reads to `Table.Verbs()` and fails on a planted verb
-   the table does not define.
+   verb the audit reads to `admit.CatalogVerbs()`, asserts the catalog
+   is non-empty so it cannot pass vacuously, and asserts the old name
+   is absent from it so the mutation in AC2 means something.
 4. `make check` green; no model identifiers in any committed artifact.
 
 **Retention set (existing, shown unharmed):**
