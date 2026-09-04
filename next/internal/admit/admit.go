@@ -24,6 +24,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/classify"
 	"github.com/shaunlmason/open-seed/next/internal/curation"
+	"github.com/shaunlmason/open-seed/next/internal/erasure"
 	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/flywheel"
@@ -897,6 +898,60 @@ func coreRules() []Rule {
 				if prior.Event.Verb == imported.Verb {
 					return &Refusal{Rule: "imported", Err: fmt.Errorf("the ledger already carries an import at position %d: a genesis import refuses a ledger that is not empty", i)}
 				}
+			}
+			return nil
+		}},
+		{Name: "erasure", Check: func(c *Context, rec *event.Record) error {
+			// The erasure fact (plans/os-db5cd353.md D1, D2;
+			// next/spec/protocol.md "Erasure"): artifact.erased is a
+			// fact that changes no state, additive catalog growth
+			// active from seed/1, admitted with its strict shape on
+			// the contract whose fold references the digest (its
+			// sealed commitment or a verdict's receipt) or on system,
+			// where the operator's attestation is the reference; an
+			// artifact erased once on a subject is not erased there
+			// again. Standing and the operator grant are the keyring
+			// and grant rules'; this rule holds the shape, the
+			// reference and the once.
+			if rec.Event.Verb != erasure.Verb || !keyring.Applies(c.Active) {
+				return nil
+			}
+			subject := rec.Event.Subject
+			p, err := erasure.Parse(subject, rec.Event.Payload)
+			if err != nil {
+				return err
+			}
+			if c.Lifecycle == nil {
+				return &erasure.Error{Subject: subject, Reason: "no lifecycle is known to resolve the reference"}
+			}
+			if subject != erasure.SystemSubject {
+				s, ok := c.Lifecycle.State(subject)
+				if !ok {
+					return &erasure.Error{Subject: subject, Reason: "no contract by that id is on this chain: an erasure is on the contract that references the artifact, or on system"}
+				}
+				referenced := s.Sealed != nil && s.Sealed.Commitment == p.Artifact
+				var known []string
+				if s.Sealed != nil {
+					known = append(known, "sealed commitment "+s.Sealed.Commitment)
+				}
+				for _, v := range s.Verdicts {
+					if v.Receipt == p.Artifact {
+						referenced = true
+					}
+					if v.Receipt != "" {
+						known = append(known, fmt.Sprintf("receipt %s (verdict at position %d)", v.Receipt, v.Pos))
+					}
+				}
+				if !referenced {
+					what := "nothing by digest"
+					if len(known) > 0 {
+						what = strings.Join(known, ", ")
+					}
+					return &erasure.Error{Subject: subject, Reason: fmt.Sprintf("artifact %s is not one this contract references: its fold holds %s — erase a referenced artifact on its contract, or an artifact referenced elsewhere on system", p.Artifact, what)}
+				}
+			}
+			if prior, done := c.Lifecycle.Erasure(subject, p.Artifact); done {
+				return &erasure.Error{Subject: subject, Reason: fmt.Sprintf("artifact %s was erased at position %d by %s: an artifact is erased once, and a second record would attribute an act that did nothing", p.Artifact, prior.Pos, prior.Signer)}
 			}
 			return nil
 		}},

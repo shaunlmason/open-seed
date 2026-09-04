@@ -95,6 +95,13 @@ type probeView struct {
 	// rather than by a guess (plans/os-48df10a2.md).
 	requestAbout string
 	request      string
+	// erasable is the digest the queried subject's fold references
+	// (its sealed commitment, else its latest verdict's receipt), the
+	// artifact an artifact.erased probe on it names; a zero digest
+	// when it references none, which the erasure rule refuses as
+	// unreferenced, so the verb is drafted exactly where something is
+	// erasable (plans/os-db5cd353.md D6).
+	erasable string
 }
 
 // qualificationProbes derives the qualification verbs' payloads for
@@ -508,6 +515,9 @@ var affordanceCatalog = []struct {
 		}
 		return `{"origin": "probe", "kind": "dashboard-action", "reference": "probe @ ` + strings.Repeat("0", 7) + `", "summary": "probe"` + about + `}`
 	}},
+	{"artifact.erased", func(v *probeView) string {
+		return `{"artifact": "` + v.erasable + `", "reason": "probe"}`
+	}},
 	{"request.answered", func(v *probeView) string {
 		// The dispatcher's close of the first unanswered request on
 		// the queried subject, declined with a reason: filed would
@@ -710,6 +720,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		escalation:  "0",
 		position:    fmt.Sprintf("%d", ctx.Count),
 		request:     "0",
+		erasable:    strings.Repeat("0", 64),
 	}
 	v.version = ctx.Active
 	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
@@ -724,6 +735,11 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		}
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			v.requestAbout = subject
+			if s.Sealed != nil {
+				v.erasable = s.Sealed.Commitment
+			} else if s.Verdict != nil && s.Verdict.Receipt != "" {
+				v.erasable = s.Verdict.Receipt
+			}
 			if s.Claim != nil {
 				v.fence = fmt.Sprintf("%d", s.Claim.Fence)
 				v.active = true

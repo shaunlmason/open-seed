@@ -92,8 +92,14 @@ named, **mutable** bucket beside the content-addressed store,
 referenced from the ledger only by the immutable commitment. Content
 is not digest-checked on the way out: the commitment verifies the
 decrypted plaintext, not the ciphertext, which rotation rewrites.
-Deleting a ciphertext is the charter's erasure path; the audit
-surfaces the absence, never silence.
+Deleting a ciphertext is the charter's erasure path, and from
+os-db5cd353 the path is a verb: `seed artifact erase` records
+`artifact.erased` on the subject, citing the commitment and the
+obligation honored, and then removes the file
+([`protocol.md`](protocol.md), "Erasure"). The audit surfaces the
+absence either way, never silence: an erasure the chain records is
+listed with its position, signer and reason, and one it does not is a
+finding.
 
 **Rotation** (`seed seal rotate`) re-encrypts every *open* sealed
 subject to the current verifier keyring: decrypt with a still-able
@@ -156,6 +162,14 @@ verifier. The scan reads only the documented age v1 recipient stanza
 lines; payloads stay opaque. Tags are agessh's four-byte key
 fingerprints — an identification hint, not a proof of exclusivity;
 the capability audit's decrypt drills carry the cryptographic claim.
+
+An erased ciphertext is the one absence that is not a finding: when
+the chain holds an `artifact.erased` for the subject's commitment
+(plans/os-db5cd353.md D4), the audit lists the subject under `erased`
+with the record's position, signer, reason and timestamp, and stays
+clean; a ciphertext deleted with no record stays
+`seal_evidence_missing`. A render on an erased subject still refuses
+`seal_broken`, its message naming the erasure rather than an absence.
 
 Record-side, `internal/reconcile` surfaces two classes in `seed
 reconcile` and the report: the neutral `unsealed` (an above-trivial

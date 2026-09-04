@@ -295,6 +295,51 @@ admission).
   proposal's PR landed the file in the registry, on the shape, citing
   the file and the PR), both from [`flywheel.md`](flywheel.md) as
   additive catalog growth, active from `seed/1`.
+- `artifact.*` — `erased` (the operator's signed record that an
+  artifact the chain references by digest was erased, on the contract
+  whose fold references it or on `system`; the section below), additive
+  catalog growth, active from `seed/1`.
+
+## Erasure
+
+The chain references bodies by hash and never carries them (the data
+classification below), so erasing the bytes an artifact digest keys
+never breaks verification: that is the first half of charter III.A row
+7, and it is structural. The second half, "the erasure is itself an
+attributable event", is **`artifact.erased`** (plans/os-db5cd353.md):
+
+- **Shape.** The strict object `{"artifact": "<lowercase-hex
+  sha256>", "reason": "<one line, at most 200 bytes>"}`
+  (`internal/erasure`): the digest the chain references the artifact
+  by, and the obligation honored, never a body.
+- **Subject.** The contract whose fold references the digest, which
+  admission holds: the subject's sealed commitment
+  ([`sealed-checks.md`](sealed-checks.md)) or one of its verdicts'
+  receipt digests ([`verdicts.md`](verdicts.md)); an unreferenced
+  digest refuses `erasure_refused` (exit 3) naming what the contract
+  does reference. On `system` any well-formed digest admits: the
+  operator's attestation is the reference, for an artifact a payload
+  cites that no contract's fold indexes by digest.
+- **Once.** An artifact erased on a subject is not erased there again;
+  the refusal names the position and signer of the first record, since
+  a second would attribute an act that did nothing.
+- **Grant.** `operator` only ([`actors.md`](actors.md)): an erasure
+  obligation is a governance act a human answers for, the
+  `decision.recorded` posture; no lane's loop erases.
+- **A fact.** The record changes no lifecycle state; the fold keeps it
+  (`Fold.Erasures`, `Fold.Erasure(subject, artifact)`), and the seal
+  audit reads it: a missing ciphertext whose commitment the chain holds
+  an erasure for is an honored erasure, listed with its position,
+  signer and reason and no finding, while one with no record stays
+  `seal_evidence_missing`, the unattributed absence the row forbids.
+- **The verb records before it removes.** `seed artifact erase
+  --subject <contract|system> --artifact <digest> --reason <text>
+  --repo <dir>` appends the record through the loop seam, then empties
+  the store's buckets under the digest (the sealed ciphertext, the
+  content, or both) and reports `removed`; an erasure that already
+  stands is finished rather than re-recorded. The order is the point: a
+  record with the bytes still present is a promise the next run keeps,
+  and bytes gone with no record is the silence the row forbids.
 
 ## Data classification (summary)
 

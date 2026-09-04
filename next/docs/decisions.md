@@ -3798,3 +3798,46 @@ threading the declaration through the verb and correcting the row's
 wording. Writing this down is the point: the offer rule most likely
 grew from a bar whose contract named something else and whose
 something else was unreachable.
+
+## Erasure is a verb, so the absence has an author (os-db5cd353)
+
+**The charter's word decides between the two courses.** The card
+offered adding an erasure verb or revising III.A row 7 to say
+"surfaced" instead of "attributable". The autonomy contract prefers
+the charter's normative text and the charter wrote "attributable"
+deliberately: a lint finding that a ciphertext is gone names neither
+who erased it nor when, and cannot be verified by a fresh reader from
+the chain. So the verb was added.
+
+**Additive catalog growth, no version bump.** `protocol.md` says of
+`offer.*`, `curation.*` and `workflow.*` that older validators refuse
+an unknown verb safely, so the version does not bump; `artifact.erased`
+is the same kind of fact, active from `seed/1`, judged by its own
+admission rule and inert below it.
+
+**The reference is the contract's own.** On a contract subject the
+digest must be one that subject's fold references (its sealed
+commitment or a verdict's receipt): the fold indexes those by digest,
+so admission can hold the citation. Every other artifact the chain
+cites lives in a payload no fold indexes, and for those the operator
+erases on `system`, its attestation being the reference. A stricter
+rule would need a digest index over every payload, which is a
+projection's job and not admission's.
+
+**Operator only, once.** An erasure obligation is a governance act a
+human answers for, the `decision.recorded` posture, and no lane's loop
+erases. An artifact erased once on a subject is not erased there
+again: a second record would attribute an act that did nothing, so
+the verb finishes a standing erasure (removes what remains) rather
+than re-recording it.
+
+**An honored erasure is not a finding.** The seal audit lists an erased
+ciphertext with its attribution and stays clean; only a deletion with
+no record is `seal_evidence_missing`. That is the row's whole point:
+the absence is honorable exactly when the chain says who and why.
+
+**Record first, then remove.** `seed artifact erase` appends the record
+and then empties the store, because a record with the bytes still
+present is a promise the next run keeps, while bytes gone with no
+record is the silence the row forbids.
+

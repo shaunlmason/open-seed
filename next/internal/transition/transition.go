@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/erasure"
 	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
@@ -951,6 +952,47 @@ type Fold struct {
 	// regressions keep the maximum count, so tolerated history never
 	// lowers the monotonic bar.
 	milestones map[string]milestoneFact
+	// erasures is every artifact.erased applied, in order
+	// (plans/os-db5cd353.md D4): the attributable half of III.A row
+	// 7, kept beside the lifecycle like the requests, so the seal
+	// audit can name who erased a ciphertext and why rather than
+	// report an absence. ErasureAnomalies counts the malformed ones.
+	erasures         []ErasureFact
+	ErasureAnomalies int
+}
+
+// ErasureFact is one erasure (artifact.erased) as the fold keeps it:
+// who erased which artifact, on which subject, at which position, and
+// the obligation named.
+type ErasureFact struct {
+	Pos      int
+	TS       string
+	Signer   string
+	Subject  string
+	Artifact string
+	Reason   string
+}
+
+// Erasures is every erasure the fold applied, in chain order.
+func (f *Fold) Erasures() []ErasureFact { return append([]ErasureFact(nil), f.erasures...) }
+
+// Erasure finds the erasure of an artifact on a subject, if one stands.
+func (f *Fold) Erasure(subject, artifact string) (ErasureFact, bool) {
+	for _, e := range f.erasures {
+		if e.Subject == subject && e.Artifact == artifact {
+			return e, true
+		}
+	}
+	return ErasureFact{}, false
+}
+
+func (f *Fold) foldErasure(pos int, e *event.Event) {
+	p, err := erasure.Parse(e.Subject, e.Payload)
+	if err != nil {
+		f.ErasureAnomalies++
+		return
+	}
+	f.erasures = append(f.erasures, ErasureFact{Pos: pos, TS: e.TS, Signer: e.Actor, Subject: e.Subject, Artifact: p.Artifact, Reason: p.Reason})
 }
 
 // PlanApproved reports the subject's approved-plan anchor, if any.
@@ -1001,6 +1043,14 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		// lifecycle, read at seed/7 positions only.
 		if e.Verb == "request.filed" || e.Verb == "request.answered" {
 			f.foldRequest(pos, e)
+			continue
+		}
+		// The erasure fact (plans/os-db5cd353.md D4): additive catalog
+		// growth active from seed/1, beside the lifecycle.
+		if e.Verb == erasure.Verb {
+			if version.Activated(e.V) {
+				f.foldErasure(pos, e)
+			}
 			continue
 		}
 		if !version.Activated(e.V) {

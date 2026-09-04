@@ -18,6 +18,7 @@ import (
 	"crypto/ed25519"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,7 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 		packet:      probePacket,
 		position:    fmt.Sprintf("%d", ctx.Count),
 		request:     "0",
+		erasable:    strings.Repeat("0", 64),
 	}
 	if ctx.Lifecycle != nil {
 		// The request probes' citations, as the production view
@@ -58,6 +60,14 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 		}
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			v.requestAbout = subject
+			// The erasure probe's digest, as the production view
+			// carries it (plans/os-db5cd353.md D6): the sealed
+			// commitment, else the latest receipt.
+			if s.Sealed != nil {
+				v.erasable = s.Sealed.Commitment
+			} else if s.Verdict != nil && s.Verdict.Receipt != "" {
+				v.erasable = s.Verdict.Receipt
+			}
 			if s.Claim != nil {
 				v.fence = fmt.Sprintf("%d", s.Claim.Fence)
 				v.active = true

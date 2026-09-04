@@ -1,0 +1,192 @@
+package main
+
+// III.A row 7 through the terminal (plans/os-db5cd353.md AC1, AC2,
+// AC3): erasing a referenced artifact never breaks chain verification,
+// and the erasure is itself an attributable event, read back from the
+// chain by the audit and by a fresh reader.
+
+import (
+	"crypto/ed25519"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/shaunlmason/open-seed/next/internal/artifact"
+	"github.com/shaunlmason/open-seed/next/internal/version"
+)
+
+// conformance: III.A row 7 — `artifact erase` records the erasure
+// under the operator's key and then removes the bytes; the chain
+// verifies afterward; `seal audit` names the erased subject with the
+// record's position, signer and reason and stays clean, while a
+// ciphertext deleted with no record stays seal_evidence_missing; a
+// render on the erased subject refuses naming the erasure; a re-run
+// finishes rather than re-records; a content artifact is erased on
+// system; the grant, the reference and the shape refuse by name.
+func TestArtifactEraseIsAttributableAndNeverBreaksTheChain(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the sealed fixture's checks run a POSIX shell (next/spec/platform.md); the erasure rule's drills run everywhere in internal/admit")
+	}
+	dir, priv, _ := writeKeys(t)
+	ld := filepath.Join(dir, "ledger")
+	if _, code := runEnv(t, "init", "--ledger", ld, "--key", priv); code != 0 {
+		t.Fatal("init failed")
+	}
+	src, base, specCommit, head := verdictRepo(t)
+	v1Key, v1Pub, v1FP := writeWorkerKey(t, 9)
+	sealKey, sealPub, sealFP := writeWorkerKey(t, 10)
+	implKey, implPub, implFP := writeWorkerKey(t, 11)
+	for _, step := range [][]string{
+		{"system.protocol.upgraded", "system", `{"to": "` + version.Seed1 + `"}`},
+		{"actor.enrolled", v1FP, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "verifier"}`, v1Pub)},
+		{"actor.enrolled", sealFP, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "sealer"}`, sealPub)},
+		{"actor.enrolled", implFP, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "implementer"}`, implPub)},
+		{"actor.granted", v1FP, `{"capability": "verdict"}`},
+		{"actor.granted", sealFP, `{"capability": "sealer"}`},
+		{"actor.granted", implFP, `{"capability": "claim"}`},
+	} {
+		if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv,
+			"--verb", step[0], "--subject", step[1], "--payload", step[2]); code != 0 {
+			t.Fatalf("%s: %d %+v", step[0], code, e)
+		}
+	}
+	seed := make([]byte, ed25519.SeedSize)
+	for i := range seed {
+		seed[i] = byte(i + 1)
+	}
+	rootKey := ed25519.NewKeyFromSeed(seed)
+	rng := base + ".." + head
+	checks := writeChecks(t, "# sealed", "true")
+	c1 := driveToReview(t, ld, src, sealKey, rootKey, "c-1", specCommit, rng, checks)
+	c2 := driveToReview(t, ld, src, sealKey, rootKey, "c-2", specCommit, rng, checks)
+	sealedPath := func(c string) string { return filepath.Join(src, "next", "var", "artifacts", "sealed", c+".age") }
+	for _, c := range []string{c1, c2} {
+		if _, err := os.Stat(sealedPath(c)); err != nil {
+			t.Fatalf("the fixture sealed %s: %v", c, err)
+		}
+	}
+	rootFP, _ := signerAt(t, ld, "0")
+
+	// The refusals, each by name, before anything is erased.
+	erase := func(key, subject, digest, reason string) (ledgerEnv, int) {
+		t.Helper()
+		return runEnv(t, "artifact", "erase", "--ledger", ld, "--key", key, "--subject", subject,
+			"--artifact", digest, "--reason", reason, "--repo", src)
+	}
+	if e, code := erase(implKey, "c-1", c1, "x"); code != 14 || e.Error == nil || e.Error.Code != "out_of_grant" {
+		t.Fatalf("a claim-granted key may not erase: %d %+v", code, e)
+	}
+	if e, code := erase(priv, "c-1", c2, "x"); code != 3 || e.Error == nil || e.Error.Code != "erasure_refused" || !strings.Contains(e.Error.Message, "sealed commitment "+c1) {
+		t.Fatalf("a digest the contract does not reference refuses naming what it references: %d %+v", code, e)
+	}
+	if e, code := erase(priv, "c-1", "sha256:"+c1, "x"); code != 3 || e.Error == nil || e.Error.Code != "erasure_refused" {
+		t.Fatalf("the digest form is held before the session opens: %d %+v", code, e)
+	}
+	if _, code := runEnv(t, "artifact", "erase", "--ledger", ld, "--key", priv, "--subject", "c-1", "--artifact", c1, "--repo", src); code != 64 {
+		t.Fatalf("an erasure names its reason: %d", code)
+	}
+	for _, c := range []string{c1, c2} {
+		if _, err := os.Stat(sealedPath(c)); err != nil {
+			t.Fatalf("a refusal erases nothing: %s %v", c, err)
+		}
+	}
+
+	// The operator erases c-1's ciphertext: the record lands first,
+	// then the bytes go.
+	e, code := erase(priv, "c-1", c1, "a retention obligation")
+	if code != 0 || !e.OK || e.Result["recorded"] != true || e.Position == nil {
+		t.Fatalf("the erasure records: %d %+v", code, e)
+	}
+	erasedAt := fmt.Sprint(e.Result["erased_at"])
+	if removed := fmt.Sprint(e.Result["removed"]); removed != "[sealed]" {
+		t.Fatalf("the sealed bucket is emptied and named: %s", removed)
+	}
+	if _, err := os.Stat(sealedPath(c1)); !os.IsNotExist(err) {
+		t.Fatalf("the ciphertext is gone: %v", err)
+	}
+	// Never breaks verification, and the record is attributable to
+	// the operator from the chain alone.
+	if v, code := runEnv(t, "ledger", "verify", "--ledger", ld); code != 0 || !v.OK {
+		t.Fatalf("the chain verifies after the erasure: %d %+v", code, v)
+	}
+	if actor, verb := signerAt(t, ld, erasedAt); verb != "artifact.erased" || actor != rootFP {
+		t.Fatalf("the erasure at %s is the operator's signed record, got %s %s", erasedAt, verb, actor)
+	}
+	// The audit names the honored erasure and stays clean.
+	a, code := runEnv(t, "seal", "audit", "--ledger", ld, "--repo", src)
+	if code != 0 || a.Result["clean"] != "true" {
+		t.Fatalf("an honored erasure leaves the audit clean: %d %+v", code, a)
+	}
+	erased, _ := a.Result["erased"].([]any)
+	if len(erased) != 1 {
+		t.Fatalf("the audit lists the erased subject: %+v", a.Result)
+	}
+	row := erased[0].(map[string]any)
+	if row["subject"] != "c-1" || row["commitment"] != c1 || fmt.Sprint(row["position"]) != erasedAt || row["by"] != rootFP || row["reason"] != "a retention obligation" {
+		t.Fatalf("the erasure is attributed by position, signer and reason: %+v", row)
+	}
+	if by, _ := a.Result["by_class"].(map[string]any); by["seal_evidence_missing"] != nil {
+		t.Fatalf("an attributed erasure is not missing evidence: %+v", by)
+	}
+	// A render on the erased subject refuses, naming the erasure.
+	if r, code := runEnv(t, "verdict", "render", "--ledger", ld, "--subject", "c-1", "--repo", src, "--key", v1Key, "--verdict", "pass"); code != 22 || r.Error == nil || !strings.Contains(r.Error.Message, "was erased at position "+erasedAt+" by "+rootFP) {
+		t.Fatalf("a render meets the attribution, not an absence: %d %+v", code, r)
+	}
+	// A re-run finishes rather than re-records.
+	e, code = erase(priv, "c-1", c1, "again")
+	if code != 0 || !e.OK || e.Result["recorded"] != false || fmt.Sprint(e.Result["erased_at"]) != erasedAt || fmt.Sprint(e.Result["removed"]) != "[]" {
+		t.Fatalf("an erasure that stands is finished, never recorded twice: %d %+v", code, e)
+	}
+	if n, _ := runEnv(t, "ledger", "show", "--ledger", ld); fmt.Sprint(n.Result["count"]) != fmt.Sprint(chainCount(t, ld)) {
+		t.Fatal("the chain did not grow on the re-run")
+	}
+
+	// c-2's ciphertext deleted with no record: the unattributed
+	// absence stays a finding.
+	if err := os.Remove(sealedPath(c2)); err != nil {
+		t.Fatal(err)
+	}
+	a, code = runEnv(t, "seal", "audit", "--ledger", ld, "--repo", src)
+	if code != 0 || a.Result["clean"] != "false" {
+		t.Fatalf("a deletion with no record is not clean: %d %+v", code, a)
+	}
+	if by, _ := a.Result["by_class"].(map[string]any); fmt.Sprint(by["seal_evidence_missing"]) != "1" {
+		t.Fatalf("the unrecorded deletion is seal_evidence_missing: %+v", by)
+	}
+	if erased, _ := a.Result["erased"].([]any); len(erased) != 1 {
+		t.Fatalf("the attributed erasure still stands apart: %+v", a.Result)
+	}
+
+	// A content artifact, referenced from a payload no fold indexes,
+	// is erased on system under the operator's attestation.
+	store := artifact.Open(filepath.Join(src, "next", "var", "artifacts"))
+	digest, err := store.Put([]byte("a packet body"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e, code = erase(priv, "system", digest, "the subject asked")
+	if code != 0 || !e.OK || fmt.Sprint(e.Result["removed"]) != "[content]" {
+		t.Fatalf("a content artifact is erased on system: %d %+v", code, e)
+	}
+	if _, err := store.Get(digest); err == nil {
+		t.Fatal("the content is gone")
+	}
+	if v, code := runEnv(t, "ledger", "verify", "--ledger", ld); code != 0 || !v.OK {
+		t.Fatalf("the chain verifies after both erasures: %d %+v", code, v)
+	}
+}
+
+// signerAt reads a record's signer and verb back through ledger show:
+// what a fresh reader attributes from the chain alone.
+func signerAt(t *testing.T, ld, position string) (actor, verb string) {
+	t.Helper()
+	e, code := runEnv(t, "ledger", "show", "--ledger", ld, "--position", position)
+	if code != 0 || !e.OK {
+		t.Fatalf("show %s: %d %+v", position, code, e)
+	}
+	ev, _ := e.Result["event"].(map[string]any)
+	return fmt.Sprint(ev["actor"]), fmt.Sprint(ev["verb"])
+}

@@ -1933,3 +1933,20 @@ failed step skips the rest of the job.
   bar, and the question was never "which is broken" but "which is the
   authority": the boundary decides what a chain may contain, and a
   conformance bar that disagrees is the thing that moves.
+
+## The erasure verb (os-db5cd353)
+
+- When a conformance row names a property the tree lacks and the
+  card offers "add it" or "revise the row", read the charter's word
+  choice as the tie-breaker: "attributable" is a claim about the
+  chain, and only a signed record meets it.
+- Check the catalog's own growth rule before reaching for a protocol
+  bump. Facts that older validators refuse as unknown are additive;
+  only a change in how an existing record is judged bumps the version.
+- The affordance soundness drill keeps its own probe view on purpose,
+  so a new probe that reads the fold must be taught to both builders,
+  and the drill failing on the first run is the drift signal working.
+- Order side effects so that the failure mode is the honest one:
+  record the erasure, then delete the bytes, because the reverse
+  leaves an absence nobody signed for.
+
