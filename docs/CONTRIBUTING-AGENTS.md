@@ -7,7 +7,7 @@ standardized, checked-in tooling for multi-agent orchestration, task tracking, a
 guardrails. Two streams of work exist here:
 
 - **v1 (the template)**: design is **complete**; the work is **implementing v1** per
-  [`docs/build-plan.md`](docs/build-plan.md). Your job in this stream is to build
+  [`docs/build-plan.md`](build-plan.md). Your job in this stream is to build
   open-seed, not to redesign it and not to extend the research.
 - **Seed (the successor, under `next/**`)**: chartered in [`SEED-NEXT.md`](../SEED-NEXT.md),
   sequenced by [`docs/next-build-plan.md`](next-build-plan.md), designed to be
@@ -17,12 +17,12 @@ guardrails. Two streams of work exist here:
 
 ## Authority order (binding)
 
-1. **[`docs/design-options.md`](docs/design-options.md)** is the design authority
+1. **[`docs/design-options.md`](design-options.md)** is the design authority
    **for v1** (everything outside `next/**`). Within it: §2 settled ground, the §7
    decisions (7.1–7.5), the §6 team layer, the §9 glossary, and the §10 defaults are
    **binding**. The "Recommendation:" lines in D1–D8 are **decided**, not open: the
    options tables around them are retained history, not an invitation to re-litigate.
-2. **[`docs/build-plan.md`](docs/build-plan.md)** governs v1 sequencing and per-phase
+2. **[`docs/build-plan.md`](build-plan.md)** governs v1 sequencing and per-phase
    acceptance criteria.
 3. **[`SEED-NEXT.md`](../SEED-NEXT.md)** (the Seed charter) is the design authority
    **for `next/**`** (Part II normative, Part III conformance), and
@@ -35,7 +35,7 @@ guardrails. Two streams of work exist here:
 4. **`docs/research/**`** is *evidence*, never authority. Where a research file
    carries an **erratum header**, the erratum wins over the text below it. On
    open-seed's own schemas, the design doc supersedes the research: notably
-   [`research/10-org-control-planes.md`](docs/research/10-org-control-planes.md)
+   [`research/10-org-control-planes.md`](research/10-org-control-planes.md)
    Part 5 (the port spec), which is amended by erratum: the D1 transition table and
    §7.1 claim protocol in the design doc are the single authority for verbs, verb
    classes, and exit codes. Do not implement Part 5 as written without applying the
