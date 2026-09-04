@@ -1895,9 +1895,9 @@ written by the two implementing sessions, one voice.
   os-5063e8ba — **in review** (task PR against plan #299: the seventh
   race shape, a hook's `bad_prev` at or beyond the position the
   client appended, re-linked from a fresh fetch and counted as
-  `Result.Relinked`; the refused tree and the hook's message kept
-  under the client's state dir (`refused/<commit>/`) before the
-  retry; `Client.WithClock` as the test seam for a segment day;
+  `Result.Relinked`; the rejected commit's own tree beside the work
+  directory it was built from and the hook's message, kept under the
+  client's state dir (`refused/<commit>/`) before the retry; `Client.WithClock` as the test seam for a segment day;
   `seed perf run --keep` and `cmd/perfgate -keep` keeping a storm's
   work dir, `relinked` in the reading beside the five budgeted
   metrics; drilled with the planted refusal (re-links, lands, keeps

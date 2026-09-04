@@ -71,12 +71,22 @@ func TestHookBadPrevAtOrBeyondOwnPositionRelinksAndKeepsTheTree(t *testing.T) {
 	if err != nil || !strings.Contains(string(msg), "position 2: bad_prev") {
 		t.Fatalf("the hook's message is kept beside the tree: %q %v", msg, err)
 	}
-	store, err := ledger.Open(filepath.Join(dir, "tree"))
-	if err != nil {
-		t.Fatal(err)
+	// Both halves of the evidence: the rejected commit's own tree (the
+	// bytes the hook judged) and the work directory it was built from,
+	// each readable as a ledger and, on this planted refusal, equal.
+	for _, half := range []string{"commit", "worktree"} {
+		store, err := ledger.Open(filepath.Join(dir, half))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, count, err := store.Tip(); err != nil || count != 2 {
+			t.Fatalf("the kept %s is the store as pushed (genesis and the append): count %d %v", half, count, err)
+		}
 	}
-	if _, count, err := store.Tip(); err != nil || count != 2 {
-		t.Fatalf("the kept tree is the store as pushed (genesis and the append): count %d %v", count, err)
+	commitHead, _ := os.ReadFile(filepath.Join(dir, "commit", "HEAD"))
+	workHead, _ := os.ReadFile(filepath.Join(dir, "worktree", "HEAD"))
+	if string(commitHead) != string(workHead) || len(commitHead) == 0 {
+		t.Fatalf("the committed tree and the work tree agree on this refusal: %q vs %q", commitHead, workHead)
 	}
 	// The remote's chain verifies with the landed append.
 	final, err := NewClient(t.TempDir(), remote, ref)

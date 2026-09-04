@@ -223,9 +223,13 @@ func (c *Client) attempt(draft Draft, sign Signer, resolve ledger.Resolver, vali
 	return &Result{Position: pos, Commit: commit}, nil
 }
 
-// keepRefused copies the committed tree and the hook's message under
-// RefusedDir()/<commit>/ (plans/os-5063e8ba.md D2). The copy is the
-// store directory as pushed: the segments and HEAD, byte for byte.
+// keepRefused keeps the evidence under RefusedDir()/<commit>/
+// (plans/os-5063e8ba.md D2): commit/ is the rejected commit's own tree,
+// materialized from the commit object (the bytes the hook judged),
+// worktree/ is the directory the attempt built the commit from, and
+// message.txt is the hook's refusal. If the record the hook found came
+// from the client's persistent index, commit/ carries it and worktree/
+// does not, and the difference between the two is the diagnosis.
 func (c *Client) keepRefused(commit, storeDir string, refusal error) error {
 	dst := filepath.Join(c.RefusedDir(), commit)
 	if err := os.MkdirAll(dst, 0o755); err != nil {
@@ -234,15 +238,22 @@ func (c *Client) keepRefused(commit, storeDir string, refusal error) error {
 	if err := os.WriteFile(filepath.Join(dst, "message.txt"), []byte(refusal.Error()+"\n"), 0o644); err != nil {
 		return err
 	}
-	return filepath.WalkDir(storeDir, func(path string, d fs.DirEntry, err error) error {
+	if err := c.Materialize(commit, filepath.Join(dst, "commit")); err != nil {
+		return err
+	}
+	return copyTree(storeDir, filepath.Join(dst, "worktree"))
+}
+
+func copyTree(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(storeDir, path)
+		rel, err := filepath.Rel(src, path)
 		if err != nil {
 			return err
 		}
-		target := filepath.Join(dst, "tree", rel)
+		target := filepath.Join(dst, rel)
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}

@@ -3442,12 +3442,16 @@ it expected. The shape is therefore "at or beyond", not "at"; a
 hook, which the client's own verification should have caught, and
 stays the refusal it is.
 
-**The evidence is kept before the retry, in the client's state dir.**
-The refused tree is the store as pushed, byte for byte, with the
-hook's message beside it under `refused/<commit>/`; a temp dir would
-be gone with the attempt, and the state dir is where a writer's own
-history already lives. `--keep` on both binaries keeps the storm
-around it.
+**The evidence is kept before the retry, both halves of it.** Under
+`refused/<commit>/` the client keeps the rejected commit's own tree,
+materialized from the commit object (the bytes the hook judged),
+beside the work directory the attempt built it from and the hook's
+message (review finding on the plan: if the record the hook found
+came from the client's persistent index, only the committed tree
+carries it, and the difference between the halves is the diagnosis).
+The state dir is where a writer's own history already lives; a temp
+dir would be gone with the attempt. `--keep` on both binaries keeps
+the storm around it.
 
 **The midnight drill does not reproduce the tree.** Two writers
 racing across an injected segment split land every append and

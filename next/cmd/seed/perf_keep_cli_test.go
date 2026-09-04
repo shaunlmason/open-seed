@@ -55,6 +55,11 @@ func TestPerfRunKeepsTheStormAndReportsRelinks(t *testing.T) {
 	if len(refused) != 1 {
 		t.Fatalf("the refused tree is kept beside the writer that pushed it: %v", refused)
 	}
+	for _, half := range []string{"commit", "worktree"} {
+		if _, err := os.Stat(filepath.Join(filepath.Dir(refused[0]), half, "HEAD")); err != nil {
+			t.Errorf("the refused %s half is kept: %v", half, err)
+		}
+	}
 	if b, err := os.ReadFile(refused[0]); err != nil || !strings.Contains(string(b), "position 9999: bad_prev") {
 		t.Fatalf("the hook's message is kept: %q %v", b, err)
 	}
