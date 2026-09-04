@@ -100,18 +100,9 @@ func TestPacketWritesTheCutoverDown(t *testing.T) {
 			t.Errorf("a cutover answered in place must fail the parse: %v", err)
 		}
 	}
-	// The operator's protocol amendment (section 4) supplies the measurement
-	// for R.4 and R.5 (the simulation's escalation payloads and five-bar
-	// audit); the remaining rows require human review, real elapsed time, or
-	// external adoption and stay not measured.
-	measured := map[string]bool{"R.4": true, "R.5": true}
 	for _, m := range p.Ledger {
-		want := "not measured"
-		if measured[m.Row] {
-			want = "measured"
-		}
-		if m.Status != want {
-			t.Errorf("ledger row %s claims %q; want %q", m.Row, m.Status, want)
+		if m.Status != "not measured" {
+			t.Errorf("ledger row %s claims %q; no measurement exists before the shadow run (D5)", m.Row, m.Status)
 		}
 	}
 }

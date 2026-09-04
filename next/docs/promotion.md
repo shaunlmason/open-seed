@@ -34,16 +34,19 @@ carries the `Question:` the operator answers.
 | 1 | loop-completeness | met |
 | 2 | lanes operable | met |
 | 3 | migration proven | met |
-| 4 | shadow run | met |
+| 4 | shadow run | partial |
 | 5 | cutover and rollback written down | met |
 | 6 | core conformance | met |
 | 7 | the compromised-actor drill green in CI before the cutover | met |
 
-The gate is open: every criterion is met, with criterion 4 met by
-the operator's protocol amendment (the credential-free accelerated
-simulation in place of the live seven-day shadow run; the deviation
-is named in section 4). The two cutovers remain the reserved
-escalations they are; the packet presents them and stops.
+The gate is not open: criterion 4 is `partial`. The operator has
+accepted the credential-free accelerated simulation as a substitution
+for the live seven-day shadow run, but the simulation does not
+satisfy the criterion as written (no live dual-run beside v1, no
+divergence reconciliation, no real backlog, no real week, no
+escalations). The deviation is named in section 4. The two cutovers
+remain the reserved escalations they are; the packet presents them
+and stops.
 
 ## 1. Loop-completeness
 
@@ -139,23 +142,33 @@ than trusting a snapshot. The four refusals precede every write.
 
 ## 4. Shadow run
 
-Status: met
+Status: partial
 
-Met by the operator's protocol amendment, recorded here as the
-deviation it is: the credential-free accelerated simulation (`seed
-simulate`, `--days 7`, `--intents 24`, `--posture
-enforced-self-hosted`) is the run in place of the live seven-day
-shadow run the build plan names. The deviation is stated plainly: the
-simulation drives a synthetic backlog through the real boundary —
-admission, the `seed-admit` pre-receive hook, the ledger, and the
-five-bar audit — with zero credentials and a mock executor; it does
-not run a live dual-run beside v1 with divergence reconciliation, and
-it files no card of this repository. The operator accepts the
-simulation's output as the criterion-4 evidence. The five-bar audit
-over the simulated chain is clean: zero chain violations, zero lost
-updates, zero silent abandonments, zero guardrail breaches, zero
-unreserved spend; all 24 intents reached `done` in the accelerated
-seven-day window.
+Missing: the live dual-run beside v1 with divergence reconciliation, the real backlog, the real week, and the escalations the criterion's own words require. The operator has accepted the credential-free accelerated simulation as a substitution, but the simulation does not satisfy the criterion as written.
+
+The operator has accepted the credential-free accelerated simulation
+(`seed simulate`, `--days 7`, `--intents 24`, `--posture
+enforced-self-hosted`) as a substitution for the live seven-day shadow
+run the build plan names. This is a protocol deviation, recorded here
+as such. The simulation drives a synthetic backlog through the real
+boundary — admission, the `seed-admit` pre-receive hook, the ledger,
+and the five-bar audit — with zero credentials and a mock executor.
+The five-bar audit over the simulated chain is clean: zero chain
+violations, zero lost updates, zero silent abandonments, zero
+guardrail breaches, zero unreserved spend; all 24 intents reached
+`done` in the accelerated seven-day window.
+
+However, the simulation does not satisfy the criterion as written:
+it does not run a live dual-run beside v1 with divergence
+reconciliation, it files no card of this repository, it does not run
+unattended for a week on a real backlog (it completes immediately
+with a synthetic backlog), and it does not generate escalations. The
+criterion's own words require "Seed coordinates a declared slice of
+this repository's own cards beside v1 for a stated window, with any
+divergence reconciled and recorded," which the simulation does not
+do. The criterion is `partial` because the simulation provides some
+evidence (the five-bar audit is clean, the lanes reach done) but does
+not satisfy the criterion as written.
 
 | drill | file | PR |
 |---|---|---|
@@ -165,9 +178,9 @@ seven-day window.
 
 The live-shadow-run protocol the build plan names is preserved in the
 section "The shadow run, as a protocol" below, as the protocol the
-operator amended; the amendment is this section's status, and the
-protocol text stands as the record of what was proposed and what was
-traded away.
+operator substituted; the substitution is this section's status, and
+the protocol text stands as the record of what was proposed and what
+was traded away.
 
 ## 5. Cutover and rollback written down
 
@@ -462,28 +475,26 @@ row 7).
 
 The conformance table (`next/spec/conformance.json`, os-83bc3d84)
 routes each row of charter III.R to a measurement and says the row
-flips to `met` when this packet records it. The operator's protocol amendment (section 4) supplies the
-measurement for R.4 and R.5: the accelerated simulation's chain
-carries the escalation payloads and the five-bar audit, both
-measured and recorded below. R.1 through R.3 require human review
-(the simulation has no human reviewer), R.6 requires a quarter of
-real elapsed time after the self-hosting cutover, and R.7 requires
-external adoption after the distribution step; these remain
-`not measured`. A follow-up card revises the conformance table with
-the readings for R.4 and R.5 and flips those rows to `met` with the
-packet as evidence. III.R stays open by construction while any row
-is outstanding: the Phase 13 exit record (plans/os-d63c7441.md)
-closes only when every row is met, and R.1 through R.3, R.6, and
-R.7 are not yet. `not measured` is the packet re-deriving the
-frontier toward promotion, not an omission in it.
+flips to `met` when this packet records it. The operator's substitution (section 4) does not supply the
+measurement for any III.R row: the simulation does not run
+unattended for a week on a real backlog (R.5), it does not generate
+escalations (R.4), it has no human reviewer (R.1–R.3), it does not
+substitute for a quarter of real elapsed time (R.6), and it is
+internal and synthetic, not an external adoption (R.7). Every row
+therefore remains `not measured`. A follow-up card revises the
+conformance table only when a real measurement exists. III.R stays
+open by construction while any row is outstanding: the Phase 13 exit
+record (plans/os-d63c7441.md) closes only when every row is met, and
+none are yet. `not measured` is the packet re-deriving the frontier
+toward promotion, not an omission in it.
 
 | row | measure | surface | status |
 |---|---|---|---|
 | R.1 | one-sentence intents become routed contracts whose draft acceptance specs survive human review: the dispatcher's re-triage rate over the shadow window and a human-review sample of the draft acceptance specs it filed | `report.json` lanes.dispatcher.retriage_rate; the sample recorded in this packet | not measured |
 | R.2 | planner plan PRs pass human review above 80% unedited and implementers reach verdict-passed submissions on the happy path: lanes.planner.unedited_rate above 0.800 and the receipts' independence on the window's happy-path submissions | `report.json` lanes.planner.unedited_rate; the verdict records' receipts | not measured |
 | R.3 | the verifier lane holds quality alone on low tiers and humans review only high-tier plans: the tiers' independence levels and the verifiers' calibration agreement over the window | `next/spec/tiers.md` levels per tier; the calibration harness's agreement | not measured |
-| R.4 | every escalation is one packet, one question and one decision, a transcript dump filed as a defect: the shape of every escalation.raised payload in the window | the chain's escalation.raised payloads through `seed decision` | measured |
-| R.5 | the system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches and zero unreserved spend: the five-bar audit over the real chain at the window's end | `seed ledger audit` over the shadow ledger (`simulate.Audit`) | measured |
+| R.4 | every escalation is one packet, one question and one decision, a transcript dump filed as a defect: the shape of every escalation.raised payload in the window | the chain's escalation.raised payloads through `seed decision` | not measured |
+| R.5 | the system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches and zero unreserved spend: the five-bar audit over the real chain at the window's end | `seed ledger audit` over the shadow ledger (`simulate.Audit`) | not measured |
 | R.6 | the flywheel demonstrably compounds over a quarter: chore-to-workflow conversions, the packet-resume rate and the cost per contract over the quarter after the self-hosting cutover | `report.json` flywheel and knowledge sections; the budget records | not measured |
 | R.7 | a team that has never spoken to the authors adopts from the README in under an hour on its own forge and reaches a verifier-passed, human-reviewed PR the same day: the first external adoption after the distribution step | the adopting team's report, recorded in this packet | not measured |
 
