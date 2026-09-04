@@ -1873,3 +1873,33 @@ failed step skips the rest of the job.
   saw a task PR editing another task's receipt. Purity runs over the
   full changed-file list now. When you exclude something for one
   computation, go and look at what else was reading that list.
+
+## The unreserved-spend bar (os-88df7ab2)
+
+- When a bar judges whether the boundary would have accepted a record,
+  ask the boundary's own predicate. Deriving an equivalent from the
+  fold's facts looks cheaper and was wrong in two ways at once: it
+  dropped the citation (which reservation this start named) and it
+  claimed a linearity the underlying predicates do not have.
+- A fixture that a bar cannot legitimately pass is telling you
+  something. When the corrected rule turned every synthetic `{}` chain
+  into unreserved spend, the fixtures were the error, not the rule:
+  they were chains no admission would have taken, and the tree already
+  had an admission-grade generator (`internal/history`) to replace
+  them with.
+- Measure the cost you are tempted to assert. One drill over a
+  40-contract chain turned "this stays linear" into "410 records in
+  130 ms", which is a number a later reader can re-run.
+
+## The guardrail bar (os-aaec6a3c)
+
+- Before removing a rule from a checker, count what else the checker
+  checks. This bar had one source, so the obvious fix would have
+  turned "reports something the boundary allows" into "reports
+  nothing at all" — the same defect at the other end, and harder to
+  notice because every drill would still pass.
+- A fixture that trips a bar is evidence about one of them. The
+  admission-grade chain from `internal/history` tripped the guardrail
+  bar, and the question was never "which is broken" but "which is the
+  authority": the boundary decides what a chain may contain, and a
+  conformance bar that disagrees is the thing that moves.

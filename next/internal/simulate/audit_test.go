@@ -12,6 +12,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 func rec(verb, subject string) *event.Record {
@@ -31,10 +32,18 @@ func happy(subject string) []*event.Record {
 	}
 }
 
+// A synthetic happy path passes every bar that reads the chain's
+// shape. It does not pass the unreserved-spend bar, and must not: its
+// run.started carries no fence and cites no reservation, so nothing
+// fenced it (plans/os-88df7ab2.md D7). The covered arm moved to
+// TestAdmittedChainAuditsClean, which audits a chain admission took.
 func TestAuditCleanRun(t *testing.T) {
 	a := Audit(happy("c-1"))
-	if !a.Clean {
-		t.Fatalf("a clean chain must pass every bar: %+v", a)
+	if len(a.SilentAbandonments) != 0 || len(a.GuardrailBreaches) != 0 || len(a.ChainViolations) != 0 || len(a.LostUpdates) != 0 {
+		t.Fatalf("a clean chain must pass every bar that reads its shape: %+v", a)
+	}
+	if len(a.UnreservedSpend) != 1 || a.UnreservedSpend[0] != "c-1" {
+		t.Fatalf("a start that cites no reservation is unfenced spend: %+v", a)
 	}
 }
 
@@ -89,8 +98,15 @@ func TestAuditCatchesEmptyChain(t *testing.T) {
 	}
 }
 
-func TestAuditCatchesUnofferedClaim(t *testing.T) {
-	// A claim with no preceding offer.published is a guardrail breach.
+// conformance: plans/os-aaec6a3c.md D1, D4 — an unoffered claim is not
+// a guardrail breach. The scheduling model publishes offers
+// (SEED-NEXT.md II.9) but admission does not require one: its claim
+// arms are authoring isolation and the lifecycle transition, and
+// nothing there reads the subject's offers, so a chain the boundary
+// would take must not be reported as a breach. internal/history's
+// generated chains claim without offering and pass the seed-admit
+// hook, which is how this was found (#311).
+func TestUnofferedClaimIsNotAGuardrailBreach(t *testing.T) {
 	recs := []*event.Record{
 		rec("intent.filed", "c-1"),
 		rec("contract.specified", "c-1"),
@@ -98,9 +114,8 @@ func TestAuditCatchesUnofferedClaim(t *testing.T) {
 		rec(transition.BudgetReserveVerb, "c-1"),
 		rec("submission.made", "c-1"),
 	}
-	a := Audit(recs)
-	if len(a.GuardrailBreaches) != 1 || a.GuardrailBreaches[0] != "c-1" {
-		t.Fatalf("a claim with no offer must be a guardrail breach, got %+v", a.GuardrailBreaches)
+	if a := Audit(recs); len(a.GuardrailBreaches) != 0 {
+		t.Fatalf("admission takes an unoffered claim, so the bar must not name it: %+v", a.GuardrailBreaches)
 	}
 }
 
@@ -180,8 +195,12 @@ func TestAuditedVerbsAreTheProtocols(t *testing.T) {
 // protocol's reservation audits clean; the same chain with the verb
 // the protocol does not define reads as unreserved spend, naming the
 // subject. Reverting D1 fails the first arm.
+// The verb's name is necessary but not sufficient: a chain naming the
+// protocol's budget.reserve with no readable citation is still
+// unfenced, and the covered arm is TestAdmittedChainAuditsClean
+// (plans/os-88df7ab2.md D1, D7).
 func TestUnreservedSpendCountsTheProtocolsReservation(t *testing.T) {
-	covered := []*event.Record{
+	named := []*event.Record{
 		rec("intent.filed", "c-1"),
 		rec("contract.specified", "c-1"),
 		rec("offer.published", "c-1"),
@@ -190,8 +209,8 @@ func TestUnreservedSpendCountsTheProtocolsReservation(t *testing.T) {
 		rec("run.started", "c-1"),
 		rec("submission.made", "c-1"),
 	}
-	if a := Audit(covered); len(a.UnreservedSpend) != 0 || !a.Clean {
-		t.Fatalf("a run covered by an admitted %s is not unreserved spend: %+v", transition.BudgetReserveVerb, a)
+	if a := Audit(named); len(a.UnreservedSpend) != 1 || a.UnreservedSpend[0] != "c-1" {
+		t.Fatalf("naming %s without a citation the fold can read does not fence a run: %+v", transition.BudgetReserveVerb, a)
 	}
 	stale := []*event.Record{
 		rec("intent.filed", "c-2"),
@@ -208,5 +227,48 @@ func TestUnreservedSpendCountsTheProtocolsReservation(t *testing.T) {
 	}
 	if a.Clean {
 		t.Fatal("a run with unreserved spend is not clean")
+	}
+}
+
+// recBy is rec with an actor and a payload: the guardrail arm reads
+// both, since it compares a claim's signer against the key that sealed
+// the subject.
+func recBy(verb, subject, actor, payload string) *event.Record {
+	// The version matters here, unlike in rec: this drill's records are
+	// read through the fold, which skips a record whose version it
+	// cannot place.
+	return &event.Record{Event: event.Event{V: version.Seed1, Verb: verb, Subject: subject, Actor: actor, Payload: []byte(payload)}}
+}
+
+// conformance: plans/os-aaec6a3c.md D1, D4 — the guardrail the
+// boundary does enforce on the claim path, and the reason this bar is
+// corrected rather than emptied. Admission refuses a claim.taken whose
+// actor sealed that subject's checks, so a chain holding one was
+// pushed past the boundary and the bar names it.
+func TestSealedAuthorClaimIsAGuardrailBreach(t *testing.T) {
+	const sealer = "fp-sealer"
+	sealed := []*event.Record{
+		recBy("intent.filed", "c-1", "fp-dispatcher", `{"intent": "x", "tier": "trivial", "budget": "small", "routing": "core"}`),
+		recBy("contract.specified", "c-1", "fp-dispatcher", `{"acceptance": {"ref": "specs/x.md @ abc1234", "executable": false}}`),
+		recBy(transition.CheckSealedVerb, "c-1", sealer, `{"commitment": "sha256:abcd"}`),
+		recBy("claim.taken", "c-1", sealer, "{}"),
+	}
+	a := Audit(sealed)
+	if len(a.GuardrailBreaches) != 1 || a.GuardrailBreaches[0] != "c-1" {
+		t.Fatalf("the key that sealed the checks may not claim the subject: %+v", a)
+	}
+	if a.Clean {
+		t.Fatal("a chain with a guardrail breach is not clean")
+	}
+
+	// A different claimant is the ordinary case and stays quiet.
+	other := []*event.Record{
+		recBy("intent.filed", "c-2", "fp-dispatcher", `{"intent": "x", "tier": "trivial", "budget": "small", "routing": "core"}`),
+		recBy("contract.specified", "c-2", "fp-dispatcher", `{"acceptance": {"ref": "specs/x.md @ abc1234", "executable": false}}`),
+		recBy(transition.CheckSealedVerb, "c-2", sealer, `{"commitment": "sha256:abcd"}`),
+		recBy("claim.taken", "c-2", "fp-implementer", "{}"),
+	}
+	if a := Audit(other); len(a.GuardrailBreaches) != 0 {
+		t.Fatalf("a claim by a key that sealed nothing is no breach: %+v", a.GuardrailBreaches)
 	}
 }

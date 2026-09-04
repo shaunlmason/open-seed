@@ -62,8 +62,24 @@ run leaves every list empty:
 2. **Lost updates** — the materialized chain is non-empty and contiguous.
 3. **Silent abandonments** — every `in_progress` window ended by one of
    the four deliberate exits.
-4. **Guardrail breaches** — every `claim.taken` rides a published offer.
-5. **Unreserved spend** — every `run.started` sits inside a reservation.
+4. **Guardrail breaches** — every `claim.taken` respects the guardrail
+   admission enforces on the claim path: the key that sealed a
+   subject's checks never claims it. An unoffered claim is **not** a
+   breach, because admission takes one: the scheduling model publishes
+   offers (`SEED-NEXT.md` §II.9) but no admission rule reads them, and
+   a bar must report what the boundary refuses. The scheduling concern
+   (work ready with no live offer) is `internal/eval`'s read, not this
+   bar's (plans/os-aaec6a3c.md D1, D3).
+5. **Unreserved spend** — every `run.started` is fenced to the
+   reservation it cited. The bar asks admission's own predicate,
+   `admit.RunStartValid`, which judges the start's cited reservation
+   at the start's own position: the strict payload, the fence against
+   the active claim, that reservation's validity, and that it was not
+   already closed there. A start the fold could not place cited
+   nothing checkable and is unfenced by construction. Asking instead
+   whether some reservation was open is weaker than the protocol,
+   since a start citing a closed or absent reservation would pass
+   while an unrelated one stands open (plans/os-88df7ab2.md D1, D7).
 
 The same audit runs over any ledger through `seed ledger audit
 --ledger <dir>` (plans/os-7599c27d.md): the chain is verified from
