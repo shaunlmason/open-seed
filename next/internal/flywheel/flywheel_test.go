@@ -414,6 +414,19 @@ func gitIn(t *testing.T, repo string, args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
+// hardenGitRepo writes the no-auto-gc settings into a fixture
+// repository's own config, before its first object, so no detached
+// git process outlives the test that made the repository
+// (plans/os-c4e8b57a.md D1: written, never passed as -c).
+// internal/gitref/fixture_guard_test.go holds every creation site in
+// next/** to it.
+func hardenGitRepo(t *testing.T, repo string) {
+	t.Helper()
+	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"}} {
+		gitIn(t, repo, "config", kv[0], kv[1])
+	}
+}
+
 func writeIn(t *testing.T, repo, name, content string) {
 	t.Helper()
 	full := filepath.Join(repo, name)
@@ -439,6 +452,7 @@ func fixtureRepo(t *testing.T) (repo, a, b, c string) {
 	t.Helper()
 	repo = t.TempDir()
 	gitIn(t, repo, "init", "--quiet", "-b", "main")
+	hardenGitRepo(t, repo)
 	writeIn(t, repo, "hello.txt", "hello\n")
 	writeIn(t, repo, "accept.md", acceptA)
 	gitIn(t, repo, "add", ".")
@@ -615,9 +629,8 @@ func TestDeclaredInputsReadsFlowAndBlockForms(t *testing.T) {
 // what the engine's mock run reads from the repository it runs in.
 func instantiate(t *testing.T, repo string) {
 	t.Helper()
-	root := filepath.Join("..", "..", "..")
 	for _, rel := range []string{".seed", "scripts/seed", "scripts/seed-harness", "scripts/harness"} {
-		copyPath(t, filepath.Join(root, rel), filepath.Join(repo, rel))
+		copyPath(t, filepath.Join(sourceTree, rel), filepath.Join(repo, rel))
 	}
 	gitIn(t, repo, "add", ".")
 	gitIn(t, repo, "commit", "--quiet", "-m", "seed: instantiate")
@@ -648,11 +661,21 @@ func copyPath(t *testing.T, from, to string) {
 	}
 }
 
+// sourceTree is the repository this package lives in: the shim and
+// the engine lock that instantiate copies into a fixture come from
+// it, so it answers whether the engine is available before any
+// fixture exists.
+var sourceTree = filepath.Join("..", "..", "..")
+
 // requireEngine skips by name when the v1 engine cannot be invoked
 // (D3): the drill's claim is about the engine, so it is never faked.
-func requireEngine(t *testing.T, repo string) {
+// It reads the pin from the source tree and runs before any fixture
+// is built: a skip that has already built a repository leaves a git
+// process to race t.TempDir's cleanup, and on macOS it lost
+// (os-222189a3), so a skip builds nothing.
+func requireEngine(t *testing.T) {
 	t.Helper()
-	if reason, ok := EngineAvailable(repo); !ok {
+	if reason, ok := EngineAvailable(sourceTree); !ok {
 		t.Skipf("the v1 engine is not available: %s", reason)
 	}
 }
@@ -664,9 +687,12 @@ func requireEngine(t *testing.T, repo string) {
 // the engine's refusal names the stage, the step and the finding, and
 // the branch's file is validated as it stands.
 func TestValidationRunsThroughTheEngineFromAStagingWorktree(t *testing.T) {
+	requireEngine(t)
 	repo, a, _, _ := fixtureRepo(t)
 	instantiate(t, repo)
-	requireEngine(t, repo)
+	if reason, ok := EngineAvailable(repo); !ok {
+		t.Fatalf("the instantiated copy resolves no engine though the tree it was copied from does: %s", reason)
+	}
 	base := gitIn(t, repo, "rev-parse", "HEAD")
 	c := newChain(t)
 	c.done("c-1", "fix the check", "core", "trivial", "accept.md", a, true, false)

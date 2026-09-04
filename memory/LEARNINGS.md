@@ -1670,3 +1670,18 @@ the assertions read, and there is no copy to go stale.
   on a run that demonstrates the pathology bounded, not absent; the
   task PR's review caught it, and the fix was to state the claim
   against the row's own words and leave the row partial.
+
+## The flywheel drill's skip path (os-222189a3)
+
+- A guard over fixture helpers is only as wide as the helper names it
+  knows: os-c4e8b57a's regex held `git(`, `run(` and `gitOut(` to the
+  hardening and never saw the flywheel package's `gitIn(`, so one
+  repository in the tree stayed unhardened while the guard passed.
+  When a package names its helper differently, widen the alternation
+  in the same PR; the property is the tree's, not the three packages'.
+- Decide a skip before building what it abandons. A precondition that
+  needs nothing from the fixture (here, whether the pinned engine is
+  in the cache, answered by the source tree the fixture copies) goes
+  first: a `t.Skip` after twelve git processes is twelve chances to
+  race the harness's cleanup, and on macOS it lost, reporting a
+  skipped drill as a failed one on a PR that touched neither.

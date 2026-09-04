@@ -18,11 +18,13 @@ import (
 )
 
 // creates matches the shapes the tree uses to make a repository: a
-// direct exec.Command("git", …) and the per-package git/run/gitOut
-// helpers, each with "init" or "clone" among the arguments. Table
-// entries built as []string{…} are the seed CLI's own `init` verb, not
-// git's, and are excluded by name.
-var creates = regexp.MustCompile(`(?:exec\.Command\("git"|\bgit\(|\brun\(|\bgitOut\()[^\n]*"(?:init|clone)"`)
+// direct exec.Command("git", …) and the per-package git/gitIn/run/
+// gitOut helpers, each with "init" or "clone" among the arguments.
+// Table entries built as []string{…} are the seed CLI's own `init`
+// verb, not git's, and are excluded by name. A helper the alternation
+// does not name escapes the property: the flywheel fixture's gitIn
+// did, and its skip path lost the cleanup race (os-222189a3).
+var creates = regexp.MustCompile(`(?:exec\.Command\("git"|\bgit\(|\bgitIn\(|\brun\(|\bgitOut\()[^\n]*"(?:init|clone)"`)
 
 // minimumSites is a floor, not a count: it goes UP when fixtures are
 // added and must never be silently satisfied by a broken pattern. It
