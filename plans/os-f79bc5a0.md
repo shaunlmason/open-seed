@@ -18,62 +18,67 @@ amendment honestly.
 ## Steps
 
 1. Amend `next/docs/promotion.md`:
-   - Flip criterion 4's status from `reserved` to `met` in the
-     criteria-at-a-glance table and the section 4 heading.
-   - Replace section 4's `Missing:` and `Question:` lines with a
-     plain statement of the operator's protocol amendment: the
-     accelerated simulation is the run in place of the live seven-day
-     shadow run; the deviation is named (synthetic backlog through
-     the real boundary, zero credentials, mock executor; no live
-     dual-run beside v1, no card of this repository filed). The
-     five-bar audit over the simulated chain is clean (zero chain
-     violations, zero lost updates, zero silent abandonments, zero
-     guardrail breaches, zero unreserved spend; all 24 intents
-     reached `done` in the accelerated seven-day window). Cite the
-     simulation drills (`TestSimulateReachesDoneEnforced`,
+   - Flip criterion 4's status from `reserved` to `partial` in the
+     criteria-at-a-glance table and the section 4 heading, with a
+     `Missing:` line naming what the simulation does not satisfy.
+   - Replace section 4's `Question:` line with a plain statement of
+     the operator's substitution: the accelerated simulation is a
+     substitution for the live seven-day shadow run; the deviation is
+     named (synthetic backlog through the real boundary, zero
+     credentials, mock executor; no live dual-run beside v1, no
+     divergence reconciliation, no real backlog, no real week, no
+     escalations). The five-bar audit over the simulated chain is
+     clean (zero chain violations, zero lost updates, zero silent
+     abandonments, zero guardrail breaches, zero unreserved spend;
+     all 24 intents reached `done` in the accelerated seven-day
+     window). Cite the simulation drills
+     (`TestSimulateReachesDoneEnforced`,
      `TestSimulateAcceleratedBacklog`,
      `TestAuditCatchesSilentAbandonment`).
    - Update the gate sentence after the criteria table to reflect
-     that every criterion is now met, with criterion 4 met by the
-     operator's protocol amendment.
+     that the gate is not open (criterion 4 is `partial`).
    - In the III.R measurement ledger intro paragraph, state that the
-     operator's amendment supplies the measurement for R.4 and R.5,
-     and that R.1–R.3, R.6, R.7 remain not measured (human review /
-     real elapsed time / external adoption).
-   - In the III.R ledger table, set R.4 and R.5 status to `measured`
+     operator's substitution does not supply the measurement for any
+     III.R row: the simulation does not run unattended for a week on
+     a real backlog (R.5), it does not generate escalations (R.4),
+     it has no human reviewer (R.1–R.3), it does not substitute for
+     a quarter of real elapsed time (R.6), and it is internal and
+     synthetic, not an external adoption (R.7). Every row remains
+     `not measured`.
+   - In the III.R ledger table, leave every row as `not measured`
      (the closed vocabulary word only; the explanation lives in the
-     intro paragraph, not the table cells). Leave R.1–R.3, R.6, R.7
-     as `not measured`.
-2. Update `next/internal/promotion/promotion_test.go`:
-   - In `TestPacketWritesTheCutoverDown`, replace the assertion that
-     every ledger row is `not measured` with an assertion that R.4
-     and R.5 are `measured` and the rest are `not measured`
-     (reflecting the operator's amendment).
+     intro paragraph, not the table cells).
+2. The promotion drill (`TestPacketWritesTheCutoverDown` in
+   `next/internal/promotion/promotion_test.go`) is unchanged: it
+   still asserts every ledger row is `not measured`, which is now
+   correct (the simulation does not measure any III.R row).
 
 ## File Scope
 
 - `next/docs/promotion.md`
-- `next/internal/promotion/promotion_test.go`
 
 No other files. The conformance table
-(`next/spec/conformance.json`) is not touched — the R.4/R.5 flip is
-a follow-up spec card (protected path).
+(`next/spec/conformance.json`) is not touched — no III.R row is
+flipped because the simulation does not measure any of them. The
+promotion drill is unchanged (it still asserts every row is not
+measured, which is now correct).
 
 ## Acceptance Criteria
 
-- Criterion 4's status is `met` in both the criteria-at-a-glance
-  table and section 4, with the deviation named plainly.
-- The III.R ledger records R.4 and R.5 as `measured` and R.1–R.3,
-  R.6, R.7 as `not measured`, with the reasons in the intro
-  paragraph.
+- Criterion 4's status is `partial` in both the criteria-at-a-glance
+  table and section 4, with the `Missing:` line naming what the
+  simulation does not satisfy and the deviation named plainly.
+- The III.R ledger records every row as `not measured`, with the
+  reasons in the intro paragraph.
 - The promotion drills (`TestPacketCitesRealDrills`,
   `TestPacketWritesTheCutoverDown`, and the rest of
   `internal/promotion`) pass.
 - `make check` is green.
-- The packet does not claim R.1–R.3, R.6, or R.7 are met; the
-  doctor will still report Part III not complete, naming exactly
-  those rows.
-- Neither cutover is performed; both remain reserved escalations.
+- The packet does not claim any III.R row is met; the doctor will
+  report Part III not complete, naming every III.R row as
+  outstanding.
+- The gate is not open; neither cutover is performed; both remain
+  reserved escalations.
 
 ## Validation Commands
 
@@ -87,6 +92,9 @@ a follow-up spec card (protected path).
 - The status column stays in the closed vocabulary; the explanation
   lives in the intro paragraph. This keeps the parser's strict
   shape check intact.
-- The conformance-table flip is deferred to a follow-up spec card
-  because `next/spec` is a protected path and the flip is a separate
-  concern from the packet amendment.
+- The conformance table is not flipped because the simulation does
+  not measure any III.R row. The doctor will report Part III not
+  complete, naming every III.R row as outstanding.
+- The criterion is `partial`, not `met`, because the simulation
+  provides some evidence (the five-bar audit is clean, the lanes
+  reach done) but does not satisfy the criterion as written.
