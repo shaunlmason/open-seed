@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-04T20:43:39Z"
     lease_expires: "2026-09-04T21:43:39Z"
 created_at: "2026-09-04T13:12:49Z"
-updated_at: "2026-09-04T20:43:39Z"
+updated_at: "2026-09-04T20:44:35Z"
 ---
 
 simulate.Audit's guardrail-breach bar names any subject whose claim.taken did not follow an offer.published (next/internal/simulate/audit.go). Admission does not hold that rule: internal/history.Generate writes an admission-grade chain that stages intent.filed, contract.specified and claim.taken with no offer at all, and that chain verifies and passes the seed-admit hook. So auditing a chain the boundary took reports guardrail breaches for every subject.
@@ -20,3 +20,7 @@ Found while implementing os-88df7ab2 (#311): its covered-arm drills audit a gene
 One of the two is wrong and the card decides which. Either the offer is a real precondition, in which case admission should refuse a claim that rides none and the history generator is writing chains the boundary should not take; or it is not, in which case the bar is restating a rule the protocol does not hold and III.R row 5's audit reports breaches that are not breaches. The same shape as os-b86dab4c (a bar counting a verb the protocol does not emit) and os-88df7ab2 (a bar deriving a rule admission already owns): the bar and the boundary must not disagree about what the chain means.
 
 Expected shape: read transition's offer rules and admit's claim path, decide which authority holds, then either move the bar to ask the boundary's predicate or fix the generator and the rule it breaks. Tier: standard (it changes what a conformance bar counts, or what admission accepts).
+
+## Comment cm-abccd6eb (seed-next-implementer, 2026-09-04T20:44:35Z)
+
+The task PR #313 merged on 2026-09-04 while this card's lease had expired, so the maintenance reap returned it to ready; re-claimed here to attach the evidence and move it to review, where the close step or the owner can finish it.
