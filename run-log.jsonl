@@ -1493,3 +1493,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-aa3afca2","kind":"pr"},"task":"os-222189a3","ts":"2026-09-04T04:02:02Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-5783cde6","kind":"receipt"},"task":"os-222189a3","ts":"2026-09-04T04:02:06Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-222189a3","ts":"2026-09-04T04:02:09Z","verb":"transition"}
+{"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-1c284ba8","ts":"2026-09-04T04:31:04Z","verb":"close"}
