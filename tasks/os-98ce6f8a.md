@@ -1,16 +1,12 @@
 ---
 id: os-98ce6f8a
 title: 'next: the promotion evidence packet — build-plan §5''s seven self-hosting criteria mapped to evidence on main, missing items named (feeds the Phase 13 exit record)'
-state: in_progress
+state: review
 priority: P2
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-cc91281f701b44e3
-    claimed_at: "2026-09-04T02:53:33Z"
-    lease_expires: "2026-09-04T03:53:33Z"
+author: seed-next-implementer
 created_at: "2026-09-03T17:59:39Z"
-updated_at: "2026-09-04T02:59:35Z"
+updated_at: "2026-09-04T02:59:39Z"
 ---
 
 Build plan section 5 lists seven criteria for the self-hosting cutover — a HUMAN decision the plan says agents drive up to and STOP at (never autonomously decidable). This card produces the evidence document the operator reads at that gate: one place mapping each of the seven criteria to the evidence already on main, and naming what is still missing.
