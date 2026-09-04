@@ -42,13 +42,21 @@ conflict, so the card waits on it as well as on this plan.
   `BudgetCloseValid`) and is documented as "the one computation
   admission, `seed budget status`, and the projections share". The bar
   is the fourth caller that should share it.
-- **The facts carry positions, so one fold answers every run.**
-  `ReservationFact.Pos` and `CloseFact.Pos` are chain positions, so a
-  single derivation per subject over the whole record slice answers
-  "was a valid reservation open at position p" for every `run.started`
-  by comparing positions. No re-fold per run, so the bar stays linear
-  in the chain and the audit's cost over a week-long shadow chain does
-  not become quadratic.
+- **A run cites one reservation, and admission already judges that
+  citation.** `RunStartFact.Reservation` is the position the start
+  named, and `admit.RunStartValid(records, table, subject, st)` is the
+  whole question in one predicate: the payload's strict shape, the
+  fence matching the active claim, the cited reservation matching the
+  fold, the signer's capability and tuple, `ReservationValid` on the
+  cited reservation, and `BudgetViewAt(prefix).ClosedBy` proving it
+  was still open at the run's own position (admit.go:2787).
+- **The derivation is not linear.** `BudgetViewAt` calls
+  `ReservationValid` per reservation fact, and each call replays
+  `keyring.StateAt(prefix)` and `table.StateAt(prefix, subject)` from
+  the chain's start; close validation replays again, and
+  `RunStartValid` pays that plus a nested `BudgetViewAt` over its own
+  prefix. The honest worst case is about `O(runs x reservations x
+  records)` per subject, not a single linear fold.
 - **The import direction is free.** `internal/admit` does not import
   `internal/simulate`; `internal/simulate` imports `transition`
   today, and the audit's own drills already import `admit` (the
@@ -60,14 +68,17 @@ conflict, so the card waits on it as well as on this plan.
 
 ## Design decisions (binding for this task)
 
-- **D1 — the bar asks the shared computation.** For each subject the
-  audit derives one `BudgetView` through `admit.BudgetViewAt` over the
-  records it was handed, and a `run.started` at position `p` is
-  covered when some reservation is valid, opened before `p`, and
-  either never closed or closed after `p`. Uncovered runs name the
-  subject as they do today. The bar stops keeping its own boolean, so
-  the audit no longer restates the protocol's budget model, which is
-  the same correction os-b86dab4c made to its verb names.
+- **D1 — the bar asks the protocol about the run's own citation.**
+  For each folded `RunStartFact` the audit asks
+  `admit.RunStartValid(records, table, subject, st)`, and a start it
+  refuses names the subject as unreserved spend. That predicate is
+  the fence, the cited reservation's validity and its openness at the
+  run's position, so the bar neither keeps a boolean nor re-derives a
+  view: it asks the same authority admission asks. Deliberately
+  **not** "some valid reservation was open at p" (this plan's first
+  reading, corrected by review on #309): a start citing a closed or
+  absent reservation while another is open would pass that and fail
+  admission, which is the fencing the bar exists to check.
 - **D2 — a run before any reservation is still unreserved spend.**
   The existing arm keeps its meaning: a `run.started` with no
   preceding valid reservation names the subject. This card only adds
@@ -92,12 +103,23 @@ conflict, so the card waits on it as well as on this plan.
   `Audit` call site is unchanged. Nothing about III.R row 5's status
   moves: the row is met by the shadow run's evidence card, not here.
 
+- **D6 — the cost is measured, not asserted.** The audit gains no
+  cache in this card; the drill set carries one measurement instead: a
+  chain of the shadow window's shape (the perf history's 40 contracts,
+  each with a reservation and a run) is audited and the reading
+  recorded in the PR, so the verb's cost over a real chain is a number
+  in the record rather than a claim. If that reading exceeds a stated
+  ceiling of ten seconds the implementation memoizes the per-position
+  replays behind one pass and says so in the task PR; D1's
+  correctness rule does not move either way.
 ## Steps
 
-1. D1 in `internal/simulate/audit.go`: the per-subject view, the
-   position comparison, the boolean removed.
-2. D3's drills in `internal/simulate/audit_test.go`, and the covered
-   arm through the CLI in `cmd/seed/ledger_audit_test.go`.
+1. D1 in `internal/simulate/audit.go`: `RunStartValid` per folded
+   start, the boolean removed.
+2. D3's drills in `internal/simulate/audit_test.go` (including the
+   cited-reservation arm: a start citing a closed reservation while
+   another is open), the covered arm through the CLI in
+   `cmd/seed/ledger_audit_test.go`, and D6's measurement.
 3. `next/spec/simulation.md`'s sentence on what the bar counts;
    `next/docs/progress.md`, `next/docs/decisions.md`,
    `memory/LEARNINGS.md`; receipt; evidence; review.
