@@ -79,7 +79,7 @@ func Audit(records []*event.Record) AuditResult {
 	type window struct {
 		open    bool
 		offered bool
-		starts  int
+		starts  []int
 	}
 	subj := map[string]*window{}
 	get := func(s string) *window {
@@ -90,7 +90,7 @@ func Audit(records []*event.Record) AuditResult {
 		}
 		return w
 	}
-	for _, rec := range records {
+	for pos, rec := range records {
 		s := rec.Event.Subject
 		switch rec.Event.Verb {
 		case transition.OfferPublishedVerb:
@@ -108,7 +108,8 @@ func Audit(records []*event.Record) AuditResult {
 			// boolean kept here (plans/os-88df7ab2.md D1).
 			get(s)
 		case transition.RunStartedVerb:
-			get(s).starts++
+			w := get(s)
+			w.starts = append(w.starts, pos)
 		}
 		// The deliberate exits are the protocol's, not a copy of them
 		// (D2): transition.IsExit names the four verbs that legally end
@@ -124,7 +125,7 @@ func Audit(records []*event.Record) AuditResult {
 			res.SilentAbandonments = append(res.SilentAbandonments, s)
 		}
 	}
-	starts := make(map[string]int, len(subj))
+	starts := make(map[string][]int, len(subj))
 	for s, w := range subj {
 		starts[s] = w.starts
 	}
@@ -165,7 +166,7 @@ func Audit(records []*event.Record) AuditResult {
 // Where the table could not be built the bar reports nothing: the
 // chain-violation arm has already named that, and a bar cannot judge a
 // chain it cannot fold (D4).
-func unreservedSpend(tbl *transition.Table, records []*event.Record, starts map[string]int) []string {
+func unreservedSpend(tbl *transition.Table, records []*event.Record, starts map[string][]int) []string {
 	if tbl == nil {
 		return nil
 	}
@@ -178,22 +179,34 @@ func unreservedSpend(tbl *transition.Table, records []*event.Record, starts map[
 	sort.Strings(subjects)
 	var out []string
 	for _, s := range subjects {
-		if starts[s] == 0 {
+		if len(starts[s]) == 0 {
 			continue
 		}
 		state, ok := tbl.StateAt(records, s)
 		if !ok {
 			// The fold placed no state for a subject that started a
-			// run: nothing fenced it.
-			for i := 0; i < starts[s]; i++ {
+			// run: nothing fenced any of them.
+			for range starts[s] {
 				out = append(out, s)
 			}
 			continue
 		}
-		for i := 0; i < starts[s]-len(state.RunStarts); i++ {
-			out = append(out, s)
-		}
+		// The fold's facts by the position of the record each came
+		// from, so a raw start is judged against its own fact rather
+		// than against a count (D1).
+		fact := make(map[int]transition.RunStartFact, len(state.RunStarts))
 		for _, st := range state.RunStarts {
+			fact[st.Pos] = st
+		}
+		for _, pos := range starts[s] {
+			st, folded := fact[pos]
+			if !folded {
+				// The fold read no fence and no reservation from this
+				// record, so there is no citation to judge: spend with
+				// no fence, named before any citation check (D1).
+				out = append(out, s)
+				continue
+			}
 			if !admit.RunStartValid(records, tbl, s, st) {
 				out = append(out, s)
 			}

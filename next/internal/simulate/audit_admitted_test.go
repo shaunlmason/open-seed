@@ -135,3 +135,62 @@ func TestStartCitingAClosedReservationIsUnfenced(t *testing.T) {
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+// conformance: plans/os-88df7ab2.md D1, D3 arm four — a raw start the
+// fold discards is spend with no fence, and it is named before any
+// citation check because there is no citation to judge. The bar reads
+// each raw record against the fact at its own position, so a subject
+// carrying one admitted start and one discarded one is named exactly
+// once: the admitted start still passes, and only the discarded one
+// counts. Under a fold-facts-only reading the discarded start is
+// invisible and this drill passes vacuously, which is the hole the
+// card exists to close.
+func TestARawStartTheFoldDiscardedIsNamedOnce(t *testing.T) {
+	records := admittedChain(t, 1)
+	var subject, version string
+	for _, rec := range records {
+		if rec.Event.Verb == transition.RunStartedVerb {
+			subject, version = rec.Event.Subject, rec.Event.V
+			break
+		}
+	}
+	if subject == "" {
+		t.Fatal("the generated chain must start a run")
+	}
+	if a := Audit(records); len(a.UnreservedSpend) != 0 {
+		t.Fatalf("the generated chain is fenced before the plant: %v", a.UnreservedSpend)
+	}
+
+	tbl, err := transition.Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, payload := range []string{
+		`{}`,
+		`{"fence": "not-a-number", "reservation": "3"}`,
+		`{"fence": "999999", "reservation": "3"}`,
+	} {
+		planted := append(append([]*event.Record(nil), records...),
+			&event.Record{Event: event.Event{
+				V: version, Verb: transition.RunStartedVerb, Subject: subject,
+				Actor: records[len(records)-1].Event.Actor, Payload: []byte(payload),
+			}})
+
+		// The premise: the fold placed no new fact for the planted
+		// record, so a bar iterating facts alone would see nothing.
+		before, _ := tbl.StateAt(records, subject)
+		after, ok := tbl.StateAt(planted, subject)
+		if !ok || len(after.RunStarts) != len(before.RunStarts) {
+			t.Fatalf("payload %s: the fold recorded a fact for it, so this is not the discarded case (%d then %d)",
+				payload, len(before.RunStarts), len(after.RunStarts))
+		}
+
+		a := Audit(planted)
+		if len(a.UnreservedSpend) != 1 || a.UnreservedSpend[0] != subject {
+			t.Errorf("payload %s: a discarded raw start names its subject once, got %v", payload, a.UnreservedSpend)
+		}
+		if a.Clean {
+			t.Errorf("payload %s: a chain with unreserved spend is not clean", payload)
+		}
+	}
+}
