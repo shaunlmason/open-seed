@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "task": "os-f79bc5a0",
+  "merge_base": "bebd0b62cfa706446f442e12f35aa79450e53dae",
+  "head": "4043c7f46815a8a02c23f9792e8c548a9bb4c0ab",
+  "plan_path": "plans/os-f79bc5a0.md",
+  "plan_sha256": "b6463d8347fa3a1292aac919367b172b22dd64d03ad986ab3d987ae750b59fc7",
+  "diff_files": [
+    "next/docs/promotion.md"
+  ],
+  "diff_sha256": "98c1455c19d554236877ea07de79db3bb83aca475c6f487a12592ccf729e0dd2",
+  "validation": [
+    {
+      "cmd": "cd next \u0026\u0026 go test ./internal/promotion/ -count=1",
+      "exit": -1
+    },
+    {
+      "cmd": "make check",
+      "exit": -1
+    }
+  ],
+  "generated_by": "shaunlmason"
+}
