@@ -32,16 +32,36 @@ type Measurer struct {
 	Contracts int
 	Writers   int
 	HookBin   string
-	Samples   int // admission checks averaged; 0 means 20
+	Samples   int    // admission checks averaged; 0 means 20
+	Keep      string // a directory the work dir is kept under; empty removes it (plans/os-5063e8ba.md D3)
 }
+
+// MetricRelinked is the storm's count of pushes a hook refused as
+// bad_prev at or beyond the writer's own append and the loop re-linked
+// (plans/os-5063e8ba.md D2): a count in the reading, never a budget,
+// so Required does not name it.
+const MetricRelinked = "relinked"
 
 // Measure runs every metric once and returns the reading.
 func (m Measurer) Measure() (Reading, error) {
-	work, err := os.MkdirTemp("", "seed-perf-*")
-	if err != nil {
-		return nil, err
+	var work string
+	if m.Keep != "" {
+		if err := os.MkdirAll(m.Keep, 0o755); err != nil {
+			return nil, err
+		}
+		w, err := os.MkdirTemp(m.Keep, "seed-perf-*")
+		if err != nil {
+			return nil, err
+		}
+		work = w
+	} else {
+		w, err := os.MkdirTemp("", "seed-perf-*")
+		if err != nil {
+			return nil, err
+		}
+		work = w
+		defer os.RemoveAll(work)
 	}
-	defer os.RemoveAll(work)
 	ledgerDir := filepath.Join(work, "ledger")
 	writers := m.Writers
 	if writers <= 0 {
@@ -103,49 +123,51 @@ func (m Measurer) Measure() (Reading, error) {
 	// remote seeded with the history, the hook installed when given,
 	// each landing one append through the optimistic loop; the wall
 	// time and the attempts each landed append cost.
-	wall, ratio, err := m.storm(work, ledgerDir, res)
+	wall, ratio, relinked, err := m.storm(work, ledgerDir, res)
 	if err != nil {
 		return nil, err
 	}
 	r[MetricContention] = ms(wall)
 	r[MetricAttempts] = ratio
+	r[MetricRelinked] = float64(relinked)
 	return r, nil
 }
 
 func ms(d time.Duration) float64 { return float64(d.Microseconds()) / 1000 }
 
-func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Duration, float64, error) {
+func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Duration, float64, int64, error) {
 	remote := filepath.Join(work, "remote.git")
 	if out, err := exec.Command("git", "init", "-q", "--bare", remote).CombinedOutput(); err != nil {
-		return 0, 0, fmt.Errorf("bare init: %v %s", err, out)
+		return 0, 0, 0, fmt.Errorf("bare init: %v %s", err, out)
 	}
 	for _, kv := range [][2]string{{"gc.auto", "0"}, {"gc.autoDetach", "false"}, {"receive.autoGC", "false"}} {
 		if out, err := exec.Command("git", "-C", remote, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
-			return 0, 0, fmt.Errorf("hardening: %v %s", err, out)
+			return 0, 0, 0, fmt.Errorf("hardening: %v %s", err, out)
 		}
 	}
 	if m.HookBin != "" {
 		shim := "#!/bin/sh\nexec " + m.HookBin + "\n"
 		if err := os.WriteFile(filepath.Join(remote, "hooks", "pre-receive"), []byte(shim), 0o755); err != nil {
-			return 0, 0, err
+			return 0, 0, 0, err
 		}
 	}
 	// Seed the remote with the history in one push.
 	seeder, err := gitref.NewClient(filepath.Join(work, "seeder"), remote, "refs/seed/ledger")
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	if _, err := seeder.CommitAndPush(ledgerDir, "", "ledger: history"); err != nil {
-		return 0, 0, fmt.Errorf("seeding the remote: %w", err)
+		return 0, 0, 0, fmt.Errorf("seeding the remote: %w", err)
 	}
 	writers := m.Writers
 	if writers <= 0 {
 		writers = 1
 	}
 	if len(res.Keys.Writers) < writers {
-		return 0, 0, fmt.Errorf("the history enrolled %d writer keys for %d writers", len(res.Keys.Writers), writers)
+		return 0, 0, 0, fmt.Errorf("the history enrolled %d writer keys for %d writers", len(res.Keys.Writers), writers)
 	}
 	var attempts int64
+	var relinked int64
 	var failed int64
 	var errMu sync.Mutex
 	var firstErr error
@@ -182,6 +204,7 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 				return
 			}
 			atomic.AddInt64(&attempts, int64(out.Attempts))
+			atomic.AddInt64(&relinked, int64(out.Relinked))
 		}(w)
 	}
 	wg.Wait()
@@ -190,24 +213,23 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 		// A writer fails for more reasons than a lost update (a hook
 		// refusal, a git error); the first failure is named so the
 		// storm's verdict is a diagnosis, not a guess.
-		return 0, 0, fmt.Errorf("%d of %d writers failed to land; the first: %v", failed, writers, firstErr)
+		return 0, 0, 0, fmt.Errorf("%d of %d writers failed to land; the first: %v", failed, writers, firstErr)
 	}
-	// Every append landed exactly once: the chain grew by writers.
 	c, err := gitref.NewClient(filepath.Join(work, "reader"), remote, "refs/seed/ledger")
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	tip, err := c.Fetch()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	dir := filepath.Join(work, "final")
 	if err := c.Materialize(tip, dir); err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	final, err := ledger.OpenReadOnly(dir)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	// Every append landed exactly once, and each from its own actor
 	// (plans/os-a00d3f34.md D1): the storm's records are signed by as
@@ -219,13 +241,13 @@ func (m Measurer) storm(work, ledgerDir string, res *history.Result) (time.Durat
 		}
 	}))
 	if err != nil {
-		return 0, 0, fmt.Errorf("the stormed chain must verify: %w", err)
+		return 0, 0, 0, fmt.Errorf("the stormed chain must verify: %w", err)
 	}
 	if rep.Count != res.Records+writers {
-		return 0, 0, fmt.Errorf("the chain holds %d records, %d expected: a lost or doubled update", rep.Count, res.Records+writers)
+		return 0, 0, 0, fmt.Errorf("the chain holds %d records, %d expected: a lost or doubled update", rep.Count, res.Records+writers)
 	}
 	if len(actors) != writers {
-		return 0, 0, fmt.Errorf("the storm's records carry %d distinct actors for %d writers", len(actors), writers)
+		return 0, 0, 0, fmt.Errorf("the storm's records carry %d distinct actors for %d writers", len(actors), writers)
 	}
-	return wall, float64(attempts) / float64(writers), nil
+	return wall, float64(attempts) / float64(writers), relinked, nil
 }

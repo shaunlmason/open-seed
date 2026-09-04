@@ -50,10 +50,24 @@ jobs:
     # D6; next/spec/platform.md): the Go suites run on Linux, macOS and
     # Windows. A platform-gated skip names its reason in the run, and
     # the doctor's platform report says which postures each can run.
+    #
+    # The Windows leg is sharded. cmd/seed is one serial suite that
+    # spawns git tens of thousands of times, and process creation on
+    # the Windows runner costs about ten times what it costs on Linux:
+    # unsharded, that package alone ran twenty minutes against Linux's
+    # two and a half. Each shard takes every Nth top-level test of
+    # cmd/seed by sorted name; shard 1 also runs every other package.
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
+        shard: [1]
+        shards: [1]
+        include:
+          - { os: windows-latest, shard: 1, shards: 3 }
+          - { os: windows-latest, shard: 2, shards: 3 }
+          - { os: windows-latest, shard: 3, shards: 3 }
+    name: platform (${{ matrix.os }}${{ matrix.shards > 1 && format(' {0}/{1}', matrix.shard, matrix.shards) || '' }})
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -66,10 +80,33 @@ jobs:
       - name: 'LF-only git (next/spec/platform.md: the suites need core.autocrlf=false where git converts by default)'
         if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
-      - name: go test (the Seed suites on ${{ matrix.os }})
-        run: go test ./... -count=1 -timeout 40m
+      - name: 'Real-time scanning off for the run (every git object the suites write is a new file Defender would inspect)'
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        shell: pwsh
+        run: Set-MpPreference -DisableRealtimeMonitoring $true
+      - name: go test (the Seed suites on ${{ matrix.os }}, shard ${{ matrix.shard }} of ${{ matrix.shards }})
+        shell: bash
         working-directory: next
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ matrix.shards }}
+        run: |
+          if [ "$SHARDS" -eq 1 ]; then
+            exec go test ./... -count=1 -timeout 40m
+          fi
+          # Every Nth top-level test of cmd/seed, by sorted name; subtests
+          # follow their parent. The list is regenerated per run, so a new
+          # test lands in a shard without anyone editing this file.
+          tests=$(go test ./cmd/seed -list 'Test' | grep '^Test' | sort \
+            | awk -v s="$SHARD" -v n="$SHARDS" 'NR % n == s % n' | paste -sd '|' -)
+          [ -n "$tests" ] || { echo "shard $SHARD of $SHARDS selected no tests"; exit 1; }
+          go test ./cmd/seed -count=1 -timeout 40m -run "^($tests)\$"
+          if [ "$SHARD" -eq 1 ]; then
+            go test $(go list ./... | grep -v '/cmd/seed$') -count=1 -timeout 40m
+          fi
       - name: seed doctor reports the platform
+        if: matrix.shard == 1
         run: go run ./cmd/seed doctor --config fixtures/deployment/seed.json
         working-directory: next
         continue-on-error: true

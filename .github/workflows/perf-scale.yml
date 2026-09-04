@@ -29,7 +29,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/go-env
       - name: 'The gate at the scale profile (next/perf/budgets-scale.json)'
-        run: go run ./cmd/perfgate -budgets perf/budgets-scale.json -last perf/last-scale.json
+        run: go run ./cmd/perfgate -budgets perf/budgets-scale.json -last perf/last-scale.json -keep "$RUNNER_TEMP/perf-scale-work"
         working-directory: next
       - name: 'Attach the reading, pass or fail'
         if: always()
@@ -38,3 +38,15 @@ jobs:
           name: perf-scale-reading
           path: next/perf/last-scale.json
           if-no-files-found: warn
+      # A storm that loses a writer writes no reading at all, so the
+      # refused trees are the only evidence it leaves: the client keeps
+      # each under refused/<commit>/ in its state dir
+      # (plans/os-5063e8ba.md D3). Attached on failure alone, since a
+      # green run's work dir is large and says nothing.
+      - name: 'Attach the refused trees when the storm fails'
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-scale-refused
+          path: ${{ runner.temp }}/perf-scale-work/**/refused/**
+          if-no-files-found: ignore
