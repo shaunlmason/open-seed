@@ -76,6 +76,15 @@ const (
 	// (plans/os-16e55c11.md D1): a committed generated document differs
 	// from what `seed docs generate` now renders from the table.
 	CodeDocsDrift = "docs_drift"
+	// CodeBrokenCitation refines ExitDrift for the citation stage of
+	// `docs check` (card os-5fe43832): a document names a relative path
+	// the tree does not hold, or one that leaves the tree. It shares
+	// ExitDrift because it is the same declared-versus-observed
+	// comparison the base code generalizes, the document being the
+	// declaration and the tree the observation, and it is a distinct
+	// code because the fix is a different one: regenerating the docs
+	// cannot repair a citation.
+	CodeBrokenCitation = "broken_citation"
 	// ExitImportRefused is the predecessor import refusing before any
 	// write (plans/os-cf13fb51.md D1, D4): unanchored, export_mismatch,
 	// import_unmapped.
