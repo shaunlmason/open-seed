@@ -1890,3 +1890,16 @@ failed step skips the rest of the job.
 - Measure the cost you are tempted to assert. One drill over a
   40-contract chain turned "this stays linear" into "410 records in
   130 ms", which is a number a later reader can re-run.
+
+## The guardrail bar (os-aaec6a3c)
+
+- Before removing a rule from a checker, count what else the checker
+  checks. This bar had one source, so the obvious fix would have
+  turned "reports something the boundary allows" into "reports
+  nothing at all" — the same defect at the other end, and harder to
+  notice because every drill would still pass.
+- A fixture that trips a bar is evidence about one of them. The
+  admission-grade chain from `internal/history` tripped the guardrail
+  bar, and the question was never "which is broken" but "which is the
+  authority": the boundary decides what a chain may contain, and a
+  conformance bar that disagrees is the thing that moves.

@@ -194,3 +194,42 @@ func TestARawStartTheFoldDiscardedIsNamedOnce(t *testing.T) {
 		}
 	}
 }
+
+// conformance: plans/os-aaec6a3c.md AC1 — an admitted chain has no
+// guardrail breach. This is the assertion that found the card: the bar
+// required an offer the boundary does not, so internal/history's
+// admission-grade chains, which claim without offering, tripped it on
+// every subject. It could not be written on os-aaec6a3c's branch alone
+// because admittedChain arrived with os-88df7ab2 (#311); it lands here
+// on the merge that brings the two together.
+func TestAdmittedChainHasNoGuardrailBreach(t *testing.T) {
+	records := admittedChain(t, 3)
+
+	// The premise, stated rather than assumed: these chains really do
+	// claim without publishing an offer. If internal/history ever
+	// starts offering, this drill still passes but stops testing the
+	// thing it was written for, so it fails loudly instead.
+	var claims, offers int
+	for _, rec := range records {
+		switch rec.Event.Verb {
+		case ClaimTakenVerb:
+			claims++
+		case transition.OfferPublishedVerb:
+			offers++
+		}
+	}
+	if claims == 0 {
+		t.Fatal("the generated chain takes no claim: this drill would pass vacuously")
+	}
+	if offers != 0 {
+		t.Fatalf("internal/history now publishes %d offer(s); this drill was written for the unoffered claim (os-aaec6a3c D1)", offers)
+	}
+
+	a := Audit(records)
+	if len(a.GuardrailBreaches) != 0 {
+		t.Errorf("an admitted chain trips no guardrail: %v", a.GuardrailBreaches)
+	}
+	if !a.Clean {
+		t.Errorf("an admitted chain audits clean: %+v", a)
+	}
+}

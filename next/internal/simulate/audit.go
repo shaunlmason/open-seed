@@ -77,9 +77,8 @@ func Audit(records []*event.Record) AuditResult {
 	// Per-subject: silent abandonment (a window opened by claim.taken
 	// and never closed by a deliberate exit) and unreserved spend.
 	type window struct {
-		open    bool
-		offered bool
-		starts  []int
+		open   bool
+		starts []int
 	}
 	subj := map[string]*window{}
 	get := func(s string) *window {
@@ -93,15 +92,16 @@ func Audit(records []*event.Record) AuditResult {
 	for pos, rec := range records {
 		s := rec.Event.Subject
 		switch rec.Event.Verb {
-		case transition.OfferPublishedVerb:
-			get(s).offered = true
 		case ClaimTakenVerb:
+			// A claim rides a published offer in the scheduling model
+			// (SEED-NEXT.md II.9), but admission does not require one:
+			// its claim arms are authoring isolation and the lifecycle
+			// transition, and nothing there reads the subject's offers.
+			// So an unoffered claim is not a guardrail breach; the bar
+			// reports what the boundary refuses, and the scheduling
+			// concern is internal/eval's ready-with-no-live-offers read
+			// (plans/os-aaec6a3c.md D1, D3).
 			w := get(s)
-			// A claim must ride a published offer: claiming work the
-			// supervisor never offered is a guardrail breach.
-			if !w.offered {
-				res.GuardrailBreaches = append(res.GuardrailBreaches, s)
-			}
 			w.open = true
 		case transition.BudgetReserveVerb:
 			// Read below, against the protocol's own rule rather than a
@@ -118,6 +118,8 @@ func Audit(records []*event.Record) AuditResult {
 			get(s).open = false
 		}
 	}
+	res.GuardrailBreaches = append(res.GuardrailBreaches, sealedAuthorClaims(tbl, records)...)
+
 	// A subject still open (claim taken, no deliberate exit) is a silent
 	// abandonment; a done contract is closed by construction.
 	for s, w := range subj {
@@ -210,6 +212,40 @@ func unreservedSpend(tbl *transition.Table, records []*event.Record, starts map[
 			if !admit.RunStartValid(records, tbl, s, st) {
 				out = append(out, s)
 			}
+		}
+	}
+	return out
+}
+
+// sealedAuthorClaims names every subject claimed by the key that
+// sealed its checks (plans/os-aaec6a3c.md D1). This is the guardrail
+// admission actually enforces on the claim path — "the key that sealed
+// the subject's checks never implements against them" — and it is
+// visible in the chain alone, because the fold carries the sealing
+// position and signer. A raw push is the case that matters: the
+// boundary would have refused the claim, so a chain that holds one is
+// a chain where the guardrail was bypassed.
+func sealedAuthorClaims(tbl *transition.Table, records []*event.Record) []string {
+	if tbl == nil {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, rec := range records {
+		if rec.Event.Verb != ClaimTakenVerb {
+			continue
+		}
+		s := rec.Event.Subject
+		if seen[s] {
+			continue
+		}
+		state, ok := tbl.StateAt(records, s)
+		if !ok || state.Sealed == nil {
+			continue
+		}
+		if state.Sealed.Signer == rec.Event.Actor {
+			seen[s] = true
+			out = append(out, s)
 		}
 	}
 	return out

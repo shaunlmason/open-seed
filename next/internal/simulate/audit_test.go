@@ -12,6 +12,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 func rec(verb, subject string) *event.Record {
@@ -97,8 +98,15 @@ func TestAuditCatchesEmptyChain(t *testing.T) {
 	}
 }
 
-func TestAuditCatchesUnofferedClaim(t *testing.T) {
-	// A claim with no preceding offer.published is a guardrail breach.
+// conformance: plans/os-aaec6a3c.md D1, D4 — an unoffered claim is not
+// a guardrail breach. The scheduling model publishes offers
+// (SEED-NEXT.md II.9) but admission does not require one: its claim
+// arms are authoring isolation and the lifecycle transition, and
+// nothing there reads the subject's offers, so a chain the boundary
+// would take must not be reported as a breach. internal/history's
+// generated chains claim without offering and pass the seed-admit
+// hook, which is how this was found (#311).
+func TestUnofferedClaimIsNotAGuardrailBreach(t *testing.T) {
 	recs := []*event.Record{
 		rec("intent.filed", "c-1"),
 		rec("contract.specified", "c-1"),
@@ -106,9 +114,8 @@ func TestAuditCatchesUnofferedClaim(t *testing.T) {
 		rec(transition.BudgetReserveVerb, "c-1"),
 		rec("submission.made", "c-1"),
 	}
-	a := Audit(recs)
-	if len(a.GuardrailBreaches) != 1 || a.GuardrailBreaches[0] != "c-1" {
-		t.Fatalf("a claim with no offer must be a guardrail breach, got %+v", a.GuardrailBreaches)
+	if a := Audit(recs); len(a.GuardrailBreaches) != 0 {
+		t.Fatalf("admission takes an unoffered claim, so the bar must not name it: %+v", a.GuardrailBreaches)
 	}
 }
 
@@ -220,5 +227,48 @@ func TestUnreservedSpendCountsTheProtocolsReservation(t *testing.T) {
 	}
 	if a.Clean {
 		t.Fatal("a run with unreserved spend is not clean")
+	}
+}
+
+// recBy is rec with an actor and a payload: the guardrail arm reads
+// both, since it compares a claim's signer against the key that sealed
+// the subject.
+func recBy(verb, subject, actor, payload string) *event.Record {
+	// The version matters here, unlike in rec: this drill's records are
+	// read through the fold, which skips a record whose version it
+	// cannot place.
+	return &event.Record{Event: event.Event{V: version.Seed1, Verb: verb, Subject: subject, Actor: actor, Payload: []byte(payload)}}
+}
+
+// conformance: plans/os-aaec6a3c.md D1, D4 — the guardrail the
+// boundary does enforce on the claim path, and the reason this bar is
+// corrected rather than emptied. Admission refuses a claim.taken whose
+// actor sealed that subject's checks, so a chain holding one was
+// pushed past the boundary and the bar names it.
+func TestSealedAuthorClaimIsAGuardrailBreach(t *testing.T) {
+	const sealer = "fp-sealer"
+	sealed := []*event.Record{
+		recBy("intent.filed", "c-1", "fp-dispatcher", `{"intent": "x", "tier": "trivial", "budget": "small", "routing": "core"}`),
+		recBy("contract.specified", "c-1", "fp-dispatcher", `{"acceptance": {"ref": "specs/x.md @ abc1234", "executable": false}}`),
+		recBy(transition.CheckSealedVerb, "c-1", sealer, `{"commitment": "sha256:abcd"}`),
+		recBy("claim.taken", "c-1", sealer, "{}"),
+	}
+	a := Audit(sealed)
+	if len(a.GuardrailBreaches) != 1 || a.GuardrailBreaches[0] != "c-1" {
+		t.Fatalf("the key that sealed the checks may not claim the subject: %+v", a)
+	}
+	if a.Clean {
+		t.Fatal("a chain with a guardrail breach is not clean")
+	}
+
+	// A different claimant is the ordinary case and stays quiet.
+	other := []*event.Record{
+		recBy("intent.filed", "c-2", "fp-dispatcher", `{"intent": "x", "tier": "trivial", "budget": "small", "routing": "core"}`),
+		recBy("contract.specified", "c-2", "fp-dispatcher", `{"acceptance": {"ref": "specs/x.md @ abc1234", "executable": false}}`),
+		recBy(transition.CheckSealedVerb, "c-2", sealer, `{"commitment": "sha256:abcd"}`),
+		recBy("claim.taken", "c-2", "fp-implementer", "{}"),
+	}
+	if a := Audit(other); len(a.GuardrailBreaches) != 0 {
+		t.Fatalf("a claim by a key that sealed nothing is no breach: %+v", a.GuardrailBreaches)
 	}
 }
