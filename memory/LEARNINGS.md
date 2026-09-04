@@ -1639,6 +1639,25 @@ the assertions read, and there is no copy to go stale.
   judged it, hold the criteria to the charter by parsing the charter,
   and let the doctor say what is still open rather than what is done.
 
+## The promotion evidence packet (os-98ce6f8a)
+
+- Evidence at a gate rots quietly: a document that names drills is
+  only as good as the tree it names, so cite in one machine-readable
+  shape and hold every citation to the tree under the gate that
+  already runs. The parser that reads the shape is the same one that
+  refuses a stale claim.
+- A packet presents; the sentence that selects an option, starts a
+  run or flips an entry point is the decision the build plan reserves,
+  and the drill checks the reserved criteria carry a question rather
+  than a choice.
+- A gate over a document holds only what its parser models: the two
+  cutover questions lived in prose the parser skipped, so deleting one
+  or answering it in place passed the gate that claimed to keep them
+  questions. Model every claim the gate is said to protect, one
+  physical line each, so an absence is a parse error and not prose
+  read past; and confine every cited path before joining it, since
+  `filepath.Join` cleans `..` into a read outside the tree the gate
+  promises.
 
 ## The flywheel drill's skip path (os-222189a3)
 
