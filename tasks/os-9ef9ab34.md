@@ -7,7 +7,7 @@ squad: core
 blocked_on:
     - plan:307
 created_at: "2026-09-04T11:41:16Z"
-updated_at: "2026-09-04T11:43:29Z"
+updated_at: "2026-09-04T12:53:28Z"
 ---
 
 `conformance.Assess` reports `complete: true` only when every applicable row is `met`: partial and routed are outstanding, and there is no exemption for a permission (next/internal/conformance/conformance.go, the Assess doc comment and the Outstanding loop). III.B row 6 is a permission, not an obligation: 'Admission MAY shard proposal intake without changing semantics; ordering remains solely the admitted chain' (SEED-NEXT.md line 833). It sits `open` in next/spec/conformance.json with the note 'not claimed: MAY; the backlog names sharded intake as a true extra'.
@@ -26,3 +26,7 @@ Two ways out, and the plan should pick one and say why:
 Reading 1 looks right (the charter's other MAY-shaped rows should be checked for the same shape while planning). Whichever is chosen, the fix touches the conformance table and possibly Assess, so it is plan-first: this card is filed, not started. Related: III.C row 4 stays partial until the weekly scale run is green, and its 'without unrelated writes racing each other's admissions pathologically' clause is also sharded intake's, so reading 2 would make os-7953612b block two rows.
 
 Found while checking whether any agent-side conformance work remained before the promotion gate (2026-09-04). Tier: standard.
+
+## Evidence ev-b563718e (pr, seed-next-implementer, 2026-09-04T12:53:28Z)
+
+https://github.com/shaunlmason/open-seed/pull/308

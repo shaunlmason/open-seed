@@ -1537,3 +1537,4 @@
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-86311f52","kind":"comment"},"task":"os-88df7ab2","ts":"2026-09-04T11:55:27Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"title":"seed: a blocked card cannot gain a second blocked_on entry, though the model and the unblock path both expect several"},"task":"os-ebddb380","ts":"2026-09-04T11:57:58Z","verb":"create"}
 {"actor":"implementer","data":{"evidence_id":"ev-2564850c","kind":"pr"},"task":"os-5fe43832","ts":"2026-09-04T12:44:16Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-b563718e","kind":"pr"},"task":"os-9ef9ab34","ts":"2026-09-04T12:53:28Z","verb":"attach-evidence"}
