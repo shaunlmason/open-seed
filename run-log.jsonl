@@ -1489,3 +1489,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-12974667","kind":"receipt"},"task":"os-a00d3f34","ts":"2026-09-04T03:04:10Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-a00d3f34","ts":"2026-09-04T03:04:14Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:301","to":"ready"},"task":"os-222189a3","ts":"2026-09-04T03:57:02Z","verb":"plan-unblock"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T04:57:06Z"},"task":"os-222189a3","ts":"2026-09-04T03:57:06Z","verb":"claim"}
