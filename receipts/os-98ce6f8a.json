@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task": "os-98ce6f8a",
   "merge_base": "7f15ce0340b86e079b18b41d5ab0bfea407fef6d",
-  "head": "eb7356f74e7a250e1e3fe153ba552236e9438177",
+  "head": "7ebfd4018df971cfbcaf327e194ae44912ca5949",
   "plan_path": "plans/os-98ce6f8a.md",
   "plan_sha256": "d96d859fa44e497bbd88b31ceeae07bbb62d965113328338ef3968477f361b30",
   "diff_files": [
@@ -14,7 +14,7 @@
     "next/internal/promotion/promotion.go",
     "next/internal/promotion/promotion_test.go"
   ],
-  "diff_sha256": "6cdc3f0713b2cca788b751f637cb122289fd7e1e48096aef79c242396bce2344",
+  "diff_sha256": "a69c8c26e6a2a8554489b16864103af675260d9e23ffd3f1c92ffdec3c0b1b3c",
   "validation": [
     {
       "cmd": "cd next \u0026\u0026 go test ./internal/promotion/ -count=1",
