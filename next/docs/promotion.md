@@ -374,9 +374,8 @@ never by editing history, and a divergence that recurs is a defect
 card.
 
 **The evidence at the end.** The five-bar audit over the real chain
-(`simulate.Audit`, `internal/simulate/audit.go`, today reachable only
-through `seed simulate`; a `seed ledger audit` verb that runs it over
-any ledger is one small card the run needs before it starts), the
+(`simulate.Audit`, `internal/simulate/audit.go`, run over any ledger
+an operator points at by `seed ledger audit`, os-7599c27d), the
 report's `lanes` section for the two rates, the shape of every
 `escalation.raised` payload, the receipts' independence on the
 happy-path submissions. Each feeds the measurement ledger below
@@ -482,7 +481,7 @@ promotion, not an omission in it.
 | R.2 | planner plan PRs pass human review above 80% unedited and implementers reach verdict-passed submissions on the happy path: lanes.planner.unedited_rate above 0.800 and the receipts' independence on the window's happy-path submissions | `report.json` lanes.planner.unedited_rate; the verdict records' receipts | not measured |
 | R.3 | the verifier lane holds quality alone on low tiers and humans review only high-tier plans: the tiers' independence levels and the verifiers' calibration agreement over the window | `next/spec/tiers.md` levels per tier; the calibration harness's agreement | not measured |
 | R.4 | every escalation is one packet, one question and one decision, a transcript dump filed as a defect: the shape of every escalation.raised payload in the window | the chain's escalation.raised payloads through `seed decision` | not measured |
-| R.5 | the system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches and zero unreserved spend: the five-bar audit over the real chain at the window's end | `simulate.Audit` over the shadow ledger | not measured |
+| R.5 | the system runs unattended for a week on a real backlog with zero chain violations, zero lost updates, zero silent abandonments, zero guardrail breaches and zero unreserved spend: the five-bar audit over the real chain at the window's end | `seed ledger audit` over the shadow ledger (`simulate.Audit`) | not measured |
 | R.6 | the flywheel demonstrably compounds over a quarter: chore-to-workflow conversions, the packet-resume rate and the cost per contract over the quarter after the self-hosting cutover | `report.json` flywheel and knowledge sections; the budget records | not measured |
 | R.7 | a team that has never spoken to the authors adopts from the README in under an hour on its own forge and reaches a verifier-passed, human-reviewed PR the same day: the first external adoption after the distribution step | the adopting team's report, recorded in this packet | not measured |
 
