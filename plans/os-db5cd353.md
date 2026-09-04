@@ -56,11 +56,14 @@ rule, a fold fact). Deps: none.
   of its verdicts' receipt digests, refused otherwise naming what the
   subject references (`erasure_unreferenced`, exit 3's family: a
   citation the chain does not hold); on `system` any well-formed
-  digest admits, the operator's attestation being the reference. An
-  artifact erased once on a subject is not erased again there
-  (`erased_already`, naming the position and signer): a second record
-  would attribute an act that did nothing. Shape refusals are the
-  strict-object refusals every fact verb has.
+  digest admits, the operator's attestation being the reference. The
+  tombstone is digest-wide: the store holds one object per digest, so
+  an artifact two contracts reference is erased for both by one act,
+  and an artifact erased once, on any subject, is not recorded again
+  (`erased_already`, naming the position, signer and subject of the
+  first record), since a second record would attribute an act that did
+  nothing. Shape refusals are the strict-object refusals every fact
+  verb has.
 - **D3 — operator only.** `artifact.erased` accepts `operator` and
   nothing else: an erasure obligation is a governance act a human
   answers for, the `decision.recorded` posture, and no lane's loop
@@ -68,9 +71,12 @@ rule, a fold fact). Deps: none.
   drills all gain the verb.
 - **D4 — the fold keeps the fact and the audit cites it.** `Fold`
   gains `erasures` (position, timestamp, signer, subject, artifact,
-  reason) with `Erasures()` and `Erasure(subject, artifact)`. `seed
-  seal audit` reports a missing ciphertext whose commitment the fold
-  holds an erasure for in a new `erased` list, naming the position,
+  reason) with `Erasures()` and `Erasure(artifact)`, the digest-wide
+  lookup, so a contract whose commitment was erased under another
+  contract's record is attributed to that record rather than reported
+  as missing evidence. `seed seal audit` reports a missing ciphertext
+  whose commitment the fold holds an erasure for in a new `erased`
+  list, naming the position,
   the signer and the reason, and counts it as no finding: an honored
   erasure leaves the audit clean, which is what "honorable" buys; a
   missing ciphertext with no erasure record stays
@@ -84,15 +90,21 @@ rule, a fold fact). Deps: none.
   the digest keys in the store (the sealed bucket, the content tree,
   or both), reporting `removed`; bytes already gone are reported as
   such, since the record is the attribution and an erasure after the
-  fact is still an erasure. The order is deliberate: a record with the
-  bytes still present is a promise the next pass keeps, bytes gone
-  with no record is the silence the row forbids. `artifact.Store`
-  gains `Erase(digest)` for the two buckets.
+  fact is still an erasure. The order is deliberate, and the resume
+  path is explicit: a run that dies between the append and the removal
+  leaves a standing record with the bytes present, and the next run of
+  the verb finds the record (on any subject) and finishes the removal
+  without a second record, reporting `recorded: false` and the
+  position it finished; a drill plants exactly that state (the record
+  landed raw, the ciphertext left in place) and asserts the finish.
+  Bytes gone with no record is the silence the row forbids.
+  `artifact.Store` gains `Erase(digest)` for the two buckets.
 - **D6 — the surfaces name it.** The affordance catalog gains the
-  probe (the subject's sealed commitment when it has one, else its
-  latest receipt digest, else a zero digest that the rule refuses as
-  unreferenced, so the verb is drafted exactly where something is
-  erasable); the registry gains the `artifact` group; the generated
+  probe (the first of the subject's references, its sealed commitment
+  then its verdicts' receipts, that no erasure tombstones; else a zero
+  digest that the rule refuses as unreferenced, so the verb is drafted
+  exactly while something remains erasable and never for an erased
+  digest); the registry gains the `artifact` group; the generated
   capability document is regenerated; `protocol.md`'s catalog gains
   `artifact.*` and a short "Erasure" section; `sealed-checks.md`'s
   erasure paragraph and audit classes follow; `actors.md` gains the
@@ -122,9 +134,11 @@ rule, a fold fact). Deps: none.
    the ciphertext is gone, the audit names the erasure by position,
    signer and reason and is clean, an unattributed deletion on another
    subject stays `seal_evidence_missing`, render refuses naming the
-   erasure, a content artifact erased on system, a non-operator
-   refuses `out_of_grant`, an unreferenced digest refuses); the
-   completeness lists.
+   erasure, a run that died after the append is finished by the next
+   run without a second record, a digest shared by two contracts is
+   erased and attributed for both, a content artifact erased on
+   system, a non-operator refuses `out_of_grant`, an unreferenced
+   digest refuses); the completeness lists.
 4. Specs (`protocol.md`, `sealed-checks.md`, `actors.md`), the
    generated docs, the conformance row and `conformance.md`,
    `next/docs/progress.md`, `next/docs/decisions.md`,
