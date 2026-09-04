@@ -1,11 +1,16 @@
 ---
 id: os-9ef9ab34
 title: 'next: a charter MAY sits open in the table, so seed doctor can never report complete (III.B row 6 blocks promotion)'
-state: ready
+state: in_progress
 priority: P1
 squad: core
+claim:
+    actor: seed-next-implementer
+    token: c-ae32ea6b64559931
+    claimed_at: "2026-09-04T11:42:15Z"
+    lease_expires: "2026-09-04T12:42:15Z"
 created_at: "2026-09-04T11:41:16Z"
-updated_at: "2026-09-04T11:42:12Z"
+updated_at: "2026-09-04T11:42:15Z"
 ---
 
 `conformance.Assess` reports `complete: true` only when every applicable row is `met`: partial and routed are outstanding, and there is no exemption for a permission (next/internal/conformance/conformance.go, the Assess doc comment and the Outstanding loop). III.B row 6 is a permission, not an obligation: 'Admission MAY shard proposal intake without changing semantics; ordering remains solely the admitted chain' (SEED-NEXT.md line 833). It sits `open` in next/spec/conformance.json with the note 'not claimed: MAY; the backlog names sharded intake as a true extra'.

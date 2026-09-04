@@ -1529,3 +1529,4 @@
 {"actor":"shaunlmason","data":{"title":"next: the unreserved-spend bar counts a reservation's occurrence, not an open valid one (III.R row 5)"},"task":"os-88df7ab2","ts":"2026-09-04T09:52:38Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: a charter MAY sits open in the table, so seed doctor can never report complete (III.B row 6 blocks promotion)"},"task":"os-9ef9ab34","ts":"2026-09-04T11:41:18Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-9ef9ab34","ts":"2026-09-04T11:42:12Z","verb":"promote"}
+{"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-04T12:42:15Z"},"task":"os-9ef9ab34","ts":"2026-09-04T11:42:15Z","verb":"claim"}
