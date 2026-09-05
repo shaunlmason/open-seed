@@ -71,6 +71,13 @@ const (
 	// subject carrying the oldest unanswered request's position and
 	// timestamp, discharged by the dispatcher's request.answered.
 	KindRequestPending = "request.pending"
+	// KindApprovalPending is a per-verb approval request nobody has
+	// answered (plans/os-5781a026.md D5): owed by the operator lane,
+	// one row per subject carrying the oldest open request's position
+	// and timestamp (identity is (Subject, Kind), so a subject with
+	// several open requests shows the oldest until it is answered),
+	// discharged by the operator's approval.granted or approval.denied.
+	KindApprovalPending = "approval.pending"
 )
 
 // Lane names used where an obligation is owed by a role rather than
@@ -104,6 +111,10 @@ var factDischargers = map[string][]string{
 	KindVerdictHuman: {"verdict.rendered"},
 	// next/spec/requests.md: the dispatcher's answer closes a request.
 	KindRequestPending: {"request.answered"},
+	// next/spec/protocol.md "Per-verb approval": either answer closes
+	// the request; the grant is then spent by the act, the denial
+	// admits nothing.
+	KindApprovalPending: {"approval.denied", "approval.granted"},
 }
 
 // mergeRequestVerb discharges a standing pass verdict that no merge
@@ -197,6 +208,7 @@ func Derive(records []*event.Record, table *transition.Table, deps Deps) []Row {
 		}
 	}
 	rows = append(rows, requestRows(fold)...)
+	rows = append(rows, approvalRows(fold)...)
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].Subject != rows[j].Subject {
 			return rows[i].Subject < rows[j].Subject
@@ -349,6 +361,32 @@ func requestRows(fold *transition.Fold) []Row {
 			Since:        r.Pos,
 			TS:           r.TS,
 			DischargedBy: append([]string(nil), factDischargers[KindRequestPending]...),
+		})
+	}
+	return rows
+}
+
+// approvalRows is the unanswered approval requests as obligations on
+// the operator lane (plans/os-5781a026.md D5): one row per subject,
+// since identity is (Subject, Kind), carrying the oldest open request
+// on it, so the request lands in the inbox the operator orients from
+// with its age in elapsed time. A request on system is owed like one
+// on a contract.
+func approvalRows(fold *transition.Fold) []Row {
+	var rows []Row
+	seen := map[string]bool{}
+	for _, a := range fold.Approvals() {
+		if a.Answered != nil || seen[a.Subject] {
+			continue
+		}
+		seen[a.Subject] = true
+		rows = append(rows, Row{
+			Subject:      a.Subject,
+			Kind:         KindApprovalPending,
+			OwedBy:       LaneOperator,
+			Since:        a.Pos,
+			TS:           a.TS,
+			DischargedBy: append([]string(nil), factDischargers[KindApprovalPending]...),
 		})
 	}
 	return rows

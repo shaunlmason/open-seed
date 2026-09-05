@@ -42,6 +42,7 @@ var specCatalogVerbs = []string{
 	"verdict.rendered", "verdict.deferred", "check.sealed",
 	"merge.requested", "merge.observed", "merge.overridden",
 	"message.sent", "request.filed", "request.answered", "artifact.erased",
+	"approval.requested", "approval.granted", "approval.denied",
 	"curation.deadend.recorded", "curation.hypothesis.proposed", "curation.hypothesis.contested", "curation.lesson.promoted",
 	"curation.lesson.retired", "curation.deadend.retired", "curation.deadend.unretired",
 	"workflow.proposed", "workflow.merged",
@@ -242,6 +243,20 @@ func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
 			t.Fatal("no pending request to answer")
 			return ""
 		}, "answered"},
+		// The per-verb approval (plans/os-5781a026.md D7): the request
+		// is afforded to any standing key on a known subject, the two
+		// answers to the operator while one is pending and to nobody
+		// after, and the pending request is the operator's obligation.
+		walkStep{"supervisor", version.Seed7, "approval.requested", "system", func(t *testing.T, ctx *Context) string {
+			return `{"verb": "offer.published", "actor": "` + fpOf(t, lanes["supervisor"]) + `", "reason": "walk"}`
+		}, "approval-requested"},
+		walkStep{"root", version.Seed7, "approval.granted", "system", func(t *testing.T, ctx *Context) string {
+			if p := ctx.Lifecycle.PendingApprovals("system"); len(p) > 0 {
+				return fmt.Sprintf(`{"request": "%d"}`, p[0].Pos)
+			}
+			t.Fatal("no pending approval to grant")
+			return ""
+		}, "approval-granted"},
 	)
 }
 
@@ -348,6 +363,25 @@ func TestAffordancesWalk(t *testing.T) {
 		"answered": func() {
 			if l := list(signer, "system"); has(l, "request.answered") {
 				t.Fatalf("an answered request lists no second answer: %v", l)
+			}
+			if l := list(keys["supervisor"], "system"); !has(l, "approval.requested") || has(l, "approval.granted") {
+				t.Fatalf("a standing key lists the approval request on system and never an answer: %v", l)
+			}
+			if l := list(signer, "system"); has(l, "approval.granted") || has(l, "approval.denied") {
+				t.Fatalf("with nothing pending the operator lists no answer: %v", l)
+			}
+		},
+		"approval-requested": func() {
+			if l := list(signer, "system"); !has(l, "approval.granted") || !has(l, "approval.denied") {
+				t.Fatalf("a pending approval lists both answers for the operator: %v", l)
+			}
+			if l := list(keys["supervisor"], "system"); has(l, "approval.granted") {
+				t.Fatalf("the requester answers nothing: %v", l)
+			}
+		},
+		"approval-granted": func() {
+			if l := list(signer, "system"); has(l, "approval.granted") || has(l, "approval.denied") {
+				t.Fatalf("an answered approval lists no second answer: %v", l)
 			}
 		},
 		"filed-c1": func() {

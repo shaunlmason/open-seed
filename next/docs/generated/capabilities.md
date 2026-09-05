@@ -13,6 +13,9 @@ Every verb the affordance catalog drafts, with the capability set the keyring ac
 | `request.filed` | — (standing only) |
 | `artifact.erased` | `operator` |
 | `request.answered` | `dispatch`, `operator` |
+| `approval.requested` | — (standing only) |
+| `approval.granted` | `operator` |
+| `approval.denied` | `operator` |
 | `system.checkpoint` | `maintenance`, `operator` |
 | `actor.enrolled` | `operator` |
 | `actor.granted` | `operator` |

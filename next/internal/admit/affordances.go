@@ -95,6 +95,14 @@ type probeView struct {
 	// rather than by a guess (plans/os-48df10a2.md).
 	requestAbout string
 	request      string
+	// actor is the probing key's fingerprint, the actor an
+	// approval.requested probe names as the one that will act;
+	// approval is the position of the oldest unanswered approval
+	// request on the queried subject, "0" when none stands, so the
+	// grant and deny probes are refused by the rule rather than by a
+	// guess (plans/os-5781a026.md D7).
+	actor    string
+	approval string
 	// erasable is the digest the queried subject's fold references
 	// (its sealed commitment, else its latest verdict's receipt), the
 	// artifact an artifact.erased probe on it names; a zero digest
@@ -524,6 +532,23 @@ var affordanceCatalog = []struct {
 		// need an intent the probe cannot have appended.
 		return `{"request": "` + v.request + `", "outcome": "declined", "reason": "probe"}`
 	}},
+	{"approval.requested", func(v *probeView) string {
+		// A per-verb approval request (plans/os-5781a026.md D7):
+		// the probing key as the actor and claim.taken as the verb,
+		// a catalog verb every deployment has. Afforded to any
+		// standing key on a subject the chain knows or on system,
+		// which is what the rule and the keyring judge.
+		return `{"verb": "claim.taken", "actor": "` + v.actor + `", "reason": "probe"}`
+	}},
+	{"approval.granted", func(v *probeView) string {
+		// The operator's grant of the oldest open request on the
+		// queried subject; a zero position when none stands, which
+		// the rule refuses.
+		return `{"request": "` + v.approval + `"}`
+	}},
+	{"approval.denied", func(v *probeView) string {
+		return `{"request": "` + v.approval + `", "reason": "probe"}`
+	}},
 	{"system.checkpoint", func(v *probeView) string {
 		// A shape-valid snapshot citation (next/spec/maintenance.md):
 		// the versioned format, a well-formed digest, a fetchable
@@ -720,6 +745,8 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		escalation:  "0",
 		position:    fmt.Sprintf("%d", ctx.Count),
 		request:     "0",
+		actor:       fp,
+		approval:    "0",
 		erasable:    strings.Repeat("0", 64),
 	}
 	v.version = ctx.Active
@@ -732,6 +759,9 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 				v.request = fmt.Sprintf("%d", r.Pos)
 				break
 			}
+		}
+		if pending := ctx.Lifecycle.PendingApprovals(subject); len(pending) > 0 {
+			v.approval = fmt.Sprintf("%d", pending[0].Pos)
 		}
 		if s, ok := ctx.Lifecycle.State(subject); ok {
 			v.requestAbout = subject

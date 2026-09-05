@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shaunlmason/open-seed/next/internal/approval"
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/classify"
 	"github.com/shaunlmason/open-seed/next/internal/curation"
@@ -589,6 +590,86 @@ func (e *RoutingError) Error() string {
 	return fmt.Sprintf("routing %q names no declared squad (seed.json teams: %s)", e.Routing, strings.Join(e.Squads, ", "))
 }
 
+// ApprovalRequiredError is a governed act with no open grant
+// (plans/os-5781a026.md D4): the declaration names the verb for this
+// actor's roster kind at or above the floor, and no approval.granted
+// naming this verb and actor stands unspent on the subject. Refused at
+// admission as policy, the ceiling's family; the message names the
+// exact request to file and the grant that would answer it.
+type ApprovalRequiredError struct {
+	Subject, Verb, Actor, Kind, Tier, MinTier string
+	// Pending is the position of this actor's unanswered request for
+	// the same act, when one stands: the operator's turn, not the
+	// actor's.
+	Pending *int
+}
+
+func (e *ApprovalRequiredError) Error() string {
+	scope := "every tier"
+	if e.MinTier != "" {
+		scope = "the " + e.MinTier + " tier and above"
+	}
+	on := "on a contract"
+	if e.Tier != "" {
+		on = "on a " + e.Tier + " contract"
+	}
+	if e.Pending != nil {
+		return fmt.Sprintf("%s %s refused: the deployment's guardrails govern %s for %s-kind keys at %s (seed.json guardrails.approvals), and %s's request at position %d awaits the operator's `seed approval grant --subject %s --request %d`",
+			e.Verb, on, e.Verb, e.Kind, scope, e.Actor, *e.Pending, e.Subject, *e.Pending)
+	}
+	return fmt.Sprintf("%s %s refused: the deployment's guardrails govern %s for %s-kind keys at %s (seed.json guardrails.approvals), and no open approval names %s for it — file `seed approval request --subject %s --verb %s --reason <why>` and wait for the operator's `seed approval grant --subject %s`; one grant admits one act",
+		e.Verb, on, e.Verb, e.Kind, scope, e.Actor, e.Subject, e.Verb, e.Subject)
+}
+
+// ApprovalValid re-judges a granted approval position-accurately
+// (plans/os-5781a026.md D4; memory/LEARNINGS.md, the laundering
+// countermeasure): the request record at its position re-parses and
+// names a catalog verb; the answer record at its position re-parses
+// and cites the request; and at the answer's position the keyring
+// held the answerer at active operator standing (the grant row's
+// capabilities) and the named actor enrolled. A grant that fails any
+// of these folds as a fact and authorizes nothing, so a raw-pushed
+// grant signed by a key without the operator's standing admits no act.
+func ApprovalValid(records []*event.Record, g transition.ApprovalFact) bool {
+	if g.Answered == nil || !g.Granted || g.Pos < 0 || g.Pos >= len(records) || *g.Answered <= g.Pos || *g.Answered >= len(records) {
+		return false
+	}
+	req := &records[g.Pos].Event
+	if req.Verb != approval.RequestedVerb || req.Subject != g.Subject || !version.Activated(req.V) {
+		return false
+	}
+	p, err := approval.ParseRequested(req.Subject, req.Payload)
+	if err != nil || p.Verb != g.Verb || p.Actor != g.Actor || !catalogHas(p.Verb) {
+		return false
+	}
+	ans := &records[*g.Answered].Event
+	if ans.Verb != approval.GrantedVerb || ans.Subject != g.Subject || ans.Actor != g.Answerer || !version.Activated(ans.V) {
+		return false
+	}
+	if _, cited, err := approval.ParseAnswer(ans.Verb, ans.Subject, ans.Payload); err != nil || cited != g.Pos {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:*g.Answered])
+	if err != nil || ring == nil {
+		return false
+	}
+	if _, enrolled := ring.Get(g.Actor); !enrolled {
+		return false
+	}
+	return ring.HasAnyCapability(g.Answerer, keyring.AcceptedCapabilities(approval.GrantedVerb))
+}
+
+// catalogHas reports whether the affordance catalog drafts the verb:
+// what "a catalog verb" means for the approval request's citation.
+func catalogHas(verb string) bool {
+	for _, p := range affordanceCatalog {
+		if p.verb == verb {
+			return true
+		}
+	}
+	return false
+}
+
 // policyRules are the declaration-driven rules: no-ops without a
 // declaration, and admission policy rather than chain validity with
 // one — the tiers precedent (next/spec/tiers.md): a raw-pushed record
@@ -596,6 +677,64 @@ func (e *RoutingError) Error() string {
 // for byte, and no protocol version bumps.
 func policyRules() []Rule {
 	return []Rule{
+		{Name: "require-approval", Check: func(c *Context, rec *event.Record) error {
+			// The require-approval mode (plans/os-5781a026.md D1, D4;
+			// charter §II.14): a record whose verb the declaration
+			// governs, by a key whose roster kind the rule names, on a
+			// subject at or above the floor, refuses unless an open
+			// grant names the verb and the actor. The three approval
+			// verbs are never governed; a floor outside the tier
+			// vocabulary fails closed, the ceiling's posture.
+			if c.Declaration == nil || c.Keyring == nil || c.Lifecycle == nil || approval.IsApprovalVerb(rec.Event.Verb) {
+				return nil
+			}
+			verb, subject, actor := rec.Event.Verb, rec.Event.Subject, rec.Event.Actor
+			rule, governed := c.Declaration.ApprovalRule(verb)
+			if !governed {
+				return nil
+			}
+			entry, ok := c.Keyring.Get(actor)
+			if !ok || !rule.Governs(actor, entry.Kind) {
+				return nil
+			}
+			tier := ""
+			if s, ok := c.Lifecycle.State(subject); ok {
+				tier = s.Tier
+			} else if verb == "intent.filed" {
+				// A birth's tier is in its payload: the floor reads
+				// the contract the act creates.
+				var p struct {
+					Tier string `json:"tier"`
+				}
+				if json.Unmarshal(rec.Event.Payload, &p) == nil {
+					tier = p.Tier
+				}
+			}
+			if tier != "" && rule.MinTier != "" {
+				if _, known := transition.Tier(rule.MinTier); known && transition.TierAbove(rule.MinTier, tier) {
+					return nil
+				}
+			}
+			// The laundering countermeasure (memory/LEARNINGS.md; the
+			// RunStartValid posture): the tolerant fold records any
+			// well-shaped raw push, so an open grant is trusted only
+			// after its signer and its citation are re-judged at their
+			// own positions.
+			for _, g := range c.Lifecycle.OpenApprovals(subject, verb, actor) {
+				if ApprovalValid(c.Records, g) {
+					return nil
+				}
+			}
+			err := &ApprovalRequiredError{Subject: subject, Verb: verb, Actor: actor, Kind: entry.Kind, Tier: tier, MinTier: rule.MinTier}
+			for _, a := range c.Lifecycle.PendingApprovals(subject) {
+				if a.Verb == verb && a.Actor == actor {
+					pos := a.Pos
+					err.Pending = &pos
+					break
+				}
+			}
+			return err
+		}},
 		{Name: "ceiling", Check: func(c *Context, rec *event.Record) error {
 			if c.Declaration == nil || rec.Event.Verb != "claim.taken" || c.Keyring == nil {
 				return nil
@@ -898,6 +1037,76 @@ func coreRules() []Rule {
 				if prior.Event.Verb == imported.Verb {
 					return &Refusal{Rule: "imported", Err: fmt.Errorf("the ledger already carries an import at position %d: a genesis import refuses a ledger that is not empty", i)}
 				}
+			}
+			return nil
+		}},
+		{Name: "approval", Check: func(c *Context, rec *event.Record) error {
+			// The per-verb approval's shapes and citations
+			// (plans/os-5781a026.md D2, D4; next/spec/protocol.md
+			// "Per-verb approval"), held regardless of declaration so
+			// a raw-pushed grant citing nothing folds as an anomaly
+			// and admits nothing: approval.requested names a catalog
+			// verb that is not an approval verb, an enrolled actor and
+			// one bounded reason, on a contract the chain knows or on
+			// system, except that a request for intent.filed is on the
+			// contract the filing would create, which the chain cannot
+			// know until the governed filing succeeds (review finding
+			// on #331); approval.granted and approval.denied cite an
+			// approval.requested on the same subject not yet
+			// answered. Standing for the request is the keyring
+			// rule's; the operator grant for the answers is the grant
+			// rule's; whether an act NEEDS one is the policy rule's.
+			verb := rec.Event.Verb
+			if !approval.IsApprovalVerb(verb) || !keyring.Applies(c.Active) {
+				return nil
+			}
+			subject := rec.Event.Subject
+			if c.Lifecycle == nil {
+				return &approval.Error{Verb: verb, Subject: subject, Reason: "no lifecycle is known to resolve the subject"}
+			}
+			if verb == approval.RequestedVerb {
+				p, err := approval.ParseRequested(subject, rec.Event.Payload)
+				if err != nil {
+					return err
+				}
+				if !catalogHas(p.Verb) {
+					return &approval.Error{Verb: verb, Subject: subject, Reason: fmt.Sprintf("verb %q is no catalog verb: an approval is asked for an act the boundary drafts", p.Verb)}
+				}
+				// The policy rule finds a grant on the governed act's
+				// own subject, and a birth's subject is the contract it
+				// creates: a request for intent.filed names that
+				// contract before the chain knows it, or no grant could
+				// ever admit a governed birth. Every other verb acts on
+				// a contract the chain knows, or on system.
+				if subject != approval.SystemSubject {
+					if _, ok := c.Lifecycle.State(subject); !ok && p.Verb != "intent.filed" {
+						return &approval.Error{Verb: verb, Subject: subject, Reason: "no contract by that id is on this chain: a request is on the contract the act concerns, or on system; a birth's request is on the contract it creates"}
+					}
+				}
+				if c.Keyring != nil {
+					if _, ok := c.Keyring.Get(p.Actor); !ok {
+						return &approval.Error{Verb: verb, Subject: subject, Reason: fmt.Sprintf("actor %q is no enrolled key: the request names the key that will act", p.Actor)}
+					}
+				}
+				return nil
+			}
+			_, pos, err := approval.ParseAnswer(verb, subject, rec.Event.Payload)
+			if err != nil {
+				return err
+			}
+			fact, ok := c.Lifecycle.ApprovalAt(pos)
+			if !ok {
+				return &approval.Error{Verb: verb, Subject: subject, Reason: fmt.Sprintf("request %d is no %s on this chain", pos, approval.RequestedVerb)}
+			}
+			if fact.Subject != subject {
+				return &approval.Error{Verb: verb, Subject: subject, Reason: fmt.Sprintf("request %d is on %s: the answer's subject is the request's", pos, fact.Subject)}
+			}
+			if fact.Answered != nil {
+				outcome := "denied"
+				if fact.Granted {
+					outcome = "granted"
+				}
+				return &approval.Error{Verb: verb, Subject: subject, Reason: fmt.Sprintf("request %d was %s at position %d by %s: a request is answered once", pos, outcome, *fact.Answered, fact.Answerer)}
 			}
 			return nil
 		}},

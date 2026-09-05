@@ -2198,6 +2198,68 @@ written by the two implementing sessions, one voice.
   `TestForgejoComparesEveryTagWhitelist`. No release is cut: III.P row
   1's residual closes when the operator cuts the first at the
   distribution step)
+## Require-approval per verb, III.L row 4's third mode (os-5781a026)
+
+Review on #320 read charter §II.14 back against the tree: per-verb
+policy on the machine-protocol surface is "allow/deny/require-approval
+by actor and risk class; approvals as request events resolved
+attributably in an operator inbox", and the tree had allow and deny
+(the grant table; the declaration's ceiling and routing rules, drilled
+on `serve` by os-8ecef90f) and no require-approval, so os-8ecef90f
+moved the row to `partial` and routed the third mode to this card.
+Plan #330; task PR the one this section lands in. What landed:
+
+- **The declaration names the verbs.** `guardrails.approvals` is a
+  list of `{verb, actors?, kinds?, min_tier?}` entries
+  (`posture.ApprovalRule`, `Config.ApprovalRule(verb)`): an entry
+  reaches the fingerprints and the roster kinds it names, every
+  non-human kind when it names neither, so the policy varies by the
+  individual keypair and by risk class; the shape is held at load, the
+  vocabularies (catalog verbs, fingerprint shape, roster kinds, tiers)
+  at `seed preseed check` (`preseed_incomplete`). A governance root's
+  unasserted kind is reached by no kind selector; the three approval
+  verbs are never governed; a floor outside the vocabulary fails closed.
+- **Three fact verbs, additive from seed/1.** `approval.requested`
+  (standing only, the actor named is the key that will act),
+  `approval.granted` and `approval.denied` (operator only, no
+  fallback), their shapes in `internal/approval`; the fold keeps
+  `ApprovalFact`s and spends a grant at the first record on its subject
+  naming its verb and actor, so one approval admits one act
+  (`OpenApproval`, `PendingApprovals`, `ApprovalAt`).
+- **Two rules.** `approval` in the core set holds the shapes and the
+  citations regardless of declaration (`approval_refused`, exit 3);
+  `require-approval` in the policy set refuses a governed act with no
+  valid open grant (`approval_required`, exit 3) naming the request to
+  file and, once one stands, the grant that answers it. Valid is
+  `ApprovalValid`, the laundering countermeasure: the request and the
+  answer re-parsed at their positions, the keyring replayed to the
+  answer's position to hold the answerer to operator standing, so a
+  raw-pushed grant signed without it folds as a fact and admits
+  nothing.
+- **The inbox and the loop.** `approval.pending` owed by
+  `lane:operator`, one row per subject carrying the oldest open
+  request; `seed approval request | grant | deny` in the shared
+  transport shape (the actor defaults to the requesting key, the
+  request to the oldest open one, several a choice); the group joins
+  the registry so `serve` carries the three; the affordances draft the
+  three where they are legal and list a governed act for its actor
+  exactly while an open grant stands.
+- **The row.** III.L row 4 reads `met` on all three modes, evidence
+  naming the machine-surface drills here and os-8ecef90f's, note naming
+  the modes; `conformance.md` regenerated; specs: `protocol.md`
+  ("Per-verb approval" and the catalog line), `postures.md` ("The
+  approvals block"; the conformance mapping), `actors.md` (the two
+  rows), `envelope.md` (the two codes), `obligations.md` (the kind),
+  `platform.md` (the conformance line).
+
+The plan PR's review (chatgpt-codex-connector, three findings) shaped
+D1, D4 and D9 before the plan merged: the actor selector, the
+position-accurate grant check, and the reading that the transport's
+non-ledger methods carry no actor and stay ungoverned; `decisions.md`
+records each. One deviation from the plan, recorded there too: D5 said one
+inbox row per open request, and the projection's identity is (subject,
+kind) by the situation read's delta, so the row is one per subject
+carrying the oldest open request, the `request.pending` shape.
 ## The refusal journal tells a blind retry from a corrected one (os-a9e715dc)
 
 `plans/os-16e55c11.md` D5 words the five-bar audit's guardrail bar as
@@ -2304,6 +2366,10 @@ that branch's to repair: one is a regex in a code span, which the stage
 masks rather than the document changes, and one is in
 `plans/os-2e34f66a.md`, which a plan file's own single-file gate owns,
 so the stage does not read `plans/` at all and the correction is carded
+as os-0dba8c6a for a plan PR. III.L row 4's third mode, require-approval
+per verb, is the section above (os-5781a026, plan #330): the row reads
+`met` on all three modes once it and os-8ecef90f's drills are on
+`main`.
 as os-0dba8c6a for a plan PR. The guardrail bar's blind-retry clause,
 which no surface could measure, is measured by the report over the
 attempts journal (os-a9e715dc, plan #332; the section above).

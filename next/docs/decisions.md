@@ -4084,6 +4084,91 @@ The same review found the Forgejo adapter reading one whitelist for both
 tag protections; it now compares each pattern's whitelist, so a weakened
 `seed/v*` protection beside a compliant `v*` is drift and Apply repairs
 it.
+## Require-approval per verb (os-5781a026)
+
+**The policy is declared by verb, kind and floor, and read as policy.**
+`guardrails.approvals` follows the ceiling's precedent to the letter:
+`Context.Declaration` supplies it, a nil declaration makes the rule a
+no-op, a raw-pushed governed act folds as filed and every chain
+verifies byte for byte. The alternative, a chain-validity rule that
+refuses a governed act at verification, was rejected for the reason
+`tiers.md` records: two byte-identical chains would be compliant or not
+depending on a file the ledger does not carry.
+
+**Three verbs, not a field on the escalation.** Catalog growth is
+additive (older validators refuse an unknown verb safely), while a new
+optional field on `escalation.raised`'s strict payload would bump the
+protocol version. The approval is its own family, and the escalation
+channel is byte-identical to `main`.
+
+**A grant is spent by one act.** The first record on the grant's
+subject whose verb and actor it names consumes it at that record's
+position, in the fold, so a second act needs a second request and no
+grant lingers as a standing permission. The offer's consumption by the
+claim that takes it is the precedent; the fold's consumption reads
+activated records only, so a grandfathered act spends nothing.
+
+**The entry selects by actor and by kind (review on #330).** An entry
+reaches the fingerprints `actors` names and the keys whose roster kind
+`kinds` names, and every non-human kind when it names neither, so one
+agent can be allowed while another of the same kind needs an approval:
+the charter's "by actor" is the individual keypair. Allow and deny by
+actor already exist at the grant table, so the entry is the
+require-approval mode's selector and carries no mode field.
+
+**A governance root's unasserted kind is reached by no kind selector.**
+The rule reads the roster's kind; a key enrolled by genesis carries
+none, and it is the operator every approval is answered by, so a kind
+selector never reaches it; its fingerprint can, if a deployment says
+so.
+
+**An open grant is re-judged before it is trusted (review on #330).**
+The tolerant fold records any well-shaped raw push, so a grant signed
+by a key without operator standing would otherwise open a governed act
+through the fold: the laundering the tree's countermeasure exists for
+(`memory/LEARNINGS.md`; the `RunStartValid` posture). `ApprovalValid`
+re-parses the request and the answer at their positions and replays
+the keyring to the answer's position, holding the answerer to active
+operator standing and the named actor to enrollment; a grant that fails
+is a fact that authorizes nothing, and the affordances, running the
+same rule, do not list the act. The fold stays keyring-agnostic, so a
+raw non-operator answer still marks the request answered in the fold;
+under enforcement it never lands, and under the cooperative posture
+the chain is advisory against a hostile credential by the charter's
+own words.
+
+**The transport's non-ledger methods stay ungoverned (review on
+#330).** `serve` authenticates nobody, and a method that appends no
+record (`docs.generate`, `protections.apply`, `boundary.fetch`) runs
+with the caller's own local credentials outside the trust boundary and
+carries no actor, so a policy at method dispatch would govern nobody
+attributably and could not be answered in an operator inbox. The policy
+governs the verbs, the acts a key signs, which is what "by actor" can
+mean; D1 validating against the affordance catalog is that reading made
+explicit.
+
+**A floor outside the vocabulary fails closed** (the ceiling's
+posture), and a birth's floor reads the filing's tier, since the
+contract the act creates has no state yet.
+
+**One inbox row per subject, not per request (D5 refined).** The plan
+said one `approval.pending` row per open request. The projection's
+identity is (subject, kind): the situation read's delta names
+removals by that pair and keys its standing set by it, so two rows of
+one kind on one subject would misreport in the delta. The row is one
+per subject carrying the oldest open request's position and timestamp,
+exactly `request.pending`'s shape, and the next request surfaces when
+the oldest is answered. Recorded here rather than silently: a reviewer
+holding the task PR to D5 should find the reason in one place.
+
+**The machine-surface drill is two halves.** Claiming is online-only
+on the local path, so the governed act (a `claim.taken`) is drilled
+against a bare remote, skipped on Windows with the platform spec's
+reason; the request, the inbox, the attributable answers, the
+answered-once rule at the derivation and the shapes at the door are
+drilled on a local ledger everywhere. The boundary's own answered-once
+refusal (`approval_refused`) is the remote half's, because the raw
+seam (`ledger append --ledger`) runs no admission by design.
 ## The refusal journal tells a blind retry from a corrected one (os-a9e715dc)
 
 **The digest is the act's, not the record's.** A record's hash covers

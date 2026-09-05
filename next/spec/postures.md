@@ -195,6 +195,22 @@ at least one distinct kind, a non-empty ingress; held at load
 every request kind admits as before. The card itself is checked in at
 `next/boundary/card.json` and `make check` re-renders and diffs it.
 
+**The approvals block.** `guardrails.approvals` is the require-approval
+mode of per-verb policy ([`protocol.md`](protocol.md), "Per-verb
+approval"; charter §II.14): a list of `{"verb", "actors"?, "kinds"?,
+"min_tier"?}` entries, one per verb, each naming the key fingerprints
+and the roster kinds it reaches (neither: every non-human kind) and
+the tier floor (absent: every tier) at and above which an act of the
+verb needs an open `approval.granted`. The shape is held at load
+(`posture_invalid`: a verb twice, an empty verb, an actor or a kind
+twice); the vocabularies at `seed preseed check` (`preseed_incomplete`:
+a verb outside the catalog or one of the three approval verbs, an actor
+that is no fingerprint, a kind outside `human`, `agent`, `service`, a
+tier outside the vocabulary).
+The boundary reads the block through the same declaration the ceiling
+and routing rules read, as policy: `approval_required` (exit 3) names
+the request to file, and no chain changes meaning because of it.
+
 ## The proposal protocol
 
 Under the forge-hosted posture an actor's credential can fetch the
@@ -360,6 +376,10 @@ authenticates the service's credential and nothing sets `SEED_PUSHER`.
 - III.B row 4 (actor credentials cannot write the ledger ref directly,
   verified by an attempted direct push) — this posture's arm of the
   drill, beside the hook's.
+- III.L row 4 (per-verb policy governs the machine-protocol surface
+  with attributable approvals) — the approvals block, the third mode
+  beside the grant table and the ceiling and routing rules;
+  `TestPreseedCheckLintsTheApprovalsBlock` (`cmd/seed`) for the lint.
 - III.L row 5 (forge protections declared and reconciled: required
   checks, admission-only ledger writes, immutable tags; scheduled/CI
   identities least-privilege) — `seed protections`, the four rulesets,

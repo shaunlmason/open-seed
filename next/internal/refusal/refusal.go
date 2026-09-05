@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
+	"github.com/shaunlmason/open-seed/next/internal/approval"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/erasure"
 	"github.com/shaunlmason/open-seed/next/internal/flywheel"
@@ -94,6 +95,17 @@ func Envelope(err error) *envelope.Envelope {
 	var req *request.Error
 	if errors.As(err, &req) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "request_refused", err.Error())
+	}
+	// The per-verb approval (plans/os-5781a026.md D2, D4): the
+	// shapes and citations of the three verbs, and the policy refusal
+	// of a governed act with no open grant.
+	var apr *approval.Error
+	if errors.As(err, &apr) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "approval_refused", err.Error())
+	}
+	var need *admit.ApprovalRequiredError
+	if errors.As(err, &need) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "approval_required", err.Error())
 	}
 	var eras *erasure.Error
 	if errors.As(err, &eras) {
