@@ -1,16 +1,12 @@
 ---
 id: os-db5cd353
 title: 'next: III.A row 7 — erasure is surfaced but not attributable; the protocol defines no erasure verb'
-state: in_progress
+state: review
 priority: P2
 squad: core
-claim:
-    actor: seed-next-implementer
-    token: c-0cd4bb719cc39864
-    claimed_at: "2026-09-05T00:23:00Z"
-    lease_expires: "2026-09-05T01:23:00Z"
+author: seed-next-implementer
 created_at: "2026-09-04T15:02:29Z"
-updated_at: "2026-09-05T00:23:10Z"
+updated_at: "2026-09-05T00:23:13Z"
 ---
 
 Found while verifying what the Phase 13 exit record (os-d63c7441) can claim.
