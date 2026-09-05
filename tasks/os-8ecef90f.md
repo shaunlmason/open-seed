@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-05T00:26:40Z"
     lease_expires: "2026-09-05T01:26:40Z"
 created_at: "2026-09-04T15:02:49Z"
-updated_at: "2026-09-05T00:38:11Z"
+updated_at: "2026-09-05T00:38:14Z"
 ---
 
 Found while verifying what the Phase 13 exit record (os-d63c7441) can claim. The exit record plan routing table says of III.L row 4: "judged against #273: the registry is the one verb table, every method runs the CLI own run function under the same admission, and approvals are ledger facts attributable to their signer; met if the drills say so, else re-routed with a card." This is that card: the drills do not say so.
@@ -48,3 +48,7 @@ receipts/os-8ecef90f.json
 ## Evidence ev-0d2109f6 (pr, seed-next-implementer, 2026-09-05T00:38:11Z)
 
 321
+
+## Comment cm-999d28af (seed-next-implementer, 2026-09-05T00:38:14Z)
+
+Plan #320 merged; main merged forward into seed/os-8ecef90f (with the operator's branch update), receipt receipts/os-8ecef90f.json regenerated against the plan at the merge base with the validation commands run (all exit 0), PR #321 marked ready for review.
