@@ -3799,6 +3799,45 @@ wording. Writing this down is the point: the offer rule most likely
 grew from a bar whose contract named something else and whose
 something else was unreachable.
 
+## The machine surface is governed by the boundary it dispatches to (os-8ecef90f)
+
+**A drill, not an implementation.** III.L row 4 asks that per-verb
+policy govern the machine-protocol surface with attributable
+approvals. `serve` resolves a method through the registry the CLI
+dispatches and runs the CLI's own run function, so there is no second
+admission path to govern: the policy per verb is admission's (the
+grant table, the declaration's ceiling and routing rules), and an
+approval landed there is a chain record signed by its actor. What was
+missing was a drill saying so on that surface, since #273's tests are
+parity assertions. Two drills were added and nothing else moved.
+
+**Refusals are held to the boundary's code, and their twins land.** A
+drill that only asserted a refusal could pass on a broken surface that
+refuses everything. Each refusal fired through `serve` (`out_of_grant`
+on `decision.record` from a claim-granted key, `routing_unknown` on a
+filing to an undeclared squad, `tier_above_ceiling` on an agent's claim
+above the declared ceiling) is compared with the CLI's code for the
+same argv, and the admitted twin (the operator's answer, the declared
+squad, a human-kind key's claim) lands through the same surface.
+
+**Attribution is the signature.** The protocol framing authenticates
+nobody (`protocol.md`, "The machine surface"), so the only attribution
+an approval through it can carry is the chain's: `decision.recorded`
+and `plan.approved` are read back through `serve`'s own `ledger.show`
+at the position the write reported, with `actor` the signing key's
+fingerprint, and the chain verifies afterward. A fresh reader
+attributes the approval from the chain alone, which is what the row's
+word buys.
+
+**The row moves to partial, not met (review on #320).** Charter II.14
+defines per-verb policy as allow, deny and require-approval, with
+approvals as request events resolved attributably in an operator
+inbox. The drills here cover allow and deny; the tree has no
+require-approval mode at all, so flipping the row on them would have
+recorded a mode nobody built. The row's note names the missing third
+and os-5781a026, the card that builds it and flips the row on all
+three together. The precedent for moving a row outside an exit record
+is os-9ef9ab34 (#308).
 ## The release is the operator's act; the workflow is the agent's (os-2e46aa2f)
 
 **Dispatch-only.** Build plan §5 reserves publishing to a human, and
