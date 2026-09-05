@@ -1993,6 +1993,29 @@ failed step skips the rest of the job.
   side effect after the append cannot turn that side effect's failure
   into a refusal from inside `resultAt`; render through a buffer and
   replace the success, rather than widening `loop.go` for one verb.
+## The packet after the substitution (os-4fde2bdf)
+
+- When one section of a gate document is corrected, re-read the rest
+  in the corrected tense: a question anchored on an event that will
+  no longer happen is an open question nobody can answer.
+- A gate that waits on a human should say exactly what it waits on
+  and that nothing else remains; otherwise every reader re-derives
+  the frontier and some derive it wrong.
+- A configuration block a human will copy belongs under a drill, not
+  in prose alone: the fixture's declaration was linted in CI and the
+  packet's twin was not, and only the twin is the one that ships.
+- A procedure that names two commands which each begin a chain has an
+  order, and the order is a claim: run it against a throwaway ledger
+  before writing it down. The declaration's init and the predecessor
+  import both write genesis, and only one order reaches the flip.
+- A placeholder in a block a drill lints is exercised only on the path
+  that reads it: `preseed check` without a ledger never compares the
+  root, so a root no key can have passed CI and would have refused at
+  the operator's terminal. Drill the substitution, not the file alone.
+- A gate document that presents a question while a governing plan's
+  prerequisite stands unmet must say the two apart: the question can
+  be put, the act it asks about still waits on the prerequisite, and
+  only the plan's own amendment path moves it.
 ## Require-approval per verb (os-5781a026)
 
 - The raw seam runs no admission. `ledger append --ledger` verifies and
