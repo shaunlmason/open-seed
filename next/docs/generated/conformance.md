@@ -19,14 +19,14 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | I. Affordances and the actor interface | 4 | 1 | 0 | 0 |
 | J. Lanes | 5 | 1 | 0 | 0 |
 | K. Curation, memory, and the flywheel | 9 | 0 | 0 | 0 |
-| L. Guardrails and governance | 5 | 0 | 1 | 0 |
+| L. Guardrails and governance | 5 | 1 | 0 | 0 |
 | M. Workflows | 1 | 0 | 0 | 0 |
 | N. Interoperability and federation | 2 | 0 | 0 | 3 |
 | O. Evaluation infrastructure | 5 | 0 | 0 | 0 |
 | P. Distribution, supply chain, adoption | 5 | 0 | 0 | 0 |
 | Q. Quality, docs, community | 6 | 1 | 0 | 0 |
 | R. The autonomy end-state | 0 | 0 | 7 | 0 |
-| **all** | 99 | 5 | 15 | 9 |
+| **all** | 99 | 6 | 14 | 9 |
 
 ## A. The Ledger
 
@@ -182,7 +182,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | L.1 | `met` | 12 | Tiers gate un-planned/un-operator'd action per-squad and per-path. | #254 TestAgentCeilingReadsTheRosterKind, TestRoutingIsHeldToTheDeclaredSquads, TestUnknownCeilingFailsClosed (internal/admit/policy_test.go), TestPlanLintHoldsTheScopeToThePathFloors, TestVerdictRenderHoldsTheReceiptToThePathFloors (cmd/seed) | — |
 | L.2 | `met` | 12 | The protected surface is enumerated in config, includes the admission rules and the check pipeline's own definitions, is changed only by the named governance root via PR + owner review, and is write-denied to every agent key it gates — capability audit in CI; the test-content residual is documented with its mitigations. | #250 TestCodeRefProtectedSurfaceIsRootOnly (cmd/seed-admit/coderef_test.go); #254 (the governance block) TestCapabilityAuditOfTheShippedManifests (cmd/seed/audit_test.go) | the test-content residual is named in next/spec/postures.md |
 | L.3 | `met` | 12 | Data/instruction defense is layered and documented with its limits: least capability for untrusted-content readers (primary), provenance-typed prompt channels, unforgeable delimiters, strict-shape command interpolation, sandboxing, network policy, secret isolation; the hostile corpus passes on every release. | #192 (the Phase 9 injection suite), #80 (the classification corpus), both under the release gate (#250) | — |
-| L.4 | `routed` | 12 | Per-verb policy governs the machine-protocol surface with attributable approvals. | — | Phase 13 item 6, #273 |
+| L.4 | `partial` | 13 | Per-verb policy governs the machine-protocol surface with attributable approvals. | #273 (one dispatch path: the registry, the CLI's own run functions, the envelope verbatim); os-8ecef90f: TestServeRefusesByTheSamePolicyAsTheCLI (a verb the grant table refuses, a filing the declaration's routing rule refuses and a claim its agent ceiling refuses each come back through serve as the failing envelope with the CLI's own code, and each admitted twin lands through the same surface) and TestServeApprovalsAreAttributableToTheirSigner (decision.recorded and plan.approved landed through serve read back through serve's ledger.show with actor equal to the signing key's fingerprint at the reported position, the chain verifying afterward), cmd/seed/serve_policy_test.go | allow and deny are drilled on the surface (the grant table, the declaration's ceiling and routing rules) and approvals are attributable to their signer; the require-approval mode charter II.14 defines (approvals as request events resolved attributably in an operator inbox) does not exist in the tree and is os-5781a026's: guardrails.approvals in the declaration, approval.requested/granted/denied, the admission rule that consumes an open approval, approval.pending in the operator's inbox, the machine-surface drill; the row flips to met there (plans/os-8ecef90f.md D3, review on #320) |
 | L.5 | `met` | 12 | Forge protections are declared desired-state and reconciled: required checks, admission-only ledger writes (*enforced-only*), immutable tags; scheduled/CI identities are least-privilege. | #252 TestPlanAndApplyThroughTheSnapshot, TestLintWorkflowsFindsScheduledWriters (internal/protections/protections_test.go), TestGitHubAdapterReconciles (internal/protections/github_test.go); TestCodeRefTagsAreImmutable (cmd/seed-admit/coderef_test.go) | — |
 | L.6 | `met` | 12 | Process changes pass boundary + retention, lint-checked for declared sets. | #126 TestPlanGateAboveTrivialTier (internal/admit/plan_test.go); #254 TestPlanLintTierAndScopeAreHeldToTheFloors (cmd/seed) | — |
 
