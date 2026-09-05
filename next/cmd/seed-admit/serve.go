@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -201,6 +202,32 @@ func (s *service) judge(recs []*event.Record) (*envelope.Envelope, int) {
 	store, err := ledger.Open(ledgerDir)
 	if err != nil {
 		return envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), propose.StatusUnavailable
+	}
+
+	// The mirror carries the guarded ref alone, so its default branch is
+	// unborn and the hook's declaration read (at the default branch's tip,
+	// the code half's own) would find nothing. A plain `fetch remote HEAD`
+	// does not fix it: HEAD lands in FETCH_HEAD, not the branch the read
+	// follows. So resolve the deployment's default branch at the remote and
+	// fetch it INTO the mirror's own branch, then point the mirror's HEAD
+	// at it — readDeclarationAt then reads the same tip the hook on the
+	// remote reads (the read is over the pre-push tip, postures.md).
+	// A fresh deployment's default branch is unborn: nothing to fetch, no
+	// declaration to read — the hook as before.
+	if branch, berr := defaultBranch(s.remote); berr == nil {
+		if out, ferr := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", client.GitDir(), "fetch", "-q", s.remote, branch).CombinedOutput(); ferr != nil {
+			ls, _ := exec.Command("git", "ls-remote", "-q", s.remote, "HEAD").CombinedOutput()
+			if strings.TrimSpace(string(ls)) != "" {
+				return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot read the deployment's default branch for the declaration: %v: %s", ferr, out)), propose.StatusUnavailable
+			}
+		} else {
+			if out, ferr := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", client.GitDir(), "update-ref", "-m", "judge", branch, "FETCH_HEAD").CombinedOutput(); ferr != nil {
+				return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot land the default branch in the mirror: %v: %s", ferr, out)), propose.StatusUnavailable
+			}
+			if out, ferr := exec.Command("git", "--git-dir", client.GitDir(), "symbolic-ref", "HEAD", branch).CombinedOutput(); ferr != nil {
+				return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot point the mirror's HEAD at the default branch: %v: %s", ferr, out)), propose.StatusUnavailable
+			}
+		}
 	}
 	storeTip, count, err := store.Tip()
 	if err != nil {

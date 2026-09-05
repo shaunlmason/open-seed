@@ -96,21 +96,56 @@ type codeRefContext struct {
 	declarationErr error
 }
 
+// gitRun is the one way this package talks to the guarded repository:
+// the eol/autocrlf pins on every call, because a declaration file with
+// CRLF would parse differently on the host than the one it guards.
+func gitRun(gitDir string, args ...string) ([]byte, error) {
+	return exec.Command("git", append([]string{"-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir}, args...)...).Output()
+}
+
+// defaultBranch is the repository's HEAD symref — the default branch the
+// declaration is read from (postures.md: the deployment's declaration is
+// deployment state, and its canonical home is the default branch's tip).
+func defaultBranch(gitDir string) (string, error) {
+	out, err := gitRun(gitDir, "symbolic-ref", "HEAD")
+	if err != nil {
+		return "", fmt.Errorf("cannot determine the default branch (HEAD is not a symbolic ref): %v", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// readDeclarationAt reads the deployment declaration at the named branch's
+// tip: nil when the branch is unborn or carries no declaration file, an
+// error when the file exists and does not parse — the caller decides what
+// an unparseable declaration does to the half it serves. Both halves of
+// the hook read the same file this way, so one broken declaration cannot
+// split the boundary into two.
+func readDeclarationAt(gitDir, branch string) (*posture.Config, error) {
+	tip, err := gitRun(gitDir, "rev-parse", "--verify", "--quiet", branch+"^{commit}")
+	if err != nil {
+		return nil, nil // unborn branch: no declaration
+	}
+	body, err := gitRun(gitDir, "show", strings.TrimSpace(string(tip))+":"+posture.DeclarationPath)
+	if err != nil {
+		return nil, nil // the branch carries no declaration file
+	}
+	return posture.Parse(body)
+}
+
 // loadCodeRefContext derives the context. A repository whose guarded
 // ref holds no admitted genesis has no standing to judge code refs by,
 // so every code push refuses until one is admitted — the ledger half
 // admits the genesis push whoever carries it.
 func loadCodeRefContext(gitDir, guarded, pusher string) (*codeRefContext, error) {
 	ctx := &codeRefContext{guarded: guarded, pusher: pusher}
-	out, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "symbolic-ref", "HEAD").Output()
+	branch, err := defaultBranch(gitDir)
 	if err != nil {
-		return nil, fmt.Errorf("rule ref: cannot determine the default branch (HEAD is not a symbolic ref): %v", err)
+		return nil, fmt.Errorf("rule ref: %v", err)
 	}
-	ctx.defaultBranch = strings.TrimSpace(string(out))
-	if tip, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "rev-parse", "--verify", "--quiet", ctx.defaultBranch+"^{commit}").Output(); err == nil {
+	ctx.defaultBranch = branch
+	if tip, err := gitRun(gitDir, "rev-parse", "--verify", "--quiet", ctx.defaultBranch+"^{commit}"); err == nil {
 		ctx.defaultTip = strings.TrimSpace(string(tip))
 	}
-
 	tipOut, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "rev-parse", "--verify", "--quiet", guarded+"^{commit}").Output()
 	if err != nil {
 		// No ledger yet: the context judges every code ref refused.
@@ -144,16 +179,11 @@ func loadCodeRefContext(gitDir, guarded, pusher string) (*codeRefContext, error)
 	ctx.active = pusher != "" && ring.HasAnyCapability(pusher, []string{keyring.CapClaim, keyring.CapOperator})
 	ctx.root = pusher != "" && ring.IsActiveRoot(pusher)
 
-	if ctx.defaultTip != "" {
-		body, err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "show", ctx.defaultTip+":"+posture.DeclarationPath).Output()
-		if err == nil {
-			cfg, perr := posture.Parse(body)
-			if perr != nil {
-				ctx.declarationErr = perr
-			} else {
-				ctx.declaration = cfg
-			}
-		}
+	cfg, perr := readDeclarationAt(gitDir, ctx.defaultBranch)
+	if perr != nil {
+		ctx.declarationErr = perr
+	} else {
+		ctx.declaration = cfg
 	}
 	return ctx, nil
 }
