@@ -1729,3 +1729,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: seed serve drops explicit id:null requests as notifications, but JSON-RPC 2.0 requires a response"},"task":"os-dd1ee5b2","ts":"2026-09-05T19:47:10Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: a torn refusal-journal tail poisons the journal permanently at the next append"},"task":"os-7622350d","ts":"2026-09-05T19:47:18Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: the racing view's settled-out claims vanish when the settled-out racers exit or are reaped"},"task":"os-9fc2c72f","ts":"2026-09-05T19:47:26Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: III.D rows 5-7 (mirror exporter suites, bidirectional-sync prevention, governed observation-only facts) are open and owned by no phase item or card"},"task":"os-b45c308d","ts":"2026-09-05T19:47:34Z","verb":"create"}
