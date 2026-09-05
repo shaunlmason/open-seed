@@ -62,10 +62,10 @@
           "row": 7,
           "text": "Erasure obligations are honorable: erasing a referenced artifact never breaks chain verification, and the erasure is itself an attributable event.",
           "posture": "any",
-          "status": "open",
-          "phase": "",
-          "evidence": "",
-          "note": "not walked by any exit record"
+          "status": "met",
+          "phase": "13",
+          "evidence": "os-db5cd353: TestArtifactEraseIsAttributableAndNeverBreaksTheChain (cmd/seed/artifact_cli_test.go: the erasure records under the operator's key, the bytes go, ledger verify is green, seal audit lists the erased subject with position, signer and reason and stays clean, a deletion with no record stays seal_evidence_missing, render names the erasure, a content artifact is erased on system), TestErasureAdmitsReferencedOnceUnderOperator and TestErasureIsAffordedWhereSomethingIsErasable (internal/admit/erasure_test.go), TestEraseEmptiesEachBucketAndNamesThem (internal/artifact); the surfacing half since #139: TestSealEndToEndCLI (cmd/seed/seal_cli_test.go)",
+          "note": "the first clause is structural (bodies are referenced by hash and never carried) and is now drilled; the second is artifact.erased, additive catalog growth from seed/1 under the operator grant, held to the subject's references and to once, folded, and read by the seal audit as an honored erasure rather than a missing-evidence finding (plans/os-db5cd353.md D1 to D5)"
         },
         {
           "row": 8,

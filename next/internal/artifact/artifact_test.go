@@ -77,3 +77,35 @@ func TestConcurrentPutsOfSameContent(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// conformance: III.A row 7 — the erasure path is a store operation
+// (plans/os-db5cd353.md D5): it empties whichever buckets hold the
+// digest, names them, and reports nothing for a digest nothing holds,
+// since the record is the attribution and the bytes' absence is not
+// an error.
+func TestEraseEmptiesEachBucketAndNamesThem(t *testing.T) {
+	s := Open(t.TempDir())
+	digest, err := s.Put([]byte("a receipt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PutSealed(digest, []byte("age-encryption.org/v1\n")); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := s.Erase(digest)
+	if err != nil || strings.Join(removed, ",") != "sealed,content" {
+		t.Fatalf("both buckets emptied and named: %v %v", removed, err)
+	}
+	if _, err := s.Get(digest); err == nil {
+		t.Fatal("the content is gone")
+	}
+	if _, err := s.GetSealed(digest); err == nil {
+		t.Fatal("the ciphertext is gone")
+	}
+	if removed, err := s.Erase(digest); err != nil || len(removed) != 0 {
+		t.Fatalf("erasing what is already gone removes nothing and is not an error: %v %v", removed, err)
+	}
+	if _, err := s.Erase("not a digest"); err == nil {
+		t.Fatal("the digest form is held")
+	}
+}

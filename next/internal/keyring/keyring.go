@@ -222,13 +222,16 @@ func AcceptedCapabilities(verb string) []string {
 		// (plans/os-48df10a2.md D1); request.filed itself is standing-only,
 		// like message.sent, and appears in no case.
 		return []string{CapDispatch, CapOperator}
-	case "approval.granted", "approval.denied":
+	case "approval.granted", "approval.denied", "artifact.erased":
 		// The per-verb approval's answers (plans/os-5781a026.md D2):
 		// operator only, the decision.recorded posture, because an
 		// approval is a gate a human holds and a machine-lane fallback
 		// would let the governed lane answer for itself.
 		// approval.requested is standing-only, like request.filed,
 		// since asking grants nothing, and appears in no case.
+		// The erasure fact (plans/os-db5cd353.md D3): an erasure
+		// obligation is a governance act a human answers for, the
+		// decision.recorded posture, and no lane's loop erases.
 		return []string{CapOperator}
 	// The supervisor lane (plans/os-c61c3392.md): offers invite
 	// claims and grant nothing, so the standard operator fallback

@@ -379,6 +379,7 @@ func TestCapabilityVocabulary(t *testing.T) {
 		"merge.requested", "verdict.rendered", "check.sealed",
 		"contract.returned", "merge.overridden", "offer.published", "request.answered",
 		"approval.granted", "approval.denied",
+		"artifact.erased",
 		"budget.reserve", "budget.settle", "budget.release",
 		"run.started", "run.settled", "run.interrupted",
 		"curation.deadend.recorded", "curation.hypothesis.proposed", "curation.hypothesis.contested", "curation.lesson.promoted",

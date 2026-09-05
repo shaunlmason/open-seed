@@ -301,6 +301,74 @@ admission).
   proposal's PR landed the file in the registry, on the shape, citing
   the file and the PR), both from [`flywheel.md`](flywheel.md) as
   additive catalog growth, active from `seed/1`.
+- `artifact.*` — `erased` (the operator's signed record that an
+  artifact the chain references by digest was erased, on the contract
+  whose fold references it or on `system`; the section below), additive
+  catalog growth, active from `seed/1`.
+
+## Erasure
+
+The chain references bodies by hash and never carries them (the data
+classification below), so erasing the bytes an artifact digest keys
+never breaks verification: that is the first half of charter III.A row
+7, and it is structural. The second half, "the erasure is itself an
+attributable event", is **`artifact.erased`** (plans/os-db5cd353.md):
+
+- **Shape.** The strict object `{"artifact": "<lowercase-hex
+  sha256>", "reason": "<one line, at most 200 bytes>"}`
+  (`internal/erasure`): the digest the chain references the artifact
+  by, and the obligation honored, never a body.
+- **Subject.** The contract whose fold references the digest, which
+  admission holds: the subject's sealed commitment
+  ([`sealed-checks.md`](sealed-checks.md)) or one of its verdicts'
+  receipt digests ([`verdicts.md`](verdicts.md)); an unreferenced
+  digest refuses `erasure_refused` (exit 3) naming what the contract
+  does reference. On `system` any well-formed digest admits: the
+  operator's attestation is the reference, for an artifact a payload
+  cites that no contract's fold indexes by digest.
+- **Once, digest-wide.** The store holds one object per digest, so an
+  artifact two contracts reference is erased for both by one act: the
+  tombstone is looked up by digest wherever it was recorded, a shared
+  commitment's absence is attributed to that record on every contract
+  that references it, and an artifact erased once is not recorded
+  again; the refusal names the position, signer and subject of the
+  first record, since a second would attribute an act that did
+  nothing. A tombstone counts only when it passed the boundary: fold
+  presence is never proof of admission, so a well-shaped record the
+  raw seam landed under a key without the grant is kept by the fold
+  and honored by nothing (`admit.ErasureValid` replays the keyring at
+  the record's own position, as the seal's own authorization is
+  checked); it neither blocks the operator's record nor attributes an
+  absence.
+- **Grant.** `operator` only ([`actors.md`](actors.md)): an erasure
+  obligation is a governance act a human answers for, the
+  `decision.recorded` posture; no lane's loop erases.
+- **A fact.** The record changes no lifecycle state; the fold keeps it
+  (`Fold.Erasures`, `Fold.Erasure(artifact)`), and every consumer reads
+  it through `admit.Erasure`, the same lookup narrowed to the records
+  that passed the boundary. The seal audit is one: a missing ciphertext
+  whose commitment the chain holds an admitted erasure for is an
+  honored erasure, listed with its position, signer and reason and no
+  finding, while one with no record, or with only a record the
+  boundary would have refused, stays `seal_evidence_missing`, the
+  unattributed absence the row forbids.
+- **The verb records before it removes.** `seed artifact erase
+  --subject <contract|system> --artifact <digest> --reason <text>
+  --repo <dir>` appends the record through the loop seam, then empties
+  the store's buckets under the digest (the sealed ciphertext, the
+  content, or both) and reports `removed`; an erasure that already
+  stands, on any subject, is finished rather than re-recorded
+  (`recorded: false`, the position it finished), which is also the
+  resume path for a run that died between the append and the removal.
+  The resume holds the grant the record took: a key without `operator`
+  refuses `out_of_grant` under a standing record exactly as at a fresh
+  append, before any removal. A removal the store refuses after the
+  record landed, or stood, is `erasure_incomplete` (exit 5,
+  [`envelope.md`](envelope.md)): the message names the position the
+  record stands at and what was removed so far, nothing is recorded
+  twice, and the next run finishes. The order is the point: a record
+  with the bytes still present is a promise the next run keeps, and
+  bytes gone with no record is the silence the row forbids.
 
 ## Per-verb approval
 

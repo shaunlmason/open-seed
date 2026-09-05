@@ -41,7 +41,7 @@ var specCatalogVerbs = []string{
 	"run.started", "run.settled", "run.interrupted",
 	"verdict.rendered", "verdict.deferred", "check.sealed",
 	"merge.requested", "merge.observed", "merge.overridden",
-	"message.sent", "request.filed", "request.answered",
+	"message.sent", "request.filed", "request.answered", "artifact.erased",
 	"approval.requested", "approval.granted", "approval.denied",
 	"curation.deadend.recorded", "curation.hypothesis.proposed", "curation.hypothesis.contested", "curation.lesson.promoted",
 	"curation.lesson.retired", "curation.deadend.retired", "curation.deadend.unretired",
