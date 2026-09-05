@@ -1722,3 +1722,4 @@
 {"actor":"shaunlmason","data":{"title":"next: ratification anchor and a doctor drift row for decisions (backlog, from ank)"},"task":"os-1da81891","ts":"2026-09-05T18:48:23Z","verb":"create"}
 {"actor":"shaunlmason","data":{"comment_id":"cm-ceb0ff29","kind":"comment"},"task":"os-1da81891","ts":"2026-09-05T18:48:59Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"to":"cancelled","transitioned":true},"task":"os-1da81891","ts":"2026-09-05T18:49:29Z","verb":"cancel"}
+{"actor":"shaunlmason","data":{"title":"next: ratification anchor and a doctor drift row for decisions (backlog, from ank)"},"task":"os-33994d3c","ts":"2026-09-05T18:49:32Z","verb":"create"}
