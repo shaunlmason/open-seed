@@ -1704,3 +1704,4 @@
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-4fde2bdf","ts":"2026-09-05T04:28:45Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-db5cd353","ts":"2026-09-05T04:28:51Z","verb":"close"}
 {"actor":"shaunlmason","data":{"title":"next: the frontier after the six merges, the doctor's count and the queue's next work"},"task":"os-e3a5cd3f","ts":"2026-09-05T05:03:46Z","verb":"create"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-0f924157","ts":"2026-09-05T05:16:05Z","verb":"promote"}
