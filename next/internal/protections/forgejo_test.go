@@ -144,8 +144,17 @@ func TestForgejoAdapterReconciles(t *testing.T) {
 	if after.Manual != 1 {
 		t.Fatalf("the manual rule persists after apply, got %d", after.Manual)
 	}
-	if len(fake.branches) != 3 || len(fake.tags) != 1 {
-		t.Fatalf("three branch protections and one tag protection, got %d/%d", len(fake.branches), len(fake.tags))
+	// One tag protection per release-tag pattern (plans/os-2e46aa2f.md
+	// D8): the template's v* and Seed's seed/v*.
+	if len(fake.branches) != 3 || len(fake.tags) != 2 {
+		t.Fatalf("three branch protections and two tag protections, got %d/%d", len(fake.branches), len(fake.tags))
+	}
+	patterns := map[string]bool{}
+	for _, tg := range fake.tags {
+		patterns[tg.NamePattern] = true
+	}
+	if !patterns["v*"] || !patterns["seed/v*"] {
+		t.Fatalf("the release-tag ruleset protects both namespaces on the forge, got %v", patterns)
 	}
 	// The ledger branch's sole writer is the admission identity.
 	led, ok := fake.branches["seed-ledger"]
@@ -281,6 +290,116 @@ func TestForgejoCustomLedgerBranch(t *testing.T) {
 	}
 	if after.DriftCount != 0 {
 		t.Fatalf("a custom-ledger deployment must reconcile to no drift, got %d", after.DriftCount)
+	}
+}
+
+// conformance: SEED-NEXT.md §II.14: a released tag cannot be
+// retargeted, so a weakened release-tag protection must read as drift
+// (plans/os-2e46aa2f.md D8). Forgejo holds one protection per pattern
+// with its own whitelist and the adapter compares every one of them,
+// never the first for both: a widened seed/v* whitelist beside a
+// compliant v* is drift and Apply repairs it, with the desired bypass
+// empty (as Desired renders it) and with a bypass identity (the case
+// the review on #329 named), and an emptied seed/v* whitelist beside a
+// compliant v* is drift as well.
+func TestForgejoComparesEveryTagWhitelist(t *testing.T) {
+	fake := newFakeForgejo()
+	srv := httptest.NewServer(fake.handler(t))
+	defer srv.Close()
+	cfg := declaration(t)
+	fj := NewForgejo(srv.URL, "o", "r", "tok")
+	if _, err := Apply(cfg, fj, ""); err != nil {
+		t.Fatal(err)
+	}
+	set := func(pattern string, users []string) {
+		fake.mu.Lock()
+		defer fake.mu.Unlock()
+		for id, tg := range fake.tags {
+			if tg.NamePattern == pattern {
+				tg.WhitelistUsernames = users
+				fake.tags[id] = tg
+			}
+		}
+	}
+	get := func(pattern string) string {
+		fake.mu.Lock()
+		defer fake.mu.Unlock()
+		for _, tg := range fake.tags {
+			if tg.NamePattern == pattern {
+				return strings.Join(tg.WhitelistUsernames, ",")
+			}
+		}
+		return "<absent>"
+	}
+
+	// The desired bypass is empty: widen seed/v* alone, v* still matches.
+	set("seed/v*", []string{"intruder"})
+	rep, _, err := Plan(cfg, fj, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.DriftCount == 0 {
+		t.Fatal("a widened seed/v* whitelist beside a compliant v* must be drift")
+	}
+	if _, err := Apply(cfg, fj, ""); err != nil {
+		t.Fatal(err)
+	}
+	if got := get("seed/v*"); got != "" {
+		t.Fatalf("apply must restore the empty seed/v* whitelist, got %q", got)
+	}
+	clean, _, err := Plan(cfg, fj, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clean.DriftCount != 0 {
+		t.Fatalf("apply must leave no drift, got %d (%+v)", clean.DriftCount, clean.Changes)
+	}
+
+	// The desired bypass is an identity: v* holds exactly it and seed/v*
+	// something else, so a read that took v*'s whitelist for both would
+	// match desired state and never repair seed/v*.
+	desired, err := Desired(cfg, "trunk")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rs := desired.Rulesets[RulesetTags]
+	rs.Bypass = []string{"app:4242"}
+	desired.Rulesets[RulesetTags] = rs
+	tagChanges := func() []Change {
+		cur, err := fj.Read()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []Change
+		for _, c := range Diff(desired, cur) {
+			if c.Ruleset == RulesetTags {
+				out = append(out, c)
+			}
+		}
+		return out
+	}
+	for _, tc := range []struct {
+		name string
+		seed []string
+	}{
+		{"widened", []string{"app:4242", "intruder"}},
+		{"emptied", nil},
+	} {
+		set("v*", []string{"app:4242"})
+		set("seed/v*", tc.seed)
+		changes := tagChanges()
+		if len(changes) != 1 || changes[0].Kind != ChangeUpdate || !strings.Contains(changes[0].Detail, "seed/v*") {
+			t.Fatalf("%s seed/v* whitelist beside a compliant v* must be one update naming the pattern, got %+v", tc.name, changes)
+		}
+		if err := fj.Apply(changes, desired); err != nil {
+			t.Fatal(err)
+		}
+		if get("v*") != "app:4242" || get("seed/v*") != "app:4242" {
+			t.Fatalf("%s: apply must set every pattern's whitelist to the desired bypass, got v*=%q seed/v*=%q", tc.name, get("v*"), get("seed/v*"))
+		}
+		if changes := tagChanges(); len(changes) != 0 {
+			t.Fatalf("%s: apply must leave no drift, got %+v", tc.name, changes)
+		}
 	}
 }
 

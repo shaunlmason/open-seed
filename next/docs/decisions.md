@@ -4016,6 +4016,74 @@ the spec's own placeholder, named as the one required substitution,
 and `TestPacketDeclarationInitializesUnderTheRootKey` initializes the
 substituted block under a real key and holds the unsubstituted one to
 the refusal.
+## The release is the operator's act; the workflow is the agent's (os-2e46aa2f)
+
+**Dispatch-only.** Build plan §5 reserves publishing to a human, and
+the CI-identity lint holds scheduled writers to read-only, so the Seed
+release workflow triggers on `workflow_dispatch` alone with the version
+as its one input. Nothing in the tree can cut a release on its own.
+
+**The tag is minted at HEAD, in its own namespace.** The engine
+repository's discipline: the workflow tags the commit it builds, so
+the tag and the released commit cannot disagree and no contributor
+needs tag-push rights. Seed's tags are `seed/v<version>`, apart from
+the template's `v*` releases (immutable under the tag rule) and the
+`seed-anchor/*` state anchors, so a Seed tag can never be read as a
+template release.
+
+**A plain matrix build, no goreleaser.** goreleaser derives the version
+from an unprefixed semver tag and its monorepo prefix is a paid
+feature; the namespace above is cheaper to keep in twenty lines of
+bash than to work around. `internal/version.Version` is a var so the
+`-ldflags -X` stamp lands; from source it stays the pre-release
+default, and a drill pins both.
+
+**Every action hash-pinned, and the namespace protected before it is
+used (review on #328).** The job holds OIDC, attestation and write
+privileges, so nothing executable in it resolves through a mutable
+tag: `actions/checkout` and `actions/attest-build-provenance` are
+pinned to commit SHAs with the tag in a trailing comment, and the
+drill refuses any `uses:` that is not a local path or a 40-hex SHA.
+The hook already refuses an update or deletion of any tag, but the
+forge reconciler's `seed-release-tags` ruleset named `refs/tags/v*`
+alone, so under the forge-hosted posture a released `seed/v*` tag
+could have been retargeted; the ruleset now names both namespaces,
+the Forgejo adapter keeps one tag protection per pattern, and the
+release drill asserts the namespace it tags is one the desired state
+protects.
+
+**Attested, and verifiable from the handbook.** `checksums.txt` is
+attested with `actions/attest-build-provenance`, the attestation the
+engine ships, and the handbook says how an adopter verifies an archive
+before running it, which is the half of III.R row 7 that a README can
+carry before any release exists.
+
+**The tag follows the build, the draft follows the attestation, and the
+privileges stay on the default branch (review on #329).** Four findings
+on the task PR, each a refinement inside the decisions above. The tag is
+pushed only once the six archives and `checksums.txt` exist, so a failed
+build strands no tag; a re-run for the same version on the same commit
+resumes the cut (the tag is kept, a draft left behind is replaced),
+while a tag at another commit or a release already published refuses,
+which is the "cut once" the second decision meant. The release is
+created as a draft, attested, and published last, so a failed
+attestation leaves a draft nobody can download rather than a public
+release whose notes promise a provenance it lacks. The version is
+validated against semver.org's grammar as a POSIX extended regular
+expression, no leading zeroes and nothing trailing, in place of a shell
+glob that let `1.2.3foo` and `1.2.3/foo` through; the drill reads the
+expression out of the workflow and drives it. And because any branch's
+edited copy of a dispatch-only workflow can be dispatched with the copy's
+own `contents: write` and OIDC grants, the job runs in the `seed-release`
+environment and only from the default branch: the environment's
+deployment branch policy is the operator's precondition, set in the
+forge's settings before the first dispatch and named in the handbook
+(the reconciler models rulesets, not environments, so it is not desired
+state), and the ref guard restates it in the file as defense in depth.
+The same review found the Forgejo adapter reading one whitelist for both
+tag protections; it now compares each pattern's whitelist, so a weakened
+`seed/v*` protection beside a compliant `v*` is drift and Apply repairs
+it.
 ## Require-approval per verb (os-5781a026)
 
 **The policy is declared by verb, kind and floor, and read as policy.**

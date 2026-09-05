@@ -109,8 +109,12 @@ func Desired(cfg *posture.Config, defaultBranch string) (*State, error) {
 		Name: RulesetContracts, Target: TargetBranch, Refs: []string{"refs/heads/seed/*"},
 		Rules: []Rule{{Type: RuleDeletion}, {Type: RuleNonFastForward}},
 	}
+	// The template's releases and Seed's (plans/os-2e46aa2f.md D8):
+	// the hook refuses an update or deletion of any tag, and the forge
+	// ruleset names both namespaces so neither posture lets a released
+	// tag be retargeted.
 	st.Rulesets[RulesetTags] = Ruleset{
-		Name: RulesetTags, Target: TargetTag, Refs: []string{"refs/tags/v*"},
+		Name: RulesetTags, Target: TargetTag, Refs: []string{"refs/tags/v*", "refs/tags/seed/v*"},
 		Rules: []Rule{{Type: RuleDeletion}, {Type: RuleNonFastForward}, {Type: RuleUpdate}},
 	}
 	return st, nil
