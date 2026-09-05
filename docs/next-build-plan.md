@@ -426,6 +426,51 @@ The contention benchmark at target scale (III.C row 4): the per-PR storm stays a
 against the same budgets, is a card for when Phase 13 is exhausted (the Phase 12
 exit record routes the row here).
 
+**Borrowed from surveyed tools (2026-09-05).** Two later surveys turned up ideas
+worth a card each. None changes a Part III row; each is filed against the charter
+section it extends and stays adapter- or record-shaped so the deliberately-absent
+table (§II.18) holds. Sources: [haksolot/ank](https://github.com/haksolot/ank)
+(binding decisions embedded in the repo, criteria frozen by hash at claim) and
+[herdrdev/herdr](https://github.com/herdrdev/herdr) (a terminal multiplexer that
+knows agent state and exposes a CLI plus socket for agents to drive each other).
+
+- **Ratified decision records, path-scoped, surfaced at claim** (ank's ADR-with-
+  constraint). Seed marks settled decisions in packets as verified or asserted
+  (§II.6) and surfaces promoted *lessons* by applies-when (§II.10, §II.12), but a
+  human-ratified decision with a binding constraint and a path scope has no
+  first-class record of its own. The card: a `decision.ratified` record whose
+  applies-when reuses the curation predicate (`internal/curation` already parses
+  `{routing?, tier?, paths?}`), surfaced in the envelope and packet at claim time
+  beside matching lessons, and marked *verified* in packets by construction since
+  it is ledger-anchored. Distinct from a lesson: no support threshold, no expiry,
+  ratification is a gate act not a curator act.
+- **Ratification anchor and a drift row in `doctor`** (ank's anchor). Record at
+  ratification the SHA-256 of the normalized constraint text plus its scope, and
+  give `seed doctor` a row that flags a decision whose current carrier text no
+  longer matches its anchor. Tamper evidence for the ledger already exists (§II.1);
+  this extends it to the prose a decision points at, which lives outside the ledger
+  and can drift silently. Cheap, and depends on the previous card.
+- **A herdr wake adapter** (§II.9 executor adapters: provision, wake, meter).
+  Advisory wake over `herdr agent prompt <name>`, and blocked-state observation
+  (`herdr agent wait <name> --until blocked`) reported onto the observation stream
+  so `blocked(needs-you)` reaches the operator's sidebar. Adapter-only by charter
+  rule: the §II.18 row forbids any coordination feature assuming a multiplexer, so
+  a worker with no herdr loses latency and nothing else. Mock-total like every
+  adapter (§II.13).
+- **A herdr shim for the v1 template** (`.seed/hooks/shims/herdr/`). Not `next/**`
+  work: `.seed/**` is protected surface, so this is an ordinary v1 card under
+  protected-path review. Contents per the shim convention: a README with the
+  fidelity table (setup yes via a workspace-create script, run yes via
+  `herdr agent start`, post-create and teardown no since herdr manages panes not
+  worktrees, blocking pre-merge no, CI remains the merge authority per R11), a
+  sample launch script that opens one pane per lane running `scripts/loop.sh`
+  with a distinct `--actor`, and a `seed mail nudge` path for herdr beside the
+  tmux-only one (content-free, the message stays in the mail file).
+
+Phase 13 is exhausted on the frontier (`next/docs/progress.md`), so these are
+filable now; none blocks promotion (§5) and none may be scheduled ahead of an
+open Phase 13 row.
+
 ## 4. Progress tracking
 
 Maintain `next/docs/progress.md`: one line per plan item — `phase.item — card id —
