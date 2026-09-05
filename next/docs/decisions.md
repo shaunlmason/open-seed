@@ -3838,4 +3838,56 @@ recorded a mode nobody built. The row's note names the missing third
 and os-5781a026, the card that builds it and flips the row on all
 three together. The precedent for moving a row outside an exit record
 is os-9ef9ab34 (#308).
+## The audit's ceiling arm reads the declaration admission read (os-b5051f2e)
+
+**A bar over the chain cannot see a file beside it, so the audit takes
+the file.** The ceiling is admission policy, not chain validity: a
+claim above it folds as filed and the chain verifies byte for byte.
+Rather than leave III.R row 5's "every claim within its ceiling"
+unmeasurable, `simulate.AuditUnder(records, declaration)` judges the
+ceiling arm under a declaration the caller gives, mirroring admission's
+rule arm for arm (the kind from the keyring replayed to the claim's
+position, the tier and squad from the fold, the ceiling from the
+declaration, fail-closed on a ceiling outside the vocabulary, silence
+for a human key, an undeclared squad or no declaration).
+`Audit(records)` is `AuditUnder(records, nil)`, so every existing
+reading, the simulation's included, is unchanged.
+
+**The verb reads the declaration by the one lookup that exists.**
+`seed ledger audit --config` goes through `deploymentDeclaration`, the
+remote verbs' `--config`, `$SEED_CONFIG`, `./seed.json` rule, so an
+audit and the admission it judges read one file by one rule; a
+reading names the declaration it was judged under, or `null`, so a
+policy the lookup found implicitly is explicit in the envelope; a
+declaration that exists and does not parse refuses `posture_invalid`
+before any bar.
+
+**The blind-retry clause is unmet, and says so.** A refused append
+never lands, so no bar over the chain can see a refusal or its retry;
+and the refusal journal cannot tell a blind retry from a corrected one
+as it stands (an entry keeps no digest of the attempted payload), so
+routing the clause there would have marked it covered by a surface
+that cannot measure it (review on #322). `simulation.md` names the
+clause unmet and cites os-a9e715dc, which owns the measurement. The
+charter's row is untouched; the bar's description shrank rather than
+grew.
+
+**One policy epoch per reading, and the simulation reads its own.**
+The ledger carries no declaration digest, so the arm judges every
+claim under the one declaration given and names it; a deployment
+whose guardrails changed audits each epoch with the file it ran
+under. The seven-day simulation, the audit that is supposed to show
+every claim within its ceiling, now declares a ceiling of its own
+(the core squad's agents at `trivial`), pushes every claim under it
+from the cooperative client and audits under the same file, reporting
+`declared: true`, so the arm is live in the conformance run rather
+than silent there (review on #322). The enforced hook reads no
+declaration today, so the flag states what the audit read, not what
+the boundary refused; the hook's reading is card os-0f924157's (review
+on #323).
+
+**A chain whose roster does not replay is silence, not a guess.** The
+arm needs a kind to judge; where the keyring cannot be replayed it
+reports nothing, which is admission's `Keyring == nil` posture, and
+verification refuses such a chain before the audit reads it anyway.
 
