@@ -1956,4 +1956,19 @@ failed step skips the rest of the job.
 - Check a tool's assumptions about tag shape before adopting it for a
   namespaced tag; a matrix build in bash was shorter than the
   workaround.
+- Order a release workflow by what a failure strands: artifacts and
+  checksums first, the immutable tag after them, the attestation before
+  the release is public, and a re-run on the same commit resumes rather
+  than refuses. A tag pushed first turns every later failure into a
+  version nobody can recover.
+- A dispatch-only workflow runs from whatever branch holds a copy of
+  it, with the copy's own permissions; the guard that holds is outside
+  the file (an environment's deployment branch policy), and an `if:` on
+  the ref only restates it.
+- A shell `case` glob is not a validator: `[0-9]*.[0-9]*.[0-9]*` reads
+  `.` as any character and `*` as anything after. Hold a format to its
+  published grammar and drive the expression from a drill.
+- When a forge splits one ruleset into several objects, read every
+  object's field and compare them all; taking the first for the rest
+  makes the others invisible to drift.
 

@@ -25,12 +25,25 @@ seed version
 ```
 
 Seed itself is released by `.github/workflows/seed-release.yml`, run by
-the operator at the distribution step (`docs/next-build-plan.md` §5):
-the tag `seed/v<version>` is minted at HEAD in-runner, `seed` and
-`seed-admit` are built for linux, darwin and windows on amd64 and arm64
-with the version stamped, and each archive ships beside `checksums.txt`
-with a build-provenance attestation. To verify an archive before running
-it, check its sha256 against `checksums.txt` and its provenance with
+the operator at the distribution step (`docs/next-build-plan.md` §5)
+from the default branch, with the version (semver, without the `v`) as
+its one input. The workflow builds `seed` and `seed-admit` for linux,
+darwin and windows on amd64 and arm64 with the version stamped, writes
+the archives and `checksums.txt`, and only then mints the tag
+`seed/v<version>` at HEAD in-runner, so a failed build leaves no tag; it
+creates the release as a draft, attests `checksums.txt` with build
+provenance, and publishes the draft last, so a failed attestation leaves
+a draft rather than a public release. A re-run for the same version on
+the same commit resumes an incomplete cut; a tag that points at another
+commit, or a release already published, refuses. One precondition is the
+operator's and lives outside the tree: the job runs in the
+`seed-release` GitHub environment, which must exist with a deployment
+branch policy that allows the default branch alone (and required
+reviewers, if wanted) before the first dispatch, because the
+environment's policy is what keeps a branch's edited copy of the
+workflow from the release privileges; the job's own ref guard only
+restates that rule. To verify an archive before running it, check its
+sha256 against `checksums.txt` and its provenance with
 `gh attestation verify <archive> --repo <owner>/<repo>`. Until the first
 release is cut the binary is built from source (`go run ./next/cmd/seed`)
 and `seed version` prints the pre-release default.

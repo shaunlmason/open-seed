@@ -3880,3 +3880,30 @@ engine ships, and the handbook says how an adopter verifies an archive
 before running it, which is the half of III.R row 7 that a README can
 carry before any release exists.
 
+**The tag follows the build, the draft follows the attestation, and the
+privileges stay on the default branch (review on #329).** Four findings
+on the task PR, each a refinement inside the decisions above. The tag is
+pushed only once the six archives and `checksums.txt` exist, so a failed
+build strands no tag; a re-run for the same version on the same commit
+resumes the cut (the tag is kept, a draft left behind is replaced),
+while a tag at another commit or a release already published refuses,
+which is the "cut once" the second decision meant. The release is
+created as a draft, attested, and published last, so a failed
+attestation leaves a draft nobody can download rather than a public
+release whose notes promise a provenance it lacks. The version is
+validated against semver.org's grammar as a POSIX extended regular
+expression, no leading zeroes and nothing trailing, in place of a shell
+glob that let `1.2.3foo` and `1.2.3/foo` through; the drill reads the
+expression out of the workflow and drives it. And because any branch's
+edited copy of a dispatch-only workflow can be dispatched with the copy's
+own `contents: write` and OIDC grants, the job runs in the `seed-release`
+environment and only from the default branch: the environment's
+deployment branch policy is the operator's precondition, set in the
+forge's settings before the first dispatch and named in the handbook
+(the reconciler models rulesets, not environments, so it is not desired
+state), and the ref guard restates it in the file as defense in depth.
+The same review found the Forgejo adapter reading one whitelist for both
+tag protections; it now compares each pattern's whitelist, so a weakened
+`seed/v*` protection beside a compliant `v*` is drift and Apply repairs
+it.
+

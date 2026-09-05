@@ -2143,8 +2143,16 @@ written by the two implementing sessions, one voice.
   `TestSeedReleaseWorkflowIsDispatchOnly` beside the scheduled-writer
   drill and `TestVersionIsStampableAndPreReleaseFromSource`; the
   handbook's Install section names the release and how to verify one.
-  No release is cut: III.P row 1's residual closes when the operator
-  cuts the first at the distribution step)
+  Review on #329: the tag is pushed only after the archives and
+  checksums exist and a same-commit re-run resumes the cut, the release
+  is a draft until the attestation exists, the version is validated by
+  semver.org's grammar, the job runs in the `seed-release` environment
+  from the default branch alone (the deployment branch policy is the
+  operator precondition the handbook names), and the Forgejo adapter
+  compares every tag protection's whitelist, held by
+  `TestForgejoComparesEveryTagWhitelist`. No release is cut: III.P row
+  1's residual closes when the operator cuts the first at the
+  distribution step)
 
 ## Frontier
 

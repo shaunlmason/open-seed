@@ -190,28 +190,61 @@ func (f *Forgejo) Read() (*State, error) {
 	// Every release-tag protection the forge holds folds into the one
 	// ruleset, its refs in the ruleset's own order, so a forge holding
 	// one of the two patterns reads as an update rather than as absent.
+	// The ruleset has one bypass list for all its refs and the forge one
+	// whitelist per protection, so every whitelist is compared, never
+	// the first one for both: the bypass reads as their union, which
+	// makes a widened whitelist on any pattern drift, and when the
+	// whitelists disagree the update rule carries them by ref, which
+	// makes a narrowed or emptied one drift too. Apply then patches
+	// every pattern to the one desired list (review on #329).
 	var refs []string
-	var bypass []string
+	var union []string
+	byRef := map[string][]string{}
+	agree := true
 	for _, pattern := range releaseTagPatterns {
 		for _, t := range tags {
 			if t.NamePattern != pattern {
 				continue
 			}
 			f.tagID[t.NamePattern] = t.ID
-			refs = append(refs, "refs/tags/"+t.NamePattern)
-			if bypass == nil {
-				bypass = append([]string(nil), t.WhitelistUsernames...)
+			ref := "refs/tags/" + t.NamePattern
+			whitelist := append([]string{}, t.WhitelistUsernames...)
+			sort.Strings(whitelist)
+			if len(refs) > 0 && !sameStrings(byRef[refs[0]], whitelist) {
+				agree = false
 			}
+			refs = append(refs, ref)
+			byRef[ref] = whitelist
+			union = unionStrings(union, whitelist)
 		}
 	}
 	if len(refs) > 0 {
+		update := Rule{Type: RuleUpdate}
+		if !agree {
+			update.Params = map[string]any{"bypass_by_ref": byRef}
+		}
 		st.Rulesets[RulesetTags] = Ruleset{
 			Name: RulesetTags, Target: TargetTag, Refs: refs,
-			Rules:  []Rule{{Type: RuleDeletion}, {Type: RuleNonFastForward}, {Type: RuleUpdate}},
-			Bypass: bypass,
+			Rules:  []Rule{{Type: RuleDeletion}, {Type: RuleNonFastForward}, update},
+			Bypass: union,
 		}
 	}
 	return st, nil
+}
+
+// unionStrings is the sorted set union of a and b; nil when both are
+// empty, so an all-empty read compares equal to an absent bypass.
+func unionStrings(a, b []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, s := range append(append([]string{}, a...), b...) {
+		if !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // rulesetFor maps a branch-protection glob back to the seed ruleset it
