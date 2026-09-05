@@ -1724,3 +1724,4 @@
 {"actor":"shaunlmason","data":{"to":"cancelled","transitioned":true},"task":"os-1da81891","ts":"2026-09-05T18:49:29Z","verb":"cancel"}
 {"actor":"shaunlmason","data":{"title":"next: ratification anchor and a doctor drift row for decisions (backlog, from ank)"},"task":"os-33994d3c","ts":"2026-09-05T18:49:32Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: federation report never persists a verified head, so a remote's rollback to a valid ancestor is accepted"},"task":"os-6cf958f2","ts":"2026-09-05T19:46:45Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: the capability card's signature is verified by no gate, and its 'JCS' canonical form is not RFC 8785"},"task":"os-f11601e0","ts":"2026-09-05T19:46:53Z","verb":"create"}
