@@ -1709,3 +1709,4 @@
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-2e46aa2f","ts":"2026-09-05T05:25:22Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-5781a026","ts":"2026-09-05T05:25:25Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-a9e715dc","ts":"2026-09-05T05:25:28Z","verb":"close"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-0f924157","ts":"2026-09-05T05:29:20Z","verb":"transition"}
