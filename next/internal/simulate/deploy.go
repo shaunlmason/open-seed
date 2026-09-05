@@ -11,11 +11,13 @@ package simulate
 import (
 	"crypto/ed25519"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -38,6 +40,7 @@ type deployment struct {
 	dir      string
 	remote   string
 	state    string
+	config   string // the deployment's declaration (seed.json), read by every verb that takes --config
 	lanesDir string
 	verbs    loop.Verbs
 	opPriv   ed25519.PrivateKey
@@ -74,7 +77,7 @@ func keyAt(dir, name string, seed byte) (path, pubHex, fp string, err error) {
 // append1 lands one signed event through the CLI seam, returning an
 // error carrying the boundary's refusal when it does not admit.
 func (d *deployment) append1(keyPath, verb, subject, payload string) error {
-	res := d.verbs.Run("ledger", "append", "--remote", d.remote, "--state", d.state,
+	res := d.verbs.Run("ledger", "append", "--remote", d.remote, "--state", d.state, "--config", d.config,
 		"--key", keyPath, "--verb", verb, "--subject", subject, "--payload", payload)
 	if res.Exit != 0 || !res.OK {
 		return fmt.Errorf("append %s %s refused: exit %d code %q: %s", verb, subject, res.Exit, res.Code, res.Message)
@@ -108,6 +111,29 @@ func build(cfg Config) (*deployment, error) {
 	}
 	for _, m := range ms {
 		d.manifest[m.Lane] = m
+	}
+	// The deployment declares its guardrails (plans/os-b5051f2e.md D5):
+	// the core squad's agents are ceilinged at the tier the catalog
+	// files at, so the ceiling rule is live at every claim the run
+	// admits and the end-of-run audit judges under the same file. The
+	// lanes are the shipped manifests, so the declaration is one
+	// seed preseed check would take.
+	d.config = filepath.Join(dir, "seed.json")
+	lanes := make([]string, 0, len(ms))
+	for _, m := range ms {
+		lanes = append(lanes, m.Lane)
+	}
+	sort.Strings(lanes)
+	decl, err := json.Marshal(map[string]any{
+		"posture":    postureName(cfg.Enforced),
+		"guardrails": map[string]any{"squads": map[string]any{"core": map[string]any{"default": "trivial", "max_agent": "trivial"}}},
+		"teams":      map[string]any{"squads": []map[string]any{{"name": "core", "lanes": lanes}}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(d.config, decl, 0o644); err != nil {
+		return nil, fmt.Errorf("write declaration: %w", err)
 	}
 
 	// The operator key is the genesis governance root.
