@@ -1069,8 +1069,8 @@ func coreRules() []Rule {
 					return &approval.Error{Verb: verb, Subject: subject, Reason: fmt.Sprintf("verb %q is no catalog verb: an approval is asked for an act the boundary drafts", p.Verb)}
 				}
 				if subject != approval.SystemSubject {
-					if _, ok := c.Lifecycle.State(subject); !ok {
-						return &approval.Error{Verb: verb, Subject: subject, Reason: "no contract by that id is on this chain: a request is on the contract the act concerns, or on system"}
+					if _, ok := c.Lifecycle.State(subject); !ok && p.Verb != "intent.filed" {
+						return &approval.Error{Verb: verb, Subject: subject, Reason: "no contract by that id is on this chain: a request is on the contract the act concerns, or on system; a birth's request is on the contract it creates"}
 					}
 				}
 				if c.Keyring != nil {

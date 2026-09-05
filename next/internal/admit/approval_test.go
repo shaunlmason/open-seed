@@ -299,6 +299,44 @@ func TestAffordancesListAGovernedActExactlyUnderAnOpenGrant(t *testing.T) {
 	}
 }
 
+// conformance: plans/os-5781a026.md D2, D4 — a governed contract birth
+// can be approved: the request is on the contract the birth creates,
+// which no chain yet knows, so its subject check allows the unknown id
+// when the requested verb is intent.filed (review on the task PR).
+// The birth then needs the open grant like every governed act.
+func TestApprovalRequestOnABirthAdmitsAndTheGrantAdmitsTheFiling(t *testing.T) {
+	ctx, signer, worker, _, _, step := approvalStand(t)
+	birthDeclaration := `{"posture": "cooperative", "guardrails": {"approvals": [{"verb": "intent.filed", "min_tier": "trivial"}]}}`
+	// intent.filed accepts dispatch or operator; the worker holds neither
+	// past claim in the fixture, so it is granted dispatch here.
+	ctx = step(signer, version.Seed1, keyring.VerbGranted, fpOf(t, worker), `{"capability": "`+keyring.CapDispatch+`"}`)
+	// The request names a contract the chain does not know, for the
+	// verb that would create it: the birth's own subject check admits
+	// it while a non-birth request on an unknown contract still refuses.
+	if err := Check(under(ctx, birthDeclaration, t), draftV(t, worker, version.Seed1, approval.RequestedVerb, "c-9", requestBody(t, worker, "intent.filed"), ctx.Tip)); err != nil {
+		t.Fatalf("a birth's approval request is on the contract it creates: %v", err)
+	}
+	var apr *approval.Error
+	if err := Check(under(ctx, birthDeclaration, t), draftV(t, worker, version.Seed1, approval.RequestedVerb, "c-9", requestBody(t, worker, "claim.taken"), ctx.Tip)); !errors.As(err, &apr) || !strings.Contains(err.Error(), "no contract by that id") {
+		t.Fatalf("a non-birth request still refuses on an unknown contract: %v", err)
+	}
+	ctx = step(worker, version.Seed1, approval.RequestedVerb, "c-9", requestBody(t, worker, "intent.filed"))
+	requested := ctx.Count - 1
+	with := under(ctx, birthDeclaration, t)
+	// Until the grant stands, the filing itself refuses naming the
+	// request the operator must answer.
+	var need *ApprovalRequiredError
+	if err := Check(with, draftV(t, worker, version.Seed1, "intent.filed", "c-9", standardBody, ctx.Tip)); !errors.As(err, &need) || need.Pending == nil || *need.Pending != requested {
+		t.Fatalf("the birth refuses approval_required until its grant stands: %v", err)
+	}
+	grant := `{"request": "` + approvalPos(requested) + `"}`
+	ctx = step(signer, version.Seed1, approval.GrantedVerb, "c-9", grant)
+	with = under(ctx, birthDeclaration, t)
+	if err := Check(with, draftV(t, worker, version.Seed1, "intent.filed", "c-9", standardBody, ctx.Tip)); err != nil {
+		t.Fatalf("the operator's grant admits the birth: %v", err)
+	}
+}
+
 func mustOpen(t *testing.T, ctx *Context, subject, actor string) transition.ApprovalFact {
 	t.Helper()
 	g, ok := ctx.Lifecycle.OpenApproval(subject, "claim.taken", actor)
