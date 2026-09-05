@@ -1684,3 +1684,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-d7906921","kind":"receipt"},"task":"os-8ecef90f","ts":"2026-09-05T00:38:07Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-0d2109f6","kind":"pr"},"task":"os-8ecef90f","ts":"2026-09-05T00:38:11Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-999d28af","kind":"comment"},"task":"os-8ecef90f","ts":"2026-09-05T00:38:14Z","verb":"comment"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-8ecef90f","ts":"2026-09-05T00:38:17Z","verb":"transition"}
