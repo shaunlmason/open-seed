@@ -354,3 +354,52 @@ func mustOpenAt(t *testing.T, ctx *Context, pos int) transition.ApprovalFact {
 	}
 	return g
 }
+
+// conformance: plans/os-5781a026.md D1 (a birth's tier is its filing's),
+// AC1 and AC2; review finding on #331: beside the drill above, a
+// governed birth reads the floor from its own filing, so a standard
+// filing refuses naming the request on the contract it would create
+// while a trivial one is under the floor and admits with no grant; the
+// operator's grant on the unborn contract is valid, admits the filing
+// on that subject and no other, and is spent by the filing at its own
+// position, which bears the contract into the lifecycle.
+func TestGovernedBirthReadsItsFloorAndSpendsItsGrant(t *testing.T) {
+	ctx, signer, worker, _, _, step := approvalStand(t)
+	ctx = step(signer, version.Seed1, keyring.VerbGranted, fpOf(t, worker), `{"capability": "`+keyring.CapDispatch+`"}`)
+	const flooredBirth = `{"posture": "cooperative", "guardrails": {"approvals": [{"verb": "intent.filed", "min_tier": "standard"}]}}`
+	file := func(c *Context, key keyForType, subject, body string) error {
+		return Check(c, draftV(t, key, version.Seed1, "intent.filed", subject, body, c.Tip))
+	}
+	with := under(ctx, flooredBirth, t)
+	var need *ApprovalRequiredError
+	err := file(with, worker, "c-3", standardBody)
+	if !errors.As(err, &need) || need.Tier != "standard" || need.MinTier != "standard" || need.Pending != nil {
+		t.Fatalf("a governed birth refuses reading the tier from its filing: %v", err)
+	}
+	if !strings.Contains(err.Error(), "seed approval request --subject c-3 --verb intent.filed") {
+		t.Fatalf("the refusal names the request on the contract the filing creates: %v", err)
+	}
+	if err := file(with, worker, "c-4", filedBody); err != nil {
+		t.Fatalf("a trivial birth is under the standard floor: %v", err)
+	}
+	ctx = step(worker, version.Seed1, approval.RequestedVerb, "c-3", requestBody(t, worker, "intent.filed"))
+	requested := ctx.Count - 1
+	ctx = step(signer, version.Seed1, approval.GrantedVerb, "c-3", `{"request": "`+approvalPos(requested)+`"}`)
+	with = under(ctx, flooredBirth, t)
+	if !ApprovalValid(ctx.Records, mustOpenAt(t, ctx, requested)) {
+		t.Fatal("the operator's grant of a birth is valid")
+	}
+	if err := file(with, worker, "c-5", standardBody); !errors.As(err, &need) {
+		t.Fatalf("the grant names one subject: %v", err)
+	}
+	if err := file(with, worker, "c-3", standardBody); err != nil {
+		t.Fatalf("the granted birth admits: %v", err)
+	}
+	ctx = step(worker, version.Seed1, "intent.filed", "c-3", standardBody)
+	if a, _ := ctx.Lifecycle.ApprovalAt(requested); a.ConsumedAt == nil || *a.ConsumedAt != ctx.Count-1 || a.Open() {
+		t.Fatalf("the birth spends the grant at its own position: %+v", a)
+	}
+	if _, born := ctx.Lifecycle.State("c-3"); !born {
+		t.Fatal("the governed birth is on the chain")
+	}
+}

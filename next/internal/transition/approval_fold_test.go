@@ -131,3 +131,35 @@ func TestApprovalAnomaliesAreCountedNotApplied(t *testing.T) {
 		t.Fatal("a pre-activation request is inert")
 	}
 }
+
+// conformance: plans/os-5781a026.md D3; review finding on #331: a
+// request for a birth is on the contract the filing creates, which the
+// chain does not know yet: the fold keeps it as a fact on that subject
+// with no anomaly, the grant opens it there, and the intent.filed that
+// bears the subject into the lifecycle spends it at its own position.
+func TestApprovalGrantForABirthIsSpentByTheFiling(t *testing.T) {
+	table := approvalTable(t)
+	const worker, root = "fp-worker", "fp-root"
+	recs := []*event.Record{
+		approvalRec(version.Seed1, approval.RequestedVerb, "c-3", worker, `{"verb": "intent.filed", "actor": "`+worker+`", "reason": "a governed birth"}`),
+		approvalRec(version.Seed1, approval.GrantedVerb, "c-3", root, `{"request": "0"}`),
+	}
+	f := table.FoldRecords(recs)
+	if _, known := f.State("c-3"); known {
+		t.Fatal("a request and a grant bear no contract into the lifecycle")
+	}
+	if _, open := f.OpenApproval("c-3", "intent.filed", worker); !open || f.ApprovalAnomalies != 0 {
+		t.Fatalf("the grant stands open on the contract the filing creates: %+v %d", f.Approvals(), f.ApprovalAnomalies)
+	}
+	recs = append(recs, approvalRec(version.Seed1, "intent.filed", "c-3", worker, `{"intent": "x", "tier": "standard", "budget": "small", "routing": "core"}`))
+	f = table.FoldRecords(recs)
+	if _, known := f.State("c-3"); !known {
+		t.Fatal("the filing bears the contract into the lifecycle")
+	}
+	if a, _ := f.ApprovalAt(0); a.ConsumedAt == nil || *a.ConsumedAt != 2 || a.Open() {
+		t.Fatalf("the filing spends the grant at its own position: %+v", a)
+	}
+	if _, open := f.OpenApproval("c-3", "intent.filed", worker); open {
+		t.Fatal("one grant admits one birth")
+	}
+}

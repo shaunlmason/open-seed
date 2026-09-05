@@ -1047,7 +1047,10 @@ func coreRules() []Rule {
 			// and admits nothing: approval.requested names a catalog
 			// verb that is not an approval verb, an enrolled actor and
 			// one bounded reason, on a contract the chain knows or on
-			// system; approval.granted and approval.denied cite an
+			// system, except that a request for intent.filed is on the
+			// contract the filing would create, which the chain cannot
+			// know until the governed filing succeeds (review finding
+			// on #331); approval.granted and approval.denied cite an
 			// approval.requested on the same subject not yet
 			// answered. Standing for the request is the keyring
 			// rule's; the operator grant for the answers is the grant
@@ -1068,6 +1071,12 @@ func coreRules() []Rule {
 				if !catalogHas(p.Verb) {
 					return &approval.Error{Verb: verb, Subject: subject, Reason: fmt.Sprintf("verb %q is no catalog verb: an approval is asked for an act the boundary drafts", p.Verb)}
 				}
+				// The policy rule finds a grant on the governed act's
+				// own subject, and a birth's subject is the contract it
+				// creates: a request for intent.filed names that
+				// contract before the chain knows it, or no grant could
+				// ever admit a governed birth. Every other verb acts on
+				// a contract the chain knows, or on system.
 				if subject != approval.SystemSubject {
 					if _, ok := c.Lifecycle.State(subject); !ok && p.Verb != "intent.filed" {
 						return &approval.Error{Verb: verb, Subject: subject, Reason: "no contract by that id is on this chain: a request is on the contract the act concerns, or on system; a birth's request is on the contract it creates"}

@@ -337,6 +337,12 @@ whoever files it (the actor itself in the loop's case, or a lane on
 its behalf), active standing only, like `request.filed`, since asking
 grants nothing; the verb a catalog verb that is not an approval verb,
 the actor an enrolled key, the reason one line of at most 200 bytes.
+The subject is a contract the chain knows or `system`, with one
+exception the policy forces: a request for `intent.filed` is on the
+contract the filing would create, which the chain does not know until
+the governed filing succeeds, because the grant is found on the
+governed act's own subject and a birth's subject is the contract it
+creates; every other verb's request on an unknown contract refuses.
 `approval.granted` `{"request"}` and `approval.denied` `{"request",
 "reason"}`, operator only with no fallback (`decision.recorded`'s
 row), cite an `approval.requested` on the same subject not yet
