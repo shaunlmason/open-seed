@@ -1723,3 +1723,4 @@
 {"actor":"shaunlmason","data":{"comment_id":"cm-ceb0ff29","kind":"comment"},"task":"os-1da81891","ts":"2026-09-05T18:48:59Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"to":"cancelled","transitioned":true},"task":"os-1da81891","ts":"2026-09-05T18:49:29Z","verb":"cancel"}
 {"actor":"shaunlmason","data":{"title":"next: ratification anchor and a doctor drift row for decisions (backlog, from ank)"},"task":"os-33994d3c","ts":"2026-09-05T18:49:32Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: federation report never persists a verified head, so a remote's rollback to a valid ancestor is accepted"},"task":"os-6cf958f2","ts":"2026-09-05T19:46:45Z","verb":"create"}
