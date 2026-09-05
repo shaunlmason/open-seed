@@ -81,6 +81,7 @@ func runSimulate(args []string, stdout, stderr io.Writer) int {
 	if rep.Audit != nil {
 		out["audit"] = map[string]any{
 			"clean":               rep.Audit.Clean,
+			"declared":            rep.Audit.Declared,
 			"chain_violations":    rep.Audit.ChainViolations,
 			"lost_updates":        rep.Audit.LostUpdates,
 			"silent_abandonments": rep.Audit.SilentAbandonments,

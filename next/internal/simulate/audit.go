@@ -6,10 +6,16 @@ package simulate
 // that violate it; a clean run leaves every list empty.
 
 import (
+	"encoding/json"
+	"fmt"
 	"sort"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/genesis"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -22,6 +28,11 @@ type AuditResult struct {
 	GuardrailBreaches  []string `json:"guardrail_breaches"`
 	UnreservedSpend    []string `json:"unreserved_spend"`
 	Clean              bool     `json:"clean"`
+	// Declared reports whether the guardrail bar's ceiling arm judged
+	// under a declaration with guardrails (plans/os-b5051f2e.md D5): a
+	// reading that says clean says whether the ceiling was among the
+	// things it read.
+	Declared bool `json:"declared"`
 }
 
 // ClaimTakenVerb is the one verb the bars read that the protocol
@@ -44,8 +55,22 @@ var AuditedVerbs = []string{
 	transition.RunStartedVerb,
 }
 
-// Audit reconstructs the five bars from the records alone.
+// Audit reconstructs the five bars from the records alone: the reading
+// every caller had before the ceiling arm existed, byte for byte.
 func Audit(records []*event.Record) AuditResult {
+	return AuditUnder(records, nil)
+}
+
+// AuditUnder reconstructs the five bars from the records, judging the
+// guardrail bar's ceiling arm under the deployment declaration when
+// one is given (plans/os-b5051f2e.md D1). The ceiling is admission
+// policy rather than chain validity, read from seed.json and never
+// carried by the ledger, so a chain alone cannot show it; a caller
+// that hands the audit the declaration admission read gets the
+// reading admission would have given. A nil declaration is the
+// records-only audit, exactly as admission with no declaration is a
+// no-op.
+func AuditUnder(records []*event.Record, declaration *posture.Config) AuditResult {
 	res := AuditResult{
 		ChainViolations:    []string{},
 		LostUpdates:        []string{},
@@ -119,6 +144,8 @@ func Audit(records []*event.Record) AuditResult {
 		}
 	}
 	res.GuardrailBreaches = append(res.GuardrailBreaches, sealedAuthorClaims(tbl, records)...)
+	res.GuardrailBreaches = append(res.GuardrailBreaches, ceilingClaims(tbl, records, declaration)...)
+	res.Declared = declaration != nil && declaration.Guardrails != nil
 
 	// A subject still open (claim taken, no deliberate exit) is a silent
 	// abandonment; a done contract is closed by construction.
@@ -246,6 +273,86 @@ func sealedAuthorClaims(tbl *transition.Table, records []*event.Record) []string
 		if state.Sealed.Signer == rec.Event.Actor {
 			seen[s] = true
 			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// ceilingClaims names every claim.taken an agent-kind key made above
+// its squad's declared agent ceiling (plans/os-b5051f2e.md D1, D2).
+// It mirrors admission's ceiling rule arm for arm: the claiming key's
+// roster kind is read from the keyring replayed over the records to
+// the claim's position (the roster admission saw), the subject's tier
+// and routing from the fold, the ceiling from the declaration. A
+// non-human key above the ceiling is a breach; a ceiling outside the
+// tier vocabulary is a breach, because admission fails closed there
+// and a bar that let a typo pass every claim would be weaker than the
+// boundary it audits; a human key, an undeclared squad, an absent
+// guardrails block and no declaration are silence. A chain whose
+// roster does not replay yields no kinds to judge and the arm is
+// silent, admission's Keyring == nil posture; verification refuses
+// such a chain before the audit reads it. The evidence names itself:
+// the subject, the kind and key, the tier, the position, the squad
+// and the ceiling, so a reader can tell this arm's finding from the
+// sealed-author arm's.
+func ceilingClaims(tbl *transition.Table, records []*event.Record, declaration *posture.Config) []string {
+	if tbl == nil || declaration == nil || declaration.Guardrails == nil {
+		return nil
+	}
+	fold := tbl.FoldRecords(records)
+	ring := keyring.New()
+	active := ""
+	var out []string
+	for pos, rec := range records {
+		// The keyring package's own replay (keyring.StateAt), taken one
+		// record at a time so the kind read at a claim is the kind the
+		// roster held there.
+		if active == "" {
+			active = rec.Event.V
+			if pos == 0 && rec.Event.Verb == genesis.Verb && rec.Event.Subject == "system" {
+				var g struct {
+					Protocol string `json:"protocol"`
+				}
+				if err := json.Unmarshal(rec.Event.Payload, &g); err == nil && g.Protocol != "" {
+					active = g.Protocol
+				}
+				ring.SeedGenesis(rec)
+			}
+		}
+		if keyring.Applies(active) {
+			if err := ring.Advance(rec); err != nil {
+				return nil
+			}
+		}
+		if rec.Event.Verb == ledger.UpgradeVerb && rec.Event.Subject == "system" {
+			var up struct {
+				To string `json:"to"`
+			}
+			if err := json.Unmarshal(rec.Event.Payload, &up); err == nil && up.To != "" {
+				active = up.To
+			}
+		}
+		if rec.Event.Verb != ClaimTakenVerb {
+			continue
+		}
+		entry, ok := ring.Get(rec.Event.Actor)
+		if !ok || entry.Kind == "human" {
+			continue
+		}
+		s, ok := fold.State(rec.Event.Subject)
+		if !ok {
+			continue
+		}
+		ceiling, declared := declaration.AgentCeiling(s.Routing)
+		if !declared {
+			continue
+		}
+		if _, known := transition.Tier(ceiling); !known {
+			out = append(out, fmt.Sprintf("%s: %s key %s claimed a %s contract at position %d in the %s squad, whose agent ceiling %q is not a tier", rec.Event.Subject, entry.Kind, rec.Event.Actor, s.Tier, pos, s.Routing, ceiling))
+			continue
+		}
+		if transition.TierAbove(s.Tier, ceiling) {
+			out = append(out, fmt.Sprintf("%s: %s key %s claimed a %s contract at position %d above the %s squad's agent ceiling %s", rec.Event.Subject, entry.Kind, rec.Event.Actor, s.Tier, pos, s.Routing, ceiling))
 		}
 	}
 	return out
