@@ -80,24 +80,7 @@ run leaves every list empty:
    admission rule reads them, and a bar must report what the boundary
    refuses. The scheduling concern (work ready with no live offer) is
    `internal/eval`'s read, not this bar's (plans/os-aaec6a3c.md D1,
-   D3). The bar's other contracted clause, **no refusal followed by a
-   blind retry**, is **unmet and unmeasured**: a refused append never
-   lands, so a refusal and its retry leave only the retry in the
-   chain, and the client's refusal journal
-   ([`refusals.md`](refusals.md)) cannot tell a blind retry from a
-   corrected one as it stands, since an entry keeps actor, verb,
-   subject, outcome, code and position but no digest of the attempted
-   payload. No surface measures the clause today; os-a9e715dc owns the
-   measurement (the journal entry gains the attempt's digest and the
-   report counts a same-digest retry as blind), and until it lands
-   this bar's description claims the ceiling arm and the sealed-author
-   arm alone (plans/os-b5051f2e.md D4).
-   subject's checks never claims it. An unoffered claim is **not** a
-   breach, because admission takes one: the scheduling model publishes
-   offers (`SEED-NEXT.md` §II.9) but no admission rule reads them, and
-   a bar must report what the boundary refuses. The scheduling concern
-   (work ready with no live offer) is `internal/eval`'s read, not this
-   bar's (plans/os-aaec6a3c.md D1, D3). The bar's other contracted
+   D3). The bar's other contracted
    clause, **no refusal followed by a blind retry**
    (plans/os-16e55c11.md D5), is not the chain's to show, since a
    refused append never lands and a refusal and its retry leave only
