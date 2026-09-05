@@ -1659,3 +1659,4 @@
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-5781a026","ts":"2026-09-05T00:08:32Z","verb":"unblock"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:324","to":"ready"},"task":"os-db5cd353","ts":"2026-09-05T00:22:57Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-05T01:23:00Z"},"task":"os-db5cd353","ts":"2026-09-05T00:23:00Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-d9ee11cb","kind":"receipt"},"task":"os-db5cd353","ts":"2026-09-05T00:23:04Z","verb":"attach-evidence"}

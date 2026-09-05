@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-05T00:23:00Z"
     lease_expires: "2026-09-05T01:23:00Z"
 created_at: "2026-09-04T15:02:29Z"
-updated_at: "2026-09-05T00:23:00Z"
+updated_at: "2026-09-05T00:23:04Z"
 ---
 
 Found while verifying what the Phase 13 exit record (os-d63c7441) can claim.
@@ -26,3 +26,7 @@ The first clause is arguably structural: the chain hash-links records and refere
 WHAT THIS CARD OWES A DECIDER. Either (a) add the erasure verb so the act is a signed record and the row is met, which touches the protocol and the transition table and is not small, or (b) revise the row the way the Phase 10 record revised its criterion, saying erasure is surfaced rather than attributed, and say so in the exit record. Not decidable from the tree: the charter wrote "attributable" deliberately.
 
 Until then III.A row 7 cannot be flipped to met by the exit record, and the record should say UNMET and cite this card.
+
+## Evidence ev-d9ee11cb (receipt, seed-next-implementer, 2026-09-05T00:23:04Z)
+
+receipts/os-db5cd353.json
