@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-05T00:26:40Z"
     lease_expires: "2026-09-05T01:26:40Z"
 created_at: "2026-09-04T15:02:49Z"
-updated_at: "2026-09-05T00:26:40Z"
+updated_at: "2026-09-05T00:38:07Z"
 ---
 
 Found while verifying what the Phase 13 exit record (os-d63c7441) can claim. The exit record plan routing table says of III.L row 4: "judged against #273: the registry is the one verb table, every method runs the CLI own run function under the same admission, and approvals are ledger facts attributable to their signer; met if the drills say so, else re-routed with a card." This is that card: the drills do not say so.
@@ -40,3 +40,7 @@ WHY THE ROW STILL IS NOT MET. Nothing DRILLS it. The three tests in cmd/seed/ser
 THE DRILL THIS CARD OWES. Over seed serve, invoke a verb that admission refuses on policy grounds (the ceiling rule is the cleanest: an agent-kind key claiming above its squad declared max_agent), and assert the JSON-RPC result is a seed-envelope carrying that refusal code — not a transport error, and not a success. That proves policy governs the surface rather than only the CLI. A second arm asserting an approval made through the surface lands as a ledger fact naming its signer closes the attributable clause.
 
 So the exit record can cite this card and, once the drill lands, flip III.L row 4 to met rather than re-routing it again. No design decision is needed after all; I was wrong to file this as one. What it needs is one test file, which needs this card promoted.
+
+## Evidence ev-d7906921 (receipt, seed-next-implementer, 2026-09-05T00:38:07Z)
+
+receipts/os-8ecef90f.json

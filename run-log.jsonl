@@ -1681,3 +1681,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-05T01:26:46Z"},"task":"os-b5051f2e","ts":"2026-09-05T00:26:46Z","verb":"claim"}
 {"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:326","to":"ready"},"task":"os-4fde2bdf","ts":"2026-09-05T00:26:49Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-05T01:26:52Z"},"task":"os-4fde2bdf","ts":"2026-09-05T00:26:52Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-d7906921","kind":"receipt"},"task":"os-8ecef90f","ts":"2026-09-05T00:38:07Z","verb":"attach-evidence"}
