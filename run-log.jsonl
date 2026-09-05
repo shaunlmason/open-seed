@@ -1727,3 +1727,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: the capability card's signature is verified by no gate, and its 'JCS' canonical form is not RFC 8785"},"task":"os-f11601e0","ts":"2026-09-05T19:46:53Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: boundary tasks pins the field names but not the values, so an out-of-vocabulary state or digest passes the stranger's read"},"task":"os-f743e94a","ts":"2026-09-05T19:47:01Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"title":"next: seed serve drops explicit id:null requests as notifications, but JSON-RPC 2.0 requires a response"},"task":"os-dd1ee5b2","ts":"2026-09-05T19:47:10Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: a torn refusal-journal tail poisons the journal permanently at the next append"},"task":"os-7622350d","ts":"2026-09-05T19:47:18Z","verb":"create"}
