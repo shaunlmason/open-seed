@@ -1,12 +1,17 @@
 ---
 id: os-8ecef90f
 title: 'next: III.L row 4 — per-verb policy on the machine-protocol surface is not drilled by #273'
-state: review
+state: done
 priority: P2
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: seed-maintenance
+    reviewed_at: "2026-09-05T00:58:29Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/321
 created_at: "2026-09-04T15:02:49Z"
-updated_at: "2026-09-05T00:38:17Z"
+updated_at: "2026-09-05T00:58:29Z"
 ---
 
 Found while verifying what the Phase 13 exit record (os-d63c7441) can claim. The exit record plan routing table says of III.L row 4: "judged against #273: the registry is the one verb table, every method runs the CLI own run function under the same admission, and approvals are ledger facts attributable to their signer; met if the drills say so, else re-routed with a card." This is that card: the drills do not say so.
