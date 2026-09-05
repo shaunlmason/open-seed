@@ -2293,6 +2293,56 @@ indistinguishable lines. Plan #332. What landed:
   and that the accelerated simulation journals nothing (remote posture)
   so the clause is read on local deployments' journals.
 
+## The enforced hook reads the declaration at the default branch's tip (os-0f924157)
+
+The review finding on #323 (os-b5051f2e's task PR): the enforced
+self-hosted posture's server-side boundary never exercised its
+guardrails — `seed-admit`'s ledger half built every admission context
+with `admit.ContextOver(records[:i])` and no declaration, and the
+installed pre-receive script passes no environment but `SEED_ADMIT_REF`
+and `SEED_PUSHER`, so the ceiling and the other declaration-driven
+policy rules were no-ops exactly at the posture that exists to enforce
+them. Plan #334 (the plan PR's review added the serve fetch, the
+corpus ceiling clause, and the one-derivation option). What landed:
+
+- **The shared read.** `readDeclarationAt` (one owner, the same three
+git invocations the code half used): the HEAD symref, the default
+branch's tip, `<tip>:seed.json` via `git show`. `admitUpdate` reads it
+once per push — the pre-push tip, the code half's own rule for mixed
+pushes — and passes `admit.WithDeclaration` into `admit.ContextOver`
+for every context it builds. A file present but unparseable fails
+closed: the ledger half refuses the push (D2), the code half's own
+message standing in for both, so one broken declaration cannot split
+the boundary into two. No file, or an unborn default branch, is no
+declaration: genesis and a fresh remote behave as before.
+- **The serve fetch.** `judge` resolves the remote's HEAD symref and
+fetches the default branch into the service's private mirror before
+`admitUpdate`: the mirror's HEAD is an unborn symref, so a plain fetch
+brings only the guarded ref and the judge would admit what the hook
+refuses. Unborn means an empty deployment: the hook as before.
+- **The drills, at the enforced boundary.** `cmd/seed-admit`: the raw
+above-ceiling claim refused at the hook with the ceiling's message, ref
+unmoved; the SAME claim through the cooperative seam under `--config`
+self-refusing at the client (the postures differ only in WHERE the
+rule runs); the at-ceiling control admitted at the hook; a broken
+declaration refusing the ledger push and the code push alike, an
+operator's repair re-opening both. `redteam`: the fixture's declaration
+gains the core squad's trivial ceiling, the fixture files one ready
+contract at `standard` (above it), and the corpus carries the
+adversary's raw claim on it beside the contention primary; the
+one-derivation invariant now hands the in-process side the same
+`*posture.Config` the hook reads, so it holds under a live guardrail.
+`simulate`: the deployment commits its declaration on the default
+branch beside writing it beside the remote (the `--config` half), and
+the end-to-end drill runs the raw above-ceiling claim at the installed
+hook — the #323 reproduction inverting.
+- **The spec.** `simulation.md`'s hedge ("the hook builds its contexts
+without a declaration today … is card os-0f924157's") is tightened to
+the affirmative: the hook, the `--config` client, and the audit each
+read the declaration, and `declared` states what each of them read.
+`postures.md`'s hook paragraph names the parse-failure refusal. The
+ceiling rule itself is unchanged.
+
 ## Frontier
 
 
@@ -2381,14 +2431,17 @@ own substitution of the credential-free accelerated simulation for
 the live seven-day shadow run (os-f79bc5a0, #316, the deviation named
 in the packet's section 4; every III.R row stays `not measured`,
 because the simulation raises no escalation and runs no real backlog
-for a real week). The agent-side remainder at the gate is three cards
+for a real week). The agent-side remainder at the gate is four cards
 in review, each a plan PR and a draft task PR waiting on the owner's
 merge: os-8ecef90f (plan #320, task #321) drills III.L row 4 on the
 machine-protocol surface and flips it; os-b5051f2e (plan #322, task
 #323) gives the five-bar audit's guardrail bar its ceiling arm under
 the declaration `seed ledger audit --config` reads; os-db5cd353 (plan
 #324, task #325) adds `artifact.erased`, so an erasure is an
-attributable event, and flips III.A row 7; this card (os-4fde2bdf,
+attributable event, and flips III.A row 7; and os-0f924157 (plan #334)
+closes #323's review finding — the enforced `seed-admit` hook reading
+the declaration at the default branch's tip, so the ceiling refuses at
+the boundary, not only at the cooperative client. this card (os-4fde2bdf,
 plan #326) re-derives the packet and this frontier. Once they merge
 the doctor reads 28 outstanding rows: the 21 Phase 13 rows the exit
 record flips, C.4 and Q.7 routed to the backlog's scale run and to
