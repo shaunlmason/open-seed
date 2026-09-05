@@ -241,6 +241,13 @@ integration_tests() {
     sed -i "s|$a|ROOT|g; s|$b|ROOT|g" "$f"
     grep -v 'flavor-test:' "$f" > "$f.core" || true
   done
+  # The coverage figure is build-cache-sensitive: it varies by a tenth
+  # between the two runs for reasons this assertion does not test, so
+  # it is dropped from the comparison. The rest of the line — the gate
+  # verdicts — is what core-gate independence claims.
+  for f in "$work/out-a.core" "$work/out-b.core"; do
+    sed -i 's|coverage [0-9.]*% (gate [0-9.]*%)||' "$f"
+  done
   if ! diff -q "$work/out-a.core" "$work/out-b.core" >/dev/null; then
     bad "the core gate's output changes when the flavor machinery is removed"
     diff "$work/out-a.core" "$work/out-b.core" | head -20

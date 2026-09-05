@@ -49,6 +49,7 @@ with its fact:
 | `escalation.pending` | `decision.recorded`, `contract.cancelled` | [`escalation.md`](escalation.md) |
 | `verdict.human` | `verdict.rendered` | [`verdicts.md`](verdicts.md) |
 | `request.pending` | `request.answered` | [`requests.md`](requests.md) |
+| `approval.pending` | `approval.denied`, `approval.granted` | [`protocol.md`](protocol.md), "Per-verb approval" |
 
 ## The kinds
 
@@ -74,6 +75,15 @@ with its fact:
   unanswered request's position and timestamp, so the situation read
   reports its age in elapsed seconds; discharged by the dispatcher's
   `request.answered`.
+- **`approval.pending`** — a per-verb approval request nobody has
+  answered ([`protocol.md`](protocol.md), "Per-verb approval"); owed by
+  the operator lane (`lane:operator`), one row per subject carrying the
+  oldest open request's position and timestamp, so the situation read
+  reports its age in elapsed seconds (identity is (subject, kind), so a
+  subject with several open requests shows the oldest until it is
+  answered); discharged by the operator's `approval.granted` or
+  `approval.denied`. The grant is then spent by the act it names; the
+  denial admits nothing.
 - **`verdict.unmerged`** — a pass verdict with no observed merge. The
   merge chain is **two events**, so this kind has two shapes: until a
   request cites the verdict the debt is the operator's and

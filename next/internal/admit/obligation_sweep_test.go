@@ -112,6 +112,7 @@ func TestObligationsAreDischargeable(t *testing.T) {
 			}
 			fp := fpOf(t, key)
 			v := probeViewAt(ctx, row.Subject)
+			v.actor = fp
 			admitted := false
 			var lastErr error
 			for _, verb := range row.DischargedBy {

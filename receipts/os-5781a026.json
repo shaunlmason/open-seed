@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-5781a026",
+  "plan_path": "plans/os-5781a026.md",
+  "plan_sha256": "9ed94afe5f2590ddbebb14a946d1a6703ab0fe7c3fbd5d86eb5e4071027e4937",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/approval/ ./internal/admit/ ./internal/transition/ ./internal/posture/ ./internal/obligation/ ./internal/keyring/ -count=1",
+    "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Approval|Preseed|Serve|Registry|Situation' -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}
