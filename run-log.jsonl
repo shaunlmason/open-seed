@@ -1700,3 +1700,4 @@
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-606c33e2","kind":"comment"},"task":"os-a9e715dc","ts":"2026-09-05T00:48:50Z","verb":"comment"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-a9e715dc","ts":"2026-09-05T00:48:53Z","verb":"transition"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-8ecef90f","ts":"2026-09-05T00:58:30Z","verb":"close"}
+{"actor":"shaunlmason","data":{"title":"next: the enforced hook reads the declaration at the default branch's tip, so the ceiling refuses at the boundary (review finding on #323)"},"task":"os-0f924157","ts":"2026-09-05T01:08:52Z","verb":"create"}
