@@ -569,25 +569,27 @@ func refusalsSection(j *refusals.Journal) (*ReportRefusals, error) {
 	// line with a digest, the same actor's next line on the same
 	// subject, in journal order, is a blind retry when it is the same
 	// act (the digest), refused with the same code, from the same
-	// position.
-	for i, e := range j.Entries {
+	// position. One pass from the tail: the nearest following line
+	// per (actor, subject) is remembered as the scan walks toward the
+	// head, so a journal of one-off refusals is read once, not once
+	// per refusal (review finding on the task PR).
+	type attempter struct{ actor, subject string }
+	following := map[attempter]int{}
+	for i := len(j.Entries) - 1; i >= 0; i-- {
+		e := j.Entries[i]
+		key := attempter{e.Actor, e.Subject}
 		if e.Digest == "" {
 			section.Undigested++
-			continue
-		}
-		if e.Outcome != refusals.OutcomeRefused {
-			continue
-		}
-		for _, next := range j.Entries[i+1:] {
-			if next.Actor != e.Actor || next.Subject != e.Subject {
-				continue
+		} else if e.Outcome == refusals.OutcomeRefused {
+			if n, ok := following[key]; ok {
+				next := j.Entries[n]
+				if next.Digest == e.Digest && next.Outcome == refusals.OutcomeRefused && next.Code == e.Code && next.Position == e.Position {
+					section.BlindRetries++
+					section.BlindRetriesByCode[e.Code]++
+				}
 			}
-			if next.Digest == e.Digest && next.Outcome == refusals.OutcomeRefused && next.Code == e.Code && next.Position == e.Position {
-				section.BlindRetries++
-				section.BlindRetriesByCode[e.Code]++
-			}
-			break
 		}
+		following[key] = i
 	}
 	for _, e := range j.Entries {
 		pos, err := strconv.Atoi(e.Position)

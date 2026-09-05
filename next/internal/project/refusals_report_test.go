@@ -11,6 +11,7 @@ package project_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -252,5 +253,49 @@ func TestReportCountsBlindRetries(t *testing.T) {
 	}
 	if s.Undigested != 2 {
 		t.Fatalf("two lines carry no digest: %+v", s)
+	}
+}
+
+// conformance: plans/os-a9e715dc.md D3 at scale (review finding on
+// the task PR): the pairing reads the journal once from the tail, so
+// a journal of many one-off refusals, each a distinct actor and
+// subject that never attempts again, still counts exactly the blind
+// retries it holds: the one unchanged re-send buried among them.
+func TestReportPairsBlindRetriesInOnePass(t *testing.T) {
+	dir := t.TempDir()
+	note := func(actor, subject, outcome, code, position, payload string) {
+		e := refusals.Entry{TS: "2026-09-01T02:00:00Z", Position: position, Actor: actor, Verb: "claim.taken", Subject: subject, Outcome: outcome, Code: code}
+		if payload != "" {
+			e.Digest = refusals.AttemptDigest(actor, "claim.taken", subject, []byte(payload))
+		}
+		refusals.Note(dir, e)
+	}
+	const oneOffs = 20000
+	for i := 0; i < oneOffs; i++ {
+		note(fmt.Sprintf("k%05d", i), fmt.Sprintf("c-%d", i), refusals.OutcomeRefused, "fenced_out", "20", `{}`)
+		if i == oneOffs/2 {
+			note("aa11", "c-blind", refusals.OutcomeRefused, "contention", "20", `{}`)
+		}
+	}
+	note("aa11", "c-blind", refusals.OutcomeRefused, "contention", "20", `{}`)
+	note("aa11", "c-blind", refusals.OutcomeAdmitted, "", "21", `{}`)
+	j, err := refusals.Load(filepath.Join(dir, refusals.File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := pKey(t, 1)
+	chain, resolve, _ := fixtureChain(t, root)
+	out := lockedTempOut(t, "views")
+	if _, err := project.RebuildWith(chain, out, project.Default(), resolve, project.Inputs{Refusals: j}); err != nil {
+		t.Fatal(err)
+	}
+	var rep project.ReportView
+	readView(t, out, "report", project.ReportFile, &rep)
+	s := rep.Refusals
+	if s == nil || s.Refused != oneOffs+2 || s.Admitted != 1 {
+		t.Fatalf("the counts are the journal's: %+v", s)
+	}
+	if s.BlindRetries != 1 || s.BlindRetriesByCode["contention"] != 1 || len(s.BlindRetriesByCode) != 1 || s.Undigested != 0 {
+		t.Fatalf("one blind retry among the one-offs: %+v", s)
 	}
 }
