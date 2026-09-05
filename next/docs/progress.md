@@ -2138,6 +2138,37 @@ written by the two implementing sessions, one voice.
   third and os-5781a026, the card that builds it and flips the row;
   `platform.md`'s conformance section names the drills; no non-test
   line moves)
+## The erasure verb: erasure is an attributable event (os-db5cd353)
+
+- III.A row 7, erasure obligations honorable and the erasure itself an
+  attributable event — os-db5cd353 — **in review** (task PR against
+  plan #324: the row's first clause was structural and undrilled, its
+  second absent by construction, since the protocol defined no erasure
+  verb and a deleted ciphertext left only a `seal_evidence_missing`
+  finding naming neither who nor when. `artifact.erased` is a fact,
+  additive catalog growth active from `seed/1` (the `offer.*` and
+  `curation.*` precedent, no version bump), strict `{artifact,
+  reason}`, on the contract whose fold references the digest (its
+  sealed commitment or a verdict's receipt) or on `system`, refused
+  when unreferenced and when already erased, `operator` only; the fold
+  keeps it (`Fold.Erasures`, `Fold.Erasure`); `seed seal audit` lists an
+  erased ciphertext under `erased` with position, signer and reason and
+  stays clean while a deletion with no record stays
+  `seal_evidence_missing`; `verdict render` names the erasure in its
+  `seal_broken`; `seed artifact erase` records first, then empties the
+  store's buckets under the digest (`artifact.Store.Erase`) and reports
+  which, finishing rather than re-recording on a re-run; the affordance
+  catalog drafts the verb exactly where the subject references
+  something. A review round narrowed every consumer of the fact to
+  records that passed the boundary (`admit.ErasureValid`, the keyring
+  replayed at the record's position), held the resume path to the
+  operator grant, and made a removal the store refuses
+  `erasure_incomplete` rather than a success. Drilled in
+  `internal/erasure`, `internal/artifact`, `internal/admit` and at the
+  terminal; the row flips to met with the drills as evidence, the
+  doctor's outstanding rows falling by one; `protocol.md` gains the
+  `artifact.*` bullet and an "Erasure" section, `sealed-checks.md`,
+  `actors.md` and `envelope.md` follow)
 
 ## Frontier
 
@@ -2245,6 +2276,11 @@ Of the two rows outside III.R that stood open on the tree's own
 account, III.L row 4 is drilled for allow and deny by os-8ecef90f (plan
 #320, task PR in review) and moves to `partial`, its require-approval
 mode being os-5781a026's, and III.A row 7 (os-db5cd353) remains.
+account, III.A row 7 is met by os-db5cd353 (plan #324, task PR in
+review) and III.L row 4 by os-8ecef90f (plan #320, task PR in review),
+so once both merge the doctor reads 28 outstanding rows: 21 Phase 13
+rows the exit record flips, C.4 and Q.7 routed to the backlog run and
+to promotion, and III.R's seven, none of which an agent can supply.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
