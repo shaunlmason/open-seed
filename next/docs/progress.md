@@ -2093,15 +2093,29 @@ written by the two implementing sessions, one voice.
   makes chain-visible; found while implementing os-88df7ab2, #311)
 - the bar carries neither clause `plans/os-16e55c11.md` D5 contracted
   for it: no ceiling arm, no blind-retry arm — os-b5051f2e —
-  **backlog** (filed from review on #312, which read the offer rule's
-  removal as losing ceiling coverage. The bar never had any: the
-  ceiling is admission policy, read from `seed.json` through
-  `Context.Declaration`, so a claim above it folds as filed and the
-  chain verifies byte for byte, while `simulate.Audit` takes records
-  alone, which is III.R row 5's own contract. The blind-retry clause is
-  further out of reach, since a refused append never lands. The card
-  owns the choice: thread the declaration through the verb, mirroring
-  admission, or keep the bar ledger-only and correct the row's wording)
+  **in review** (task PR against plan #322: filed from review on #312,
+  which read the offer rule's removal as losing ceiling coverage. The
+  bar never had any: the ceiling is admission policy, read from
+  `seed.json` through `Context.Declaration`, so a claim above it folds
+  as filed and the chain verifies byte for byte, while `simulate.Audit`
+  takes records alone. The card did both halves honestly:
+  `simulate.AuditUnder(records, declaration)` gives the guardrail bar a
+  ceiling arm that mirrors admission's rule arm for arm, the claiming
+  key's kind from the keyring replayed to the claim's position, the
+  tier and squad from the fold, the ceiling from the declaration,
+  failing closed on a ceiling outside the vocabulary and silent for a
+  human key, an undeclared squad or no declaration, the evidence naming
+  subject, kind, key, tier, position, squad and ceiling; `seed ledger
+  audit --config` reads the declaration by the remote verbs' shared
+  lookup and names it in the reading; `Audit(records)` is unchanged
+  for every caller; the simulation declares a ceiling of its own and
+  audits under it, its reading saying `declared: true` (review on
+  #322). The blind-retry clause is stated as unmet: a refused append
+  never lands and the refusal journal keeps no attempt digest, so no
+  surface measures it today, which `simulation.md`'s bar 4 now says,
+  citing os-a9e715dc for the measurement. Drilled in both packages; an
+  admission-grade 40-contract chain audits clean under a declaration
+  in about 180 ms)
 
 ## The machine surface's policy, drilled (os-8ecef90f)
 
