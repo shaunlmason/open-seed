@@ -1657,3 +1657,4 @@
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-db5cd353","ts":"2026-09-05T00:08:23Z","verb":"unblock"}
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-2e46aa2f","ts":"2026-09-05T00:08:27Z","verb":"unblock"}
 {"actor":"shaunlmason","data":{"to":"blocked","transitioned":false},"task":"os-5781a026","ts":"2026-09-05T00:08:32Z","verb":"unblock"}
+{"actor":"shaunlmason","data":{"auto_path":"plan_unblock","removed":"plan:324","to":"ready"},"task":"os-db5cd353","ts":"2026-09-05T00:22:57Z","verb":"plan-unblock"}
