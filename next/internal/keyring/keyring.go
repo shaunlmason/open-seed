@@ -206,6 +206,11 @@ func AcceptedCapabilities(verb string) []string {
 		// (plans/os-48df10a2.md D1); request.filed itself is standing-only,
 		// like message.sent, and appears in no case.
 		return []string{CapDispatch, CapOperator}
+	case "artifact.erased":
+		// The erasure fact (plans/os-db5cd353.md D3): an erasure
+		// obligation is a governance act a human answers for, the
+		// decision.recorded posture, and no lane's loop erases.
+		return []string{CapOperator}
 	// The supervisor lane (plans/os-c61c3392.md): offers invite
 	// claims and grant nothing, so the standard operator fallback
 	// stands.

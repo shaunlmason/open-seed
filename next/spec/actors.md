@@ -143,6 +143,7 @@ ending standing is deferred until the catalog grows a verb for it.
 | `actor.qualified`, `actor.disqualified` | `supervise`, `operator` (the first non-operator actor rows: SEED-NEXT.md §5 makes suspension of a failing configuration the supervisor's attributable act with no operator ceremony, and a mint is the same act with the opposite sign; operator stays the standing override, evals.md) |
 | `intent.filed` | `dispatch`, `operator` |
 | `request.answered` | `dispatch`, `operator` (the dispatcher's close of an inbound request, from seed/7; the filing verb itself has no row — standing only, like a message — since a proposal's ingress identity holds no capability; [requests.md](requests.md)) |
+| `artifact.erased` | `operator` (the erasure obligation is a governance act a human answers for, the decision.recorded posture; the record names the digest and the obligation, on the contract whose fold references the artifact or on system, once; [protocol.md](protocol.md), Erasure) |
 | `contract.specified` | `dispatch`, `operator` |
 | `contract.blocked` | `dispatch`, `operator` |
 | `contract.unblocked` | `dispatch`, `operator` |

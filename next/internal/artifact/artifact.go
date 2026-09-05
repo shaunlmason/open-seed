@@ -165,3 +165,36 @@ func (s *Store) GetSealed(commitment string) ([]byte, error) {
 	}
 	return b, nil
 }
+
+// Erase removes the bytes a digest keys, in whichever buckets hold
+// them: the sealed ciphertext under the commitment, the content under
+// the digest, or both. It returns the buckets it emptied ("sealed",
+// "content"), empty when nothing was stored, which is not an error:
+// the erasure record is the attribution (plans/os-db5cd353.md D5), and
+// an erasure after the fact is still an erasure. This is the charter's
+// erasure path made a verb rather than a file deletion: the chain
+// references the bytes by digest and never carries them, so removing
+// them never breaks verification, and the caller records the act
+// before calling here so the absence is never silence.
+func (s *Store) Erase(digest string) ([]string, error) {
+	if !digestRE.MatchString(digest) {
+		return nil, fmt.Errorf("artifact store: %q is not a lowercase-hex sha256 digest", digest)
+	}
+	var removed []string
+	for _, b := range []struct{ name, path string }{
+		{"sealed", s.sealedPath(digest)},
+		{"content", s.path(digest)},
+	} {
+		if _, err := os.Stat(b.path); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return removed, fmt.Errorf("artifact store: %w", err)
+		}
+		if err := os.Remove(b.path); err != nil {
+			return removed, fmt.Errorf("artifact store: %w", err)
+		}
+		removed = append(removed, b.name)
+	}
+	return removed, nil
+}

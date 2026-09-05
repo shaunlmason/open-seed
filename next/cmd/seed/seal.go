@@ -23,6 +23,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/erasure"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/seal"
@@ -57,6 +58,13 @@ func unsealChecks(records []*event.Record, s transition.SubjectState, identity e
 	}
 	ct, err := store.GetSealed(s.Sealed.Commitment)
 	if err != nil {
+		// An erased body names its erasure: the refusal is the same,
+		// and the reader learns who erased it and why rather than
+		// meeting an absence (plans/os-db5cd353.md D4).
+		if fact, ok := erasureOf(records, s.Sealed.Commitment); ok {
+			return nil, envelope.Fail(envelope.ExitSealBroken, "seal_broken",
+				fmt.Sprintf("the ciphertext for commitment %s was erased at position %d by %s (%s) — the sealed body a commitment points at must survive for a render; the erasure is the chain's attributable record of why it did not", s.Sealed.Commitment, fact.Pos, fact.Signer, fact.Reason))
+		}
 		return nil, envelope.Fail(envelope.ExitSealBroken, "seal_broken",
 			fmt.Sprintf("the ciphertext for commitment %s is not retrievable: %v — the sealed body a commitment points at must survive (erasure is a surfaced state)", s.Sealed.Commitment, err))
 	}
@@ -373,6 +381,12 @@ func runSealAudit(args []string, stdout, stderr io.Writer) int {
 		findings = append(findings, map[string]string{"subject": subject, "class": class, "detail": detail})
 		byClass[class]++
 	}
+	// An honored erasure is not a finding (plans/os-db5cd353.md D4):
+	// a missing ciphertext whose commitment the chain holds an
+	// artifact.erased for is listed here with its attribution, and the
+	// audit stays clean; one with no record stays seal_evidence_missing,
+	// the unattributed absence III.A row 7 forbids.
+	erased := []map[string]string{}
 	checked := 0
 	for _, id := range st.fold.Subjects() {
 		s, ok := st.fold.State(id)
@@ -382,6 +396,15 @@ func runSealAudit(args []string, stdout, stderr io.Writer) int {
 		checked++
 		ct, err := store.GetSealed(s.Sealed.Commitment)
 		if err != nil {
+			// Only a tombstone whose signer held the grant at its own
+			// position is honored (admit.ErasureValid, the
+			// sealAuthorized posture; review finding on the task PR):
+			// a raw record under a key without it leaves the absence
+			// unattributed, and a finding.
+			if fact, ok := admit.Erasure(st.records, st.fold, s.Sealed.Commitment); ok {
+				erased = append(erased, map[string]string{"subject": id, "commitment": s.Sealed.Commitment, "position": fmt.Sprintf("%d", fact.Pos), "by": fact.Signer, "reason": fact.Reason, "ts": fact.TS})
+				continue
+			}
 			add(id, "seal_evidence_missing", fmt.Sprintf("the ciphertext for commitment %s is not retrievable: %v — erasure is a surfaced state, never silence", s.Sealed.Commitment, err))
 			continue
 		}
@@ -407,8 +430,31 @@ func runSealAudit(args []string, stdout, stderr io.Writer) int {
 		"subjects": fmt.Sprintf("%d", checked),
 		"findings": findings,
 		"by_class": byClass,
+		"erased":   erased,
 		"clean":    fmt.Sprintf("%t", len(findings) == 0),
 	}), st.count), stdout, stderr)
+}
+
+// erasureOf finds the erasure of a commitment among the records: the
+// first artifact.erased whose payload names it and whose signer held
+// the grant at its own position (admit.ErasureValid), read the way the
+// fold reads it, so a render's refusal can attribute the absence it
+// meets and never cites a tombstone the boundary would have refused.
+func erasureOf(records []*event.Record, commitment string) (transition.ErasureFact, bool) {
+	for pos, rec := range records {
+		if rec.Event.Verb != erasure.Verb {
+			continue
+		}
+		p, err := erasure.Parse(rec.Event.Subject, rec.Event.Payload)
+		if err != nil || p.Artifact != commitment {
+			continue
+		}
+		fact := transition.ErasureFact{Pos: pos, TS: rec.Event.TS, Signer: rec.Event.Actor, Subject: rec.Event.Subject, Artifact: p.Artifact, Reason: p.Reason}
+		if admit.ErasureValid(records, fact) {
+			return fact, true
+		}
+	}
+	return transition.ErasureFact{}, false
 }
 
 // loadSealState is loadVerdictState plus the tip keyring the seal
