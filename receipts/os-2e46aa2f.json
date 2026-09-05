@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-2e46aa2f",
+  "plan_path": "plans/os-2e46aa2f.md",
+  "plan_sha256": "bf09078c66779ae922dd8cc3dbd3f69ad11f229cadd051243785df8d91579816",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/protections/ ./internal/version/ -count=1",
+    "sh scripts/validate.sh",
+    "make check"
+  ],
+  "generated_by": "local"
+}
