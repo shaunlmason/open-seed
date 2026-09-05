@@ -122,8 +122,14 @@ declaration it ran under, and the reading names which it was judged
 under. The simulation declares a ceiling of its own (the core squad's
 agents at `trivial`, the tier its catalog files at) and audits under
 it, so its clean reading says `declared: true`: the ceiling was among
-the things it read, at every claim the run admitted and again at the
-end (plans/os-b5051f2e.md D5).
+the things the audit read at the end, and among what the cooperative
+client read at every claim it pushed (plans/os-b5051f2e.md D5).
+`declared` states what the audit read, not what the hook refused:
+under enforced-self-hosted the `seed-admit` pre-receive hook builds
+its contexts without a declaration today, so a raw above-ceiling push
+lands there and only the audit names it (review finding on #323). The
+hook's own reading, at the default branch's tip as
+[`postures.md`](postures.md) describes, is card os-0f924157's.
 This is how the shadow run's real chain is measured against charter
 III.R row 5 (`next/docs/promotion.md`).
 

@@ -3878,10 +3878,13 @@ claim under the one declaration given and names it; a deployment
 whose guardrails changed audits each epoch with the file it ran
 under. The seven-day simulation, the audit that is supposed to show
 every claim within its ceiling, now declares a ceiling of its own
-(the core squad's agents at `trivial`), admits every claim under it
-and audits under the same file, reporting `declared: true`, so the
-arm is live in the conformance run rather than silent there (review
-on #322).
+(the core squad's agents at `trivial`), pushes every claim under it
+from the cooperative client and audits under the same file, reporting
+`declared: true`, so the arm is live in the conformance run rather
+than silent there (review on #322). The enforced hook reads no
+declaration today, so the flag states what the audit read, not what
+the boundary refused; the hook's reading is card os-0f924157's (review
+on #323).
 
 **A chain whose roster does not replay is silence, not a guess.** The
 arm needs a kind to judge; where the keyring cannot be replayed it
