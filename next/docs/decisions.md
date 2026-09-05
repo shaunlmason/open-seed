@@ -3890,6 +3890,75 @@ on #323).
 arm needs a kind to judge; where the keyring cannot be replayed it
 reports nothing, which is admission's `Keyring == nil` posture, and
 verification refuses such a chain before the audit reads it anyway.
+## Erasure is a verb, so the absence has an author (os-db5cd353)
+
+**The charter's word decides between the two courses.** The card
+offered adding an erasure verb or revising III.A row 7 to say
+"surfaced" instead of "attributable". The autonomy contract prefers
+the charter's normative text and the charter wrote "attributable"
+deliberately: a lint finding that a ciphertext is gone names neither
+who erased it nor when, and cannot be verified by a fresh reader from
+the chain. So the verb was added.
+
+**Additive catalog growth, no version bump.** `protocol.md` says of
+`offer.*`, `curation.*` and `workflow.*` that older validators refuse
+an unknown verb safely, so the version does not bump; `artifact.erased`
+is the same kind of fact, active from `seed/1`, judged by its own
+admission rule and inert below it.
+
+**The reference is the contract's own.** On a contract subject the
+digest must be one that subject's fold references (its sealed
+commitment or a verdict's receipt): the fold indexes those by digest,
+so admission can hold the citation. Every other artifact the chain
+cites lives in a payload no fold indexes, and for those the operator
+erases on `system`, its attestation being the reference. A stricter
+rule would need a digest index over every payload, which is a
+projection's job and not admission's.
+
+**Operator only, once, digest-wide.** An erasure obligation is a
+governance act a human answers for, the `decision.recorded` posture,
+and no lane's loop erases. The store holds one object per digest, so
+an artifact two contracts reference is erased for both by one act
+(review on #324): the tombstone is looked up by digest wherever it was
+recorded, the audit attributes a shared commitment's absence to the
+one record, and an artifact erased once is not recorded again. A run
+that dies between the append and the removal leaves a standing record
+with the bytes present, and the next run finishes the removal without
+a second record; the drill plants exactly that state. The affordance
+probe offers the first reference no tombstone covers, so the verb is
+drafted while something remains erasable and never for an erased
+digest.
+
+**An honored erasure is not a finding.** The seal audit lists an erased
+ciphertext with its attribution and stays clean; only a deletion with
+no record is `seal_evidence_missing`. That is the row's whole point:
+the absence is honorable exactly when the chain says who and why.
+
+**Record first, then remove.** `seed artifact erase` appends the record
+and then empties the store, because a record with the bytes still
+present is a promise the next run keeps, while bytes gone with no
+record is the silence the row forbids.
+
+**A tombstone attributes only what passed the boundary, and a removal
+that fails is a refusal (review on #325).** The raw `ledger append`
+seam lets any standing key land a well-shaped `artifact.erased`, and
+the fold keeps it, as it keeps every fact. Three consumers took the
+fold's word for it: the seal audit honored the tombstone by digest and
+reported clean, the once rule refused the operator's own record behind
+it, and the verb's resume path finished a removal under whichever
+record stood, for whichever key asked. The tree's answer to the same
+shape elsewhere (`RunStartValid`, `sealAuthorized`) is to replay the
+keyring at the record's own position, so `admit.ErasureValid` does
+that, `admit.Erasure` is the digest-wide lookup narrowed to the records
+that passed the boundary, and every consumer reads through it. The
+resume path also holds the caller to the grant a fresh append holds,
+since finishing a removal is the same governance act as recording it.
+And a removal the store refuses after the record landed is
+`erasure_incomplete` (exit 5) naming the position, never a success
+with a note: the shared commit renders the envelope it lands, so the
+verb renders through a buffer and replaces a success whose removal
+failed, which keeps `loop.go` untouched and the journal's admitted
+outcome true.
 ## The packet names what stands between it and the question (os-4fde2bdf)
 
 **A gate document says what the gate waits on.** The packet's section

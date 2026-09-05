@@ -12,6 +12,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/erasure"
 	"github.com/shaunlmason/open-seed/next/internal/flywheel"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/halt"
@@ -93,6 +94,10 @@ func Envelope(err error) *envelope.Envelope {
 	var req *request.Error
 	if errors.As(err, &req) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "request_refused", err.Error())
+	}
+	var eras *erasure.Error
+	if errors.As(err, &eras) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "erasure_refused", err.Error())
 	}
 	var ceil *admit.CeilingError
 	if errors.As(err, &ceil) {
