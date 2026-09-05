@@ -24,6 +24,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/refusal"
 	"github.com/shaunlmason/open-seed/next/internal/simulate"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
@@ -138,8 +139,18 @@ func runLedgerAudit(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(io.Discard)
 	dir := fs.String("ledger", "", "ledger directory")
 	supported := fs.String("supported", "", "comma-separated supported protocol versions (default: this build's)")
+	config := fs.String("config", "", "deployment declaration the ceiling arm judges under (default: $SEED_CONFIG, else ./seed.json when present)")
 	if err := fs.Parse(args); err != nil || *dir == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "ledger audit requires --ledger <dir>"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "ledger audit requires --ledger <dir> [--config <declaration>]"), stdout, stderr)
+	}
+	// The guardrail bar's ceiling arm reads the declaration admission
+	// read, by the remote verbs' own lookup (plans/os-b5051f2e.md D3),
+	// so an audit and the admission it judges read one file by one
+	// rule; a declaration that exists and does not parse refuses here,
+	// before any bar, as the remote verbs refuse before any transport.
+	cfg, failEnv := deploymentDeclaration(*config)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
 	}
 	store, failEnv := openStore(*dir)
 	if failEnv != nil {
@@ -170,7 +181,7 @@ func runLedgerAudit(args []string, stdout, stderr io.Writer) int {
 	if len(records) != rep.Count {
 		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the replay observed %d records and reported %d", len(records), rep.Count)), stdout, stderr)
 	}
-	a := simulate.Audit(records)
+	a := simulate.AuditUnder(records, cfg)
 	bars := []struct {
 		name string
 		list []string
@@ -198,11 +209,30 @@ func runLedgerAudit(args []string, stdout, stderr io.Writer) int {
 		env := envelope.Fail(envelope.ExitDrift, "audit_violated", fmt.Sprintf("the chain breaks %d of the five bars: %s", len(violated), strings.Join(violated, "; ")))
 		return render(stampTip(env, rep.Count), stdout, stderr)
 	}
-	result := map[string]any{"count": rep.Count, "tip": rep.Tip, "clean": true}
+	// The reading names the declaration it was judged under, or null,
+	// so a policy the lookup found implicitly is explicit in the
+	// envelope (D3).
+	result := map[string]any{"count": rep.Count, "tip": rep.Tip, "clean": true, "declaration": declarationSource(*config, cfg)}
 	for _, b := range bars {
 		result[b.name] = b.list
 	}
 	return render(stampTip(envelope.OK(result), rep.Count), stdout, stderr)
+}
+
+// declarationSource names the file deploymentDeclaration read for a
+// reading: the explicit --config path, else $SEED_CONFIG, else the
+// working tree's seed.json when one was found, else nil. It reports
+// the lookup rather than deciding it.
+func declarationSource(explicit string, cfg *posture.Config) any {
+	switch {
+	case explicit != "":
+		return explicit
+	case os.Getenv("SEED_CONFIG") != "":
+		return os.Getenv("SEED_CONFIG")
+	case cfg != nil:
+		return "seed.json"
+	}
+	return nil
 }
 
 func runLedgerAppend(args []string, stdout, stderr io.Writer) int {

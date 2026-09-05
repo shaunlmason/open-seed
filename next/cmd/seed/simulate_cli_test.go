@@ -32,6 +32,12 @@ func simDone(t *testing.T, posture string, intents int) {
 	if clean, _ := audit["clean"].(bool); !clean {
 		t.Fatalf("%s: the ledger audit must be clean, got %+v", posture, audit)
 	}
+	// The guardrail bar's ceiling arm judged under the deployment's
+	// declaration (plans/os-b5051f2e.md D5): the run admitted every
+	// claim under a declared ceiling and the audit read the same file.
+	if declared, _ := audit["declared"].(bool); !declared {
+		t.Fatalf("%s: the audit must judge under the deployment's declaration, got %+v", posture, audit)
+	}
 	results, _ := e.Result["results"].([]any)
 	for _, r := range results {
 		m, _ := r.(map[string]any)
