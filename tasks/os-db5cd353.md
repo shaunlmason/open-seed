@@ -10,7 +10,7 @@ claim:
     claimed_at: "2026-09-05T00:23:00Z"
     lease_expires: "2026-09-05T01:23:00Z"
 created_at: "2026-09-04T15:02:29Z"
-updated_at: "2026-09-05T00:23:04Z"
+updated_at: "2026-09-05T00:23:07Z"
 ---
 
 Found while verifying what the Phase 13 exit record (os-d63c7441) can claim.
@@ -30,3 +30,7 @@ Until then III.A row 7 cannot be flipped to met by the exit record, and the reco
 ## Evidence ev-d9ee11cb (receipt, seed-next-implementer, 2026-09-05T00:23:04Z)
 
 receipts/os-db5cd353.json
+
+## Evidence ev-634098a4 (pr, seed-next-implementer, 2026-09-05T00:23:07Z)
+
+325
