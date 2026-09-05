@@ -11,6 +11,7 @@ package project_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,8 +128,8 @@ func TestReportRefusalsSection(t *testing.T) {
 	// moved the report to 11, its retired and stale counts to 12, and
 	// the lanes section to 13, each republishing every prefix in its
 	// turn.
-	if v := project.Report().Version; v != "17" {
-		t.Fatalf("the report's version is 17 (10 added the refusals section, 11 the knowledge section, 12 its retired and stale counts, 13 the lanes section, 14 the flywheel section, 15 the lanes section's by_kind split, 16 the planner's strongest, 17 the adapters section), got %s", v)
+	if v := project.Report().Version; v != "18" {
+		t.Fatalf("the report's version is 18 (10 added the refusals section, 11 the knowledge section, 12 its retired and stale counts, 13 the lanes section, 14 the flywheel section, 15 the lanes section's by_kind split, 16 the planner's strongest, 17 the adapters section, 18 the refusals section's blind-retry counts), got %s", v)
 	}
 }
 
@@ -173,4 +174,128 @@ func readRaw(t *testing.T, out, name, file string) []byte {
 		t.Fatal(err)
 	}
 	return b
+}
+
+// blindFixture is a journal with digests: a refusal re-sent unchanged
+// from the same position (a blind retry, refused alike), then
+// corrected (admitted); a contention spin re-sent unchanged from the
+// same position (blind, under its own code); a refusal of another act
+// followed by a different act on the same subject (no retry); a
+// contention refusal whose unchanged re-send is admitted after the
+// tip moved (convergence, the first arm, never blind); a same act
+// refused again with another code (a new answer); a same act refused
+// alike from an advanced position (a new state); a line from before
+// the digest existed; and another actor's same-digest attempt, which
+// is nobody's retry.
+func blindFixture(t *testing.T) *refusals.Journal {
+	t.Helper()
+	dir := t.TempDir()
+	note := func(actor, verb, subject, outcome, code, position string, payload string) {
+		e := refusals.Entry{TS: "2026-09-01T02:00:00Z", Position: position, Actor: actor, Verb: verb, Subject: subject, Outcome: outcome, Code: code}
+		if payload != "" {
+			e.Digest = refusals.AttemptDigest(actor, verb, subject, []byte(payload))
+		}
+		refusals.Note(dir, e)
+	}
+	note("aa11", "request.filed", "system", refusals.OutcomeRefused, "request_refused", "10", `{"kind": "wish"}`)
+	note("aa11", "request.filed", "system", refusals.OutcomeRefused, "request_refused", "10", `{"kind": "wish"}`)
+	note("aa11", "request.filed", "system", refusals.OutcomeAdmitted, "", "11", `{"kind": "mirror-edit"}`)
+	note("ee55", "claim.taken", "c-5", refusals.OutcomeRefused, "contention", "12", `{}`)
+	note("ee55", "claim.taken", "c-5", refusals.OutcomeRefused, "contention", "12", `{}`)
+	note("aa11", "claim.taken", "c-1", refusals.OutcomeRefused, "fenced_out", "12", `{"fence": "3"}`)
+	note("aa11", "claim.released", "c-1", refusals.OutcomeAdmitted, "", "13", `{"fence": "4"}`)
+	note("bb22", "claim.taken", "c-2", refusals.OutcomeRefused, "contention", "13", `{}`)
+	note("bb22", "claim.taken", "c-2", refusals.OutcomeAdmitted, "", "15", `{}`)
+	note("ff66", "claim.taken", "c-6", refusals.OutcomeRefused, "contention", "15", `{}`)
+	note("ff66", "claim.taken", "c-6", refusals.OutcomeRefused, "fenced_out", "15", `{}`)
+	note("aa11", "claim.taken", "c-7", refusals.OutcomeRefused, "fenced_out", "15", `{}`)
+	note("aa11", "claim.taken", "c-7", refusals.OutcomeRefused, "fenced_out", "16", `{}`)
+	note("cc33", "message.sent", "c-3", refusals.OutcomeRefused, "fenced_out", "16", "")
+	note("cc33", "message.sent", "c-3", refusals.OutcomeAdmitted, "", "16", "")
+	note("dd44", "claim.taken", "c-2", refusals.OutcomeAdmitted, "", "17", `{}`)
+	j, err := refusals.Load(filepath.Join(dir, refusals.File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return j
+}
+
+// conformance: III.R row 5's blind-retry clause (plans/os-a9e715dc.md
+// D3, AC2), by modes.md's definition — a refusal followed by the same
+// actor's same-digest attempt on the same subject, refused with the
+// same code from the same position, counts as one blind retry under
+// that code; a corrected retry, an admitted next attempt
+// (convergence), a refusal with another code, a refusal from an
+// advanced position and a different act on the subject count none;
+// another actor's same act is nobody's retry; undigested lines are
+// counted as such and judged not at all.
+func TestReportCountsBlindRetries(t *testing.T) {
+	root := pKey(t, 1)
+	dir, resolve, _ := fixtureChain(t, root)
+	out := lockedTempOut(t, "views")
+	if _, err := project.RebuildWith(dir, out, project.Default(), resolve, project.Inputs{Refusals: blindFixture(t)}); err != nil {
+		t.Fatal(err)
+	}
+	var rep project.ReportView
+	readView(t, out, "report", project.ReportFile, &rep)
+	s := rep.Refusals
+	if s == nil {
+		t.Fatal("a declared journal must produce the refusals section")
+	}
+	if s.Refused != 11 || s.Admitted != 5 {
+		t.Fatalf("the counts are the journal's: %+v", s)
+	}
+	if s.BlindRetries != 2 {
+		t.Fatalf("the unchanged request and the contention spin are the two blind retries: %+v", s)
+	}
+	if s.BlindRetriesByCode["request_refused"] != 1 || s.BlindRetriesByCode["contention"] != 1 || len(s.BlindRetriesByCode) != 2 {
+		t.Fatalf("split by the refusal's code: %+v", s.BlindRetriesByCode)
+	}
+	if s.Undigested != 2 {
+		t.Fatalf("two lines carry no digest: %+v", s)
+	}
+}
+
+// conformance: plans/os-a9e715dc.md D3 at scale (review finding on
+// the task PR): the pairing reads the journal once from the tail, so
+// a journal of many one-off refusals, each a distinct actor and
+// subject that never attempts again, still counts exactly the blind
+// retries it holds: the one unchanged re-send buried among them.
+func TestReportPairsBlindRetriesInOnePass(t *testing.T) {
+	dir := t.TempDir()
+	note := func(actor, subject, outcome, code, position, payload string) {
+		e := refusals.Entry{TS: "2026-09-01T02:00:00Z", Position: position, Actor: actor, Verb: "claim.taken", Subject: subject, Outcome: outcome, Code: code}
+		if payload != "" {
+			e.Digest = refusals.AttemptDigest(actor, "claim.taken", subject, []byte(payload))
+		}
+		refusals.Note(dir, e)
+	}
+	const oneOffs = 20000
+	for i := 0; i < oneOffs; i++ {
+		note(fmt.Sprintf("k%05d", i), fmt.Sprintf("c-%d", i), refusals.OutcomeRefused, "fenced_out", "20", `{}`)
+		if i == oneOffs/2 {
+			note("aa11", "c-blind", refusals.OutcomeRefused, "contention", "20", `{}`)
+		}
+	}
+	note("aa11", "c-blind", refusals.OutcomeRefused, "contention", "20", `{}`)
+	note("aa11", "c-blind", refusals.OutcomeAdmitted, "", "21", `{}`)
+	j, err := refusals.Load(filepath.Join(dir, refusals.File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := pKey(t, 1)
+	chain, resolve, _ := fixtureChain(t, root)
+	out := lockedTempOut(t, "views")
+	if _, err := project.RebuildWith(chain, out, project.Default(), resolve, project.Inputs{Refusals: j}); err != nil {
+		t.Fatal(err)
+	}
+	var rep project.ReportView
+	readView(t, out, "report", project.ReportFile, &rep)
+	s := rep.Refusals
+	if s == nil || s.Refused != oneOffs+2 || s.Admitted != 1 {
+		t.Fatalf("the counts are the journal's: %+v", s)
+	}
+	if s.BlindRetries != 1 || s.BlindRetriesByCode["contention"] != 1 || len(s.BlindRetriesByCode) != 1 || s.Undigested != 0 {
+		t.Fatalf("one blind retry among the one-offs: %+v", s)
+	}
 }

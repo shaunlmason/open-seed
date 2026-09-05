@@ -4169,4 +4169,54 @@ answered-once rule at the derivation and the shapes at the door are
 drilled on a local ledger everywhere. The boundary's own answered-once
 refusal (`approval_refused`) is the remote half's, because the raw
 seam (`ledger append --ledger`) runs no admission by design.
+## The refusal journal tells a blind retry from a corrected one (os-a9e715dc)
+
+**The digest is the act's, not the record's.** A record's hash covers
+`ts` and `prev`, which every retry changes by construction, so it can
+never match across one. The journal digests
+`{actor, verb, subject, payload}` in canonical form and nothing else:
+two attempts of one act by one key digest alike wherever the tip
+stood, and any change to what the actor asked for digests apart. The
+version is excluded with the coordinates, since the same act re-signed
+after an upgrade is the same act.
+
+**A journal from before the field still loads.** The journal is a
+declared input and loads are strict, but a field added later cannot
+retroactively make old journals garbage; a missing digest loads and is
+counted as `undigested`, a present one that is no sha256 refuses
+naming the line, the strictness every other field has.
+
+**The count reads the established definition (review on #332).**
+`modes.md` already defines the blind retry the loop drills assert
+against: the same act refusing with the same code on consecutive
+iterations from a position that did not advance, while an admitting
+next attempt is the first convergence arm. The first draft counted any
+same-digest next attempt, which would have labelled a valid
+convergence (the optimistic loop re-sending the same act after a
+contention refusal and landing it on the moved tip) as blind. The
+report reads the definition from the journal: the same actor's next
+attempt on the same subject, same digest, refused with the same code,
+stamped at the same position; a later same-digest attempt after a
+different act in between is a new decision, and each refusal counts
+at most once. The split by code stays, so a contention spin reads
+apart from a `fenced_out` act re-sent unchanged.
+
+**The report version is "18" (review on #332).** The plan's first
+draft read the register at "16" and named "17", which the adapters
+section already holds; rebuilding a digest-free journal under an
+unchanged version would have produced different bytes under the same
+build identity.
+
+**A derivation refusal journals without a digest rather than not at
+all.** Two loop verbs refuse before a payload exists (a budget close
+that cannot find its reservation, a run start that cannot derive its
+tuple); their lines keep the rate's population whole and are counted
+undigested.
+
+**The audit keeps reading records alone.** III.R row 5's contract is
+that the ledger justifies everything, so `simulate.Audit` does not
+read the journal; the bar's description names the report's count as
+the clause's evidence, and says the accelerated simulation cannot show
+it because its deployment appends through the remote posture, which
+keeps no journal by declaration.
 

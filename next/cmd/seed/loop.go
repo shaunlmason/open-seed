@@ -173,8 +173,8 @@ func contextEnvelope(err error) *envelope.Envelope {
 // view: "not that" and "then what may I do?" in one envelope, which
 // is the whole reason these verbs are not sugar over the raw seam
 // (D4). Nothing was appended, so the position is the view's own tip.
-func (ls *loopSession) refuse(env *envelope.Envelope, subject, verb string, signer ed25519.PrivateKey) *envelope.Envelope {
-	return ls.refuseAt(env, ls.ctx, subject, verb, signer)
+func (ls *loopSession) refuse(env *envelope.Envelope, subject, verb string, payload []byte, signer ed25519.PrivateKey) *envelope.Envelope {
+	return ls.refuseAt(env, ls.ctx, subject, verb, payload, signer)
 }
 
 // refuseAt is refuse against a named view. On the remote path the
@@ -184,7 +184,7 @@ func (ls *loopSession) refuse(env *envelope.Envelope, subject, verb string, sign
 // envelope that carries a position keeps it, and the affordances come
 // from the view it was computed at rather than from the session's
 // opening tip (plans/os-9b3f3ef3.md D3).
-func (ls *loopSession) refuseAt(env *envelope.Envelope, view *admit.Context, subject, verb string, signer ed25519.PrivateKey) *envelope.Envelope {
+func (ls *loopSession) refuseAt(env *envelope.Envelope, view *admit.Context, subject, verb string, payload []byte, signer ed25519.PrivateKey) *envelope.Envelope {
 	if view == nil {
 		view = ls.ctx
 	}
@@ -192,7 +192,7 @@ func (ls *loopSession) refuseAt(env *envelope.Envelope, view *admit.Context, sub
 	if env.Position == nil {
 		env = stampTip(env, view.Count)
 	}
-	return journalAttempt(env, ls.dir, signer, verb, subject)
+	return journalAttempt(env, ls.dir, signer, verb, subject, payload)
 }
 
 // loopAct is one act ready for the boundary: the verb and the
@@ -270,14 +270,14 @@ func (ls *loopSession) commit(f *loopFlags, act loopAct, signer ed25519.PrivateK
 		return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot sign the act: %v", err)), stdout, stderr)
 	}
 	if err := admit.Check(ls.ctx, rec); err != nil {
-		return render(ls.refuse(remoteFailureEnvelope(err), subject, act.verb, signer), stdout, stderr)
+		return render(ls.refuse(remoteFailureEnvelope(err), subject, act.verb, act.payload, signer), stdout, stderr)
 	}
 	if ls.remote != nil {
 		landed, res, err := ls.remote.pushDraft(act.verb, subject, string(act.payload), signer, fp,
 			recheckDerivation(act, subject))
 		if err != nil {
 			return render(ls.refuseAt(remoteFailureEnvelope(err), refusalView(err, ls.ctx),
-				subject, act.verb, signer), stdout, stderr)
+				subject, act.verb, act.payload, signer), stdout, stderr)
 		}
 		hash, err := landed.Event.Hash()
 		if err != nil {
@@ -295,7 +295,7 @@ func (ls *loopSession) commit(f *loopFlags, act loopAct, signer ed25519.PrivateK
 	}
 	pos, err := ls.store.Append(rec, ls.ctx.Resolve)
 	if err != nil {
-		return render(ls.refuse(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), subject, act.verb, signer), stdout, stderr)
+		return render(ls.refuse(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), subject, act.verb, act.payload, signer), stdout, stderr)
 	}
 	hash, err := rec.Event.Hash()
 	if err != nil {
@@ -307,7 +307,7 @@ func (ls *loopSession) commit(f *loopFlags, act loopAct, signer ed25519.PrivateK
 	// recomputed at the LANDED tip, not the one the act was judged
 	// against.
 	env := stampAffordances(envelope.OK(result), ls.dir, signer, subject)
-	return render(journalAttempt(stampTip(env, pos+1), ls.dir, signer, act.verb, subject), stdout, stderr)
+	return render(journalAttempt(stampTip(env, pos+1), ls.dir, signer, act.verb, subject, act.payload), stdout, stderr)
 }
 
 // terse is the ordinary success result: the subject and nothing
@@ -776,7 +776,7 @@ func runBudgetLoop(args []string, verb, name string, stdout, stderr io.Writer) i
 	}
 	payload, refusal := derive(ls.ctx)
 	if refusal != nil {
-		return render(ls.refuse(refusal, subject, verb, signer), stdout, stderr)
+		return render(ls.refuse(refusal, subject, verb, nil, signer), stdout, stderr)
 	}
 	// A reserve's landed position IS its reservation id, so the
 	// response names it and the closing act needs no lookup at all.

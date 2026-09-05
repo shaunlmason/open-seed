@@ -159,6 +159,10 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   cache moves to generation 13 with it; version "16" adds `strongest`
   to `lanes.planner`, the `tuples` scope of the latest applied offer
   that carries one ([`ranking.md`](ranking.md)), absent when none has;
+  version "18" adds `blind_retries`, `blind_retries_by_code` and
+  `undigested` to `refusals` ([`refusals.md`](refusals.md);
+  plans/os-a9e715dc.md D3), which only a build declaring a journal
+  carries, so an input-free build's bytes move by the version alone;
   version "13" adds `lanes`, [`trajectories.md`](trajectories.md):
   `dispatcher` `{specified, respecified, retriage_rate}`, subjects
   with one or more applied specifications, those with two or more,

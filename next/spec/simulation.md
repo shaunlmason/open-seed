@@ -80,18 +80,23 @@ run leaves every list empty:
    admission rule reads them, and a bar must report what the boundary
    refuses. The scheduling concern (work ready with no live offer) is
    `internal/eval`'s read, not this bar's (plans/os-aaec6a3c.md D1,
-   D3). The bar's other contracted clause, **no refusal followed by a
-   blind retry**, is **unmet and unmeasured**: a refused append never
-   lands, so a refusal and its retry leave only the retry in the
-   chain, and the client's refusal journal
-   ([`refusals.md`](refusals.md)) cannot tell a blind retry from a
-   corrected one as it stands, since an entry keeps actor, verb,
-   subject, outcome, code and position but no digest of the attempted
-   payload. No surface measures the clause today; os-a9e715dc owns the
-   measurement (the journal entry gains the attempt's digest and the
-   report counts a same-digest retry as blind), and until it lands
-   this bar's description claims the ceiling arm and the sealed-author
-   arm alone (plans/os-b5051f2e.md D4).
+   D3). The bar's other contracted
+   clause, **no refusal followed by a blind retry**
+   (plans/os-16e55c11.md D5), is not the chain's to show, since a
+   refused append never lands and a refusal and its retry leave only
+   the retry in the chain; it is measured by the report over the
+   deployment's attempts journal ([`refusals.md`](refusals.md)): every
+   journaled attempt carries the digest of the act, and the report's
+   `blind_retries` counts a refusal followed by the same actor's
+   same-digest attempt on the same subject refused with the same code
+   from a position that did not advance, the blind retry
+   [`modes.md`](modes.md) defines, by the code, so a run that respects
+   the clause reads zero there (plans/os-a9e715dc.md D3, D4). `simulate.Audit` itself keeps
+   reading records alone, this row's contract that the ledger
+   justifies everything, and the accelerated simulation cannot show
+   the clause: its throwaway deployment appends through the remote
+   posture, which keeps no journal by declaration, so the clause is
+   read on local deployments' journals.
 5. **Unreserved spend** — every `run.started` is fenced to the
    reservation it cited. The bar asks admission's own predicate,
    `admit.RunStartValid`, which judges the start's cited reservation

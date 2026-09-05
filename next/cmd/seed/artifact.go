@@ -114,7 +114,7 @@ func runArtifactErase(args []string, stdout, stderr io.Writer) int {
 		}
 		if accepted := keyring.AcceptedCapabilities(erasure.Verb); ls.ctx.Keyring == nil || !ls.ctx.Keyring.HasAnyCapability(fp, accepted) {
 			return render(ls.refuse(remoteFailureEnvelope(&admit.OutOfGrantError{Actor: fp, Verb: erasure.Verb, Accepted: accepted}),
-				subject, erasure.Verb, signer), stdout, stderr)
+				subject, erasure.Verb, payload, signer), stdout, stderr)
 		}
 		out := remove(prior.Pos, map[string]any{"subject": prior.Subject, "by": prior.Signer, "recorded": false})
 		if removeErr != nil {

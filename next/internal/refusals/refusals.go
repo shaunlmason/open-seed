@@ -36,8 +36,11 @@ const (
 
 // Entry is one admission-boundary attempt: the instant, the
 // tip-ordinal position the response envelope stamped, the signing
-// actor, the verb and subject attempted, the outcome, and — on
-// refusals only — the envelope's machine code.
+// actor, the verb and subject attempted, the outcome, on refusals
+// only the envelope's machine code, and the digest of the act
+// attempted (plans/os-a9e715dc.md D1), which is what tells a blind
+// retry from a corrected one. Absent on lines written before the
+// field existed, which still load.
 type Entry struct {
 	TS       string `json:"ts"`
 	Position string `json:"position"`
@@ -46,6 +49,53 @@ type Entry struct {
 	Subject  string `json:"subject"`
 	Outcome  string `json:"outcome"`
 	Code     string `json:"code,omitempty"`
+	Digest   string `json:"digest,omitempty"`
+}
+
+// AttemptDigest is the identity of an ACT, not of a record
+// (plans/os-a9e715dc.md D1): the lowercase hex SHA-256 of the RFC 8785
+// canonical form of {actor, verb, subject, payload}. The boundary's
+// coordinates are excluded on purpose: ts, prev and the version change
+// on every retry by construction, so a record hash can never match
+// across one, while two attempts of the same act by the same key
+// digest alike wherever the tip stood. A payload that is not a JSON
+// object (which the boundary refuses at the shape rule) is embedded
+// as a string, so the digest still exists and still differs from any
+// object's. An empty payload digests as an empty object.
+func AttemptDigest(actor, verb, subject string, payload []byte) string {
+	var body any
+	trimmed := bytes.TrimSpace(payload)
+	if len(trimmed) == 0 {
+		body = json.RawMessage(`{}`)
+	} else if json.Valid(trimmed) && trimmed[0] == '{' {
+		body = json.RawMessage(trimmed)
+	} else {
+		body = string(payload)
+	}
+	b, err := json.Marshal(map[string]any{"actor": actor, "verb": verb, "subject": subject, "payload": body})
+	if err != nil {
+		return ""
+	}
+	canonical, err := jcs.Transform(b)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(canonical)
+	return hex.EncodeToString(sum[:])
+}
+
+// digestShape is what a present digest must look like: a sha256 in
+// lowercase hex, the shape AttemptDigest writes.
+func digestShape(d string) bool {
+	if len(d) != 64 {
+		return false
+	}
+	for _, c := range d {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 // Note appends one attempt line to the journal in dir, best-effort:
@@ -154,6 +204,9 @@ func (e Entry) check() error {
 	}
 	if e.Verb == "" || e.Subject == "" || e.Actor == "" {
 		return errors.New("attempts name actor, verb, and subject")
+	}
+	if e.Digest != "" && !digestShape(e.Digest) {
+		return fmt.Errorf("digest is not a sha256, got %q", e.Digest)
 	}
 	return nil
 }

@@ -214,7 +214,7 @@ func runRunStart(args []string, stdout, stderr io.Writer) int {
 	}
 	payload, refusal := derive(ls.ctx)
 	if refusal != nil {
-		return render(ls.refuse(refusal, subject, transition.RunStartedVerb, signer), stdout, stderr)
+		return render(ls.refuse(refusal, subject, transition.RunStartedVerb, nil, signer), stdout, stderr)
 	}
 	// The success names what was committed to: the reservation the run
 	// spends under and the configuration it declared, which is what

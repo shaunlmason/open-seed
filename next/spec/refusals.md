@@ -23,7 +23,8 @@ admissions pollute an operator-local numerator).
 
 ```json
 {"ts": "…", "position": "12", "actor": "<fp>", "verb": "claim.taken",
- "subject": "c-1", "outcome": "refused", "code": "fenced"}
+ "subject": "c-1", "outcome": "refused", "code": "fenced",
+ "digest": "<sha256 of the act>"}
 ```
 
 - `ts`: the journaling process's RFC3339 UTC instant.
@@ -32,6 +33,20 @@ admissions pollute an operator-local numerator).
 - `actor`: the signing key's fingerprint.
 - `outcome`: `admitted` or `refused`.
 - `code`: the envelope's machine code — present exactly on refusals.
+- `digest`: the identity of the **act** attempted
+  (plans/os-a9e715dc.md D1): the lowercase hex SHA-256 of the RFC 8785
+  canonical form of `{"actor", "verb", "subject", "payload"}`, the
+  payload embedded as the JSON value it is (a non-object payload,
+  which the boundary refuses at the shape rule, as a string). `ts`,
+  `prev` and the version are excluded on purpose: they are the
+  boundary's coordinates and a retry changes them by construction, so
+  a record's own hash can never match across one, while two attempts
+  of the same act by the same key digest alike wherever the tip stood.
+  This is what lets a reader tell a **blind retry** (the same act
+  re-sent unchanged after a refusal) from a corrected one. Written on
+  every line the seams below journal; absent on lines written before
+  the field existed, which still load; a present digest that is no
+  sha256 refuses the load naming the line.
 
 Writes are best-effort and never fail or slow the verb they ride
 (the affordance-stamping posture): any error is swallowed, and a
@@ -96,7 +111,8 @@ declare no journal, absence of data stated, never fabricated:
   "refused": 1, "admitted": 100,
   "by_code": {"fenced": 1}, "by_verb": {"claim.taken": 1},
   "span": {"from": 10, "to": 11},
-  "rate": "0.0099"
+  "rate": "0.0099",
+  "blind_retries": 0, "blind_retries_by_code": {}, "undigested": 0
 }
 ```
 
@@ -111,6 +127,24 @@ declare no journal, absence of data stated, never fabricated:
 - `rate` is refused/(refused+admitted) rendered to exactly four
   decimals (`0.0000` when the journal is empty), deterministic
   bytes; consumers needing more precision divide the counts.
+- `blind_retries` is III.R row 5's blind-retry clause measured
+  (plans/os-a9e715dc.md D3; [`simulation.md`](simulation.md), the
+  guardrail bar), by the definition [`modes.md`](modes.md) gives the
+  loop drills: the same act refusing with the same code on consecutive
+  attempts from a position that did not advance. For each refused line
+  that carries a digest, the same actor's **next** journaled attempt on
+  the same subject, in journal order, is a blind retry when its digest
+  equals the refusal's, it is refused with the same code, and its
+  stamped position equals the refusal's; each refusal counts at most
+  once. An admitted next attempt is convergence (the first arm), and a
+  refusal with another code or from an advanced position is a new
+  answer to a new state; neither is blind. `blind_retries_by_code`
+  splits the count by the code, so the spins the optimistic loop makes
+  on `contention` read apart from a `fenced_out` or
+  `invalid_transition` act re-sent unchanged; `undigested` is the lines
+  that carry no digest and so could not be judged (a journal from
+  before the field existed). Report version "18" carries the three
+  ([`projections.md`](projections.md)).
 
 The cache mirrors the input-free report and therefore never carries
 this section, exactly as it never carries the observation section.

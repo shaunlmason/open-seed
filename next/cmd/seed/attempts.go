@@ -21,8 +21,13 @@ import (
 
 // journalAttempt notes the attempt the envelope describes into the
 // ledger directory's journal and hands the envelope back unchanged.
-// Degrading, never failing: any missing piece journals nothing.
-func journalAttempt(env *envelope.Envelope, dir string, key ed25519.PrivateKey, verb, subject string) *envelope.Envelope {
+// Degrading, never failing: any missing piece journals nothing. The
+// payload is the act attempted, digested into the line
+// (plans/os-a9e715dc.md D1, D2) so a later reading can tell a blind
+// retry from a corrected one; a seam that holds none journals the
+// line without a digest rather than not at all, since the rate's
+// population must not shrink because a field is unknown.
+func journalAttempt(env *envelope.Envelope, dir string, key ed25519.PrivateKey, verb, subject string, payload []byte) *envelope.Envelope {
 	if env == nil || env.Position == nil || dir == "" || verb == "" || subject == "" || len(key) != ed25519.PrivateKeySize {
 		return env
 	}
@@ -37,6 +42,9 @@ func journalAttempt(env *envelope.Envelope, dir string, key ed25519.PrivateKey, 
 		Verb:     verb,
 		Subject:  subject,
 		Outcome:  refusals.OutcomeAdmitted,
+	}
+	if payload != nil {
+		e.Digest = refusals.AttemptDigest(fp, verb, subject, payload)
 	}
 	if env.Error != nil {
 		e.Outcome = refusals.OutcomeRefused

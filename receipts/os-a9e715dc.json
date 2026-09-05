@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-a9e715dc",
+  "plan_path": "plans/os-a9e715dc.md",
+  "plan_sha256": "938499198207632562b489c6d3f6da7976462dc87c54b5606f3abee8fc9915a4",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/refusals/ ./internal/project/ -count=1",
+    "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Attempt|Refusal|Trajectory|Report' -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}
