@@ -1716,3 +1716,4 @@
 {"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-0f924157","ts":"2026-09-05T08:29:28Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-05T10:29:37Z"},"task":"os-0f924157","ts":"2026-09-05T09:29:37Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-0f924157","ts":"2026-09-05T09:29:56Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"title":"next: ratified decision records, path-scoped, surfaced at claim (backlog, from ank)"},"task":"os-0a6a7d20","ts":"2026-09-05T18:48:13Z","verb":"create"}
