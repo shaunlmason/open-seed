@@ -2117,6 +2117,28 @@ written by the two implementing sessions, one voice.
   admission-grade 40-contract chain audits clean under a declaration
   in about 180 ms)
 
+## The machine surface's policy, drilled (os-8ecef90f)
+
+- III.L row 4, per-verb policy on the machine-protocol surface with
+  attributable approvals — os-8ecef90f — **in review** (task PR against
+  plan #320: tests only. The row was routed because #273's three
+  `serve` tests are parity assertions, which is III.I row 3, and the
+  card's determination was that the row is structurally true and needs
+  a drill. `TestServeRefusesByTheSamePolicyAsTheCLI` fires a grant-table
+  refusal, a routing refusal and an agent-ceiling refusal through
+  `serve` and holds each to the CLI's code for the same argv, with each
+  admitted twin landing through the same surface;
+  `TestServeApprovalsAreAttributableToTheirSigner` reads
+  `decision.recorded` and `plan.approved` back through `serve`'s
+  `ledger.show` with the signing key's fingerprint as `actor` and the
+  chain verifying afterward. Review on #320 (chatgpt-codex-connector)
+  read charter II.14 back: per-verb policy is allow, deny and
+  require-approval, and the tree has no require-approval mode, so the
+  row moves to `partial` rather than met, its note naming the missing
+  third and os-5781a026, the card that builds it and flips the row;
+  `platform.md`'s conformance section names the drills; no non-test
+  line moves)
+
 ## Frontier
 
 
@@ -2218,6 +2240,11 @@ through 12 required and Phase 13 alone following, and **neither
 cutover autonomously decidable**: spin-out IS the entry-point
 switch, so both are escalations. That section is the authority; no
 promotion criteria are restated here.
+
+Of the two rows outside III.R that stood open on the tree's own
+account, III.L row 4 is drilled for allow and deny by os-8ecef90f (plan
+#320, task PR in review) and moves to `partial`, its require-approval
+mode being os-5781a026's, and III.A row 7 (os-db5cd353) remains.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
