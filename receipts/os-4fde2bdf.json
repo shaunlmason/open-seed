@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-4fde2bdf",
+  "plan_path": "plans/os-4fde2bdf.md",
+  "plan_sha256": "75c1deea2af1fa5af03b3d4e345d5e0649de7dc6f93511eeca0433a7c1e88788",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/promotion/ -count=1",
+    "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Packet' -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}
