@@ -8,6 +8,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/loop"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -131,7 +132,13 @@ func Run(cfg Config) (*Report, error) {
 	if err != nil {
 		return nil, err
 	}
-	audit := Audit(records)
+	// The audit judges under the declaration the run admitted under
+	// (D5), so the ceiling arm reads the claims the boundary took.
+	decl, err := posture.Load(d.config)
+	if err != nil {
+		return nil, fmt.Errorf("the deployment's declaration: %w", err)
+	}
+	audit := AuditUnder(records, decl)
 	rep.Audit = &audit
 	return rep, nil
 }
@@ -162,7 +169,7 @@ func (d *deployment) stageContract(subject string, r repo, at time.Time) error {
 // drive runs the implementer's loop to a submission, the distinct
 // verifier's verdict, and the observer's merge — the terminal chain.
 func (d *deployment) drive(subject string, r repo) error {
-	posture := []string{"--remote", d.remote, "--state", d.state}
+	posture := []string{"--remote", d.remote, "--state", d.state, "--config", d.config}
 	man := d.manifest["implementer"]
 	drv, err := loop.New(man, d.verbs, posture, d.keys["implementer"],
 		loop.WorkFunc(func(s string, sit loop.Situation) (int, error) {
@@ -183,15 +190,15 @@ func (d *deployment) drive(subject string, r repo) error {
 	}
 	// The verifier is a distinct key; the receipt runs through the real
 	// verdict machinery over the repo.
-	if res := d.verbs.Run("verdict", "render", "--remote", d.remote, "--state", d.state,
+	if res := d.verbs.Run("verdict", "render", "--remote", d.remote, "--state", d.state, "--config", d.config,
 		"--subject", subject, "--repo", r.src, "--key", d.keys["verifier"], "--verdict", "pass"); res.Exit != 0 {
 		return fmt.Errorf("verdict render %s refused: %s: %s", subject, res.Code, res.Message)
 	}
-	if res := d.verbs.Run("merge", "request", "--remote", d.remote, "--state", d.state,
+	if res := d.verbs.Run("merge", "request", "--remote", d.remote, "--state", d.state, "--config", d.config,
 		"--subject", subject, "--key", d.keys["implementer"]); res.Exit != 0 {
 		return fmt.Errorf("merge request %s refused: %s: %s", subject, res.Code, res.Message)
 	}
-	if res := d.verbs.Run("merge", "observe", "--remote", d.remote, "--state", d.state,
+	if res := d.verbs.Run("merge", "observe", "--remote", d.remote, "--state", d.state, "--config", d.config,
 		"--subject", subject, "--key", d.keys["observer"], "--merged", r.head, "--pr", "pr/"+subject); res.Exit != 0 {
 		return fmt.Errorf("merge observe %s refused: %s: %s", subject, res.Code, res.Message)
 	}
@@ -201,7 +208,7 @@ func (d *deployment) drive(subject string, r repo) error {
 // curate has the curator propose from what recurred; a refusal is not
 // fatal to the run (there may be nothing to propose).
 func (d *deployment) curate() {
-	_ = d.verbs.Run("knowledge", "propose", "--remote", d.remote, "--state", d.state,
+	_ = d.verbs.Run("knowledge", "propose", "--remote", d.remote, "--state", d.state, "--config", d.config,
 		"--key", d.keys["curator"], "--claim", "fix-the-check contracts recur", "--kind", "pattern")
 }
 

@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-b5051f2e",
+  "plan_path": "plans/os-b5051f2e.md",
+  "plan_sha256": "facef5caac274a1645f379e8f9c92fbfe125a626489dae7da6a330f066f3b5cd",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/simulate/ -count=1",
+    "cd next \u0026\u0026 go test ./cmd/seed/ -run 'LedgerAudit|Simulate' -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}

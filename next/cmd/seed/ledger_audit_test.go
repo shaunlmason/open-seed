@@ -1,11 +1,15 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/history"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -195,5 +199,90 @@ func TestAdmittedChainAuditsCleanThroughTheVerb(t *testing.T) {
 	}
 	if strings.Contains(e.Error.Message, "unreserved_spend") {
 		t.Fatalf("an admitted chain's runs cite open reservations: %q", e.Error.Message)
+	}
+}
+
+// ceilingDeclaration is a deployment whose core squad ceilings agents
+// at standard; the chain below claims a critical contract with an
+// agent-kind key.
+const ceilingDeclaration = `{"posture": "cooperative", "guardrails": {"squads": {"core": {"default": "standard", "max_agent": "standard"}}}, "teams": {"squads": [{"name": "core", "lanes": ["implementer"]}]}}`
+
+// conformance: III.R row 5 (every claim within its ceiling) — the
+// verb reads the declaration by the remote verbs' shared lookup and
+// judges the guardrail bar's ceiling arm under it (plans/os-b5051f2e.md
+// D3, AC3): --config turns a clean reading into audit_violated naming
+// the agent's claim above the ceiling, the same chain without a
+// declaration is clean, a reading names the declaration it was judged
+// under or null, $SEED_CONFIG is honored, and a declaration that
+// exists and does not parse refuses posture_invalid before any bar.
+func TestLedgerAuditReadsTheDeclaration(t *testing.T) {
+	ld, priv := auditLedger(t)
+	agentKey := workerRawKey(61)
+	agentPub := agentKey.Public().(ed25519.PublicKey)
+	agentFP, err := event.Fingerprint(agentPub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []struct{ verb, subject, payload string }{
+		{"actor.enrolled", agentFP, fmt.Sprintf(`{"key": %q, "kind": "agent", "name": "agent"}`, hex.EncodeToString(agentPub))},
+		{"actor.granted", agentFP, `{"capability": "claim"}`},
+		{"intent.filed", "c-1", `{"intent": "the big one", "tier": "critical", "budget": "small", "routing": "core"}`},
+		{"contract.specified", "c-1", `{"acceptance": {"ref": "specs/c1.md @ abc1234", "executable": false}}`},
+	} {
+		if e, code := runEnv(t, "ledger", "append", "--ledger", ld, "--key", priv, "--verb", s.verb, "--subject", s.subject, "--payload", s.payload); code != 0 || !e.OK {
+			t.Fatalf("%s: %d %+v", s.verb, code, e)
+		}
+	}
+	// The claim and its deliberate exit land raw under the agent's key:
+	// admission under the declaration would have refused the claim, and
+	// a raw push past the boundary is the case the bar exists for.
+	claimPos := rawAppend(t, ld, agentKey, "claim.taken", "c-1", `{}`)
+	rawAppend(t, ld, agentKey, "claim.released", "c-1", `{}`)
+
+	// No declaration: the records-only reading, clean, naming none.
+	e, code := runEnv(t, "ledger", "audit", "--ledger", ld)
+	if code != 0 || !e.OK || e.Result["declaration"] != nil {
+		t.Fatalf("with no declaration the chain is clean and the reading names none: %d %+v", code, e)
+	}
+
+	// Under the declaration the same chain breaks the guardrail bar,
+	// by name, and no other bar.
+	decl := writeDeclaration(t, ceilingDeclaration)
+	e, code = runEnv(t, "ledger", "audit", "--ledger", ld, "--config", decl)
+	if code != 28 || e.Error == nil || e.Error.Code != "audit_violated" {
+		t.Fatalf("the agent's claim above the ceiling is refused under the declaration: %d %+v", code, e)
+	}
+	want := fmt.Sprintf("guardrail_breaches [c-1: agent key %s claimed a critical contract at position %d above the core squad's agent ceiling standard]", agentFP, claimPos)
+	if !strings.Contains(e.Error.Message, want) {
+		t.Fatalf("the refusal names the subject, kind, key, tier, position, squad and ceiling:\n%s\n%s", e.Error.Message, want)
+	}
+	for _, bar := range []string{"chain_violations", "lost_updates", "silent_abandonments", "unreserved_spend"} {
+		if strings.Contains(e.Error.Message, bar) {
+			t.Errorf("%s stays quiet on this chain: %q", bar, e.Error.Message)
+		}
+	}
+
+	// A ceiling that covers the tier reads clean and names the
+	// declaration it was judged under.
+	wide := writeDeclaration(t, strings.Replace(ceilingDeclaration, `"max_agent": "standard"`, `"max_agent": "critical"`, 1))
+	e, code = runEnv(t, "ledger", "audit", "--ledger", ld, "--config", wide)
+	if code != 0 || !e.OK || e.Result["declaration"] != wide {
+		t.Fatalf("a covering ceiling reads clean and the reading names its declaration: %d %+v", code, e)
+	}
+
+	// $SEED_CONFIG is the shared lookup's second step.
+	t.Setenv("SEED_CONFIG", decl)
+	e, code = runEnv(t, "ledger", "audit", "--ledger", ld)
+	if code != 28 || e.Error == nil || !strings.Contains(e.Error.Message, "guardrail_breaches [c-1: agent key") {
+		t.Fatalf("$SEED_CONFIG is honored: %d %+v", code, e)
+	}
+	t.Setenv("SEED_CONFIG", "")
+
+	// A declaration that exists and does not parse refuses before any
+	// bar is read, as the remote verbs refuse before any transport.
+	bad := writeDeclaration(t, `{"posture": "nonsense"}`)
+	e, code = runEnv(t, "ledger", "audit", "--ledger", ld, "--config", bad)
+	if code != 13 || e.Error == nil || e.Error.Code != "posture_invalid" || e.Result != nil {
+		t.Fatalf("a malformed declaration refuses posture_invalid before any bar: %d %+v", code, e)
 	}
 }
