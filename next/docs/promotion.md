@@ -65,7 +65,13 @@ in review merge (os-8ecef90f for III.L row 4, os-b5051f2e for the
 audit's ceiling arm, os-db5cd353 for III.A row 7), nothing agent-side
 remains open at this gate: every criterion's evidence is on `main`,
 and the next act is the operator's deployment, then the operator's
-answer.
+answer. The answer is not the flip. Build plan §5 counts the cutover
+on seven criteria `met` and puts the shadow run before the cutover on
+its critical path, and the substitution does not move criterion 4 to
+`met`, so the cutover pull request merges only once criterion 4 is
+`met` on the build plan's own terms; "The two cutovers are
+escalations" names the two ways it can be, neither of them this
+packet's to take.
 
 ## 1. Loop-completeness
 
@@ -217,6 +223,8 @@ existing in the tree rather than by a claim about it.
 | `TestPacketWritesTheCutoverDown` | `internal/promotion/promotion_test.go` | #294 |
 | `TestPacketCitesRealDrills` | `internal/promotion/promotion_test.go` | #294 |
 | `TestPacketDeclarationLints` | `cmd/seed/promotion_cli_test.go` | #327 |
+| `TestPacketDeclarationInitializesUnderTheRootKey` | `cmd/seed/promotion_cli_test.go` | #327 |
+| `TestPacketProcedureReachesTheFlip` | `cmd/seed/promotion_cli_test.go` | #327 |
 
 ## 6. Core conformance
 
@@ -338,16 +346,26 @@ runs, since the ledger authority moves to is this deployment either
 way: a declaration for this repository at the root (`seed.json`,
 `posture.DeclarationPath`, the file the doctor, the remote verbs and
 the hook read), in the shape `seed init --preseed` reads
-(`next/spec/postures.md`, "The preseed"). The proposed content, which
-`TestPacketDeclarationLints` holds to `seed preseed check` so the block
-the operator copies is one `make check` has linted:
+(`next/spec/postures.md`, "The preseed"). The proposed content, with
+one required substitution: `governance.root` is the fingerprint of the
+operator's root key, because `seed init --preseed` refuses
+`preseed_drift` before genesis when the declared root is not the
+initializing key (`cmd/seed/preseed.go`, `applyPreseed`), naming that
+key's fingerprint in the refusal, so the block as printed initializes
+nothing and the value to substitute is read off the refusal, or off
+`seed init`'s `governance_root` on a throwaway ledger.
+`TestPacketDeclarationLints` holds the block to
+`seed preseed check`, and `TestPacketDeclarationInitializesUnderTheRootKey`
+initializes it under a real key with the fingerprint substituted and
+holds the unsubstituted block to that refusal, so what the operator
+copies is one `make check` has both linted and initialized:
 
 ```json
 {
   "posture": "enforced-self-hosted",
   "protocol": "seed/7",
   "governance": {
-    "root": "declared-at-init",
+    "root": "<the root key's fingerprint>",
     "owners": ["@shaunlmason"],
     "change_process": "pr+owner-review"
   },
@@ -381,6 +399,43 @@ lane for the sessions that work cards, the dispatcher lane for the
 session that files intents, the verifier lane for the reviewing
 identity, the maintenance lane for the scheduled pass, an observer
 for `merge.observed`).
+
+**The order.** The deployment's ledger is written by the import, and
+by nothing before it. `seed import --from-open-seed` is the genesis
+transform and refuses every ledger that holds a record
+(`ledger_not_empty`, exit 3; `internal/importer/importer.go`,
+`next/spec/import.md`), so a ledger `seed init --preseed` has already
+initialized cannot be imported into, and the declaration is applied
+over the imported chain, never under it. A deployment standing before
+the flip is therefore the remote with its hook, the declaration at the
+root, the root key and the lane keys, with `refs/seed/ledger` empty;
+at the flip, in this order: `scripts/seed state anchor` and
+`scripts/seed state export` on v1; `seed import --from-open-seed
+export.json --source <clone> --repo <checkout> --ledger <empty dir>
+--artifacts <dir> --key <root key>`, which writes genesis under the
+root key, the activations through `seed/5`, `system.imported`, the
+enrollments and the whole history; `seed init --preseed seed.json
+--ledger <that dir> --key <root key> --lanes next/lanes`, which holds
+the chain to the declaration (the root is the importing key, or
+`preseed_drift`) and appends exactly the activations the declaration
+names beyond the import's, `seed/6` and `seed/7` today, and nothing on
+a second run; `seed preseed check --config seed.json --ledger <that
+dir>`, green with nothing pending; the lane keys enrolled and granted
+by the root (`seed ledger append --verb actor.enrolled`, then
+`actor.granted`); and the ledger directory (`HEAD` and
+`segments/*.jsonl`, the layout the guarded ref carries) committed as
+the tree of `refs/seed/ledger` and pushed once, the hook verifying the
+pushed chain from genesis at that push and admitting every append
+after it (`next/spec/admission.md`, "The ledger half"). A ledger a
+shadow window wrote, had one run, is a shadow and not the target of
+the import: it is kept for its record beside v1's frozen ref.
+`TestPacketProcedureReachesTheFlip` runs that order through the CLI
+against a predecessor fixture, with this block's root substituted, and
+proves the reverse order refuses by name, so the procedure an operator
+follows literally is one `make check` has followed. The real export of
+this repository follows the same order (criterion 3's fixture: the
+import writes 1344 records at `seed/5`, the declaration then appends
+the two activations and reads unchanged, the check reads green).
 
 **The slice.** This workstream's own `next:` cards open at the
 window's start: the backlog cards the build plan's §3 names
@@ -427,9 +482,14 @@ Criterion 5, in the build plan's three clauses.
 
 Today `scripts/seed` (v1, the pinned engine) is the only coordination
 entry point, and the build plan's ground rules keep it so "until
-spin-out". The flip is one change, made after the shadow window has
-closed with its divergences reconciled and the seven criteria all
-`met`: the root `AGENTS.md` section "How work happens" is rewritten
+spin-out". The flip is one change, made only when the seven criteria
+are all `met`, criterion 4 included: build plan §5 counts the cutover
+on all seven and puts the shadow run before it on the critical path,
+and the substitution section 4 records does not move the criterion,
+so the flip waits on the shadow window closed with its divergences
+reconciled, or on the amendment "The two cutovers are escalations"
+names. The change itself: the root `AGENTS.md` section "How work
+happens" is rewritten
 around the Seed loop verbs (`seed situation`, `seed claim take`,
 `seed submission make`, `seed claim release|park`, `seed escalation
 raise`, `seed message read`, and mail sent as a `message.sent` append
@@ -443,9 +503,13 @@ every role file and the dispatch and maintenance workflows in the
 same pull request. That pull request is the cutover; its merge is the
 moment authority moves, and it is the escalated decision the build
 plan reserves. Before it merges, the v1 state ref is anchored one last
-time (`scripts/seed state anchor`) and re-imported into the ledger at
-that anchor (`seed import --from-open-seed`), so the ledger holds the
-whole history at the flip.
+time (`scripts/seed state anchor`) and imported at that anchor into the
+deployment's empty ledger (`seed import --from-open-seed`), in the
+order "The deployment" gives: the import is the genesis transform, so
+it is the first write to the ledger that becomes authoritative, the
+declaration is applied over it by `seed init --preseed`, and a ledger
+a shadow window wrote is kept for its record and is never the target
+of the import. So the ledger holds the whole history at the flip.
 
 ### What stays authoritative where during the window
 
@@ -485,11 +549,25 @@ each gate, present this packet, and stop.
 
 **Self-hosting.** Question: does this repository's own development move to Seed at the position the operator records as the start, on the terms in "The cutover and the rollback", with criterion 4 standing `partial` under the substitution section 4 records?
 
-Its preconditions are six criteria `met` and the fourth `partial` by
-the operator's own substitution, a deployment standing at the enforced
-self-hosted posture ("The deployment"), the v1 state anchored and
-imported into that deployment's ledger at the flip, and the
-compromised-actor drill green on the commit that carries the cutover.
+Its preconditions, for putting the question, are six criteria `met`
+and the fourth `partial` by the operator's own substitution, a
+deployment standing at the enforced self-hosted posture ("The
+deployment"), the v1 state anchored and imported into that
+deployment's ledger at the flip, and the compromised-actor drill green
+on the commit that carries the cutover. The cutover itself keeps the
+prerequisite build plan §5 binds and this packet cannot waive:
+criterion 4 `met`, the shadow run before the cutover on the critical
+path. The substitution does not supply it, so an answer of yes does
+not merge the cutover pull request until one of two things exists,
+neither of them agent work: the shadow run of "The shadow run, as a
+protocol", run on the deployment and closed with its divergences
+reconciled, which meets the criterion on its own words; or an
+amendment of build plan §5 by a recorded decision that accepts the
+substitution in the criterion's place, made by the operator as the
+deviation it is (that section's own rule for a step that trades away
+what the plan requires), and not by this packet, which is not the
+build plan's to amend. Until one exists the question is put and the
+flip waits.
 
 **Distribution.** Question: does Seed become what new users clone, and from which repository?
 

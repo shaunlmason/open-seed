@@ -1958,4 +1958,16 @@ failed step skips the rest of the job.
 - A configuration block a human will copy belongs under a drill, not
   in prose alone: the fixture's declaration was linted in CI and the
   packet's twin was not, and only the twin is the one that ships.
+- A procedure that names two commands which each begin a chain has an
+  order, and the order is a claim: run it against a throwaway ledger
+  before writing it down. The declaration's init and the predecessor
+  import both write genesis, and only one order reaches the flip.
+- A placeholder in a block a drill lints is exercised only on the path
+  that reads it: `preseed check` without a ledger never compares the
+  root, so a root no key can have passed CI and would have refused at
+  the operator's terminal. Drill the substitution, not the file alone.
+- A gate document that presents a question while a governing plan's
+  prerequisite stands unmet must say the two apart: the question can
+  be put, the act it asks about still waits on the prerequisite, and
+  only the plan's own amendment path moves it.
 

@@ -2225,17 +2225,30 @@ ledger remote whose `pre-receive` is the `seed-admit` binary (the
 criteria name the self-hosted posture, so the forge-hosted service
 would be a second recorded deviation, not an alternative), the
 operator's key as the governance root, one enrolled key per lane,
-declared in the block the packet's "The deployment" carries and
-`TestPacketDeclarationLints` holds to `seed preseed check`. After the
-deployment: the v1 state anchored and imported at the flip, the
-cutover PR the packet's "The cutover and the rollback" writes down,
-the operator's answer to the Self-hosting question at the position
-they record, and only then the Phase 13 exit record (os-d63c7441, plan
-#288 with #315, blocked on this gate), whose plan writes it when the
-doctor reports complete, which III.R makes reachable after the
-cutovers, not before. The derivation, stated rather than read off a
-summary: every Phase 13 item has a merged PR; the exit line's
-remaining criterion, the conformance report showing Part III complete,
+declared in the block the packet's "The deployment" carries, with
+`governance.root` the one substitution (the root key's fingerprint),
+which `TestPacketDeclarationLints` holds to `seed preseed check` and
+`TestPacketDeclarationInitializesUnderTheRootKey` initializes under a
+real key. After the deployment: the operator's answer to the
+Self-hosting question at the position they record; then the flip,
+which waits on criterion 4 `met`, because build plan §5 counts the
+cutover on all seven criteria and puts the shadow run before it, and
+the substitution does not supply it: the shadow run on that
+deployment, or an amendment of §5 the operator records as the
+deviation it is, neither of them agent work. At the flip, in the order
+the packet's "The deployment" gives and `TestPacketProcedureReachesTheFlip`
+follows: the v1 state anchored and imported into the deployment's
+empty ledger (the import is the genesis transform and refuses a ledger
+holding any record), the declaration applied over the imported chain
+by `seed init --preseed`, the lane keys enrolled, the ledger pushed to
+the hook, and the cutover PR the packet's "The cutover and the
+rollback" writes down; and only then the Phase 13 exit record
+(os-d63c7441, plan #288 with #315, blocked on this gate), whose plan
+writes it when the doctor reports complete, which III.R makes
+reachable after the cutovers, not before. The derivation, stated
+rather than read off a summary: every Phase 13 item has a merged PR;
+the exit line's remaining criterion, the conformance report showing
+Part III complete,
 cannot be met by any agent act, because the table routes III.R's rows
 to measurements a real deployment supplies and the deployment needs
 credentials and infrastructure only the operator can grant.

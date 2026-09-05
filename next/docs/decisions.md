@@ -3868,3 +3868,31 @@ remote verbs and the hook read.
 they flip and the doctor's count once they merge; the operator's
 decision is stated once, in order: the deployment, then the answer.
 
+**The review findings on the task PR, three, each verified before it
+was fixed.** The Self-hosting preconditions read as if the cutover
+could follow the answer with criterion 4 `partial`; build plan §5
+counts the cutover on seven criteria `met` and puts the shadow run
+before it on the critical path, and a packet cannot waive a
+prerequisite its governing plan binds. The question is still put (D2),
+and the packet now says in the gate paragraph, the cutover section and
+the preconditions that the flip waits on criterion 4 `met`: by the
+shadow run on the deployment, or by an amendment of §5 the operator
+records as the deviation it is, neither of them the packet's to make.
+The procedure had `seed init --preseed` write the deployment's ledger
+and `seed import --from-open-seed` write it again; the import is the
+genesis transform and refuses a ledger holding any record (exit 3
+`ledger_not_empty`, reproduced against this repository's real export),
+so the order is now the import first into an empty ledger, then the
+declaration over the imported chain (`init --preseed` appends exactly
+`seed/6` and `seed/7` over the import's `seed/5` and nothing on a
+second run, the check reads green), then the lane keys, then the push
+to the hook; `TestPacketProcedureReachesTheFlip` follows that order
+through the CLI and proves the reverse refuses by name. The block's
+`governance.root` read `declared-at-init`, which `applyPreseed`
+refuses `preseed_drift` before genesis because no fingerprint equals
+it, and the lint alone never reaches the comparison; the value is now
+the spec's own placeholder, named as the one required substitution,
+and `TestPacketDeclarationInitializesUnderTheRootKey` initializes the
+substituted block under a real key and holds the unsubstituted one to
+the refusal.
+
