@@ -1933,3 +1933,18 @@ failed step skips the rest of the job.
   bar, and the question was never "which is broken" but "which is the
   authority": the boundary decides what a chain may contain, and a
   conformance bar that disagrees is the thing that moves.
+
+## The machine surface's policy drill (os-8ecef90f)
+
+- A parity drill proves a surface returns what another surface
+  returns; it does not say what either is governed by. When a
+  conformance row asks about policy, fire the refusals through the
+  surface, hold their codes to the boundary's, and land each admitted
+  twin, so the drill fails if the policy moves, the surface diverges,
+  or the surface starts refusing everything.
+- The CLI's local `ledger append` reads no declaration; only the
+  remote verbs and the loop verbs do (`deploymentDeclaration` in
+  `cmd/seed/remote.go`). A declaration-driven policy drill therefore
+  runs against a remote, which is also the only place claiming is
+  legal, so the two halves of the drill share one fixture.
+
