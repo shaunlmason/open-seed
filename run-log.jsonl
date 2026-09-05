@@ -1717,3 +1717,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-05T10:29:37Z"},"task":"os-0f924157","ts":"2026-09-05T09:29:37Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-0f924157","ts":"2026-09-05T09:29:56Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"title":"next: ratified decision records, path-scoped, surfaced at claim (backlog, from ank)"},"task":"os-0a6a7d20","ts":"2026-09-05T18:48:13Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"next: a herdr wake adapter for executors (backlog, adapter-only per §II.18)"},"task":"os-d76b7d6c","ts":"2026-09-05T18:48:16Z","verb":"create"}
