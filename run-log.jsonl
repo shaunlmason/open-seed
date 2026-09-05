@@ -1719,3 +1719,4 @@
 {"actor":"shaunlmason","data":{"title":"next: ratified decision records, path-scoped, surfaced at claim (backlog, from ank)"},"task":"os-0a6a7d20","ts":"2026-09-05T18:48:13Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: a herdr wake adapter for executors (backlog, adapter-only per §II.18)"},"task":"os-d76b7d6c","ts":"2026-09-05T18:48:16Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"shims: a herdr shim for the v1 template (.seed/hooks/shims/herdr/, protected surface)"},"task":"os-a7b5dffb","ts":"2026-09-05T18:48:20Z","verb":"create"}
+{"actor":"shaunlmason","data":{"title":"next: ratification anchor and a doctor drift row for decisions (backlog, from ank)"},"task":"os-1da81891","ts":"2026-09-05T18:48:23Z","verb":"create"}
