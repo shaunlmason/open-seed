@@ -950,7 +950,11 @@ func coreRules() []Rule {
 					return &erasure.Error{Subject: subject, Reason: fmt.Sprintf("artifact %s is not one this contract references: its fold holds %s — erase a referenced artifact on its contract, or an artifact referenced elsewhere on system", p.Artifact, what)}
 				}
 			}
-			if prior, done := c.Lifecycle.Erasure(p.Artifact); done {
+			// Only a tombstone that passed the boundary stands
+			// (ErasureValid): a raw one under a key without the grant
+			// attributes nothing and must not block the operator's
+			// own record.
+			if prior, done := Erasure(c.Records, c.Lifecycle, p.Artifact); done {
 				return &erasure.Error{Subject: subject, Reason: fmt.Sprintf("artifact %s was erased at position %d by %s on %s: an artifact is erased once, wherever it was recorded, and a second record would attribute an act that did nothing", p.Artifact, prior.Pos, prior.Signer, prior.Subject)}
 			}
 			return nil
@@ -2893,6 +2897,48 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 		}
 	}
 	return false
+}
+
+// ErasureValid reports whether a folded artifact.erased passed the
+// admission boundary at its own position (the RunStartValid posture:
+// fold presence is never proof of admission): the record at the
+// position is that erasure, on that subject, by that signer, naming
+// that digest, and the signer held a capability the verb accepts
+// against the prefix it appended onto, the keyring replayed there the
+// way the seal's own authorization is. The raw seam lets any standing
+// key land a well-shaped tombstone and the fold keeps it, and one that
+// never passed the boundary attributes nothing: it neither cleans the
+// seal audit, nor blocks the operator's own record, nor resumes a
+// removal (review findings on the task PR; plans/os-db5cd353.md D3).
+func ErasureValid(records []*event.Record, st transition.ErasureFact) bool {
+	rec, ok := runFactRecord(records, st.Pos, erasure.Verb, st.Subject)
+	if !ok || rec.Event.Actor != st.Signer || !version.Activated(rec.Event.V) {
+		return false
+	}
+	p, err := erasure.Parse(rec.Event.Subject, rec.Event.Payload)
+	if err != nil || p.Artifact != st.Artifact {
+		return false
+	}
+	ring, _, err := keyring.StateAt(records[:st.Pos])
+	return err == nil && ring != nil &&
+		ring.HasAnyCapability(st.Signer, keyring.AcceptedCapabilities(erasure.Verb))
+}
+
+// Erasure finds the admitted erasure of an artifact, wherever it was
+// recorded: the fold's digest-wide lookup (transition.Fold.Erasure)
+// narrowed to the tombstones that passed the boundary. Every consumer
+// of the fact reads it through here: the once rule, the affordance
+// probe, the seal audit, the render's refusal and the verb's resume.
+func Erasure(records []*event.Record, fold *transition.Fold, artifact string) (transition.ErasureFact, bool) {
+	if fold == nil {
+		return transition.ErasureFact{}, false
+	}
+	for _, e := range fold.Erasures() {
+		if e.Artifact == artifact && ErasureValid(records, e) {
+			return e, true
+		}
+	}
+	return transition.ErasureFact{}, false
 }
 
 // InterruptValid reports whether a folded run.interrupted passed the

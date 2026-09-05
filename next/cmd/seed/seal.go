@@ -396,7 +396,12 @@ func runSealAudit(args []string, stdout, stderr io.Writer) int {
 		checked++
 		ct, err := store.GetSealed(s.Sealed.Commitment)
 		if err != nil {
-			if fact, ok := st.fold.Erasure(s.Sealed.Commitment); ok {
+			// Only a tombstone whose signer held the grant at its own
+			// position is honored (admit.ErasureValid, the
+			// sealAuthorized posture; review finding on the task PR):
+			// a raw record under a key without it leaves the absence
+			// unattributed, and a finding.
+			if fact, ok := admit.Erasure(st.records, st.fold, s.Sealed.Commitment); ok {
 				erased = append(erased, map[string]string{"subject": id, "commitment": s.Sealed.Commitment, "position": fmt.Sprintf("%d", fact.Pos), "by": fact.Signer, "reason": fact.Reason, "ts": fact.TS})
 				continue
 			}
@@ -431,8 +436,10 @@ func runSealAudit(args []string, stdout, stderr io.Writer) int {
 }
 
 // erasureOf finds the erasure of a commitment among the records: the
-// artifact.erased whose payload names it, read the way the fold reads
-// it, so a render's refusal can attribute the absence it meets.
+// first artifact.erased whose payload names it and whose signer held
+// the grant at its own position (admit.ErasureValid), read the way the
+// fold reads it, so a render's refusal can attribute the absence it
+// meets and never cites a tombstone the boundary would have refused.
 func erasureOf(records []*event.Record, commitment string) (transition.ErasureFact, bool) {
 	for pos, rec := range records {
 		if rec.Event.Verb != erasure.Verb {
@@ -442,7 +449,10 @@ func erasureOf(records []*event.Record, commitment string) (transition.ErasureFa
 		if err != nil || p.Artifact != commitment {
 			continue
 		}
-		return transition.ErasureFact{Pos: pos, TS: rec.Event.TS, Signer: rec.Event.Actor, Subject: rec.Event.Subject, Artifact: p.Artifact, Reason: p.Reason}, true
+		fact := transition.ErasureFact{Pos: pos, TS: rec.Event.TS, Signer: rec.Event.Actor, Subject: rec.Event.Subject, Artifact: p.Artifact, Reason: p.Reason}
+		if admit.ErasureValid(records, fact) {
+			return fact, true
+		}
 	}
 	return transition.ErasureFact{}, false
 }

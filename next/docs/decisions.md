@@ -3887,3 +3887,24 @@ and then empties the store, because a record with the bytes still
 present is a promise the next run keeps, while bytes gone with no
 record is the silence the row forbids.
 
+**A tombstone attributes only what passed the boundary, and a removal
+that fails is a refusal (review on #325).** The raw `ledger append`
+seam lets any standing key land a well-shaped `artifact.erased`, and
+the fold keeps it, as it keeps every fact. Three consumers took the
+fold's word for it: the seal audit honored the tombstone by digest and
+reported clean, the once rule refused the operator's own record behind
+it, and the verb's resume path finished a removal under whichever
+record stood, for whichever key asked. The tree's answer to the same
+shape elsewhere (`RunStartValid`, `sealAuthorized`) is to replay the
+keyring at the record's own position, so `admit.ErasureValid` does
+that, `admit.Erasure` is the digest-wide lookup narrowed to the records
+that passed the boundary, and every consumer reads through it. The
+resume path also holds the caller to the grant a fresh append holds,
+since finishing a removal is the same governance act as recording it.
+And a removal the store refuses after the record landed is
+`erasure_incomplete` (exit 5) naming the position, never a success
+with a note: the shared commit renders the envelope it lands, so the
+verb renders through a buffer and replaces a success whose removal
+failed, which keeps `loop.go` untouched and the journal's admitted
+outcome true.
+

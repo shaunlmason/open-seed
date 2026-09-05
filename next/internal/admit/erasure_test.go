@@ -9,10 +9,12 @@ package admit
 import (
 	"crypto/ed25519"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/shaunlmason/open-seed/next/internal/erasure"
+	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -124,5 +126,72 @@ func TestErasureIsAffordedWhereSomethingIsErasable(t *testing.T) {
 	ctx = step(k.signer, version.Seed1, erasure.Verb, "c-1", erasedBody(testCommitment, "done"))
 	if listed(k.signer, "c-1") {
 		t.Fatal("an erased artifact is not offered for erasure again")
+	}
+}
+
+// conformance: III.A row 7 (the erasure is itself an attributable
+// event); SEED-NEXT.md Part II "Capabilities": fold presence is never
+// proof of admission: a well-shaped tombstone the raw seam landed under
+// plain standing is kept by the fold and honored by nothing. ErasureValid
+// refuses it, Erasure finds nothing, the once rule does not count it, the
+// verb stays drafted for the operator, and the operator's own record is
+// the one every consumer then attributes (review findings on the task
+// PR).
+func TestErasureHonorsOnlyTombstonesThatPassedTheBoundary(t *testing.T) {
+	ctx, k, step := sealFixture(t)
+	ctx = step(k.sealer, version.Seed1, "check.sealed", "c-1", sealBody(testCommitment))
+	listed := func(priv ed25519.PrivateKey) bool {
+		for _, v := range Affordances(ctx, priv, "c-1") {
+			if v == erasure.Verb {
+				return true
+			}
+		}
+		return false
+	}
+	// The raw seam: plain standing lands a tombstone the grant rule
+	// would have refused.
+	ctx = step(k.plain, version.Seed1, erasure.Verb, "c-1", erasedBody(testCommitment, "not mine to honor"))
+	raw, ok := ctx.Lifecycle.Erasure(testCommitment)
+	if !ok || raw.Signer != fpOf(t, k.plain) {
+		t.Fatalf("the fold keeps the raw tombstone as a fact: %+v %v", raw, ok)
+	}
+	if ErasureValid(ctx.Records, raw) {
+		t.Fatal("a signer without the grant never passed the boundary")
+	}
+	if _, ok := Erasure(ctx.Records, ctx.Lifecycle, testCommitment); ok {
+		t.Fatal("an unauthorized tombstone attributes nothing")
+	}
+	if !listed(k.signer) {
+		t.Fatal("the artifact remains erasable: the verb stays drafted for the operator")
+	}
+	// The once rule counts only what passed the boundary, so the
+	// operator's record admits over the raw one.
+	if err := Check(ctx, draftV(t, k.signer, version.Seed1, erasure.Verb, "c-1", erasedBody(testCommitment, "a retention obligation"), ctx.Tip)); err != nil {
+		t.Fatalf("the operator's erasure admits over an unauthorized tombstone: %v", err)
+	}
+	ctx = step(k.signer, version.Seed1, erasure.Verb, "c-1", erasedBody(testCommitment, "a retention obligation"))
+	fact, ok := Erasure(ctx.Records, ctx.Lifecycle, testCommitment)
+	if !ok || fact.Signer != fpOf(t, k.signer) || fact.Pos != ctx.Count-1 || !ErasureValid(ctx.Records, fact) {
+		t.Fatalf("the operator's record is the admitted erasure: %+v %v", fact, ok)
+	}
+	var refusal *erasure.Error
+	err := Check(ctx, draftV(t, k.signer, version.Seed1, erasure.Verb, "c-1", erasedBody(testCommitment, "again"), ctx.Tip))
+	if !errors.As(err, &refusal) || !strings.Contains(err.Error(), fmt.Sprintf("at position %d by %s", fact.Pos, fact.Signer)) {
+		t.Fatalf("once names the admitted record, never the raw one: %v", err)
+	}
+	if listed(k.signer) {
+		t.Fatal("an erased artifact is not offered for erasure again")
+	}
+	// A fact that misattributes the record, or cites a position outside
+	// the chain, is not valid either: the record itself is checked.
+	for name, st := range map[string]transition.ErasureFact{
+		"another signer":    {Pos: fact.Pos, Subject: "c-1", Signer: fpOf(t, k.plain), Artifact: testCommitment},
+		"another subject":   {Pos: fact.Pos, Subject: "c-2", Signer: fact.Signer, Artifact: testCommitment},
+		"another artifact":  {Pos: fact.Pos, Subject: "c-1", Signer: fact.Signer, Artifact: strings.Repeat("ab", 32)},
+		"outside the chain": {Pos: ctx.Count, Subject: "c-1", Signer: fact.Signer, Artifact: testCommitment},
+	} {
+		if ErasureValid(ctx.Records, st) {
+			t.Errorf("%s is not the admitted record", name)
+		}
 	}
 }

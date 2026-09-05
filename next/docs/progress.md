@@ -2145,11 +2145,16 @@ written by the two implementing sessions, one voice.
   store's buckets under the digest (`artifact.Store.Erase`) and reports
   which, finishing rather than re-recording on a re-run; the affordance
   catalog drafts the verb exactly where the subject references
-  something. Drilled in `internal/erasure`, `internal/artifact`,
-  `internal/admit` and at the terminal; the row flips to met with the
-  drills as evidence, the doctor's outstanding rows falling by one;
-  `protocol.md` gains the `artifact.*` bullet and an "Erasure" section,
-  `sealed-checks.md`, `actors.md` and `envelope.md` follow)
+  something. A review round narrowed every consumer of the fact to
+  records that passed the boundary (`admit.ErasureValid`, the keyring
+  replayed at the record's position), held the resume path to the
+  operator grant, and made a removal the store refuses
+  `erasure_incomplete` rather than a success. Drilled in
+  `internal/erasure`, `internal/artifact`, `internal/admit` and at the
+  terminal; the row flips to met with the drills as evidence, the
+  doctor's outstanding rows falling by one; `protocol.md` gains the
+  `artifact.*` bullet and an "Erasure" section, `sealed-checks.md`,
+  `actors.md` and `envelope.md` follow)
 
 ## Frontier
 

@@ -748,7 +748,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 				}
 			}
 			for _, d := range candidates {
-				if _, erased := ctx.Lifecycle.Erasure(d); !erased {
+				if _, erased := Erasure(ctx.Records, ctx.Lifecycle, d); !erased {
 					v.erasable = d
 					break
 				}

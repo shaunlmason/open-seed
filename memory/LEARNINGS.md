@@ -1962,4 +1962,17 @@ failed step skips the rest of the job.
 - Order side effects so that the failure mode is the honest one:
   record the erasure, then delete the bytes, because the reverse
   leaves an absence nobody signed for.
+- A fact the fold keeps is consumed at use, and every consumer must
+  ask whether the record passed the boundary rather than whether the
+  fold holds it: the raw seam lands anything well-shaped. Replay the
+  keyring at the record's position (`RunStartValid`, `sealAuthorized`,
+  `ErasureValid`) and route every reader through one lookup, or the
+  audit, the rule and the verb drift apart on their own.
+- A resume path that skips the shared commit skips the grant rule
+  with it: a verb that finishes an act without appending must hold
+  the caller to the capability the append would have.
+- The shared commit renders the envelope it lands, so a verb with a
+  side effect after the append cannot turn that side effect's failure
+  into a refusal from inside `resultAt`; render through a buffer and
+  replace the success, rather than widening `loop.go` for one verb.
 

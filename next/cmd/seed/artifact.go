@@ -8,16 +8,23 @@ package main
 // gone with no record is the silence the row forbids. The record is a
 // loop act in the shared transport shape, judged by the boundary's
 // erasure rule; an erasure that already stands is not recorded twice,
-// and a re-run only finishes the removal.
+// and a re-run only finishes the removal, under the same grant the
+// record took. A removal the store refuses after the record landed is
+// a refusal of its own, never a success with a note.
 
 import (
+	"bytes"
+	"crypto/ed25519"
 	"flag"
 	"fmt"
 	"io"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/erasure"
+	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 )
 
 func runArtifact(args []string, stdout, stderr io.Writer) int {
@@ -66,30 +73,69 @@ func runArtifactErase(args []string, stdout, stderr io.Writer) int {
 	defer ls.done()
 	store := artifact.Open(artifactsDir(*artifacts, *repo))
 	subject, art := *f.subject, *digest
-	erase := func(out map[string]any) map[string]any {
-		removed, err := store.Erase(art)
+	// The removal, after the record. What it emptied goes in the
+	// result; what it could not remove is a refusal (review finding on
+	// the task PR): the record stands and the bytes remain, which is
+	// exactly the state the next run finishes, and a success envelope
+	// would tell a caller the erasure is complete when it is not.
+	var removed []string
+	var removeErr error
+	var recordedAt int
+	remove := func(pos int, out map[string]any) map[string]any {
+		recordedAt = pos
+		removed, removeErr = store.Erase(art)
 		if removed == nil {
 			removed = []string{}
 		}
+		out["artifact"] = art
+		out["erased_at"] = fmt.Sprintf("%d", pos)
 		out["removed"] = removed
-		if err != nil {
-			// The record stands and the bytes do not: the next run
-			// finishes the removal, never re-records.
-			out["erase_error"] = err.Error()
-		}
 		return out
+	}
+	incomplete := func(stamp int) int {
+		return render(stampTip(envelope.Fail(envelope.ExitUnavailable, "erasure_incomplete",
+			fmt.Sprintf("the erasure of %s is recorded at position %d and its bytes remain: %v (removed so far: %v); the record stands, so run the verb again once the store can remove them, which finishes the removal and is not recorded twice",
+				art, recordedAt, removeErr, removed)), stamp), stdout, stderr)
 	}
 	// An erasure that already stands, on any subject, is finished and
 	// not re-recorded: a second record would attribute an act that did
 	// nothing, and the bytes may remain when a run died between the
-	// append and the removal (plans/os-db5cd353.md D5).
-	if ls.ctx.Lifecycle != nil {
-		if prior, ok := ls.ctx.Lifecycle.Erasure(art); ok {
-			env := envelope.OK(erase(map[string]any{"subject": prior.Subject, "artifact": art, "erased_at": fmt.Sprintf("%d", prior.Pos), "by": prior.Signer, "recorded": false}))
-			return render(stampTip(env, ls.ctx.Count), stdout, stderr)
+	// append and the removal (plans/os-db5cd353.md D5). Only a record
+	// that passed the boundary stands (admit.Erasure), and the resume
+	// is the same governance act as the record, so the caller must hold
+	// the grant the verb accepts here exactly as the grant rule holds it
+	// at a fresh append (review finding on the task PR): a standing
+	// record is never a way for a key without the grant to finish a
+	// removal under the operator's name.
+	if prior, ok := admit.Erasure(ls.ctx.Records, ls.ctx.Lifecycle, art); ok {
+		fp, err := event.Fingerprint(signer.Public().(ed25519.PublicKey))
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), stdout, stderr)
 		}
+		if accepted := keyring.AcceptedCapabilities(erasure.Verb); ls.ctx.Keyring == nil || !ls.ctx.Keyring.HasAnyCapability(fp, accepted) {
+			return render(ls.refuse(remoteFailureEnvelope(&admit.OutOfGrantError{Actor: fp, Verb: erasure.Verb, Accepted: accepted}),
+				subject, erasure.Verb, signer), stdout, stderr)
+		}
+		out := remove(prior.Pos, map[string]any{"subject": prior.Subject, "by": prior.Signer, "recorded": false})
+		if removeErr != nil {
+			return incomplete(ls.ctx.Count)
+		}
+		return render(stampTip(envelope.OK(out), ls.ctx.Count), stdout, stderr)
 	}
-	return ls.commit(f, loopAct{verb: erasure.Verb, payload: payload, resultAt: func(pos int) map[string]any {
-		return erase(map[string]any{"subject": subject, "artifact": art, "erased_at": fmt.Sprintf("%d", pos), "recorded": true})
-	}}, signer, stdout, stderr)
+	// The shared commit renders the envelope it lands, so the success is
+	// rendered into a buffer and forwarded only when the removal that ran
+	// inside it succeeded; a refusal before the append ran no removal and
+	// is forwarded as it is.
+	var buf bytes.Buffer
+	code := ls.commit(f, loopAct{verb: erasure.Verb, payload: payload, resultAt: func(pos int) map[string]any {
+		return remove(pos, map[string]any{"subject": subject, "recorded": true})
+	}}, signer, &buf, stderr)
+	if removeErr != nil {
+		return incomplete(recordedAt + 1)
+	}
+	if _, err := io.Copy(stdout, &buf); err != nil {
+		fmt.Fprintf(stderr, "seed: envelope render failed: %v\n", err)
+		return 1
+	}
+	return code
 }

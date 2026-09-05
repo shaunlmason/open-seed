@@ -165,11 +165,15 @@ the capability audit's decrypt drills carry the cryptographic claim.
 
 An erased ciphertext is the one absence that is not a finding: when
 the chain holds an `artifact.erased` for the subject's commitment
-(plans/os-db5cd353.md D4), the audit lists the subject under `erased`
-with the record's position, signer, reason and timestamp, and stays
-clean; a ciphertext deleted with no record stays
+whose signer held the operator grant at the record's own position
+(plans/os-db5cd353.md D4; `admit.ErasureValid`, the keyring replayed
+there as it is for the seal's own authorization), the audit lists the
+subject under `erased` with the record's position, signer, reason and
+timestamp, and stays clean; a ciphertext deleted with no record, or
+with only a record the boundary would have refused, stays
 `seal_evidence_missing`. A render on an erased subject still refuses
-`seal_broken`, its message naming the erasure rather than an absence.
+`seal_broken`, its message naming the admitted erasure rather than an
+absence.
 
 Record-side, `internal/reconcile` surfaces two classes in `seed
 reconcile` and the report: the neutral `unsealed` (an above-trivial
