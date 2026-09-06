@@ -25,10 +25,10 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/externalfact"
 	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
-	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -229,7 +229,7 @@ type Deps struct {
 	// (plans/os-0cd18799.md D6). Nil means no forge is configured: the
 	// observe step then reports every observable submission skipped
 	// with that reason, never silently, and CI runs that way.
-	Observe func(pr string) (protections.Observation, error)
+	Observe func(pr string) (externalfact.Observation, error)
 	// Refresh re-reads the ledger between the observe step and the
 	// return step, so the return cites the observation the pass just
 	// recorded rather than the opening view's. Nil means the opening
@@ -408,7 +408,7 @@ func (d Deps) observe(rep *Report) {
 // forge's answer: literals and a count, the thread field absent where
 // the forge cannot say. One renderer for the pass and the verb, so
 // the two cannot disagree about the shape.
-func ObservationPayload(pr string, o protections.Observation) ([]byte, error) {
+func ObservationPayload(pr string, o externalfact.Observation) ([]byte, error) {
 	out := map[string]any{"pr": pr, "head": o.Head, "checks": o.Checks, "review": o.Review}
 	if o.UnresolvedThreads != nil {
 		out["unresolved_threads"] = *o.UnresolvedThreads

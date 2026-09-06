@@ -1,52 +1,15 @@
 package protections
 
-// Coverage for the observer's GitHub arm and the Forgejo adapter's
-// delete/update paths and rule-parameter coercion (plans/os-ad610334.md
+// Coverage for the Forgejo adapter's delete/update paths and rule-parameter coercion (plans/os-ad610334.md
 // D2, D4): the aggregate gate holds the internal tree to 90%, and the
 // forge adapter's remove/update branches and the rule helpers earn their
 // place under it the same way the create path does.
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
-
-func TestGitHubObserver(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "Bearer tok" {
-			http.Error(w, "no token", http.StatusUnauthorized)
-			return
-		}
-		switch r.URL.Path {
-		case "/repos/o/r/pulls/7":
-			json.NewEncoder(w).Encode(prState{Merged: true, MergeCommitSHA: "cafef00d"})
-		case "/repos/o/r/pulls/8":
-			json.NewEncoder(w).Encode(prState{Merged: false})
-		default:
-			http.Error(w, "no such pr", http.StatusNotFound)
-		}
-	}))
-	defer srv.Close()
-	gh := NewGitHub(srv.URL, "o", "r", "tok")
-	sha, merged, err := gh.Merged("pr/7")
-	if err != nil || !merged || sha != "cafef00d" {
-		t.Fatalf("a merged GitHub PR returns its sha, got %q %v %v", sha, merged, err)
-	}
-	if _, merged, _ := gh.Merged("8"); merged {
-		t.Error("an unmerged GitHub PR reports not merged")
-	}
-	if _, _, err := gh.Merged(""); err == nil {
-		t.Error("an empty pr reference is refused, never a silent false")
-	}
-	if _, _, err := gh.Merged("pr/x"); err == nil {
-		t.Error("a non-numeric pr is refused")
-	}
-	if _, _, err := gh.Merged("pr/9"); err == nil {
-		t.Error("a forge error surfaces, never a silent false")
-	}
-}
 
 // desiredForgejoState is a hand-built desired State with a branch
 // ruleset (carrying update, pull-request and status-check rules so the
@@ -174,8 +137,8 @@ func TestForgejoDoSurfacesForgeError(t *testing.T) {
 	}))
 	defer srv.Close()
 	fj := NewForgejo(srv.URL, "o", "r", "tok")
-	if _, _, err := fj.Merged("pr/1"); err == nil {
-		t.Error("a 5xx from the forge surfaces as an error, never a silent unmerged")
+	if _, err := fj.Read(); err == nil {
+		t.Error("a 5xx from the forge surfaces as an error, never a silent read")
 	}
 }
 
