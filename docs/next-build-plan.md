@@ -426,10 +426,10 @@ The contention benchmark at target scale (III.C row 4): the per-PR storm stays a
 against the same budgets, is a card for when Phase 13 is exhausted (the Phase 12
 exit record routes the row here).
 
-**Borrowed from surveyed tools (2026-09-05).** Two later surveys turned up ideas
-worth a card each. None changes a Part III row; each is filed against the charter
-section it extends and stays adapter- or record-shaped so the deliberately-absent
-table (§II.18) holds. Sources: [haksolot/ank](https://github.com/haksolot/ank)
+**Borrowed from surveyed tools (2026-09-05).** Two later surveys turned up three
+Seed ideas worth a card each. None changes a Part III row; each is filed against
+the charter section it extends and stays adapter- or record-shaped so the
+deliberately-absent table (§II.18) holds. Sources: [haksolot/ank](https://github.com/haksolot/ank)
 (binding decisions embedded in the repo, criteria frozen by hash at claim) and
 [herdrdev/herdr](https://github.com/herdrdev/herdr) (a terminal multiplexer that
 knows agent state and exposes a CLI plus socket for agents to drive each other).
@@ -451,21 +451,22 @@ knows agent state and exposes a CLI plus socket for agents to drive each other).
   this extends it to the prose a decision points at, which lives outside the ledger
   and can drift silently. Cheap, and depends on the previous card.
 - **A herdr wake adapter** (§II.9 executor adapters: provision, wake, meter).
-  Advisory wake over `herdr agent prompt <name>`, and blocked-state observation
-  (`herdr agent wait <name> --until blocked`) reported onto the observation stream
-  so `blocked(needs-you)` reaches the operator's sidebar. Adapter-only by charter
-  rule: the §II.18 row forbids any coordination feature assuming a multiplexer, so
-  a worker with no herdr loses latency and nothing else. Mock-total like every
-  adapter (§II.13).
-- **A herdr shim for the v1 template** (`.seed/hooks/shims/herdr/`). Not `next/**`
-  work: `.seed/**` is protected surface, so this is an ordinary v1 card under
-  protected-path review. Contents per the shim convention: a README with the
-  fidelity table (setup yes via a workspace-create script, run yes via
-  `herdr agent start`, post-create and teardown no since herdr manages panes not
-  worktrees, blocking pre-merge no, CI remains the merge authority per R11), a
-  sample launch script that opens one pane per lane running `scripts/loop.sh`
-  with a distinct `--actor`, and a `seed mail nudge` path for herdr beside the
-  tmux-only one (content-free, the message stays in the mail file).
+  Advisory wake over `herdr agent prompt <name>`; herdr's pane state (`herdr agent
+  wait <name> --until blocked`) metered onto the observation stream as *liveness
+  only*, a wedge signal for the supervisor's preemption path (§II.9), never an
+  escalation. Escalation is a ledger event (§II.7: `blocked(needs-you)` carries the
+  packet, the question, and the minimal decision), so the adapter surfaces
+  *admitted* escalations to the operator's pane over the same wake channel and
+  mints none from what a terminal shows. Adapter-only by charter rule: the §II.18
+  row forbids any coordination feature assuming a multiplexer, so a worker with no
+  herdr loses latency and nothing else. Mock-total like every adapter (§II.13).
+A fourth idea from the same survey, a herdr lifecycle shim under
+`.seed/hooks/shims/herdr/`, is **not this plan's to schedule**: the ground rules
+(§0) limit Seed's v1 integration points to the Makefile and this docs tree, and
+`docs/design-options.md` D6 assigns the remaining lifecycle shims to the v1/v2
+stream, whose roadmap is cards on the state ref (`docs/build-plan.md`, Phase 7).
+It is filed there as card os-a7b5dffb under that authority and protected-path
+review; it is listed here only so the survey's trail is complete.
 
 Phase 13 is exhausted on the frontier (`next/docs/progress.md`), so these are
 filable now; none blocks promotion (§5) and none may be scheduled ahead of an
