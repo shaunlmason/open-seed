@@ -2191,3 +2191,25 @@ failed step skips the rest of the job.
   `ls` before `Write`: an overwrite of a test file is invisible until
   `writeDeclaration` goes undefined three files away.
 
+## The graph beside the lifecycle (os-f0ae2cdf)
+
+- A tolerant fold plus a cycle check is a laundering hole: a
+  raw-pushed edge the boundary would have refused becomes the edge the
+  next cycle check honors. Fold relation facts by judging each at its
+  own prefix (grant, shape, rule against the lifecycle there) and let
+  admission call the same `Apply` on the candidate; then the graph the
+  rule sees is exactly the graph that passed the boundary.
+- Go's `flag` package treats `0` and "unset" alike for an `Int`; a
+  cursor flag that must be given needs a sentinel default (`-1`) or
+  the usage refusal never fires.
+- The queue orders by `since_position`, so a subject that re-readies
+  (an unblock) sorts after subjects that were ready all along; a drill
+  asserting queue order must expect the re-readied one last.
+- Operator standing satisfies every offer scope, so a root key is a
+  candidate for every scoped offer in the wake bridge; a drill
+  counting candidates must count the root.
+- The cache's `report` value is the marshalled section; asserting it
+  equal to the view's section through `reflect.DeepEqual` after
+  unmarshalling both is the cheap parity check, and the `user_version`
+  pin lives in `cache_test.go`, apart from the stamp version pin in
+  `cache_time_test.go`.

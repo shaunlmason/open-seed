@@ -319,6 +319,13 @@ admission).
   proposal's PR landed the file in the registry, on the shape, citing
   the file and the PR), both from [`flywheel.md`](flywheel.md) as
   additive catalog growth, active from `seed/1`.
+- `dependency.*`, `hierarchy.*`, `goal.*` — `dependency.linked`,
+  `dependency.unlinked`, `hierarchy.parented`, `goal.aligned` (the
+  relation facts beside the lifecycle: what a contract requires, what
+  it belongs under, and the commit-anchored mission it serves; facts
+  on a known open contract under the dispatch grant, never
+  transitions — [`topology.md`](topology.md)), additive catalog
+  growth, active from `seed/1`.
 - `artifact.*` — `erased` (the operator's signed record that an
   artifact the chain references by digest was erased, on the contract
   whose fold references it or on `system`; the section below), additive
