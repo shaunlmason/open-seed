@@ -65,12 +65,22 @@ branch, the threads and the context.
   named reason when any link is missing: the latest return was the
   verifier's (a fail verdict routes to whoever is strongest, not to
   whoever failed), no return stands, the window carried no admitted
-  `run.started` or one that declared no tuple, or the holder is
-  suspended or revoked (a preference nobody active can take is an
-  offer nobody can take). Record-derived at the declared instant like
+  `run.started` or one that declared no tuple, the holder is
+  suspended or revoked, or the holder's admissible `claim` grant no
+  longer cites the tuple (`actor.disqualified` removes a tuple from
+  `GrantTuples(holder, claim)` while the actor stays active, and
+  `offer list` judges a tuple-scoped offer by that set, so a
+  preference for a disqualified tuple is an offer its worker cannot
+  see: the liveness failure this plan exists to remove). The test is
+  the listing's own: the holder is eligible today, by the rule
+  `offer list` applies (`eligibleFor`: capabilities, tier, tuple), for
+  an offer scoped `{capabilities: [claim], tuples: [tuple]}` at the
+  subject's tier; the resumption also names the **consumed offer**
+  (below, D3) or none. Record-derived at the declared instant like
   the ranking, never a clock; no admission rule reads it. Refused: a
   preference derived from anything but the chain; a preference for a
-  verdict-returned subject.
+  verdict-returned subject; a preference for a tuple the holder can
+  no longer claim.
 - **D2. `seed offer publish --resume`.** Fills the `tuples` scope with
   the resumption's tuple, alone or beside `--strongest <n>` and
   `--tuple` (a set, the prior tuple first in the payload for the
@@ -85,22 +95,46 @@ branch, the threads and the context.
   in this pass, append `offer.published` on it, scoped by D1's tuple
   when one derives and unscoped by tuple otherwise, with the
   capabilities and tiers of the offer the returned claim consumed
-  (the latest applied offer at or before the claim's position, from
-  `Offers`) or, where none stands, `capabilities: [claim]` and the
-  subject's filed tier. `expires` is the append's own instant plus
-  `--reoffer-ttl` (default 24h, a declared duration, read at the
-  effect since an offer must expire strictly after its own `ts` and
-  the pass's `--as-of` may be historical). The re-offer is one per
-  return, in the pass that returned it: an expired re-offer is the
-  supervisor's to renew, because the pass returns work and does not
-  run the queue. The report gains `reoffered`
-  (`{subject, tuple?, holder?, expires}`); a refusal is reported like
-  every other, and a `maintenance`-only key meets `out_of_grant`. The
-  scope rule is pure in `internal/maintain` (`Reoffer(s, resumption,
-  ttl)` renders the payload; the effect is `Deps.Append`), drilled
-  without a ledger. Refused: a re-offer on a subject the pass did not
-  return; a scope wider than the consumed offer's; a clock read
-  inside the rule.
+  or, where none stands, `capabilities: [claim]` and the subject's
+  filed tier. **The consumed offer is derived, not read off the
+  fold**: `Offers` keeps every well-shaped `offer.published`, a
+  raw-pushed one included, and the listing makes an unauthorized one
+  inert only at listing time (`offerAuthorized`, the keyring replayed
+  to the offer's own position). So the consumed offer is the latest
+  offer at or before the claim's position that was **authorized at
+  its own position** (its signer held `supervise` or `operator` there)
+  and that the **claimant was eligible for at the claim's position**
+  (the listing's eligibility rule against the keyring at that
+  position). Copying anything else would launder a scheduling policy
+  nobody granted into a maintenance-signed offer. The two predicates
+  today live as private copies in `cmd/seed/offer.go` and
+  `internal/project/report.go`; this task lifts them to
+  `ranking.OfferAuthorized(records, offer)` and
+  `ranking.Eligible(ring, actor, tier, offer)` and points both callers
+  at them, so listing, reporting and resumption judge by one rule.
+  **One instant for the payload and the record.** `Deps.Append`
+  stamps the event's `ts` after the payload exists, and admission
+  refuses an offer whose `expires` is not strictly after its own
+  `ts`, so a payload rendered against another clock can be born dead.
+  The pass therefore takes `at` once from the effect (`Deps.Instant`,
+  nil meaning the wall clock, read once per re-offer), renders
+  `Reoffer(s, resumption, ttl, at)` purely from it (`expires` = `at`
+  + `--reoffer-ttl`, default 24h, a declared duration), and appends
+  through `Deps.AppendAt(at, verb, subject, payload)`, which signs
+  with `ts` = `at`; `Append` becomes `AppendAt` at the wall clock.
+  Not `--as-of`, which may be historical and is the classification
+  instant, not the append's. The re-offer is one per return, in the
+  pass that returned it: an expired re-offer is the supervisor's to
+  renew, because the pass returns work and does not run the queue.
+  The report gains `reoffered` (`{subject, tuple?, holder?,
+  expires}`); a refusal is reported like every other, and a
+  `maintenance`-only key meets `out_of_grant`. The scope rule is pure
+  in `internal/maintain` (`Reoffer` renders the payload from the
+  resumption and the instant it is handed), drilled without a ledger.
+  Refused: a re-offer on a subject the pass did not return; a scope
+  wider than the consumed offer's; a source offer not authorized at
+  its position or not met by the claimant; a clock read inside the
+  rule; an `expires` computed from any instant but the record's `ts`.
 - **D4. The worker's poll shows why.** `seed offer list` already
   renders the `tuples` scope; a re-offer scoped to one tuple is
   visible as such, and a worker holding another configuration does
@@ -122,12 +156,16 @@ branch, the threads and the context.
 
 ## Steps
 
-1. `internal/ranking`: `Resumption`, `Resume` per D1, table-driven
-   drills over hand-built states and one chain.
+1. `internal/ranking`: `Resumption`, `Resume` per D1 (the consumed
+   offer per D3), `OfferAuthorized` and `Eligible` lifted from their
+   two private copies with the callers repointed; table-driven drills
+   over hand-built states and one chain, a disqualification drill
+   and a raw-pushed-offer drill among them.
 2. `cmd/seed/offer.go`: `--resume` per D2 with its drills (alone, with
    `--strongest`, with `--tuple`, `resume_empty` for each reason).
-3. `internal/maintain`: `Reoffer` and the step per D3, the report
-   section, the `--reoffer-ttl` flag in `cmd/seed/maintain.go`; the
+3. `internal/maintain`: `Reoffer`, `Deps.Instant`, `Deps.AppendAt`
+   and the step per D3, the report section, the `--reoffer-ttl` flag
+   and `appendAt` in `cmd/seed/maintain.go`; the
    CLI drills over the forge stand from os-0cd18799: a red return is
    followed by a re-offer the prior configuration's worker lists and
    another does not, the consumed offer's tiers ride along, no
@@ -141,7 +179,8 @@ branch, the threads and the context.
 
 - `next/internal/ranking/**`, `next/internal/maintain/**`
 - `next/cmd/seed/offer.go`, `next/cmd/seed/maintain.go` and their
-  drills
+  drills; `next/internal/project/report.go` (the repointed
+  `offerAuthorized` call only)
 - `next/spec/ranking.md`, `next/spec/offers.md`,
   `next/spec/observations-forge.md`, `next/spec/maintenance.md`
 - `next/lanes/fragments/lane/maintenance.md`,
@@ -161,8 +200,9 @@ Nothing outside `next/**` except the work-product files above. NOT
    returned window's declared tuple and holder after a return by
    observation, and refuses by name after a return by verdict, with
    no return, with no admitted `run.started` on the window, with a
-   start that declared no tuple, and with a suspended or revoked
-   holder.
+   start that declared no tuple, with a suspended or revoked holder,
+   and with an active holder whose tuple `actor.disqualified` has
+   since removed from its `claim` grant.
 2. **The verb scopes by resumption.** `offer publish --resume` appends
    an offer whose `tuples` scope carries the prior tuple, alone or
    beside `--strongest` and `--tuple`; the worker holding that tuple
@@ -171,7 +211,11 @@ Nothing outside `next/**` except the work-product files above. NOT
 3. **The pass re-offers what it returned.** One `maintain run` over a
    red snapshot returns the submission and appends a re-offer scoped
    to the prior tuple with the consumed offer's capabilities and
-   tiers, expiring strictly after its own `ts`; the prior worker's
+   tiers, its `expires` equal to the record's own `ts` plus the ttl
+   exactly (asserted on the appended record, not the payload alone);
+   a well-shaped offer raw-pushed by an ungranted key between the
+   legitimate offer and the claim contributes nothing to the re-offer's
+   scope; the prior worker's
    `offer list` shows it; a window with no declared tuple yields a
    re-offer unscoped by tuple; a second pass over the same subject
    re-offers nothing; a `maintenance`-only key sees the re-offer
@@ -183,8 +227,11 @@ Nothing outside `next/**` except the work-product files above. NOT
 5. **Mutation evidence.** Each fails a drill: a resumption derived
    after a verdict return; a re-offer wider than the consumed offer's
    scope; a re-offer on a subject the pass did not return; an expiry
-   computed from the declared instant; a suspended holder's tuple
-   preferred; the policy table or `ranking.Rules` edited.
+   computed from the declared instant or from a clock other than the
+   record's `ts`; a suspended holder's tuple preferred; a disqualified
+   tuple preferred; the consumed offer taken as the latest folded fact
+   without the authorization replay; the policy table or
+   `ranking.Rules` edited.
 6. `make check` green with coverage measured cold above the gate;
    the generated docs drift-free; no model identifiers in any
    committed artifact.
@@ -192,7 +239,9 @@ Nothing outside `next/**` except the work-product files above. NOT
 **Retention set (existing, shown unharmed):**
 
 - `ranking.Derive`, `Top`, the policy table drill and every existing
-  `offer publish` drill are unchanged; the maintenance pass's reap,
+  `offer publish` and `offer list` drill are unchanged, and the
+  project report's offer section renders as before; the maintenance
+  pass's reap,
   observe, return, lint, file, rebuild and checkpoint drills are
   green; `offer.published` admits exactly as before; the modes
   fixtures reach `done` as before.
@@ -205,10 +254,12 @@ Nothing outside `next/**` except the work-product files above. NOT
 
 ## Expected diff shape
 
-New: `Resume` in `next/internal/ranking/`, `Reoffer` and the step in
-`next/internal/maintain/`, their drills. Modified: `offer.go` (the
-flag), `maintain.go` (the wiring and `--reoffer-ttl`), the forge
-stand drills, four spec pages, the maintenance fragment and its
-generated doc, the three docs files, the receipt. Roughly +700/-20
-lines, all under `next/**` plus the memory files. No admission,
-transition, keyring or protocol change.
+New: `Resume`, `OfferAuthorized` and `Eligible` in
+`next/internal/ranking/`, `Reoffer`, `Deps.Instant`, `Deps.AppendAt`
+and the step in `next/internal/maintain/`, their drills. Modified:
+`offer.go` (the flag; the two predicates become calls), `report.go`
+(one call), `maintain.go` (the wiring, `appendAt` and
+`--reoffer-ttl`), the forge stand drills, four spec pages, the
+maintenance fragment and its generated doc, the three docs files, the
+receipt. Roughly +800/-50 lines, all under `next/**` plus the memory
+files. No admission, transition, keyring or protocol change.
