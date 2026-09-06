@@ -204,6 +204,11 @@ func AcceptedCapabilities(verb string) []string {
 		return []string{CapClaim, CapOperator}
 	case "merge.observed":
 		return []string{CapObserver, CapOperator}
+	// The forge observation (plans/os-0cd18799.md D1): what the forge's
+	// checks and review threads say about the head under review is the
+	// observer's fact, the merge.observed row.
+	case "check.observed":
+		return []string{CapObserver, CapOperator}
 	// The sealed-checks commitment (plans/os-3128535a.md): sealer
 	// only, no operator fallback, mirroring the verdict lane's
 	// posture — authoring isolation is the row's whole point.

@@ -11,6 +11,7 @@
 package transition
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -520,6 +521,16 @@ type SubjectState struct {
 	// cleared on each submission.made; a raw-pushed second override
 	// in one window stays an anomaly, never the fact.
 	Override *OverrideFact
+	// Observation is the latest check.observed folded on the current
+	// submission window, cleared on each submission.made
+	// (plans/os-0cd18799.md D1): what the forge last said about the
+	// head under review. Folded only from its window (review, from
+	// seed/8) and with a well-formed payload; raw pushes outside it
+	// stay anomalies, never facts.
+	Observation *CheckFact
+	// Returns is every applied contract.returned on the subject, in
+	// chain order, with what each cited (D4, D7).
+	Returns []ReturnFact
 	// Offers is every well-shaped offer.published on the subject, in
 	// chain order (plans/os-c61c3392.md): the tolerant fold records
 	// raw pushes too, and the consuming surface applies liveness
@@ -899,6 +910,11 @@ func satAdd(a, b int) int {
 type SubmissionFact struct {
 	Pos    int
 	Signer string
+	// PR is the pull request the submission named, when it named one
+	// (plans/os-0cd18799.md D2): what the maintenance pass polls the
+	// forge for. Empty on a submission that named none, which is
+	// legal and simply never observed.
+	PR string
 }
 
 // milestoneFact is a subject's milestone high-water mark: the highest
@@ -1317,6 +1333,22 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 			}
 			continue
 		}
+		if e.Verb == CheckObservedVerb {
+			// The forge observation folds only from its window: a
+			// review subject at a seed/8 position, with the strict
+			// shape. Raw pushes outside it stay anomalies, never
+			// facts (plans/os-0cd18799.md D1); the admission rule holds
+			// the head binding and the change requirement.
+			if s, ok := f.states[e.Subject]; ok {
+				fact, ferr := ParseCheckObserved(pos, e)
+				if ferr == nil && version.ForgeChecksApply(e.V) && s.State == "review" {
+					s.Observation = &fact
+				} else {
+					s.Anomalies++
+				}
+			}
+			continue
+		}
 		if e.Verb == MergeRequestedVerb {
 			if s, ok := f.states[e.Subject]; ok {
 				var r struct {
@@ -1612,7 +1644,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 							}
 						}
 						if e.Verb == "submission.made" {
-							s.Submissions = append(s.Submissions, SubmissionFact{Pos: pos, Signer: e.Actor})
+							s.Submissions = append(s.Submissions, SubmissionFact{Pos: pos, Signer: e.Actor, PR: submissionPR(e)})
 						}
 						s.dropClaim(fence)
 						continue
@@ -1720,15 +1752,36 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		}
 		s.State, s.Since = to, pos
 		if e.Verb == "submission.made" {
-			s.Submission = &SubmissionFact{Pos: pos, Signer: e.Actor}
+			s.Submission = &SubmissionFact{Pos: pos, Signer: e.Actor, PR: submissionPR(e)}
 			s.Submissions = []SubmissionFact{*s.Submission}
 			s.Verdicts = nil
 			// A new submission opens a new judgment window: the lockout
 			// and the override both bind to the submission they judged
-			// (plans/os-d2497eb7.md).
+			// (plans/os-d2497eb7.md), and so does the forge's word on
+			// the head (plans/os-0cd18799.md D1).
 			s.SubmissionFails = nil
 			s.Deferred = nil
 			s.Override = nil
+			s.Observation = nil
+		}
+		if e.Verb == ContractReturnedVerb {
+			// What the return cited, for the ceiling and the view
+			// (plans/os-0cd18799.md D4, D7): the fail verdict's position
+			// or the red observation's.
+			var r struct {
+				Verdict     string `json:"verdict"`
+				Observation string `json:"observation"`
+			}
+			fact := ReturnFact{Pos: pos, Verdict: -1, Observation: -1}
+			if json.Unmarshal(e.Payload, &r) == nil {
+				if n, err := strconv.Atoi(strings.TrimSpace(r.Verdict)); err == nil && r.Verdict != "" {
+					fact.Verdict = n
+				}
+				if n, err := strconv.Atoi(strings.TrimSpace(r.Observation)); err == nil && r.Observation != "" {
+					fact.Observation = n
+				}
+			}
+			s.Returns = append(s.Returns, fact)
 		}
 		if e.Verb == MergeObservedVerb {
 			// Applied transitions only: a raw-pushed second observation
@@ -1852,10 +1905,10 @@ func (t *Table) StateAt(records []*event.Record, subject string) (SubjectState, 
 // (plans/os-73c00a50.md).
 var completeness = map[string][]string{
 	"intent.filed": {"intent", "tier", "budget", "routing"},
-	// The failed verdict's return path cites the red verdict that
-	// authorizes it (plans/os-d2497eb7.md); the return rule in admit
-	// validates the citation, completeness pins presence.
-	"contract.returned": {"verdict"},
+	// The return path's citation, a fail verdict or from seed/8 a red
+	// observation (plans/os-d2497eb7.md; plans/os-0cd18799.md D4), is
+	// exactly one of two fields, which presence-per-field cannot say:
+	// the return rule in admit holds both presence and the citation.
 }
 
 // CheckCompleteness enforces the completeness rules for the verb's
@@ -1923,6 +1976,80 @@ func emptyJSON(raw json.RawMessage) bool {
 
 // fenceCited extracts a payload's fence citation for the tolerant
 // fold; admission's strict twin lives in the fence rule.
+// submissionPR reads the optional pull-request reference a
+// submission.made names (plans/os-0cd18799.md D2): the merge.observed
+// ref grammar, pr/<n> or <n>, defined from seed/8; at earlier
+// positions the field is undefined and is not read.
+func submissionPR(e *event.Event) string {
+	if !version.ForgeChecksApply(e.V) {
+		return ""
+	}
+	var p struct {
+		PR string `json:"pr"`
+	}
+	if json.Unmarshal(e.Payload, &p) != nil {
+		return ""
+	}
+	return strings.TrimSpace(p.PR)
+}
+
+// ParseCheckObserved decodes check.observed's strict payload into the
+// fact the fold records (plans/os-0cd18799.md D1): every field
+// present but the thread count, the literals in their vocabularies,
+// the head a full lowercase-hex commit, the count non-negative. The
+// binding to the submission's head and the change requirement are
+// the admission rule's, which needs the chain.
+func ParseCheckObserved(pos int, e *event.Event) (CheckFact, error) {
+	var p struct {
+		PR      string `json:"pr"`
+		Head    string `json:"head"`
+		Checks  string `json:"checks"`
+		Threads *int   `json:"unresolved_threads"`
+		Review  string `json:"review"`
+	}
+	dec := json.NewDecoder(bytes.NewReader(e.Payload))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&p); err != nil {
+		return CheckFact{}, &ChainError{Subject: e.Subject, Verb: CheckObservedVerb, Reason: fmt.Sprintf("the payload is the strict object {pr, head, checks, unresolved_threads?, review}: %v", err)}
+	}
+	var missing []string
+	for _, f := range []struct{ name, val string }{{"pr", p.PR}, {"head", p.Head}, {"checks", p.Checks}, {"review", p.Review}} {
+		if strings.TrimSpace(f.val) == "" {
+			missing = append(missing, f.name)
+		}
+	}
+	if len(missing) > 0 {
+		return CheckFact{}, &IncompleteError{Verb: CheckObservedVerb, Subject: e.Subject, Missing: missing}
+	}
+	head := strings.TrimSpace(p.Head)
+	if !fullSHARE.MatchString(head) {
+		return CheckFact{}, &ChainError{Subject: e.Subject, Verb: CheckObservedVerb, Reason: fmt.Sprintf("head %q is not a full lowercase-hex commit — the observer records which head the forge judged", p.Head)}
+	}
+	if !member(CheckStates, p.Checks) {
+		return CheckFact{}, &VocabularyError{Verb: CheckObservedVerb, Subject: e.Subject, Field: "checks", Value: p.Checks, Known: CheckStates}
+	}
+	if !member(ReviewStates, p.Review) {
+		return CheckFact{}, &VocabularyError{Verb: CheckObservedVerb, Subject: e.Subject, Field: "review", Value: p.Review, Known: ReviewStates}
+	}
+	if p.Threads != nil && *p.Threads < 0 {
+		return CheckFact{}, &ChainError{Subject: e.Subject, Verb: CheckObservedVerb, Reason: fmt.Sprintf("unresolved_threads %d is negative — a count, or absent where the forge cannot say", *p.Threads)}
+	}
+	return CheckFact{Pos: pos, Signer: e.Actor, PR: strings.TrimSpace(p.PR), Head: head, Checks: p.Checks, Threads: p.Threads, Review: p.Review}, nil
+}
+
+// fullSHARE is the forge-fact wire form for a commit: a full
+// lowercase-hex sha, the merge.observed convention.
+var fullSHARE = regexp.MustCompile(`^[0-9a-f]{40,64}$`)
+
+func member(list []string, v string) bool {
+	for _, m := range list {
+		if m == v {
+			return true
+		}
+	}
+	return false
+}
+
 func fenceCited(payload []byte) (string, bool) {
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(payload, &m); err != nil {
@@ -2103,6 +2230,65 @@ const (
 	ContractReturnedVerb = "contract.returned"
 	MergeOverriddenVerb  = "merge.overridden"
 )
+
+// CheckObservedVerb is the observer's forge fact about the submission
+// under review (plans/os-0cd18799.md D1; next/spec/observations-forge.md;
+// SEED-NEXT.md §II.4 "External facts"): the checks the forge ran on the
+// submission's head, the review threads still open, the review state.
+// A fact admitted only on review subjects from seed/8, changing no
+// state; it carries counts and literals and never a line of forge
+// prose.
+const CheckObservedVerb = "check.observed"
+
+// The observation's literal vocabularies (D1). A refusal names them.
+var (
+	CheckStates  = []string{"green", "red", "pending"}
+	ReviewStates = []string{"approved", "changes_requested", "none"}
+)
+
+// CheckFact is the folded check.observed: the position and signer, the
+// pull request and head it observed, the combined check state, the
+// unresolved-thread count (nil where the forge cannot say: Forgejo has
+// no thread resolution, next/spec/forges.md), and the review state.
+type CheckFact struct {
+	Pos     int
+	Signer  string
+	PR      string
+	Head    string
+	Checks  string
+	Threads *int
+	Review  string
+}
+
+// Red reports whether the observation says the submission is not
+// mergeable as it stands (D3): a red check, an unresolved thread, or
+// a review requesting changes. Pending alone is not red.
+func (c CheckFact) Red() bool {
+	return c.Checks == "red" || (c.Threads != nil && *c.Threads > 0) || c.Review == "changes_requested"
+}
+
+// Same reports whether two observations carry the same facts, which
+// is what admission refuses a second time (D1): an unchanged poll
+// appends nothing.
+func (c CheckFact) Same(o CheckFact) bool {
+	if c.PR != o.PR || c.Head != o.Head || c.Checks != o.Checks || c.Review != o.Review {
+		return false
+	}
+	if (c.Threads == nil) != (o.Threads == nil) {
+		return false
+	}
+	return c.Threads == nil || *c.Threads == *o.Threads
+}
+
+// ReturnFact is an applied contract.returned and what it cited: the
+// fail verdict's position or the red observation's, the other -1
+// (plans/os-0cd18799.md D4). The maintenance pass counts the
+// observation-cited returns against its ceiling (D7).
+type ReturnFact struct {
+	Pos         int
+	Verdict     int
+	Observation int
+}
 
 // OfferPublishedVerb is the supervisor's eligibility-scoped invitation
 // to claim (plans/os-c61c3392.md; next/spec/offers.md; SEED-NEXT.md

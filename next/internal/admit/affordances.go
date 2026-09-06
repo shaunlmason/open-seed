@@ -57,16 +57,21 @@ type probeView struct {
 	// synthesize the payload shape THAT version admits, or the
 	// affordance list would say a verb is unavailable because the
 	// probe spoke the wrong dialect (plans/os-8e53ffd9.md).
-	version     string
-	now         string
-	expires     string
-	fence       string
-	active      bool
-	reservation string
-	submission  string
-	verdict     string
-	packet      string
-	escalation  string
+	version string
+	now     string
+	expires string
+	// observationHead is the head the submission under review names,
+	// observationChecks a check state differing from the standing
+	// observation's, and redObservation the standing red observation's
+	// position when one stands on that head (plans/os-0cd18799.md).
+	observationHead, observationChecks, redObservation, observationPR string
+	fence                                                             string
+	active                                                            bool
+	reservation                                                       string
+	submission                                                        string
+	verdict                                                           string
+	packet                                                            string
+	escalation                                                        string
 	// standing is whether a question stands right now: several
 	// synthesizers must carry its citation only then.
 	standing bool
@@ -607,7 +612,24 @@ var affordanceCatalog = []struct {
 	{"decision.recorded", func(v *probeView) string {
 		return `{"escalation": "` + v.escalation + `", "choice": "` + v.choice + `"}`
 	}},
-	{"contract.returned", func(v *probeView) string { return `{"verdict": "` + v.verdict + `"}` }},
+	{"contract.returned", func(v *probeView) string {
+		// The return cites what stands (plans/os-0cd18799.md D4): a
+		// red observation where one stands on the head, else the
+		// verdict. Either is one legal citation; the rule refuses the
+		// other by name.
+		if v.redObservation != "" {
+			return `{"observation": "` + v.redObservation + `"}`
+		}
+		return `{"verdict": "` + v.verdict + `"}`
+	}},
+	{"check.observed", func(v *probeView) string {
+		// The forge observation probe (plans/os-0cd18799.md D1) speaks
+		// the head under review and a check state that DIFFERS from
+		// the standing observation's, since an unchanged observation
+		// refuses by design and the probe asks whether a new fact
+		// would admit.
+		return `{"pr": "` + v.observationPR + `", "head": "` + v.observationHead + `", "checks": "` + v.observationChecks + `", "review": "none"}`
+	}},
 	{"claim.taken", func(v *probeView) string { return `{}` }},
 	{"claim.released", func(v *probeView) string {
 		return `{"fence": "` + v.fence + `", "packet": ` + v.packet + `}`
@@ -748,6 +770,11 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		actor:       fp,
 		approval:    "0",
 		erasable:    strings.Repeat("0", 64),
+		// A head the rule refuses where no submission stands: a
+		// well-formed citation, so illegality is the rule set's.
+		observationHead:   strings.Repeat("0", 40),
+		observationChecks: "red",
+		observationPR:     "probe",
 	}
 	v.version = ctx.Active
 	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
@@ -789,6 +816,21 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 			}
 			if s.Submission != nil {
 				v.submission = fmt.Sprintf("%d", s.Submission.Pos)
+				if head, ok := submissionHead(ctx, subject, s); ok {
+					v.observationHead = head
+				}
+				if s.Submission.PR != "" {
+					v.observationPR = s.Submission.PR
+				}
+			}
+			v.observationChecks = "red"
+			if s.Observation != nil {
+				if s.Observation.Checks == "red" {
+					v.observationChecks = "green"
+				}
+				if s.Observation.Red() && s.Observation.Head == v.observationHead {
+					v.redObservation = fmt.Sprintf("%d", s.Observation.Pos)
+				}
 			}
 			if s.Verdict != nil {
 				v.verdict = fmt.Sprintf("%d", s.Verdict.Pos)

@@ -20,7 +20,7 @@ var knownGroups = map[string]bool{
 	"version": true, "init": true, "ledger": true, "project": true,
 	"situation": true, "obs": true, "plan": true, "verdict": true,
 	"seal": true, "offer": true, "budget": true, "claim": true,
-	"escalation": true, "decision": true, "submission": true, "merge": true,
+	"escalation": true, "decision": true, "submission": true, "merge": true, "check": true,
 	"reconcile": true, "maintain": true, "lane": true, "message": true,
 	"doctor": true, "protections": true, "perf": true, "import": true,
 	"preseed": true, "run": true, "eval": true, "knowledge": true,

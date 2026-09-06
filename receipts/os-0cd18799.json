@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-0cd18799",
+  "plan_path": "plans/os-0cd18799.md",
+  "plan_sha256": "b4e948e3a099727961c78fdfdbe24fefc026282395f0cad8800a012b9524e9bf",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/admit/ ./internal/obligation/ ./internal/protections/ ./internal/maintain/ ./cmd/seed/ -run 'CheckObserved|Unmergeable|ReturnedByObservation|ObserverChecks|MaintainObserve|ReturnCeiling|Injection' -count=1",
+    "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}

@@ -4304,3 +4304,133 @@ corrected it, and the implementation holds to the correction.
 - **`defer` stays where it was.** The verdict group's registry row
   lists `receipt, render, check, traces`; `defer` was unlisted before
   this card and this card does not re-home it.
+
+## The admission random walk: an instrument that explores (os-21bf939f)
+
+The III.I class ran over every prefix of one hand-written walk, and
+every generator in the tree walks a scripted shape, so rule
+interactions at positions no script reaches were tested only where
+someone thought of the case. The walk (plans/os-21bf939f.md) draws
+instead: a lane, a subject and a move at every position, the listed
+move re-drafted the way the sweep re-drafts and checked, the
+forbidden move drafted by a lane holding the capability and expected
+to refuse on the table's ground. What it found on its first runs, and
+what was decided about each:
+
+- **The sweep's re-draft copy lacked the escalation anchors.** The
+  first eight walks failed the III.I class at once: `decision.recorded`
+  listed for root on an escalated contract, re-drafted by
+  `probeViewAt` as an answer citing escalation "", refused. The copy
+  is deliberately independent of the production view so drift between
+  them fails the class; here the drift was the copy's, missing an
+  anchor the scenario never needed. Fixed in the copy (the standing
+  question's position and first option, from the fold, as the
+  production view derives them). A test-helper change under D7: no
+  production surface moved.
+- **Verb-scoped rules refuse ahead of the lifecycle rule, by the rule
+  set's order.** The plan's transition oracle asked for the lifecycle
+  rule's own error on every forbidden draft. The rule set runs fence
+  (position 862) and escalation (982) before lifecycle (2340), so a
+  forbidden exit drafted with the catalog's `"fence": "0"` on a
+  subject holding no claim refuses as a fence citing nothing active,
+  and `escalation.raised` while a question stands, or
+  `decision.recorded` where none does, refuses as the escalation
+  rule's. Each is a truthful refusal on a ground the illegal state
+  implies; none masks the transition. The oracle accepts exactly those,
+  enumerated by type and condition (`FenceError` with `Active < 0` on a
+  draft that cites a fence; `EscalationError` on the two verbs that
+  rule scopes) and fails any other earlier refusal as the named
+  refusal-ordering class, so a new case is classified by a human
+  rather than absorbed. The lifecycle rule's `ContentionError` on an
+  exclusive verb counts as reached: it is that rule's refusal of a
+  second claim, the ceiling's claim clause.
+- **Reached is counted per run, not per walk.** At the fast size a
+  walk's six forbidden draws can all land on the fence and escalation
+  rules by chance (seed 20260906001 at 24 steps did), which says
+  nothing about the instrument. The run must reach the lifecycle rule
+  somewhere; a walk need not.
+- **Two holders of the walk's own.** The shared scenario revokes its
+  holder at seed/3, so a walk started from its end had no
+  claim-capable lane. Root enrolls and grants two holders in the
+  preamble, through the same admit path as every step; two rather than
+  one puts contention within the draw.
+- **The walk lives in `admit_test`, behind an export shim.** The end
+  oracle is `simulate.Audit`, and that package imports `admit`, so the
+  walker cannot sit in the internal test package (an import cycle). It
+  sits in the external one and reads the shared scenario, the sweep's
+  re-draft and the fixtures through `export_test.go`; three consumers
+  of one scenario and one re-draft, no copy of either.
+- **The epilogue closes what the walk left open, through the listed
+  path.** The audit's abandonment bar reads an open claim window at the
+  chain's end as silent abandonment, and a walk stops mid-window by
+  construction. The walk lifts a standing halt and releases every
+  active claim by its holder before the audit, each as a listed verb
+  re-drafted and checked, so the epilogue is itself III.I evidence and
+  the walk's exits are the deliberate ones the lease clause names.
+- **Sizes.** Eight walks of forty-eight steps measured about eleven
+  seconds locally, over the plan's five; the steps were halved first,
+  as D6 orders, and eight by twenty-four measures about five. The
+  scheduled size is two hundred by ninety-six, about three seconds a
+  walk on the implementing host, as one step on the weekly
+  `perf-scale` job. Sixty walks of ninety-six steps ran green locally
+  before the sizes were fixed.
+- **Nothing in production moved.** No walk found a forbidden verb
+  admitted, a fold disagreeing with the table, a non-lifecycle verb
+  moving a state, a nondeterministic listing, or a red audit bar. The
+  findings were the instrument's own, above.
+
+## The forge says the submission is not mergeable (os-0cd18799)
+
+Not a plan item: a §3 backlog card against charter §II.4 (`check.observed`,
+named there and in the verb catalog and built nowhere), §II.8, §II.11 and
+§II.13. The gap: after `submission.made` nothing was owed between the pull
+request opening and the merge being observed, the verifier never read the
+forge, and the return cited a fail verdict alone, so an agent opened the
+pull request and stopped. What landed (`next/spec/observations-forge.md`):
+
+- **The fact is the observer's, and it binds to the head.**
+  `check.observed` admits on review subjects from `seed/8` with `{pr, head,
+  checks, unresolved_threads?, review}`; the head must equal the tail of
+  the submission packet's `base` range, so a stale poll never stands for
+  the head being judged. Literals and a count only: the reader carries no
+  thread body, comment, check output or reviewer name, and the injection
+  sweep plants its marker in every field the fakes serve.
+- **Change is the admission condition.** An unchanged observation refuses
+  naming the standing one, at the boundary and before signing in `seed
+  check observe`, so the ledger's share is bounded by change rather than
+  by polling cadence.
+- **Absent is not zero.** Forgejo has no thread resolution, so its
+  observation carries no thread count rather than none; the forges page
+  names it as it names the pull-request rule.
+- **No checks is green.** A head the forge lists no checks for is green,
+  the v1 engine's `checksGate` posture: nothing failed and nothing runs.
+  Pending is neither red nor green and owes nothing.
+- **The return by observation records no lockout.** The v1 `reject` edge
+  blacklists the author; a red pull request wants its author back, so the
+  return adds no fail and no rejected fact and the prior submitter is the
+  natural next claimant. The table row is unchanged; the citation rule
+  widened to exactly one of `verdict` or `observation`, the latest
+  observation only.
+- **`merge.requested` refuses while red on both citation paths.** The
+  override overrules a verdict and says nothing about the forge; a chain
+  branch protection would hold must not sit `unreconciled`.
+- **The verdict is owed only under review.** The drift sweep found the
+  first draft advertising `submission.pending` on a subject a return by
+  observation had re-readied unjudged, a debt nobody could discharge, and
+  `verdict.unmerged` beside a red observation while `merge.requested`
+  refused. Both are suppressed by derivation, not by a special case in the
+  sweep.
+- **The pass re-reads between observe and return.** `maintain.Deps`
+  gains `Observe`, `Refresh` and `ReturnCeiling`; the return reads the
+  fresh fold so it cites the observation the pass just recorded, rather
+  than widening `Append` to return positions.
+- **The ceiling is a count on the chain.** `Returns` on the fold records
+  what each return cited; the fourth observation-cited return under the
+  default of three is `escalation.raised` with the submission packet's
+  base, the observation's position and head, the count, and three
+  answers. Rounds are counted, never timed.
+- **Named follow-ups, not built here.** A forge webhook as an advisory
+  wake adapter (§II.9); preferring the prior submitter's tuple for the
+  re-offer, supervisor ranking policy (Phase 13 item 7), filed as
+  os-29e2fef2.
+

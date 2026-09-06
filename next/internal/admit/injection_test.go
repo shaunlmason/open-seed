@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
@@ -296,7 +297,7 @@ func TestNoHostileTextWidensTheDispatcherSet(t *testing.T) {
 		for _, v := range Affordances(c, dispatcher, "c-1") {
 			reachable[v] = true
 		}
-		view := probeViewAt(c, "c-1")
+		view := probeViewAt(c, "c-1", time.Now())
 		for _, p := range affordanceCatalog {
 			if reachable[p.verb] {
 				continue

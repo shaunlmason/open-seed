@@ -1989,6 +1989,23 @@ written by the two implementing sessions, one voice.
   for what it shows and flips nothing on it; the run is red on a lost
   append until os-5063e8ba's re-link lands, which is the carded
   defect, not a regression)
+- the forge says the submission is not mergeable (charter §II.4's
+  `check.observed`, §II.13's checks gate on the contract loop, III.D
+  row 7) — os-0cd18799 — **in review** (task PR against plan #344:
+  `check.observed` at `seed/8`, the observer's fact on the head under
+  review bound to the submission's packet head and admitted only when
+  it changes; `submission.made --pr`; the `submission.unmergeable`
+  obligation owed by the dispatch lane with the head on the row;
+  `contract.returned` citing the latest red observation with no
+  lockout, `merge.requested` refusing while the forge says red;
+  `Observer.Checks` over GitHub, Forgejo (thread count nil) and the
+  snapshot; `seed check observe`; the maintenance pass's observe and
+  return steps with the return ceiling escalating on the fourth red
+  return; `next/spec/observations-forge.md`; the implementer fragment's
+  red-return paragraph; the walk's `seed8`, `review-c6`, `observed-c6`
+  and `returned-c6` stations; III.D row 7 met by construction and left
+  for the exit record to flip; the ranking follow-up D8 names filed as
+  os-29e2fef2)
 - sharded admission intake (III.B row 6, MAY) — os-7953612b —
   **backlog** (filed; a true extra whose absence conforms: the row is
   a permission, and os-9ef9ab34 marks it met by abstention, since the
@@ -2009,6 +2026,20 @@ written by the two implementing sessions, one voice.
   filed from the scale benchmark's second measurement; P1: a lost append is what III.C row 4 forbids; the
   drill first, then the fix, and the loop re-linking on a `bad_prev`
   whose cited tip is not the tip it fetched)
+
+- a random-walk property test over admission (III.I over random
+  positions, the §I.2 ceiling as oracles; the 2026-09-06
+  formal-methods survey's first card, docs/next-build-plan.md §3) —
+  os-21bf939f — **review** (task PR against plan #349:
+  `TestAdmissionRandomWalk` in `next/internal/admit`, a seeded walker
+  from the shared scenario with four oracles a step and the five-bar
+  audit plus a ceiling coverage map at the end of every walk; found
+  the sweep's re-draft copy missing the escalation anchors, fixed in
+  the copy; eight walks of twenty-four steps under `make check-next`,
+  two hundred of ninety-six on the weekly `perf-scale` job)
+- an exhaustive interleaving check of the append loop and halt (the
+  survey's second card) — os-07e6e76c — **backlog** (blocked on
+  os-21bf939f for its generator and predicates)
 
 ## A fixture that escaped the hardening guard (os-222189a3)
 
@@ -2577,13 +2608,19 @@ promotion criteria are restated here.
 
 Of the two rows outside III.R that stood open on the tree's own
 account, III.L row 4 is drilled for allow and deny by os-8ecef90f (plan
-#320, task PR in review) and moves to `partial`, its require-approval
-mode being os-5781a026's, and III.A row 7 (os-db5cd353) remains.
-account, III.A row 7 is met by os-db5cd353 (plan #324, task PR in
-review) and III.L row 4 by os-8ecef90f (plan #320, task PR in review),
-so once both merge the doctor reads 28 outstanding rows: 21 Phase 13
-rows the exit record flips, C.4 and Q.7 routed to the backlog run and
-to promotion, and III.R's seven, none of which an agent can supply.
+#320, task PR #321, merged) and stands `partial`, its require-approval
+mode being os-5781a026's, and III.A row 7 is met by os-db5cd353 (plan
+#324, task PR #325, merged), so the doctor reads 28 outstanding rows:
+21 Phase 13 rows the exit record flips, C.4 and Q.7 routed to the
+backlog run and to promotion, and III.R's seven, none of which an
+agent can supply. (This paragraph carried two overlapping versions of
+itself after #338 merged; the merged reading is the one above.)
+
+The 2026-09-06 formal-methods survey (docs/next-build-plan.md §3)
+filed two backlog cards, listed in the backlog section above:
+os-21bf939f, the admission random walk, is in review against plan
+#349; os-07e6e76c, the append-loop interleaving check, is blocked on
+it.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.

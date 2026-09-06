@@ -209,6 +209,20 @@ Who signs which step is the keyring's: asking for the merge accepts
 `claim` or `operator` (the work lane's act), observing it accepts
 `observer` or `operator`.
 
+## The forge's word before the merge (plans/os-0cd18799.md)
+
+From `seed/8` the observer records what the forge says about the head
+under review as `check.observed`, and `contract.returned` cites a red
+observation as well as a fail verdict: `{"verdict": <position>}` or
+`{"observation": <position>}`, exactly one, the observation the latest
+on the subject and red, with no lockout recorded. `merge.requested`
+refuses on either citation path while a red observation stands on the
+head under review, naming it: a chain that branch protection would
+hold anyway must not sit `unreconciled` behind it. A later green
+observation supersedes. `merge.overridden` is untouched. The fact, the
+obligation, the return and the maintenance pass that performs it are
+[`observations-forge.md`](observations-forge.md).
+
 ## Merge facts from the forge (Phase 13 item 3)
 
 `merge.observed`'s `{merged, pr}` is forge-neutral. `seed merge observe

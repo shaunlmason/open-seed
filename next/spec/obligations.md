@@ -50,6 +50,7 @@ with its fact:
 | `verdict.human` | `verdict.rendered` | [`verdicts.md`](verdicts.md) |
 | `request.pending` | `request.answered` | [`requests.md`](requests.md) |
 | `approval.pending` | `approval.denied`, `approval.granted` | [`protocol.md`](protocol.md), "Per-verb approval" |
+| `submission.unmergeable` | `contract.returned` (citing the observation) | [`observations-forge.md`](observations-forge.md) |
 
 ## The kinds
 
@@ -67,8 +68,22 @@ with its fact:
   lane, since a human is a key with operator standing, and discharged
   by the `verdict.rendered` such a key makes on the same submission
   ([`verdicts.md`](verdicts.md), "The rubric and the scorecard").
-- **`submission.pending`** — a submission no verdict cites; owed by
-  the verifier lane.
+- **`submission.pending`** — a submission no verdict cites, while the
+  subject is under review; owed by the verifier lane. A return by
+  observation ([`observations-forge.md`](observations-forge.md))
+  re-readies the subject unjudged, and a verdict there would be a debt
+  nobody can discharge.
+- **`submission.unmergeable`** — the forge's latest observation on the
+  submission under review says it is not mergeable as it stands: a red
+  check, an unresolved review thread, or a review requesting changes
+  ([`observations-forge.md`](observations-forge.md)); from `seed/8`.
+  Owed by the dispatch lane (`lane:dispatch`), since the return is
+  queue management; `since` is the observation's position; the row
+  carries `head`, so the read says which revision is red; discharged
+  by `contract.returned` citing the observation. Not emitted for
+  `pending` alone, nor once a fail verdict stands on the window, where
+  the return is owed on the verdict's account; while it stands the
+  merge debt is not advertised, because `merge.requested` refuses.
 - **`request.pending`** — an inbound request nobody has answered
   ([`requests.md`](requests.md)); owed by the dispatch lane
   (`lane:dispatch`), one row per subject carrying the oldest

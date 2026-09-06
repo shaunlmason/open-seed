@@ -26,15 +26,17 @@ import (
 )
 
 // probeViewAt is the sweep's independent copy of the affordance
-// computation's view derivation (the anchors a probe payload cites:
+// computation's view derivation, at the clock the caller passes (the
+// random walk fixes it so a seed replays byte for byte,
+// plans/os-21bf939f.md D5; the sweep passes the wall clock) (the anchors a probe payload cites:
 // the active fence, an open reservation, the bound submission, the
 // standing verdict, placeholders where absent). It is deliberately
 // not shared with the production derivation in Affordances: if the
 // two ever disagree on an anchor, the re-drafted record diverges
 // from the probe and the class fails, which is exactly the drift
 // signal this test exists to raise.
-func probeViewAt(ctx *Context, subject string) *probeView {
-	now := time.Now().UTC()
+func probeViewAt(ctx *Context, subject string, now time.Time) *probeView {
+	now = now.UTC()
 	v := &probeView{
 		now:         now.Format(time.RFC3339),
 		expires:     now.Add(time.Hour).Format(time.RFC3339),
@@ -47,6 +49,11 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 		request:     "0",
 		approval:    "0",
 		erasable:    strings.Repeat("0", 64),
+		// The observation probe's defaults, as the production view
+		// carries them (plans/os-0cd18799.md).
+		observationHead:   strings.Repeat("0", 40),
+		observationChecks: "red",
+		observationPR:     "probe",
 	}
 	if ctx.Lifecycle != nil {
 		// The request probes' citations, as the production view
@@ -94,9 +101,41 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 			}
 			if s.Submission != nil {
 				v.submission = fmt.Sprintf("%d", s.Submission.Pos)
+				// The forge observation's citations, as the production
+				// view carries them (plans/os-0cd18799.md): the head
+				// and pull request the submission names, a check state
+				// differing from the standing observation's, and the
+				// standing red observation the return cites.
+				if head, ok := submissionHead(ctx, subject, s); ok {
+					v.observationHead = head
+				}
+				if s.Submission.PR != "" {
+					v.observationPR = s.Submission.PR
+				}
+			}
+			v.observationChecks = "red"
+			if s.Observation != nil {
+				if s.Observation.Checks == "red" {
+					v.observationChecks = "green"
+				}
+				if s.Observation.Red() && s.Observation.Head == v.observationHead {
+					v.redObservation = fmt.Sprintf("%d", s.Observation.Pos)
+				}
 			}
 			if s.Verdict != nil {
 				v.verdict = fmt.Sprintf("%d", s.Verdict.Pos)
+			}
+			// The standing question, as the production view carries
+			// it: the answer cites the escalation's position and its
+			// first option. The random walk found the copy without
+			// it (plans/os-21bf939f.md; a listed decision.recorded
+			// re-drafted as an answer to no question).
+			if s.Escalation != nil {
+				v.escalation = fmt.Sprintf("%d", s.Escalation.Pos)
+				v.standing = true
+				if len(s.Escalation.Options) > 0 {
+					v.choice = s.Escalation.Options[0].ID
+				}
 			}
 			view := BudgetViewAt(ctx.Records, ctx.Table, subject, s)
 			if len(view.Open) > 0 {
@@ -166,7 +205,7 @@ func TestAffordanceRegressionClass(t *testing.T) {
 				}
 			}
 			fp := fpOf(t, key)
-			v := probeViewAt(ctx, pair.subject)
+			v := probeViewAt(ctx, pair.subject, time.Now())
 			// The request probe names the prober as the actor that
 			// will act, as the production view does.
 			v.actor = fp

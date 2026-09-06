@@ -28,6 +28,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
+	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -142,9 +143,42 @@ type Refusal struct {
 	Reason  string `json:"reason"`
 }
 
+// Observed is one forge observation the pass recorded
+// (plans/os-0cd18799.md D6): the subject, the pull request and head,
+// and the three literals; never a line of forge prose.
+type Observed struct {
+	Subject string `json:"subject"`
+	PR      string `json:"pr"`
+	Head    string `json:"head"`
+	Checks  string `json:"checks"`
+	Threads *int   `json:"unresolved_threads,omitempty"`
+	Review  string `json:"review"`
+}
+
+// Returned is one submission the pass returned to the queue on the
+// forge's word: the subject, the observation cited and its head, and
+// how many observation-cited returns the subject now carries.
+type Returned struct {
+	Subject     string `json:"subject"`
+	Observation int    `json:"observation"`
+	Head        string `json:"head"`
+	Returns     int    `json:"returns"`
+}
+
+// Escalated is one subject the pass froze at the return ceiling
+// (D7): the count that reached it and the ceiling itself.
+type Escalated struct {
+	Subject string `json:"subject"`
+	Returns int    `json:"returns"`
+	Ceiling int    `json:"ceiling"`
+}
+
 // Report is what one pass did.
 type Report struct {
 	Reaped     []Reap                 `json:"reaped"`
+	Observed   []Observed             `json:"observed"`
+	Returned   []Returned             `json:"returned"`
+	Escalated  []Escalated            `json:"escalated"`
 	Skipped    []Skip                 `json:"skipped"`
 	Findings   []reconcile.Finding    `json:"findings"`
 	Filed      []Filing               `json:"filed"`
@@ -152,6 +186,12 @@ type Report struct {
 	Checkpoint *checkpoint.Checkpoint `json:"checkpoint,omitempty"`
 	Refusals   []Refusal              `json:"refusals"`
 }
+
+// DefaultReturnCeiling bounds the observation-cited returns one
+// subject may carry before the pass escalates instead
+// (plans/os-0cd18799.md D7): SEED-NEXT.md §II.13's "max revisions" on
+// the contract loop.
+const DefaultReturnCeiling = 3
 
 // Deps is everything the pass reads and everything it does. The
 // effects are injected so the rules above are drillable without a
@@ -185,6 +225,20 @@ type Deps struct {
 	// unsettled-run lint CONSUMES these; re-deriving the anchoring
 	// here would put it in two places (D2).
 	Obligations []obligation.Row
+	// Observe reads what the forge says about a pull request's head
+	// (plans/os-0cd18799.md D6). Nil means no forge is configured: the
+	// observe step then reports every observable submission skipped
+	// with that reason, never silently, and CI runs that way.
+	Observe func(pr string) (protections.Observation, error)
+	// Refresh re-reads the ledger between the observe step and the
+	// return step, so the return cites the observation the pass just
+	// recorded rather than the opening view's. Nil means the opening
+	// fold and obligations stand for both.
+	Refresh func() (*transition.Fold, []obligation.Row, error)
+	// ReturnCeiling bounds the observation-cited returns one subject
+	// may carry before the pass escalates instead (D7); zero means
+	// DefaultReturnCeiling.
+	ReturnCeiling int
 
 	// Corroborate answers the ledger half of the reap rule for one
 	// subject's active fence. Injected because the derivation belongs
@@ -204,15 +258,23 @@ type Deps struct {
 	Materialize func() (body []byte, position int, err error)
 }
 
-// Run executes one pass in the fixed order: reap, lint, file, rebuild,
-// checkpoint. The order matters in one place only — the checkpoint is
-// last, because it attests to the state the rest of the pass produced.
+// Run executes one pass in the fixed order: reap, observe, return,
+// lint, file, rebuild, checkpoint. The observations come before the
+// lints so the lints read fresh facts, the return before the filing so
+// a returned subject is not also filed as a finding, and the
+// checkpoint is last, because it attests to the state the rest of the
+// pass produced (plans/os-0cd18799.md D6).
 func Run(d Deps) (Report, error) {
 	rep := Report{
-		Reaped: []Reap{}, Skipped: []Skip{}, Findings: []reconcile.Finding{},
+		Reaped: []Reap{}, Observed: []Observed{}, Returned: []Returned{}, Escalated: []Escalated{},
+		Skipped: []Skip{}, Findings: []reconcile.Finding{},
 		Filed: []Filing{}, Rebuilt: []string{}, Refusals: []Refusal{},
 	}
 	d.reap(&rep)
+	d.observe(&rep)
+	if err := d.returnRed(&rep); err != nil {
+		return rep, err
+	}
 	rep.Findings = append(rep.Findings, d.lint(&rep)...)
 	d.file(&rep)
 	if err := d.rebuild(&rep); err != nil {
@@ -292,6 +354,200 @@ func (d Deps) reap(rep *Report) {
 			})
 		}
 	}
+}
+
+// observe records what the forge says about every submission under
+// review that names a pull request (plans/os-0cd18799.md D6): one
+// check.observed per subject whose observation differs from the
+// standing one, a skip with its reason for every subject it cannot
+// or need not observe, a refusal reported rather than retried.
+func (d Deps) observe(rep *Report) {
+	if d.Fold == nil {
+		return
+	}
+	for _, id := range d.Fold.Subjects() {
+		s, ok := d.Fold.State(id)
+		if !ok || s.State != "review" || s.Submission == nil || s.Submission.PR == "" {
+			continue
+		}
+		pr := s.Submission.PR
+		if d.Observe == nil {
+			rep.Skipped = append(rep.Skipped, Skip{Subject: id, State: "review",
+				Because: fmt.Sprintf("no forge is configured, so %s is not observed — pass --forge to poll it", pr)})
+			continue
+		}
+		o, err := d.Observe(pr)
+		if err != nil {
+			rep.Skipped = append(rep.Skipped, Skip{Subject: id, State: "review",
+				Because: fmt.Sprintf("reading %s from the forge: %v", pr, err)})
+			continue
+		}
+		fact := transition.CheckFact{PR: pr, Head: o.Head, Checks: o.Checks, Threads: o.UnresolvedThreads, Review: o.Review}
+		if s.Observation != nil && s.Observation.Same(fact) {
+			rep.Skipped = append(rep.Skipped, Skip{Subject: id, State: "review",
+				Because: fmt.Sprintf("the observation at position %d already says exactly this about %s — an unchanged poll appends nothing", s.Observation.Pos, pr)})
+			continue
+		}
+		payload, err := ObservationPayload(pr, o)
+		if err != nil {
+			rep.Refusals = append(rep.Refusals, Refusal{Verb: transition.CheckObservedVerb, Subject: id, Reason: err.Error()})
+			continue
+		}
+		if d.Append == nil {
+			continue
+		}
+		if err := d.Append(transition.CheckObservedVerb, id, payload); err != nil {
+			rep.Refusals = append(rep.Refusals, Refusal{Verb: transition.CheckObservedVerb, Subject: id, Reason: err.Error()})
+			continue
+		}
+		rep.Observed = append(rep.Observed, Observed{Subject: id, PR: pr, Head: o.Head, Checks: o.Checks, Threads: o.UnresolvedThreads, Review: o.Review})
+	}
+}
+
+// ObservationPayload renders check.observed's strict object from the
+// forge's answer: literals and a count, the thread field absent where
+// the forge cannot say. One renderer for the pass and the verb, so
+// the two cannot disagree about the shape.
+func ObservationPayload(pr string, o protections.Observation) ([]byte, error) {
+	out := map[string]any{"pr": pr, "head": o.Head, "checks": o.Checks, "review": o.Review}
+	if o.UnresolvedThreads != nil {
+		out["unresolved_threads"] = *o.UnresolvedThreads
+	}
+	return json.Marshal(out)
+}
+
+// returnRed returns every submission the forge's latest word says is
+// not mergeable (plans/os-0cd18799.md D6, D7): for each
+// submission.unmergeable row the fresh view carries, a
+// contract.returned citing the observation, unless the subject has
+// reached the return ceiling, in which case an escalation carrying
+// the packet, the observation and one decision freezes it instead.
+func (d Deps) returnRed(rep *Report) error {
+	fold, rows := d.Fold, d.Obligations
+	if d.Refresh != nil {
+		fresh, freshRows, err := d.Refresh()
+		if err != nil {
+			return err
+		}
+		fold, rows = fresh, freshRows
+	}
+	if fold == nil {
+		return nil
+	}
+	ceiling := d.ReturnCeiling
+	if ceiling <= 0 {
+		ceiling = DefaultReturnCeiling
+	}
+	for _, row := range rows {
+		if row.Kind != obligation.KindSubmissionUnmergeable {
+			continue
+		}
+		s, ok := fold.State(row.Subject)
+		if !ok || s.Observation == nil || s.State != "review" {
+			continue
+		}
+		if d.Append == nil {
+			continue
+		}
+		if AtCeiling(s, ceiling) {
+			payload, err := CeilingPacket(d.Records, row.Subject, s, ceiling)
+			if err != nil {
+				rep.Refusals = append(rep.Refusals, Refusal{Verb: "escalation.raised", Subject: row.Subject, Reason: err.Error()})
+				continue
+			}
+			if err := d.Append("escalation.raised", row.Subject, payload); err != nil {
+				rep.Refusals = append(rep.Refusals, Refusal{Verb: "escalation.raised", Subject: row.Subject, Reason: err.Error()})
+				continue
+			}
+			rep.Escalated = append(rep.Escalated, Escalated{Subject: row.Subject, Returns: ReturnsByObservation(s), Ceiling: ceiling})
+			continue
+		}
+		payload, _ := json.Marshal(map[string]string{"observation": strconv.Itoa(s.Observation.Pos)})
+		if err := d.Append(transition.ContractReturnedVerb, row.Subject, payload); err != nil {
+			rep.Refusals = append(rep.Refusals, Refusal{Verb: transition.ContractReturnedVerb, Subject: row.Subject, Reason: err.Error()})
+			continue
+		}
+		rep.Returned = append(rep.Returned, Returned{Subject: row.Subject, Observation: s.Observation.Pos, Head: s.Observation.Head, Returns: ReturnsByObservation(s) + 1})
+	}
+	return nil
+}
+
+// ReturnsByObservation counts the subject's applied returns that
+// cited an observation rather than a verdict: the quantity the
+// ceiling bounds (plans/os-0cd18799.md D7). Verdict-cited returns are
+// the verifier's routing and do not count.
+func ReturnsByObservation(s transition.SubjectState) int {
+	n := 0
+	for _, r := range s.Returns {
+		if r.Observation >= 0 {
+			n++
+		}
+	}
+	return n
+}
+
+// AtCeiling reports whether the next red return would exceed the
+// ceiling: with the default of three, the fourth red observation
+// escalates rather than returning. The ceiling is a declared
+// threshold, never a clock: rounds are counted on the chain.
+func AtCeiling(s transition.SubjectState, ceiling int) bool {
+	if ceiling <= 0 {
+		ceiling = DefaultReturnCeiling
+	}
+	return ReturnsByObservation(s) >= ceiling
+}
+
+// CeilingPacket composes the escalation.raised payload the pass
+// appends at the ceiling (D7): a packet naming the standing
+// observation's position and head and the count, and one decision
+// with three answers. Literals and counts only, never forge prose.
+func CeilingPacket(records []*event.Record, subject string, s transition.SubjectState, ceiling int) ([]byte, error) {
+	if s.Observation == nil || s.Submission == nil {
+		return nil, fmt.Errorf("no observation stands on %s", subject)
+	}
+	acceptance := "the contract's acceptance spec, which the fold does not carry"
+	if s.Acceptance != nil && s.Acceptance.Ref != "" {
+		acceptance = s.Acceptance.Ref
+	}
+	base := packet.ZeroRange
+	if s.Submission.Pos >= 0 && s.Submission.Pos < len(records) {
+		if p, err := packet.FromPayload(subject, records[s.Submission.Pos].Event.Payload); err == nil && p.Base != "" {
+			base = p.Base
+		}
+	}
+	threads := "threads unknown"
+	if s.Observation.Threads != nil {
+		threads = fmt.Sprintf("%d unresolved thread(s)", *s.Observation.Threads)
+	}
+	returns := ReturnsByObservation(s)
+	body, err := packet.Render(packet.Packet{
+		Acceptance: []string{acceptance},
+		Decisions:  []packet.Decision{},
+		Base:       base,
+		Refs:       []string{},
+		Findings: []packet.Finding{{
+			Tried:   fmt.Sprintf("returned %d time(s) on the forge's word, the ceiling being %d", returns, ceiling),
+			Outcome: fmt.Sprintf("the observation at position %d reports checks %s, %s, review %s on head %s — red again, and the maintenance lane returns no more", s.Observation.Pos, s.Observation.Checks, threads, s.Observation.Review, s.Observation.Head),
+		}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	question, err := json.Marshal(map[string]any{
+		"question": fmt.Sprintf("%s has been returned %d time(s) on the forge's word and is red again: raise the ceiling, cancel, or merge by hand?", s.Submission.PR, returns),
+		"options": []map[string]string{
+			{"id": "raise-ceiling", "choice": "raise the return ceiling and let the maintenance lane keep returning it"},
+			{"id": "cancel", "choice": "cancel the contract"},
+			{"id": "merge-by-hand", "choice": "the operator merges by hand and observes the merge"},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(map[string]any{
+		packet.Key:   json.RawMessage(body),
+		"escalation": json.RawMessage(question),
+	})
 }
 
 // RaceReapPacket composes the claim.reaped payload for a settled-out
