@@ -242,10 +242,11 @@ charter row for row, renders it under the docs drift gate, and gives
 status, lists every row not yet met by pillar, row and status, sets
 the enforced-only rows aside at the cooperative posture and names the
 mixed rows there, and reports `complete` only when every applicable
-row is met. The rows it lists as open today are Phase 13's, flipped
+row is met. The rows it lists as open today are Phase 13's — flipped
 by the Phase 13 exit record (os-d63c7441) once III.R's measurements
-exist, which is the promotion critical path in the build plan's own
-words.
+exist, the promotion critical path in the build plan's own words —
+and P.1, which os-53650015 records as partial: its tagged-release
+clause is unmet until §5 step 2 cuts the first seed/v* release.
 
 | drill | file | PR |
 |---|---|---|
