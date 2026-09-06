@@ -20,6 +20,7 @@ package admit
 import (
 	"crypto/ed25519"
 	"testing"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
@@ -111,7 +112,7 @@ func TestObligationsAreDischargeable(t *testing.T) {
 				}
 			}
 			fp := fpOf(t, key)
-			v := probeViewAt(ctx, row.Subject)
+			v := probeViewAt(ctx, row.Subject, time.Now())
 			v.actor = fp
 			admitted := false
 			var lastErr error
