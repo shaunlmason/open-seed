@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.0",
+  "task": "os-53650015",
+  "plan_path": "plans/os-53650015.md",
+  "plan_sha256": "ab37e0745d4c10c0b8569d90dacca2fbb32cc9486a7877d83b2c94f7818ae943",
+  "validation_commands": [
+    "cd next \u0026\u0026 go run ./cmd/seed docs check --root ..",
+    "cd next \u0026\u0026 go run ./cmd/seed doctor --config fixtures/deployment/seed.json --repo .. | grep -q '\"id\":\"P.1\",\"status\":\"partial\"'",
+    "cd next \u0026\u0026 go test ./internal/conformance ./internal/docs -count=1",
+    "cd next \u0026\u0026 go test ./cmd/seed -run 'Test(Doctor|Docs)' -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}

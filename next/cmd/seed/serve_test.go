@@ -276,3 +276,37 @@ func jsonString(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
 }
+
+// conformance: III.I via plans/os-ef2e3134.md D1, D2 — the human-verdict
+// deferral is a protocol method: `serve --list` carries verdict.defer,
+// the registry resolves it to the verdict group with the defer argv
+// prefix, and invoking it with no flags refuses at usage naming the
+// verb's own flags, never an unknown subverb. Before this card the
+// dispatcher routed defer while the row omitted it, so the machine
+// surface could not route a low-confidence item to a human.
+func TestVerdictDeferExposed(t *testing.T) {
+	e, code := runEnv(t, "serve", "--list")
+	if code != 0 {
+		t.Fatalf("serve --list: %d %+v", code, e)
+	}
+	listed := false
+	for _, m := range e.Result["methods"].([]any) {
+		if m == "verdict.defer" {
+			listed = true
+		}
+	}
+	if !listed {
+		t.Fatalf("verdict.defer is a protocol method: %v", e.Result["methods"])
+	}
+	g, argv, ok := catalog(strings.NewReader("")).Resolve("verdict.defer")
+	if !ok || g.Name != "verdict" || strings.Join(argv, " ") != "defer" {
+		t.Fatalf("the registry resolves verdict.defer to the verdict group with the defer prefix: %v %q %v", ok, g.Name, argv)
+	}
+	e, code = runEnv(t, "verdict", "defer")
+	if code != 64 || e.Error == nil || !strings.Contains(e.Error.Message, "verdict defer") || strings.Contains(e.Error.Message, "unknown") {
+		t.Fatalf("verdict defer with no flags refuses at usage naming its own flags: %d %+v", code, e)
+	}
+	if spoken := usageSubverbs(t, "verdict"); strings.Join(spoken, ",") != "check,defer,receipt,render,traces" {
+		t.Fatalf("the usage line names defer beside the other four: %v", spoken)
+	}
+}

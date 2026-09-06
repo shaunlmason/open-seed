@@ -381,7 +381,9 @@ This phase carries promotion's migration gate (item 5) and, in item 1, the drill
 that must be green before the self-hosting cutover (§5).
 
 *Exit:* charter III.B (service posture), III.O (the compromised-actor drill in CI;
-simulation mode closing row 5), III.P complete, and the rows the Phase 10 exit record
+simulation mode closing row 5), III.P complete save row 1's tagged-release clause (the
+first `seed/v*` release is §5 step 2's; the Phase 12 exit record walks the row partial,
+os-53650015), and the rows the Phase 10 exit record
 routes here (III.E rows 8 and 9, III.G row 9); the pillars no earlier exit line owns —
 III.C, III.L, III.M and III.Q — are walked at this exit, each row met by citation or
 routed to Phase 13; the fixture organization runs a week-long simulated backlog

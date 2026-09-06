@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-ef2e3134",
+  "plan_path": "plans/os-ef2e3134.md",
+  "plan_sha256": "4da023f42de81c34344b46f320aa4e5d633a18a6e6eb0dca2e0d161b3de2625d",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./cmd/seed/ -run 'VerdictDeferExposed|RegistryMirrorsTheCLIVocabulary|ProtocolMethodsAreTheCLIVerbs' -count=1",
+    "cd next \u0026\u0026 go test ./cmd/seed/ -run 'Verdict|Rubric|Defer|Serve|Handbook|Registry|Protocol' -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}

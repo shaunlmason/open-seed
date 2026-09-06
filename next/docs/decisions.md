@@ -4489,6 +4489,19 @@ to implementation.
   re-recorded `next/trajectories/lanes/{dispatcher,maintenance}.json`
   on purpose, the scenario and the posture unchanged.
 
+## Verdict defer on the machine surface (os-ef2e3134)
+
+The gap os-7fc2ca38's last bullet recorded: the dispatcher routed
+`verdict defer` while the registry row and the usage line omitted it,
+so `seed serve` derived a method set without the human-verdict
+deferral and a lane over the machine surface had no way to route a
+low-confidence item to a human (III.I). One word in the row, one in
+each usage string, in the dispatcher's order; the vocabulary drill
+holds row and line equal in both directions, and
+`TestVerdictDeferExposed` names the method. No flag, refusal or
+posture of the verb changed, and no spec text: the method set is
+derived from the catalog, never listed.
+
 ## The projection boundary has three sides (os-b45c308d)
 
 Plan #350 charters Phase 13 item 8: III.D rows 5, 6 and 7 at the
