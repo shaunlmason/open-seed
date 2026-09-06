@@ -2025,6 +2025,20 @@ written by the two implementing sessions, one voice.
   drill first, then the fix, and the loop re-linking on a `bad_prev`
   whose cited tip is not the tip it fetched)
 
+- a random-walk property test over admission (III.I over random
+  positions, the §I.2 ceiling as oracles; the 2026-09-06
+  formal-methods survey's first card, docs/next-build-plan.md §3) —
+  os-21bf939f — **review** (task PR against plan #349:
+  `TestAdmissionRandomWalk` in `next/internal/admit`, a seeded walker
+  from the shared scenario with four oracles a step and the five-bar
+  audit plus a ceiling coverage map at the end of every walk; found
+  the sweep's re-draft copy missing the escalation anchors, fixed in
+  the copy; eight walks of twenty-four steps under `make check-next`,
+  two hundred of ninety-six on the weekly `perf-scale` job)
+- an exhaustive interleaving check of the append loop and halt (the
+  survey's second card) — os-07e6e76c — **backlog** (blocked on
+  os-21bf939f for its generator and predicates)
+
 ## A fixture that escaped the hardening guard (os-222189a3)
 
 - the flywheel engine drill's skip path races `t.TempDir`'s cleanup on
@@ -2592,13 +2606,19 @@ promotion criteria are restated here.
 
 Of the two rows outside III.R that stood open on the tree's own
 account, III.L row 4 is drilled for allow and deny by os-8ecef90f (plan
-#320, task PR in review) and moves to `partial`, its require-approval
-mode being os-5781a026's, and III.A row 7 (os-db5cd353) remains.
-account, III.A row 7 is met by os-db5cd353 (plan #324, task PR in
-review) and III.L row 4 by os-8ecef90f (plan #320, task PR in review),
-so once both merge the doctor reads 28 outstanding rows: 21 Phase 13
-rows the exit record flips, C.4 and Q.7 routed to the backlog run and
-to promotion, and III.R's seven, none of which an agent can supply.
+#320, task PR #321, merged) and stands `partial`, its require-approval
+mode being os-5781a026's, and III.A row 7 is met by os-db5cd353 (plan
+#324, task PR #325, merged), so the doctor reads 28 outstanding rows:
+21 Phase 13 rows the exit record flips, C.4 and Q.7 routed to the
+backlog run and to promotion, and III.R's seven, none of which an
+agent can supply. (This paragraph carried two overlapping versions of
+itself after #338 merged; the merged reading is the one above.)
+
+The 2026-09-06 formal-methods survey (docs/next-build-plan.md §3)
+filed two backlog cards, listed in the backlog section above:
+os-21bf939f, the admission random walk, is in review against plan
+#349; os-07e6e76c, the append-loop interleaving check, is blocked on
+it.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
