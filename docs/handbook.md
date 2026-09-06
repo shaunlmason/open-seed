@@ -28,6 +28,19 @@ the port, the evidence chain, and where each gate grounds).
    - Branch rule for `seed-state`: allow pushes, **block force-pushes and
      deletion**.
    - Tag rule for `seed-anchor/*`: create-only, no deletion.
+   These are **re-verified by CI, not just applied once**: `seed-maintenance`
+   runs a protections read-back before it reaps (a drifted-protections job
+   must not mutate state). It reads the four protections back from the
+   GitHub API and, if one is relaxed or deleted, writes a `HALT` marker on
+   `seed-state` and stops the job — every mutating verb then refuses until
+   an operator re-applies the rule and runs `seed state resume`. It needs a
+   repository-scoped **fine-grained PAT with Administration: read** (the
+   default `GITHUB_TOKEN` gets 403 on the ruleset reads): set the
+   `SEED_GH_TOKEN` repository secret (Contents: read & write as well, for
+   the HALT push). Without that secret the check **degrades** — it prints a
+   named `WARNING` and skips, so a repo that cannot be seen is not walled.
+   A red check means a protection drifted: re-apply the rule per this
+   checklist, then `seed state resume`; do not resume over it.
 4. **Edit the identity files:** put your leads in `CODEOWNERS`, your operator
    roster in `.seed/config.toml`, your mission in `.seed/teams/core.yaml`,
    and wire your real lint/test into `make check` (keep it fast: it is the
