@@ -280,6 +280,60 @@ func Rubric(doc []byte) ([]Item, error) {
 	return items, nil
 }
 
+// TraceAttributesError names the part of a trace-attributes section
+// the parser refuses: a receipt on such a spec refuses spec_unrunnable,
+// since a declaration that cannot be read cannot bound what
+// reproduces.
+type TraceAttributesError struct {
+	Detail string
+}
+
+func (e *TraceAttributesError) Error() string { return "trace attributes: " + e.Detail }
+
+// TraceAttributes reads the "## Trace attributes" section exactly as
+// Rubric reads "## Rubric" (plans/os-7fc2ca38.md D3): each bullet is
+// one attribute key `- <key>`, the key non-empty, without whitespace
+// and unique within the spec. Only declared keys survive trace
+// normalization, so a spec with no such section retains none, which
+// is a valid declaration and yields no error.
+func TraceAttributes(doc []byte) ([]string, error) {
+	lines := strings.Split(string(doc), "\n")
+	current := ""
+	var keys []string
+	seen := map[string]bool{}
+	for _, line := range lines {
+		if m := markerText(line); m != "" {
+			if m == "trace attributes" {
+				current = m
+			} else {
+				current = ""
+			}
+			continue
+		}
+		if current == "" {
+			continue
+		}
+		raw := strings.TrimSpace(line)
+		if raw == "" || !strings.ContainsAny(raw[:1], "-*+") {
+			continue
+		}
+		t := strings.TrimSpace(strings.TrimLeft(raw, "-*+ \t"))
+		key := strings.Trim(t, "`*_ ")
+		if key == "" {
+			return nil, &TraceAttributesError{Detail: fmt.Sprintf("item %q carries no key: an item is `- <key>`", t)}
+		}
+		if strings.ContainsAny(key, " \t") {
+			return nil, &TraceAttributesError{Detail: fmt.Sprintf("key %q carries whitespace: an attribute key is one token", key)}
+		}
+		if seen[key] {
+			return nil, &TraceAttributesError{Detail: fmt.Sprintf("key %q appears twice: a key is declared once", key)}
+		}
+		seen[key] = true
+		keys = append(keys, key)
+	}
+	return keys, nil
+}
+
 // Scope lists the paths a plan's "File Scope" section names: every
 // backticked path or prefix in that section, deduplicated, in order of
 // appearance. A plan with no such section scopes nothing, which the

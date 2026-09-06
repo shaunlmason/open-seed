@@ -47,7 +47,7 @@ func TestScorecardValidationNamesThePart(t *testing.T) {
 	repo, commit := scoreRepo(t)
 	rubric := []plan.Item{{ID: "tone", Criterion: "a"}, {ID: "taste", Criterion: "b"}}
 	receipt := &Receipt{Transcripts: []Transcript{{Cmd: "go test", Exit: 0}}}
-	if err := Validate(good(commit), "c-1", 12, rubric, receipt, repo); err != nil {
+	if err := Validate(good(commit), "c-1", 12, rubric, receipt, repo, nil); err != nil {
 		t.Fatalf("the agreeing scorecard validates: %v", err)
 	}
 	bend := func(f func(s *Scorecard)) *Scorecard {
@@ -77,7 +77,7 @@ func TestScorecardValidationNamesThePart(t *testing.T) {
 		{"an empty line range", bend(func(s *Scorecard) { s.Items[0].Evidence = []string{"main.go @ " + commit + "#L3-L1"} }), "evidence", "empty line range"},
 		{"a note over the budget", bend(func(s *Scorecard) { s.Items[0].Note = strings.Repeat("x", NoteBudget+1) }), "note", "budget"},
 	} {
-		err := Validate(row.s, "c-1", 12, rubric, receipt, repo)
+		err := Validate(row.s, "c-1", 12, rubric, receipt, repo, nil)
 		var se *ScorecardError
 		if !errors.As(err, &se) || se.Part != row.part || !strings.Contains(err.Error(), row.names) {
 			t.Fatalf("%s refuses at %s naming %q: %v", row.name, row.part, row.names, err)
@@ -85,10 +85,10 @@ func TestScorecardValidationNamesThePart(t *testing.T) {
 	}
 	// Without a repository the anchored path is judged by grammar
 	// alone; without a receipt no transcript resolves.
-	if err := Validate(good(commit), "c-1", 12, rubric, receipt, ""); err != nil {
+	if err := Validate(good(commit), "c-1", 12, rubric, receipt, "", nil); err != nil {
 		t.Fatalf("no repository, grammar alone: %v", err)
 	}
-	if err := Validate(good(commit), "c-1", 12, rubric, nil, repo); err == nil {
+	if err := Validate(good(commit), "c-1", 12, rubric, nil, repo, nil); err == nil {
 		t.Fatal("no receipt, no transcript to cite")
 	}
 	ref, err := good(commit).Ref()

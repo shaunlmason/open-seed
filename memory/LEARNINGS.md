@@ -2129,7 +2129,6 @@ failed step skips the rest of the job.
   not from the working tree: the digest in the fact binds the anchor's
   bytes, and an index over the checkout would rank text nobody
   reviewed. The same `Verify` delivery uses is the gate for indexing.
-
 - 2026-09-06 (os-7b6afa4d): the GitHub **rulesets list** endpoint
   (`GET /rulesets`) carries only name/target/enforcement/id: the ref
   patterns (`conditions.ref_name.include`) and rule types live on the
@@ -2144,6 +2143,32 @@ failed step skips the rest of the job.
   name — a sh+git writer can mint it without the engine (a self-contained
   temp repo, not a worktree of the caller's, so the commit roots in the
   right history and the push fast-forwards the protected ref).
+- 2026-09-06 (os-7fc2ca38): a receipt field must reproduce from a fresh
+  run or it cannot be in the receipt at all: `verdict check` compares
+  the whole canonical digest. Anything per-run (ids, timestamps, a raw
+  export's digest) goes to the artifact store as a sidecar the receipt
+  never names. Normalize first, digest second, and let the acceptance
+  spec declare (allowlist) what survives normalization.
+- 2026-09-06 (os-7fc2ca38): `internal/verdict`'s test helper `gated(spec,
+  commit)` ignores its first argument and always anchors `accept.md`;
+  a drill on a second spec file needs its own helper or the wrong spec
+  runs silently green.
+- 2026-09-06 (os-21bf939f): a test that needs a package's unexported
+  fixtures AND a package that imports the package under test (here
+  `internal/simulate`'s audit over `internal/admit`) cannot live in
+  the internal test package: the import is a cycle there. Put it in
+  the external `_test` package and hand it the fixtures through an
+  `export_test.go` in the internal one; `_test.go` files of the
+  internal package are visible to that shim, so scenario scripts and
+  helpers defined in tests export the same way.
+- 2026-09-06 (os-21bf939f): the sweep's "independent copy" of the
+  affordance view derivation is only as complete as the scenario that
+  exercises it. A random walk found the copy carried no escalation
+  anchors, so a listed `decision.recorded` re-drafted as an answer to
+  no question and failed the III.I class for a helper gap, not a rule
+  bug. When a re-draft copy exists for drift detection, every anchor
+  the production view carries must be in it, or the class fires on
+  its own instrument.
 
 ## The graph beside the lifecycle (os-f0ae2cdf)
 
