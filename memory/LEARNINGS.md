@@ -2213,3 +2213,16 @@ failed step skips the rest of the job.
   unmarshalling both is the cheap parity check, and the `user_version`
   pin lives in `cache_test.go`, apart from the stamp version pin in
   `cache_time_test.go`.
+- 2026-09-06 (os-07e6e76c): a model of a git-backed protocol must
+  accept pushes by ancestry, not by tip equality: a plain `git push`
+  and a `merge-base --is-ancestor` hook both land a commit whose
+  parent chain contains the remote's current tip, so after a rollback
+  an in-flight push lands and heals the truncated line. A model with
+  the stricter rule passes every property it states and diverges from
+  the client; only replaying the model's traces through the real
+  client catches it. Never exclude from replay the configuration where
+  the model and the code can disagree.
+- 2026-09-06 (os-07e6e76c): when sampling traces from several
+  enumerated configurations, take them round-robin across the
+  configurations before stepping; every k-th trace of the concatenated
+  list samples the largest configuration alone.
