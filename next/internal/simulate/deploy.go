@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -29,6 +30,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/lane"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/loop"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
@@ -169,6 +171,16 @@ func build(cfg Config) (*deployment, error) {
 		return nil, err
 	}
 
+	// The declaration is deployment state whose canonical home is the
+	// default branch's tip (postures.md): the hook reads it there, not
+	// from the file beside the remote the cooperative client takes via
+	// --config. Commit it as the operator (the governance root) so the
+	// enforced boundary has the same ceiling to refuse against that the
+	// cooperative half runs (os-0f924157 D4.3).
+	if err := d.commitDeclaration(); err != nil {
+		return nil, fmt.Errorf("commit the declaration: %w", err)
+	}
+
 	// Upgrade to seed/1 so the lifecycle verbs admit.
 	if err := d.append1(d.opKey, ledger.UpgradeVerb, "system", `{"to": "`+version.Seed1+`"}`); err != nil {
 		return nil, err
@@ -227,5 +239,63 @@ func (d *deployment) seedGenesis() error {
 		return fmt.Errorf("genesis landed at position %d, not 0", res.Position)
 	}
 	_ = ledger.Resolver(resolve)
+	return nil
+}
+
+// commitDeclaration lands the deployment's seed.json on the default
+// branch as the operator (the governance root, which the code half
+// admits without the protected-surface check) so the enforced hook has
+// the declaration to read at the default branch's tip — the same file
+// the cooperative client takes via --config, now in its canonical home.
+func (d *deployment) commitDeclaration() error {
+	pub := d.opPriv.Public().(ed25519.PublicKey)
+	opFP, err := event.Fingerprint(pub)
+	if err != nil {
+		return err
+	}
+	branchOut, err := exec.Command("git", "--git-dir", d.remote, "symbolic-ref", "HEAD").Output()
+	if err != nil {
+		return fmt.Errorf("read the default branch: %w", err)
+	}
+	branch := strings.TrimSpace(string(branchOut))
+
+	work := filepath.Join(d.dir, "decl-work")
+	if err := os.MkdirAll(work, 0o755); err != nil {
+		return err
+	}
+	git := func(args ...string) error {
+		cmd := exec.Command("git", append([]string{"-C", work}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("git %v: %v: %s", args, err, out)
+		}
+		return nil
+	}
+	if err := git("init", "-q"); err != nil {
+		return err
+	}
+	if err := git("config", "user.email", "op@sim"); err != nil {
+		return err
+	}
+	if err := git("config", "user.name", "operator"); err != nil {
+		return err
+	}
+	body, err := os.ReadFile(d.config)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(work, posture.DeclarationPath), body, 0o644); err != nil {
+		return err
+	}
+	if err := git("add", "-A"); err != nil {
+		return err
+	}
+	if err := git("commit", "-q", "--allow-empty", "-m", "the deployment declaration"); err != nil {
+		return err
+	}
+	push := exec.Command("git", "-C", work, "push", "-q", d.remote, "HEAD:"+branch)
+	push.Env = append(os.Environ(), "SEED_PUSHER="+opFP)
+	if out, err := push.CombinedOutput(); err != nil {
+		return fmt.Errorf("commit the declaration: %v: %s", err, out)
+	}
 	return nil
 }

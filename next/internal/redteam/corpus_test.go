@@ -38,6 +38,20 @@ func corpus() []attack {
 			},
 		},
 		{
+			// The ceiling refuses the adversary's own raw claim on a
+			// contract above its squad's agent ceiling, at the enforced
+			// boundary (os-0f924157 D4.2) — a negative under the claim
+			// clause beside the contention primary, and the one the
+			// one-derivation invariant now asserts under the declaration.
+			name:   "claim a contract above its squad's agent ceiling",
+			clause: "claim", side: Ledger,
+			reason: "agent ceiling is trivial",
+			run: func(fx *Fixture, adv *Adversary) Outcome {
+				o, _ := adv.As("claim.taken", ContractAbove, `{}`)
+				return o
+			},
+		},
+		{
 			name: "render a verdict on its own submission", clause: "approve", side: Ledger, primary: true,
 			reason: "is not granted any of",
 			run: func(fx *Fixture, adv *Adversary) Outcome {

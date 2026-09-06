@@ -138,7 +138,12 @@ cooperative client reads `seed.json` from its working tree (`--config`,
 `$SEED_CONFIG`, `./seed.json`), the hook reads it at the default
 branch's tip, a raw-pushed record that would have refused folds as
 filed, every chain verifies byte for byte, and no protocol version
-bumps. With no declaration both rules are no-ops: today's behavior.
+bumps. With no declaration both rules are no-ops: today's behavior. A
+declaration that is present but does not parse is not "no
+declaration": the hook fails closed, refusing the ledger push and the
+code push alike (the code half already refuses agent code pushes until
+an operator repairs it), so one broken declaration cannot split the
+boundary into two (card os-0f924157).
 
 **The path floor is enforced at the plan lint and at the render**, never
 at admission, because a path is a fact about a repository and admission

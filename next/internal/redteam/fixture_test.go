@@ -51,11 +51,22 @@ const (
 	ContractPeer     = "c-peer"    // held by the peer worker
 	ContractReady    = "c-ready"   // ready, unheld
 	ContractBacklog  = "c-backlog" // filed, never specified
+	ContractAbove    = "c-above"   // ready, unheld, at the tier ABOVE the squad's agent ceiling (D4.2)
 )
 
 // Protected is the surface the fixture's declaration protects, beside
 // the declaration's own path.
 var Protected = []string{"Makefile", ".github/workflows/", "next/spec/transitions.json"}
+
+// CeilingBlock is the guardrail FRAGMENT the fixture's declaration
+// splices in beside its posture and protected surface (os-0f924157
+// D4.2): the core squad's agents ceilinged at trivial — the tier every
+// fixture contract is filed at except ContractAbove, which rides
+// standard and is refused at the ceiling. The lanes are the same ones
+// the declaration's teams block routes to, so the ceiling is declared on
+// the lane the contracts actually use. Inner "key": value pairs, not a
+// full object: stageCode wraps it in the declaration's own braces.
+const CeilingBlock = `"guardrails": {"squads": {"core": {"default": "trivial", "max_agent": "trivial"}}}, "teams": {"squads": [{"name": "core", "lanes": ["dispatch", "supervise", "verdict", "observer", "claim"]}]}`
 
 // Identity is one enrolled actor.
 type Identity struct {
@@ -277,8 +288,15 @@ func (f *Fixture) stageLedger() error {
 	// trivial tier (prose-only acceptance, so no plan gate and no
 	// sealed checks stand between the adversary and the verbs the
 	// ceiling is about).
-	for _, cid := range []string{ContractHeld, ContractReview, ContractReleased, ContractPeer, ContractReady, ContractBacklog} {
-		if _, err := f.Append(f.Dispatch, f.Active, "intent.filed", cid, `{"intent": "work on `+cid+`", "tier": "trivial", "budget": "small", "routing": "core"}`); err != nil {
+	for _, cid := range []string{ContractHeld, ContractReview, ContractReleased, ContractPeer, ContractReady, ContractBacklog, ContractAbove} {
+		// ContractAbove rides standard, the tier ABOVE the fixture squad's
+		// trivial agent ceiling (D4.2): ready and unheld, so the adversary
+		// can claim it and be refused by the ceiling at the boundary.
+		tier := "trivial"
+		if cid == ContractAbove {
+			tier = "standard"
+		}
+		if _, err := f.Append(f.Dispatch, f.Active, "intent.filed", cid, fmt.Sprintf(`{"intent": "work on %s", "tier": %q, "budget": "small", "routing": "core"}`, cid, tier)); err != nil {
 			return err
 		}
 		if cid == ContractBacklog {
@@ -322,9 +340,12 @@ func Packet(acceptance string) string {
 // stageCode commits the declaration on the default branch as the root
 // (operator standing), tags the initial revision, and has the peer push
 // its own contract branch, so the adversary has a default branch, a tag
-// and another actor's branch to attack.
+// and another actor's branch to attack. The declaration carries the
+// guardrail ceiling (CeilingBlock) beside the protected surface, so the
+// enforced boundary has a live ceiling to refuse against — the one the
+// hook now reads (os-0f924157 D1).
 func (f *Fixture) stageCode() error {
-	decl := fmt.Sprintf(`{"posture": %q, "protected": [%s]}`, posture.EnforcedSelfHosted, quoteAll(Protected))
+	decl := fmt.Sprintf(`{"posture": %q, %s, "protected": [%s]}`, posture.EnforcedSelfHosted, CeilingBlock, quoteAll(Protected))
 	files := map[string]string{
 		posture.DeclarationPath:      decl + "\n",
 		"README.md":                  "# fixture\n",
@@ -421,6 +442,27 @@ func (f *Fixture) RefTip(ref string) string {
 func (f *Fixture) Refs() string {
 	out, _ := f.git("for-each-ref", "--format=%(refname) %(objectname)")
 	return out
+}
+
+// Declaration reads the deployment declaration off the remote's default
+// branch tip the way the hook does (os-0f924157 D1): the HEAD symref's
+// branch, its tip, and <tip>:seed.json via git show, parsed. The
+// one-derivation invariant hands this same *posture.Config to
+// admit.ContextOver so the in-process side reads what the hook reads.
+func (f *Fixture) Declaration() (*posture.Config, error) {
+	branch, err := f.git("symbolic-ref", "HEAD")
+	if err != nil {
+		return nil, err
+	}
+	tip, err := f.git("rev-parse", "--quiet", "--verify", branch+"^{commit}")
+	if err != nil {
+		return nil, nil // unborn default branch: no declaration
+	}
+	body, err := f.git("show", tip+":"+posture.DeclarationPath)
+	if err != nil {
+		return nil, nil // the branch carries no declaration file
+	}
+	return posture.Parse([]byte(body))
 }
 
 // Records fetches the guarded ref and returns its verified records.

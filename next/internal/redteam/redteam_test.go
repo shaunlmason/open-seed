@@ -119,6 +119,13 @@ func TestOneDerivationLedgerAgrees(t *testing.T) {
 	fx := newFixture(t)
 	adv := newAdversary(t, fx)
 
+	// The in-process side reads the SAME declaration the hook reads, so
+	// the invariant holds under a live guardrail (os-0f924157 D4.2):
+	// the fixture's committed ceiling, not an absent one.
+	decl, err := fx.Declaration()
+	if err != nil {
+		t.Fatalf("reading the fixture's declaration: %v", err)
+	}
 	entries := corpus()
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].order < entries[j].order })
 
@@ -131,7 +138,7 @@ func TestOneDerivationLedgerAgrees(t *testing.T) {
 		if o.Record == nil {
 			continue // a multi-record rewrite/truncation: the hook's alone
 		}
-		ctx, err := admit.ContextOver(o.Before)
+		ctx, err := admit.ContextOver(o.Before, admit.WithDeclaration(decl))
 		if err != nil {
 			t.Fatalf("%q: admission context over the judged prefix: %v", a.name, err)
 		}

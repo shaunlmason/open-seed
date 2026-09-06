@@ -1,0 +1,13 @@
+{
+  "schema_version": "2.0",
+  "task": "os-0f924157",
+  "plan_path": "plans/os-0f924157.md",
+  "plan_sha256": "766c391100eca6404b2a3c57f13421866f06d9932ea5c084c4b04cadf128e20b",
+  "validation_commands": [
+    "cd next && go test ./cmd/seed-admit/ -count=1",
+    "cd next && go test ./internal/redteam/ -count=1",
+    "cd next && go test ./internal/simulate/ -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}
