@@ -2246,3 +2246,17 @@ failed step skips the rest of the job.
   enumerated configurations, take them round-robin across the
   configurations before stepping; every k-th trace of the concatenated
   list samples the largest configuration alone.
+- A version gate written as a named list (`tuple.Applies`) silently
+  falls behind when new protocol versions are registered elsewhere;
+  a drill that a seed/N chain can still exercise the gated feature is
+  the only thing that catches it. When a stand at the newest version
+  refuses a payload field as unknown, check the gate before the
+  payload.
+- `run.started` is signed by the supervisor, not the claim holder: a
+  derivation that ties the run to the holder must key on the fence,
+  never on the signer.
+- A maintenance step that publishes must take its instant once and
+  hand it to both the payload and the record (`Deps.Instant`,
+  `Deps.AppendAt`); an offer whose `expires` is computed from another
+  clock than the record's `ts` can be born dead under admission's
+  strictly-after rule.

@@ -113,8 +113,11 @@ authority.
   <json>]...` — shapes the payload and appends through the same
   validated path as every append; each `--tuple` is parsed at the
   door with the parser admission applies, so a malformed one refuses
-  as usage before anything is signed. Refusals reuse the established
-  admission exits; no new exit codes.
+  as usage before anything is signed. `--strongest <n>` fills the
+  scope by the ranking and `--resume` by the subject's own resumption
+  ([`ranking.md`](ranking.md)); both refuse rather than widen when
+  nothing derives. Refusals reuse the established admission exits; no
+  new exit codes.
 - `seed offer list (--ledger <dir> | --remote <repo> [--ref <ref>]
   [--state <dir>]) --actor <fingerprint> [--now <RFC3339>]` — the
   worker's poll: live offers whose eligibility the actor meets, with

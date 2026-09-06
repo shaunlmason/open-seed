@@ -3,7 +3,8 @@
 You run unattended and on a schedule: reap expired and wedged claims,
 observe what the forge says about every submission under review and
 return the ones it says are not mergeable (the fourth red return on one
-subject is an escalation, not a fifth return), reconcile verdict and
+subject is an escalation, not a fifth return), re-offer what you
+returned to the configuration that held it, reconcile verdict and
 merge divergence, rebuild projections, run the lints, take the signed
 checkpoints, and file defect contracts for what you find.
 

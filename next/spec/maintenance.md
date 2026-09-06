@@ -15,16 +15,38 @@ acts, and this lane acts on the raw append seam. What it holds is
 ## The pass
 
 `seed maintain run` runs one pass in a fixed order: reap, observe,
-return, lint, file, rebuild, checkpoint. The observations come before
-the lints so the lints read fresh facts, the return before the filing
-so a returned subject is not also filed as a finding, and the
-checkpoint is last because it attests to the state the rest of the
-pass produced. The observe and return steps, and the return ceiling
+return, re-offer, lint, file, rebuild, checkpoint. The observations
+come before the lints so the lints read fresh facts, the return before
+the filing so a returned subject is not also filed as a finding, the
+re-offer right after the return so what the pass returned is claimable
+before the pass ends, and the checkpoint is last because it attests to
+the state the rest of the pass produced. The observe and return steps, and the return ceiling
 that turns the fourth red return into an escalation, are
 [`observations-forge.md`](observations-forge.md) (plans/os-0cd18799.md
 D6, D7): with no `--forge` the observe step reports every observable
 submission skipped with that reason, and a key holding `maintenance`
 alone meets `out_of_grant` on both acts, reported like every refusal.
+
+**Re-offer** (plans/os-29e2fef2.md D3). For every subject the pass
+returned in this pass, it appends one `offer.published`: scoped to the
+prior submitter's tuple where `internal/ranking.Resume` derives one
+the holder can still take ([`ranking.md`](ranking.md) "Resume"), else
+carrying the consumed offer's own tuple scope, never wider; with the
+capabilities and tiers of the offer the returned claim consumed, or
+`[claim]` and the subject's filed tier where none stood. The consumed
+offer is derived with the listing's two predicates (authorized at its
+own position, met by the claimant at the claim's), so a raw-pushed
+offer lends nothing. `expires` is the append's own instant plus
+`--reoffer-ttl` (default 24h): the pass takes the instant once and
+signs the record at it, so the offer's expiry and its `ts` derive from
+one reading and the offer cannot be born dead; not `--as-of`, which is
+the classification instant and may be historical. One re-offer per
+return, in the pass that returned it: a second pass over the same
+subject returns nothing and re-offers nothing, and an expired re-offer
+is the supervisor's to renew, because the pass returns work and does
+not run the queue. The report's `reoffered` rows carry the subject,
+the tuple and holder where one derived, and the expiry; a refusal is
+reported like every other.
 
 The decision logic is `internal/maintain` with its effects injected,
 so every rule below is drillable without a ledger. A retry rule, a

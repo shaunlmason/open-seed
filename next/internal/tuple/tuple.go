@@ -114,7 +114,11 @@ func (t Tuple) Complete() bool {
 // and every later registered version keeps them, as a named list, never
 // an ordering; records at earlier positions keep their earlier judgment.
 func Applies(active string) bool {
-	return active == version.Seed2 || active == version.Seed3 || active == version.Seed4
+	switch active {
+	case version.Seed2, version.Seed3, version.Seed4, version.Seed5, version.Seed6, version.Seed7, version.Seed8:
+		return true
+	}
+	return false
 }
 
 // ModelLineage splits a model string by the convention of
