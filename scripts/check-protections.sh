@@ -83,6 +83,24 @@ api() {
   fi
 }
 
+# ok_or_die <label>: a read only means what its status says. 200 is the
+# success; 401/402/403 and no HTTP code at all are the documented degraded
+# arm (the token/API cannot be read); everything else (404 on an expected
+# object, 429, 5xx) is an error the check must not turn into "nothing
+# found" — an empty error body must never masquerade as an empty ruleset
+# list, which with --write-halt would commit a HALT for drift that is not
+# proven.
+ok_or_die() {
+  case "$API_CODE" in
+  200) return 0 ;;
+  401|402|403|'')
+    read_degraded "$1" "HTTP ${API_CODE:-none}: $(head -c 200 "$API_ERR" 2>/dev/null)" ;;
+  *)
+    echo "check-protections: the API answered $API_CODE on $1 (a read error, not an empty answer)"
+    exit 1 ;;
+  esac
+}
+
 # read_degraded <what> <how-not-to-see>: a read that came back with no
 # usable HTTP code (gh failed before the request — no token gh can use,
 # network down) degrades like a 403: the check cannot see, so it names the
@@ -112,12 +130,32 @@ say_fail() {
 # it, so the check degrades on its own. (A repo that HAS the seed-state ref
 # but is missing a protection is a real drift: that falls through to exit 3.)
 state_ref_present() {
-  # Against $REPO explicitly, never the caller's cwd origin: the check
-  # must see the repo it is pointed at, wherever it runs from.
+  # Distinguishes a MISSING ref from a FAILED probe: `ls-remote --exit-code`
+  # exits 2 for "no matching refs" and 0 for "present"; any other code is a
+  # transport/authentication/network failure (an expired or under-scoped
+  # token, a broken network) and must not masquerade as "no seed-state ref"
+  # — degrading on a failed probe would silently disable the read-back. The
+  # plan's step 2 covers a repo that cannot be SEEN yet, not one the probe
+  # cannot reach. (Against a public repo a bad token degrades to an
+  # anonymous read, so the probe still succeeds; against a private one it
+  # fails and we report it.)
   git ls-remote --exit-code "https://x-oauth:${GH_TOKEN}@github.com/$REPO.git" seed-state >/dev/null 2>&1
 }
 
-if ! state_ref_present; then
+if state_ref_present; then
+  probe_rc=0
+else
+  probe_rc=$?
+fi
+case "$probe_rc" in
+0) : ;;
+2) : ;;
+*)
+  echo "check-protections: the state-ref probe failed (rc=$probe_rc) — not a missing-ref answer, treating it as an API error"
+  exit 1 ;;
+esac
+
+if [ "$probe_rc" = 2 ]; then
   echo "WARNING: no seed-state ref on origin — degraded (fresh instantiation, seed init not run); protections not yet verifiable"
   exit 0
 fi
@@ -127,13 +165,13 @@ api "repos/$REPO/branches/main/protection"
 main=$(cat "$API_BODY_FILE" 2>/dev/null)
 case "$API_CODE" in
 401|402|403)
-  echo "WARNING: the API answered $API_CODE on branches/main/protection (the token cannot read protections) — degraded, check not run"
+  echo "WARNING: the API answered $API_CODE on branches/main/protection (the token cannot read it) — degraded, check not run"
   exit 0 ;;
 404)
   say_fail "main" "no main branch protection (apply the handbook §1 checklist)"
   main=null ;;
-'')
-  read_degraded "branches/main/protection" "$(head -c 200 "$API_ERR" 2>/dev/null)" ;;
+*)
+  ok_or_die "branches/main/protection" "" ;;
 esac
 
 if [ "$main" != "null" ] && [ -n "$main" ]; then
@@ -167,16 +205,16 @@ fi
 api "repos/$REPO/rulesets?per_page=100"
   sets=$(cat "$API_BODY_FILE" 2>/dev/null)
   case "$API_CODE" in
+  200)
+    [ -n "$sets" ] || sets='[]' ;;
   401|402|403)
     echo "WARNING: the API answered $API_CODE on the rulesets endpoint (the token needs Administration: read-only) — degraded, rulesets not asserted"
     exit 0 ;;
   404)
     say_fail "rulesets" "no rulesets exist on this repository"
     sets='[]' ;;
-  '')
-    read_degraded "the rulesets endpoint" "$(head -c 200 "$API_ERR" 2>/dev/null)" ;;
   *)
-    [ -n "$sets" ] || sets='[]' ;;
+    ok_or_die "the rulesets endpoint" ;;
   esac
   # The list endpoint carries only name/target/enforcement/id: the ref
   # patterns (conditions.ref_name.include) and the rule types live on the
@@ -186,44 +224,54 @@ api "repos/$REPO/rulesets?per_page=100"
   details='[]'
   for id in $(printf '%s' "$sets" | jq -r '.[].id'); do
     api "repos/$REPO/rulesets/$id"
+    # A per-id read must mean what its status says too: 200 appends, a
+    # degraded token stops the check, anything else is an error — the
+    # detail list may not quietly shrink into false missing-ruleset
+    # findings (which --write-halt would turn into a HALT).
+    case "$API_CODE" in
+    200) : ;;
+    401|402|403|'')
+      read_degraded "rulesets/$id" "HTTP ${API_CODE:-none}: $(head -c 200 "$API_ERR" 2>/dev/null)" ;;
+    *)
+      echo "check-protections: the API answered $API_CODE on rulesets/$id (a read error, not an empty answer)"
+      exit 1 ;;
+    esac
     d=$(cat "$API_BODY_FILE" 2>/dev/null)
     [ -n "$d" ] || continue
     details=$(printf '%s' "$details" | jq -c --argjson x "$d" '. + [$x]')
   done
   sets=$details
 
-  # One jq over the details: the first ruleset whose ref include matches the
-  # pattern. The payload's ref patterns live in conditions.ref_name.include
-  # (there is no target_id field to match against).
-  find_set() {
-    printf '%s' "$sets" | jq -c --arg p "$1" '[.[] | select(.conditions.ref_name.include | index($p))] | first // empty'
+  # One jq over the details: a ruleset that QUALIFIES for the pattern —
+  # enforcement active, the expected TARGET kind (a branch ruleset that
+  # carries a tag pattern, or vice versa, is not the protection even if
+  # the pattern string happens to collide), and every required rule type
+  # present. Selecting any qualifying entry — not the API-order-dependent
+  # first match — keeps a disabled legacy twin from shadowing its active
+  # replacement.
+  find_set() { # $1 pattern, $2 target, $3 rules JSON array
+    printf '%s' "$sets" | jq -c --arg p "$1" --arg t "$2" --argjson r "$3" \
+      '[.[] | select(.target == $t
+        and ((.conditions.ref_name.include // []) | index($p))
+        and .enforcement == "active"
+        and ([.rules[].type] as $have | all($r[]; . as $w | $have | index($w) != null)))] | first // empty'
   }
-  set_ok() { # $1 label, $2 pattern, $3... required rule types
-    label=$1; pattern=$2; shift 2
-    st=$(find_set "$pattern")
+  set_ok() { # $1 label, $2 pattern, $3 target, $4... required rule types
+    label=$1; pattern=$2; target=$3; shift 3
+    # Build the required-rules JSON array from the remaining args (one
+    # rule type each) — a single line, not one word per line.
+    rules_json=$(printf '%s\0' "$@" | jq -Rs 'split("\u0000") | map(select(length > 0))')
+    st=$(find_set "$pattern" "$target" "$rules_json")
     if [ -z "$st" ]; then
-      say_fail "$label" "no ruleset matching '$pattern'"
+      say_fail "$label" "no active ruleset of target '$target' matches '$pattern' with the required rule types"
       return
     fi
-    enf=$(printf '%s' "$st" | jq -r .enforcement)
     rules=$(printf '%s' "$st" | jq -r '[.rules[].type] | sort | join(" ")')
-    bad=""
-    [ "$enf" = active ] || bad="enforcement is '$enf', not active"
-    for want in "$@"; do
-      case " $rules " in
-      *" $want "*) : ;;
-      *) bad="$bad rule type '$want' missing (has: $rules)"; break ;;
-      esac
-    done
-    if [ -z "$bad" ]; then
-      say_ok "$label: ruleset '$(printf '%s' "$st" | jq -r .name)' active on '$pattern' (rules: $rules)"
-    else
-      say_fail "$label" "${bad# }"
-    fi
+    say_ok "$label: ruleset '$(printf '%s' "$st" | jq -r .name)' active on '$pattern' (target $target, rules: $rules)"
   }
-  set_ok "seed-state" "refs/heads/seed-state" deletion non_fast_forward
-  set_ok "seed-anchor" "refs/tags/seed-anchor/*" deletion non_fast_forward update
-  set_ok "release-tags" "refs/tags/v*" deletion non_fast_forward update
+  set_ok "seed-state" "refs/heads/seed-state" branch deletion non_fast_forward
+  set_ok "seed-anchor" "refs/tags/seed-anchor/*" tag deletion non_fast_forward update
+  set_ok "release-tags" "refs/tags/v*" tag deletion non_fast_forward update
 
   # the read-back summary for the job ----------------------------------------
   echo

@@ -68,7 +68,12 @@ jobs:
           # failing a repo it cannot see.
           GH_TOKEN: ${{ secrets.SEED_GH_TOKEN || github.token }}
         run: |
-          out=$(sh scripts/check-protections.sh --write-halt 2>&1); rc=$?
+          # The default shell runs with errexit and the assignment below
+          # would inherit the checker's exit status: capturing through an
+          # `if` keeps a nonzero (drift/API error) from stopping the job on
+          # this line before rc is even assigned, so the findings reach the
+          # log instead of vanishing into the captured output.
+          if out=$(sh scripts/check-protections.sh --write-halt 2>&1); then rc=0; else rc=$?; fi
           if [ "$rc" -eq 0 ]; then
             # Green or degraded: carry the read-back in the job summary.
             printf '%s\n' "$out" >> "$GITHUB_STEP_SUMMARY"
