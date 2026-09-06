@@ -30,6 +30,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -110,6 +111,28 @@ func run(stdin io.Reader, stderr io.Writer, gitDir, guarded, pusher string) int 
 func admitUpdate(gitDir, oldID, newID string) error {
 	if newID == zeroID {
 		return fmt.Errorf("rule ref: deletion of the ledger ref is refused")
+	}
+	// The ledger half reads the declaration the way the code half does:
+	// at the default branch's tip as it stands BEFORE this push
+	// (postures.md). A push that both changes the declaration and rides
+	// it is judged against the declaration that stood before it — the
+	// code half's own rule for mixed pushes. No file, or an unborn
+	// branch, is no declaration: the hook as before. A file that does not
+	// parse fails closed, the code half's posture (D2), and so does a
+	// default branch that cannot even be resolved (a detached or
+	// unreadable HEAD): each of those would otherwise judge the push with
+	// every declaration-driven rule disabled while the code half refuses
+	// the same state, one broken declaration splitting the boundary into
+	// two.
+	var decl *posture.Config
+	if branch, err := defaultBranch(gitDir); err != nil {
+		return fmt.Errorf("rule ref: %v — the ledger half refuses until an operator repairs the repository's HEAD", err)
+	} else {
+		var perr error
+		decl, perr = readDeclarationAt(gitDir, branch)
+		if perr != nil {
+			return fmt.Errorf("rule ref: the deployment declaration at %s does not parse (%v) — the ledger half refuses until an operator repairs it", posture.DeclarationPath, perr)
+		}
 	}
 	if oldID != zeroID {
 		if err := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", gitDir, "merge-base", "--is-ancestor", oldID, newID).Run(); err != nil {
@@ -197,7 +220,11 @@ func admitUpdate(gitDir, oldID, newID string) error {
 		if i == 0 {
 			ctx = &admit.Context{Count: 0, Tip: prev, Resolve: resolve, Keyring: keyring.New(), Table: table, Lifecycle: table.FoldRecords(nil)}
 		} else {
-			ctx, err = admit.ContextOver(records[:i])
+			opts := []admit.Option{}
+			if decl != nil {
+				opts = append(opts, admit.WithDeclaration(decl))
+			}
+			ctx, err = admit.ContextOver(records[:i], opts...)
 			if err != nil {
 				return fmt.Errorf("rule ref: %v", err)
 			}

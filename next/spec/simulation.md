@@ -129,14 +129,18 @@ agents at `trivial`, the tier its catalog files at) and audits under
 it, so its clean reading says `declared: true`: the ceiling was among
 the things the audit read at the end, and among what the cooperative
 client read at every claim it pushed (plans/os-b5051f2e.md D5).
-`declared` states what the audit read, not what the hook refused:
+`declared` states what the audit, the client, and the hook each read:
 under enforced-self-hosted the `seed-admit` pre-receive hook builds
-its contexts without a declaration today, so a raw above-ceiling push
-lands there and only the audit names it (review finding on #323). The
-hook's own reading, at the default branch's tip as
-[`postures.md`](postures.md) describes, is card os-0f924157's.
-This is how the shadow run's real chain is measured against charter
-III.R row 5 (`next/docs/promotion.md`).
+its admission contexts WITH the declaration, read at the default
+branch's tip as [`postures.md`](postures.md) describes, so a raw
+above-ceiling push refuses at the boundary and the audit names the
+same rule (card os-0f924157, closing the review finding on #323). A
+deployment that commits its declaration on the default branch — which
+the simulation does, beside writing it beside the remote for the
+`--config` client — gives the hook, the cooperative client, and the
+end-of-run audit one file to read. This is how the shadow run's real
+chain is measured against charter III.R row 5
+(`next/docs/promotion.md`).
 
 Each bar's violation, planted once, is caught by name (the drills in
 `internal/simulate`).

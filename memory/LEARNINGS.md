@@ -2086,3 +2086,28 @@ failed step skips the rest of the job.
   flywheel, knowledge, lanes and refusals report drills all name the
   number and what each increment added.
 
+## The enforced boundary reads its own declaration (os-0f924157)
+
+- A policy that lives in the deployment declaration is only as enforced
+  as its worst reader. The hook's ledger half built its admission
+  contexts with no declaration, so the ceiling was a no-op exactly at
+  the posture that exists to enforce it — the gap the drill must name:
+  "the hook admits it" is not the same as "the audit names it". One
+  shared read (`readDeclarationAt`), wired into the half that never
+  read, closes it; the code half's inline read refactors onto the same
+  helper, so one broken declaration cannot split the boundary into two.
+- "Inherited by construction" is a claim a mirror breaks. The
+  admission service's dry-run runs the hook's own `admitUpdate` over a
+  private mirror whose HEAD is an unborn symref: a plain fetch brings
+  only the guarded ref, so the declaration read finds nothing and the
+  judge admits what the hook refuses. The fix is the explicit fetch of
+  the default branch at the one call site — no second read path, no
+  serve-only option — and the mirror's mirror of the declaration is
+  what makes "the service judges what the hook would" testable.
+- A one-derivation invariant that compares the hook against
+  `admit.Check` in-process must hand the in-process side the same
+  `*posture.Config` the hook reads, or it compares a boundary with a
+  guardrail against one without and stays green for the wrong reason.
+  Read the declaration back off the remote's default-branch tip the way
+  the hook does and pass it through — the invariant then holds under a
+  live guardrail, not an absent one.
