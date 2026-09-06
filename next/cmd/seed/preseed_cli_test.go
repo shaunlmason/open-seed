@@ -117,7 +117,7 @@ func TestPreseedCheckLintsTheFile(t *testing.T) {
 		"no such manifest":   `{"posture": "cooperative", "teams": {"squads": [{"name": "core", "lanes": ["wizard"]}]}}`,
 		"undeclared squad":   `{"posture": "cooperative", "guardrails": {"squads": {"ops": {"default": "trivial", "max_agent": "trivial"}}}, "teams": {"squads": [{"name": "core", "lanes": ["implementer"]}]}}`,
 		"incomplete surface": `{"posture": "cooperative", "protected": ["Makefile"]}`,
-		"unknown protocol":   `{"posture": "cooperative", "protocol": "seed/9"}`,
+		"unknown protocol":   `{"posture": "cooperative", "protocol": "seed/10"}`,
 	} {
 		e, code := runEnv(t, "preseed", "check", "--config", writeDeclaration(t, body), "--lanes", "../../lanes")
 		if code != 13 || e.Error == nil || e.Error.Code != "preseed_incomplete" {

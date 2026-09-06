@@ -262,7 +262,7 @@ func TestRemoteAppendCooperativeRefusals(t *testing.T) {
 	t.Run("upgraded remote refuses stale build at 10", func(t *testing.T) {
 		remote := bareRemote(t)
 		resolve := seedRemoteGenesis(t, remote)
-		libAppend(t, remote, resolve, "seed/0", ledger.UpgradeVerb, "system", `{"to": "seed/9"}`)
+		libAppend(t, remote, resolve, "seed/0", ledger.UpgradeVerb, "system", `{"to": "seed/10"}`)
 		before := remoteTip(t, remote)
 		e, code := runEnv(t, "ledger", "append", "--remote", remote, "--state", t.TempDir(),
 			"--key", priv, "--verb", "message.sent", "--subject", "c-0001", "--payload", `{"n": 1}`)
