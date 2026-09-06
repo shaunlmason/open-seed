@@ -1761,3 +1761,4 @@
 {"actor":"shaunlmason","data":{"title":"next: trace-shaped test evidence in the receipt (backlog, §II.8 receipts, III.G evidence paths)"},"task":"os-7fc2ca38","ts":"2026-09-06T04:32:19Z","verb":"create"}
 {"actor":"shaunlmason","data":{"title":"next: the forge says the submission is not mergeable"},"task":"os-0cd18799","ts":"2026-09-06T04:44:42Z","verb":"create"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-7fc2ca38","ts":"2026-09-06T04:45:35Z","verb":"promote"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-0cd18799","ts":"2026-09-06T04:49:23Z","verb":"promote"}
