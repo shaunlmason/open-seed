@@ -206,29 +206,33 @@ func (s *service) judge(recs []*event.Record) (*envelope.Envelope, int) {
 
 	// The mirror carries the guarded ref alone, so its default branch is
 	// unborn and the hook's declaration read (at the default branch's tip,
-	// the code half's own) would find nothing. A plain `fetch remote HEAD`
-	// does not fix it: HEAD lands in FETCH_HEAD, not the branch the read
-	// follows. So resolve the deployment's default branch at the remote and
-	// fetch it INTO the mirror's own branch, then point the mirror's HEAD
-	// at it — readDeclarationAt then reads the same tip the hook on the
-	// remote reads (the read is over the pre-push tip, postures.md).
-	// A fresh deployment's default branch is unborn: nothing to fetch, no
-	// declaration to read — the hook as before.
-	if branch, berr := defaultBranch(s.remote); berr == nil {
+	// the code half's own) would find nothing. The default branch is
+	// resolved THROUGH THE TRANSPORT (ls-remote --symref), because the
+	// deployment's remote may be an SSH/HTTPS URL, and `git --git-dir <url>`
+	// is not a repository for one; then it is fetched INTO the mirror's
+	// own branch (a plain `fetch remote HEAD` lands in FETCH_HEAD, not the
+	// branch the read follows) and the mirror's HEAD pointed at it, so
+	// readDeclarationAt reads the same tip the hook on the remote reads
+	// (the read is over the pre-push tip, postures.md). An unborn HEAD is
+	// an empty deployment — the hook as before; a detached or unreadable
+	// one fails closed as unavailable, not a silent no-declaration.
+	branch, berr := defaultBranchRemote(s.remote)
+	switch {
+	case berr != nil:
+		return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot resolve the deployment's default branch: %v", berr)), propose.StatusUnavailable
+	case branch != "":
 		if out, ferr := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", client.GitDir(), "fetch", "-q", s.remote, branch).CombinedOutput(); ferr != nil {
-			ls, _ := exec.Command("git", "ls-remote", "-q", s.remote, "HEAD").CombinedOutput()
-			if strings.TrimSpace(string(ls)) != "" {
-				return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot read the deployment's default branch for the declaration: %v: %s", ferr, out)), propose.StatusUnavailable
-			}
-		} else {
-			if out, ferr := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", client.GitDir(), "update-ref", "-m", "judge", branch, "FETCH_HEAD").CombinedOutput(); ferr != nil {
-				return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot land the default branch in the mirror: %v: %s", ferr, out)), propose.StatusUnavailable
-			}
-			if out, ferr := exec.Command("git", "--git-dir", client.GitDir(), "symbolic-ref", "HEAD", branch).CombinedOutput(); ferr != nil {
-				return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot point the mirror's HEAD at the default branch: %v: %s", ferr, out)), propose.StatusUnavailable
-			}
+			return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot fetch the deployment's default branch: %v: %s", ferr, out)), propose.StatusUnavailable
+		}
+		if out, ferr := exec.Command("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "--git-dir", client.GitDir(), "update-ref", "-m", "judge", branch, "FETCH_HEAD").CombinedOutput(); ferr != nil {
+			return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot land the default branch in the mirror: %v: %s", ferr, out)), propose.StatusUnavailable
+		}
+		if out, ferr := exec.Command("git", "--git-dir", client.GitDir(), "symbolic-ref", "HEAD", branch).CombinedOutput(); ferr != nil {
+			return envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("cannot point the mirror's HEAD at the default branch: %v: %s", ferr, out)), propose.StatusUnavailable
 		}
 	}
+	// branch == "": the deployment's HEAD is unborn — nothing to fetch, no
+	// declaration to read, the hook as before.
 	storeTip, count, err := store.Tip()
 	if err != nil {
 		return envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), propose.StatusRefused

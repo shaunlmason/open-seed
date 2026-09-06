@@ -14,8 +14,10 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/gitref"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/propose"
@@ -89,6 +91,44 @@ func TestServiceCeilingRefusesUnderTheDeclaration(t *testing.T) {
 	asAdmission(t, func() { res, perr = d.client.Propose(posture.DefaultLedgerRef, []*event.Record{at}) })
 	if perr != nil || res == nil {
 		t.Fatalf("the at-ceiling proposal admits through the service: %v", perr)
+	}
+}
+
+// conformance: the transport arm of D3 (review, P1) — a deployment the
+// service reaches only as a URL (file:// here, the same code an SSH/HTTPS
+// spelling runs) reads its declaration the same way. A broken declaration
+// on the default branch must refuse the proposal: the old code's
+// `--git-dir <url>` resolution could not read the remote at all and
+// would have admitted it.
+func TestServiceReadsTheDeclarationThroughTheTransport(t *testing.T) {
+	remote := forgeRemote(t)
+	if out, err := gitSymbolicRef(remote, "refs/heads/main"); err != nil {
+		t.Fatalf("pin the default branch: %v %s", err, out)
+	}
+	priv := fixtureKey(t)
+	rootFP := fpFor(t, priv)
+	commitDeclaration(t, remote, rootFP, `{"posture": "enforced-self-hosted"}`)
+
+	d := startService(t, "file://"+remote)
+	asAdmission(t, func() {
+		rec, err := genesis.Build(priv, nil, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := d.client.Propose(posture.DefaultLedgerRef, []*event.Record{rec}); err != nil {
+			t.Fatalf("genesis through the URL service: %v", err)
+		}
+	})
+	// Break the declaration AFTER genesis: the judge then reads it as it
+	// stands and must fail closed.
+	commitDeclaration(t, remote, rootFP, `{"posture": "enforced-self-hosted", "guardrails": {"squads": {"core": {"default": "trivial", "max_agent": ""}}}}`)
+
+	store, _ := materializedTip(t, remote)
+	rec := signed(t, "message.sent", "c-0001", `{"n": 1}`, tipOf(t, store))
+	var perr error
+	asAdmission(t, func() { _, perr = d.client.Propose(posture.DefaultLedgerRef, []*event.Record{rec}) })
+	if perr == nil || !strings.Contains(perr.Error(), posture.DeclarationPath) {
+		t.Fatalf("a URL deployment's broken declaration refuses the proposal, naming the file: %v", perr)
 	}
 }
 

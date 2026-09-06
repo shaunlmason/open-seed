@@ -114,6 +114,36 @@ func defaultBranch(gitDir string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// defaultBranchRemote resolves a remote's default branch THROUGH THE
+// TRANSPORT, so it works for an SSH/HTTPS URL as well as a path: a
+// `git --git-dir <url> symbolic-ref` is not a repository for a URL remote.
+// It is ls-remote --symref's three cases: a `ref:` line is the branch
+// (the deployment's default); an empty listing is an unborn HEAD (an
+// empty deployment — no default branch, the hook as before); a listing
+// with no `ref:` line is a detached or unreadable HEAD, which fails
+// rather than pretending there is no declaration (postures.md: a broken
+// declaration fails closed). An empty return, not an error, marks the
+// unborn case so the caller can distinguish it from a failure.
+func defaultBranchRemote(remote string) (string, error) {
+	out, err := exec.Command("git", "ls-remote", "-q", "--symref", remote, "HEAD").Output()
+	if err != nil {
+		return "", fmt.Errorf("ls-remote: %v", err)
+	}
+	branch := ""
+	for _, line := range strings.Split(string(out), "\n") {
+		if rest, ok := strings.CutPrefix(line, "ref: "); ok {
+			if fields := strings.Fields(rest); len(fields) > 0 {
+				branch = fields[0]
+			}
+			break
+		}
+	}
+	if branch == "" && strings.TrimSpace(string(out)) != "" {
+		return "", fmt.Errorf("the remote's HEAD is detached or unreadable, not a symref to a default branch: %s", strings.TrimSpace(string(out)))
+	}
+	return branch, nil
+}
+
 // readDeclarationAt reads the deployment declaration at the named branch's
 // tip: nil when the branch is unborn or carries no declaration file, an
 // error when the file exists and does not parse — the caller decides what
