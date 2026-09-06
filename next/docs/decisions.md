@@ -4666,17 +4666,24 @@ each inside the plan's autonomy contract:
   report and the bridge already read them. `ranking.Resume` reads those
   two rather than adding a third copy; `internal/project/report.go`
   and `cmd/seed/offer.go` are untouched on that account.
-- **`tuple.Applies` is extended to seed/5 through seed/8.** The named
-  list stopped at seed/4 although its own comment says every later
-  registered version keeps tuple semantics and the protocol register
-  says nothing else changes at seed/5. On a seed/8 chain, the forge
-  loop's, no grant could cite a tuple, no `run.started` could declare
-  one and no offer could scope by one, so the resumption could never
-  derive there. The list now names seed/2 through seed/8, its drill
-  asserts each, and every existing drill at seed/5 or later is green
-  under it (the fixtures that append a tupleless `run.started` sit at
-  seed/1 through seed/3). `next/internal/tuple/` is the one file
-  outside the plan's scope list, for that reason.
+- **`seed/9` restores the runtime-tuple semantics.** `tuple.Applies`
+  names seed/2 through seed/4 and was not extended when seed/5 through
+  seed/8 were registered, so on the forge loop's seed/8 chain no grant
+  could cite a tuple, no `run.started` could declare one and no offer
+  could scope by one: the resumption could never derive there. The
+  first cut extended the list in place; the review found (correctly)
+  that this re-judges records the shipped binaries already admitted
+  tupleless at seed/5 through seed/8, which the protocol forbids, and
+  exceeds D6. So seed/5 through seed/8 keep their recorded judgment
+  and `seed/9` restores the semantics, registered in `version` and the
+  protocol register with the usual two-validators-disagree trigger,
+  every later gate (evals, levels, import, racing, requests, forge
+  checks) naming it too. This is a protocol change D6 did not
+  foresee, taken here rather than escalated because the plan's purpose
+  is unmet without it and the bump is the tree's routine shape for a
+  change in judgment; the forge stand and the resumption drills run
+  at seed/9. `next/internal/tuple/` and `next/internal/version/` are
+  the files outside the plan's scope list, for that reason.
 - **The window derives even when the tuple does not.** `Resume`
   returns the fence, holder and consumed offer whenever a return by
   observation stands, and `ok` only when the tuple also derives, so

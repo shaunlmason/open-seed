@@ -2041,9 +2041,9 @@ written by the two implementing sessions, one voice.
   return, scoped to the prior tuple with the consumed offer's
   capabilities and tiers, its expiry and its record's `ts` from one
   instant through `Deps.Instant` and `Deps.AppendAt`, `--reoffer-ttl`;
-  `tuple.Applies` extended to every registered version from seed/2,
-  which the forge loop at seed/8 needed and its own comment already
-  promised; the "Resume" section of `next/spec/ranking.md`, the
+  `seed/9` restoring the runtime-tuple semantics that seed/5 through
+  seed/8 lost by omission, which the resumption on the forge loop's
+  chain needs; the "Resume" section of `next/spec/ranking.md`, the
   re-offer sections of `observations-forge.md` and `maintenance.md`,
   the maintenance fragment's clause)
 - sharded admission intake (III.B row 6, MAY) — os-7953612b —

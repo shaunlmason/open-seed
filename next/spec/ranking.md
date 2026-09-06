@@ -109,9 +109,15 @@ latest offer before the claim whose signer held the supervise boundary
 at its own position and whose scopes the holder met there, the two
 predicates the listing applies ([`offers.md`](offers.md) "Foreign
 offers are inert"), so a raw-pushed offer nobody granted never lends
-its scope. Record-derived like the ranking, never a clock; no
-admission rule reads it; the policy table above is unchanged, because
-the preference is per subject, not a ranking rule.
+its scope. The start read is the first at the fence that the run rule's own
+derivation (`admit.RunStartValid`) accepts, since the tolerant fold
+keeps a raw-pushed start too. Record-derived like the ranking, never
+a clock; no admission rule reads it; the policy table above is
+unchanged, because the preference is per subject, not a ranking rule.
+A declared tuple needs a chain where tuple semantics apply: `seed/2`
+through `seed/4`, and again from `seed/9`
+([`protocol.md`](protocol.md)); a window opened at `seed/5` through
+`seed/8` declared none, and the resumption says so.
 
 It **refuses by name** when any link is missing: the latest return was
 the verifier's (a fail verdict routes to whoever is strongest, not to

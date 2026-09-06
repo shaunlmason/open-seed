@@ -184,7 +184,8 @@ noticed. The pass therefore **re-offers what it returned**
 "Re-offer"): one `offer.published` per return, in the pass that
 returned it, scoped to the prior submitter's tuple where the chain
 derives one the holder can still take ([`ranking.md`](ranking.md)
-"Resume") and carrying the capabilities and tiers of the offer the
+"Resume"; a chain at `seed/9`, where a start declares its tuple
+again) and carrying the capabilities and tiers of the offer the
 returned claim consumed. The prior submitter's poll lists it and takes
 it through the unchanged claim; another configuration's does not. A
 window that declared no tuple re-offers unscoped by tuple. Nothing in

@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/offers"
@@ -97,13 +98,20 @@ func Resume(records []*event.Record, fold *transition.Fold, subject string) (Res
 	}
 	r.Fence, r.Holder = fence, holder
 	r.Offer = consumed(records, s, fence, holder)
-	// The first start at the fence is the admitted one: a start is
-	// once per fence at the boundary, and a raw duplicate folds after
-	// it as an anomaly. It is the supervisor's act on the holder's
-	// window, so the signer is not the holder and is not matched.
+	// The start is the first BOUNDARY-VALID one at the fence: the
+	// tolerant fold keeps a raw-pushed start too, and a raw start
+	// before the legitimate one would otherwise name an attacker's
+	// configuration, so each candidate is judged by the run rule's own
+	// derivation (admit.RunStartValid) against the prefix it appended
+	// onto. It is the supervisor's act on the holder's window, so the
+	// signer is not the holder and is not matched.
+	table, err := transition.Default()
+	if err != nil {
+		return r.fail(fmt.Sprintf("the transition table does not load: %v", err))
+	}
 	var start *transition.RunStartFact
 	for i := range s.RunStarts {
-		if s.RunStarts[i].Fence == fence {
+		if s.RunStarts[i].Fence == fence && admit.RunStartValid(records, table, subject, s.RunStarts[i]) {
 			start = &s.RunStarts[i]
 			break
 		}

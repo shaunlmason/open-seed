@@ -110,12 +110,20 @@ func (t Tuple) Complete() bool {
 }
 
 // Applies reports whether tuple semantics are active under the given
-// protocol version: seed/2 introduced them (next/spec/qualification.md)
-// and every later registered version keeps them, as a named list, never
-// an ordering; records at earlier positions keep their earlier judgment.
+// protocol version, as a named list, never an ordering: seed/2
+// introduced them (next/spec/qualification.md) and seed/3 and seed/4
+// kept them. The list was not extended when seed/5 through seed/8 were
+// registered, and the binaries that shipped those versions judged a
+// tupleless grant, start and offer as valid at those positions, so
+// those versions keep that recorded judgment here for good
+// (next/spec/protocol.md: records at earlier positions keep their
+// earlier judgment). seed/9 restores the semantics
+// (plans/os-29e2fef2.md; the resumption needs a declared tuple on the
+// forge loop's chain), and every version registered after it must be
+// named here too.
 func Applies(active string) bool {
 	switch active {
-	case version.Seed2, version.Seed3, version.Seed4, version.Seed5, version.Seed6, version.Seed7, version.Seed8:
+	case version.Seed2, version.Seed3, version.Seed4, version.Seed9:
 		return true
 	}
 	return false

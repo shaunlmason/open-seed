@@ -73,8 +73,8 @@ func TestDiffNamesTheFieldPerField(t *testing.T) {
 }
 
 func TestAppliesAtSeed2AndLater(t *testing.T) {
-	if Applies(version.Protocol) || Applies(version.Seed1) || !Applies(version.Seed2) || !Applies(version.Seed3) || !Applies(version.Seed4) || !Applies(version.Seed5) || !Applies(version.Seed6) || !Applies(version.Seed7) || !Applies(version.Seed8) || Applies("seed/9") {
-		t.Fatal("tuple semantics activate at seed/2 and stay on at every later registered version, never by ordering")
+	if Applies(version.Protocol) || Applies(version.Seed1) || !Applies(version.Seed2) || !Applies(version.Seed3) || !Applies(version.Seed4) || Applies(version.Seed5) || Applies(version.Seed6) || Applies(version.Seed7) || Applies(version.Seed8) || !Applies(version.Seed9) || Applies("seed/10") {
+		t.Fatal("tuple semantics activate at seed/2, keep the recorded silence of seed/5 through seed/8, and return at seed/9: a named list, never an ordering")
 	}
 	partial := Tuple{Harness: "h/1", Environment: "env"}
 	if partial.Complete() || !full().Complete() {

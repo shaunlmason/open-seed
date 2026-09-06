@@ -30,39 +30,67 @@ type resumeStand struct {
 	tuple string
 	offer int
 	fence int
+	// v is the version the stand appends at: seed/9 unless a case
+	// opens its window at seed/8 and upgrades after.
+	v string
 }
 
-func (s *stand) at8(who, verb, subject, payload string) int {
-	s.t.Helper()
-	s.clock++
-	return s.addAt(who, version.Seed8, fmt.Sprintf("2026-09-02T%02d:00:00Z", s.clock%24), verb, subject, payload)
+func (r *resumeStand) at8(who, verb, subject, payload string) int {
+	r.t.Helper()
+	r.clock++
+	return r.addAt(who, r.v, fmt.Sprintf("2026-09-02T%02d:00:00Z", r.clock%24), verb, subject, payload)
+}
+
+// upgrade appends the protocol upgrade to the next version and moves
+// the stand there.
+func (r *resumeStand) upgrade(to string) {
+	r.at8("root", ledger.UpgradeVerb, "system", `{"to": "`+to+`"}`)
+	r.v = to
 }
 
 func newResumeStand(t *testing.T) *resumeStand {
+	return newResumeStandAt(t, version.Seed9)
+}
+
+// newResumeStandAt carries the ranking stand to top (seed/8 or seed/9)
+// with one contract on it.
+func newResumeStandAt(t *testing.T, top string) *resumeStand {
 	t.Helper()
 	s := newStand(t)
-	for _, v := range []string{version.Seed5, version.Seed6, version.Seed7, version.Seed8} {
+	for _, v := range []string{version.Seed5, version.Seed6, version.Seed7, version.Seed8, version.Seed9} {
+		if v == version.Seed9 && top != version.Seed9 {
+			break
+		}
 		s.next("root", ledger.UpgradeVerb, "system", `{"to": "`+v+`"}`)
 	}
-	r := &resumeStand{stand: s, tuple: tupleJSON("lineage/1", "detached-git-worktree")}
-	s.at8("root", keyring.VerbGranted, s.fps["a"], `{"capability": "claim", "tuple": `+r.tuple+`}`)
-	s.at8("root", "intent.filed", "c-1", `{"intent": "drill", "tier": "trivial", "budget": "small", "routing": "core"}`)
-	s.at8("root", "contract.specified", "c-1", `{"acceptance": {"ref": "spec.md @ 0123456789abcdef", "executable": false}}`)
-	r.offer = s.at8("root", "offer.published", "c-1", `{"eligibility": {"capabilities": ["claim"], "tiers": ["trivial"]}, "expires": "2027-01-01T00:00:00Z"}`)
+	r := &resumeStand{stand: s, tuple: tupleJSON("lineage/1", "detached-git-worktree"), v: top}
+	// A grant cites a tuple only where tuple semantics apply; at
+	// seed/8 worker a holds the plain claim grant the stand gave it.
+	if top == version.Seed9 {
+		r.at8("root", keyring.VerbGranted, s.fps["a"], `{"capability": "claim", "tuple": `+r.tuple+`}`)
+	}
+	r.at8("root", "intent.filed", "c-1", `{"intent": "drill", "tier": "trivial", "budget": "small", "routing": "core"}`)
+	r.at8("root", "contract.specified", "c-1", `{"acceptance": {"ref": "spec.md @ 0123456789abcdef", "executable": false}}`)
+	r.offer = r.at8("root", "offer.published", "c-1", `{"eligibility": {"capabilities": ["claim"], "tiers": ["trivial"]}, "expires": "2027-01-01T00:00:00Z"}`)
 	return r
 }
 
 // claim opens worker a's window and, unless told otherwise, reserves
-// and starts a run declaring the tuple.
+// and has the root (the run lane) start a run declaring the tuple;
+// "raw" plants a start by worker c, which holds no run lane, before
+// the legitimate one, declaring another configuration.
 func (r *resumeStand) claim(t *testing.T, start string) {
 	t.Helper()
 	r.fence = r.at8("a", "claim.taken", "c-1", `{}`)
 	reservation := r.at8("a", "budget.reserve", "c-1", fmt.Sprintf(`{"amount": "10", "fence": "%d"}`, r.fence))
 	switch start {
+	case "raw":
+		r.at8("c", "run.started", "c-1", fmt.Sprintf(`{"fence": "%d", "reservation": "%d", "tuple": %s}`, r.fence, reservation, tupleJSON("lineage/raw", "detached-git-worktree")))
+		fallthrough
 	case "declared":
-		r.at8("a", "run.started", "c-1", fmt.Sprintf(`{"fence": "%d", "reservation": "%d", "tuple": %s}`, r.fence, reservation, r.tuple))
+		r.at8("root", "run.started", "c-1", fmt.Sprintf(`{"fence": "%d", "reservation": "%d", "tuple": %s}`, r.fence, reservation, r.tuple))
 	case "undeclared":
-		r.at8("a", "run.started", "c-1", fmt.Sprintf(`{"fence": "%d", "reservation": "%d"}`, r.fence, reservation))
+		r.at8("root", "run.started", "c-1", fmt.Sprintf(`{"fence": "%d", "reservation": "%d"}`, r.fence, reservation))
 	case "none":
 	default:
 		t.Fatalf("unknown start %q", start)
@@ -124,48 +152,62 @@ func TestResumeRefusesByName(t *testing.T) {
 		arrange func(t *testing.T, r *resumeStand)
 		says    string
 		window  bool
+		top     string
 	}{
 		"no return": {func(t *testing.T, r *resumeStand) {
 			r.claim(t, "declared")
 			r.submit(t)
-		}, "carries no return", false},
+		}, "carries no return", false, ""},
 		"a verdict return routes by the ranking": {func(t *testing.T, r *resumeStand) {
 			r.claim(t, "declared")
 			sub := r.submit(t)
 			v := r.at8("v", "verdict.rendered", "c-1", fmt.Sprintf(`{"verdict": "fail", "receipt": "%s", "submission": "%d", "independence": "L1"}`, strings.Repeat("0", 64), sub))
 			r.at8("root", transition.ContractReturnedVerb, "c-1", fmt.Sprintf(`{"verdict": "%d"}`, v))
-		}, "cited a verdict, not an observation", false},
+		}, "cited a verdict, not an observation", false, ""},
 		"no admitted run.started": {func(t *testing.T, r *resumeStand) {
 			r.claim(t, "none")
 			r.submit(t)
 			r.returnRed(t)
-		}, "carries no admitted run.started", true},
-		"a start that declared no tuple": {func(t *testing.T, r *resumeStand) {
+		}, "carries no admitted run.started", true, ""},
+		"a tupleless start at seed/9 is no admitted start": {func(t *testing.T, r *resumeStand) {
 			r.claim(t, "undeclared")
 			r.submit(t)
 			r.returnRed(t)
-		}, "declared no tuple", true},
+		}, "carries no admitted run.started", true, ""},
+		"a start admitted tupleless at seed/8 declared no tuple": {func(t *testing.T, r *resumeStand) {
+			// The window opened where tuple semantics were silent and
+			// the chain upgraded after: the start keeps its recorded
+			// judgment (valid, tupleless) and the resumption says so.
+			r.claim(t, "undeclared")
+			r.upgrade(version.Seed9)
+			r.submit(t)
+			r.returnRed(t)
+		}, "declared no tuple", true, version.Seed8},
 		"a suspended holder": {func(t *testing.T, r *resumeStand) {
 			r.claim(t, "declared")
 			r.submit(t)
 			r.returnRed(t)
 			r.at8("root", keyring.VerbSuspended, r.fps["a"], `{"reason": "drill"}`)
-		}, "is suspended", true},
+		}, "is suspended", true, ""},
 		"a revoked holder": {func(t *testing.T, r *resumeStand) {
 			r.claim(t, "declared")
 			r.submit(t)
 			r.returnRed(t)
 			r.at8("root", keyring.VerbRevoked, r.fps["a"], `{"reason": "drill"}`)
-		}, "is revoked", true},
+		}, "is revoked", true, ""},
 		"an active holder whose tuple was disqualified": {func(t *testing.T, r *resumeStand) {
 			r.claim(t, "declared")
 			r.submit(t)
 			r.returnRed(t)
 			r.at8("root", keyring.VerbDisqualified, r.fps["a"], `{"capability": "claim", "tuple": `+r.tuple+`, "contract": "e-1", "verdict": "3", "reason": "the eval failed"}`)
-		}, "admissible claim grant does not cite it", true},
+		}, "admissible claim grant does not cite it", true, ""},
 	} {
 		t.Run(name, func(t *testing.T) {
-			r := newResumeStand(t)
+			top := tc.top
+			if top == "" {
+				top = version.Seed9
+			}
+			r := newResumeStandAt(t, top)
 			tc.arrange(t, r)
 			got, ok := r.resume(t)
 			if ok || got.Tuple != nil {
@@ -181,6 +223,21 @@ func TestResumeRefusesByName(t *testing.T) {
 				t.Fatalf("no window derives without a return by observation: %+v", got)
 			}
 		})
+	}
+}
+
+// conformance: AC5: the start resumed is the first boundary-valid one
+// at the fence: a start raw-pushed by a key holding no run lane before
+// the legitimate one declares nothing, so a mutation taking the first
+// folded fact fails here.
+func TestResumeSkipsARawStart(t *testing.T) {
+	r := newResumeStand(t)
+	r.claim(t, "raw")
+	r.submit(t)
+	r.returnRed(t)
+	got, ok := r.resume(t)
+	if !ok || got.Tuple == nil || !got.Tuple.Equal(parse(t, r.tuple)) {
+		t.Fatalf("the legitimate start's tuple, never the raw one's: %+v (%s)", got.Tuple, got.Because)
 	}
 }
 
@@ -210,13 +267,13 @@ func TestResumeConsumedOfferIsAuthorizedAndMet(t *testing.T) {
 // with no consumed offer, and the tuple still does.
 func TestResumeWithoutAnOffer(t *testing.T) {
 	s := newStand(t)
-	for _, v := range []string{version.Seed5, version.Seed6, version.Seed7, version.Seed8} {
+	for _, v := range []string{version.Seed5, version.Seed6, version.Seed7, version.Seed8, version.Seed9} {
 		s.next("root", ledger.UpgradeVerb, "system", `{"to": "`+v+`"}`)
 	}
-	r := &resumeStand{stand: s, tuple: tupleJSON("lineage/1", "detached-git-worktree")}
-	s.at8("root", keyring.VerbGranted, s.fps["a"], `{"capability": "claim", "tuple": `+r.tuple+`}`)
-	s.at8("root", "intent.filed", "c-1", `{"intent": "drill", "tier": "trivial", "budget": "small", "routing": "core"}`)
-	s.at8("root", "contract.specified", "c-1", `{"acceptance": {"ref": "spec.md @ 0123456789abcdef", "executable": false}}`)
+	r := &resumeStand{stand: s, tuple: tupleJSON("lineage/1", "detached-git-worktree"), v: version.Seed9}
+	r.at8("root", keyring.VerbGranted, s.fps["a"], `{"capability": "claim", "tuple": `+r.tuple+`}`)
+	r.at8("root", "intent.filed", "c-1", `{"intent": "drill", "tier": "trivial", "budget": "small", "routing": "core"}`)
+	r.at8("root", "contract.specified", "c-1", `{"acceptance": {"ref": "spec.md @ 0123456789abcdef", "executable": false}}`)
 	r.claim(t, "declared")
 	r.submit(t)
 	r.returnRed(t)

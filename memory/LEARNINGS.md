@@ -2251,7 +2251,13 @@ failed step skips the rest of the job.
   a drill that a seed/N chain can still exercise the gated feature is
   the only thing that catches it. When a stand at the newest version
   refuses a payload field as unknown, check the gate before the
-  payload.
+  payload. The fix is never to extend the list in place: the shipped
+  binaries judged those positions, so the positions keep that
+  judgment and a new version carries the correction.
+- A derivation that reads a run fact off the tolerant fold must
+  re-judge it with `admit.RunStartValid`: the fold keeps raw-pushed
+  starts too, and the first folded fact at a fence is not the
+  admitted one.
 - `run.started` is signed by the supervisor, not the claim holder: a
   derivation that ties the run to the holder must key on the fence,
   never on the signer.

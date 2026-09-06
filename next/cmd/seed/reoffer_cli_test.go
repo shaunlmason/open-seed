@@ -42,7 +42,7 @@ func reofferLedger(t *testing.T) *reofferStand {
 	}
 	// A well-shaped offer by a key holding no supervise standing folds
 	// and is inert everywhere (offers.md "Foreign offers are inert").
-	rawAppendAt(t, m.ld, workerRawKey(23), version.Seed8, "offer.published", "c-1", `{"eligibility": {"tiers": ["huge"]}, "expires": "2027-01-01T00:00:00Z"}`)
+	rawAppendAt(t, m.ld, workerRawKey(23), version.Seed9, "offer.published", "c-1", `{"eligibility": {"tiers": ["huge"]}, "expires": "2027-01-01T00:00:00Z"}`)
 	r.open(t)
 	return r
 }
@@ -52,6 +52,11 @@ func reofferLedger(t *testing.T) *reofferStand {
 func (r *reofferStand) open(t *testing.T) {
 	t.Helper()
 	fence, reservation := openWindow(t, r.ld, 22, r.keys["workerA"], "c-1")
+	// A start raw-pushed by a key holding no run lane, declaring
+	// another configuration, folds before the legitimate one and must
+	// never be the one resumed (offers.md's laundering posture).
+	rawAppendAt(t, r.ld, workerRawKey(23), version.Seed9, "run.started", "c-1",
+		fmt.Sprintf(`{"fence": %q, "reservation": %q, "tuple": %s}`, fence, reservation, drillTuple(map[string]string{"model": "lineage/raw"})))
 	// The run is the supervisor's act on the holder's window; the
 	// declared tuple is judged against the holder's admissible set.
 	if _, err := admitAppend(t, r.ld, workerRawKey(21), "run.started", "c-1",

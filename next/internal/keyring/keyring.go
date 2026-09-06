@@ -321,7 +321,7 @@ func AcceptedCapabilities(verb string) []string {
 // records at earlier positions are grandfathered as inert, and every
 // later version keeps them (seed/2 adds tuple semantics on top,
 // tuple.Applies). Named versions rather than an ordering: an unknown
-// "seed/9" is not a version this build implements, and a keyring that
+// "seed/10" is not a version this build implements, and a keyring that
 // guessed it had actor semantics would be judging a chain it cannot
 // verify.
 func Applies(active string) bool { return version.Activated(active) }
