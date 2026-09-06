@@ -1803,3 +1803,4 @@
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-0cd18799","ts":"2026-09-06T07:41:38Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-ea954a8a","kind":"pr"},"task":"os-0cd18799","ts":"2026-09-06T07:41:43Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-2f836bfc","kind":"pr"},"task":"os-21bf939f","ts":"2026-09-06T07:48:36Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-21bf939f","ts":"2026-09-06T07:48:40Z","verb":"transition"}
