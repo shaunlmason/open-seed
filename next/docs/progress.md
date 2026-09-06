@@ -2476,6 +2476,68 @@ its outcome attributes collapsed into it. What landed
   and 8 keep their status with the drills added to their evidence; row
   10 stays as the Phase 10 record left it.
 
+## III.F row 12: dependencies cascade, holds cascade, rollups render, ancestry warns (os-f0ae2cdf)
+
+The one Part III row the Phase 5 exit record routed to "Phase 13's
+catch-all, which names no item", closed as one graph-derived feature
+against plan #341 (`plans/os-f0ae2cdf.md`). The transition table stays
+the sole authority on lifecycle legality and terminality
+(`transitions.json` untouched); what a contract requires, belongs
+under and serves are facts beside the lifecycle, and everything the
+row asks for is derived. What landed (`next/docs/decisions.md`
+"III.F row 12"):
+
+- **The four facts**: `dependency.linked`, `dependency.unlinked`,
+  `hierarchy.parented`, `goal.aligned`, additive catalog growth from
+  `seed/1` under `dispatch` with the operator fallback, strict
+  payloads, on a known open contract; the graph rule (known target,
+  no self edge, no dependency or hierarchy cycle, links a set, parent
+  and mission replaced) at the admission rule `topology`,
+  `topology_refused` naming the part; `seed topology depend |
+  undepend | parent | align` through the checked path; the
+  dispatcher's `acts_through`; four residuals in the injection table.
+- **One trustworthy fold** (`internal/topology`): each relation judged
+  at its own position (version, the signer's grant with the keyring
+  replayed there, shape, the graph rule against the lifecycle at that
+  prefix); a fact that fails is a named anomaly that hides no work,
+  holds no claim and lends no mission; admission and every projection
+  read `admit.Topology`.
+- **Effective readiness** (`ready`, every dependency terminal, no
+  blocked ancestor) consumed by the claim boundary
+  (`not_effectively_ready`), the queue (Version "4", derivation
+  `transitions/1+topology/1`), the poll (`offers.Live`, the
+  eligibility helper moved out of `cmd/seed` into `internal/offers`
+  and shared with the report) and the wake delta; holds cascade as
+  `held_by` with no descendant rewritten.
+- **Advisory wakes**: `offers.Bridge` over a readiness delta from the
+  supervisor's cursor, matching live authorized offers to eligible
+  active actors and calling the adapter's `Wake` only through a
+  registered channel, errors reported and never acted on; `seed offer
+  wake --since` runs the pass and registers no channel (every shipped
+  `Wake` is the documented no-op); `TestWakelessPollOnlyRun` retained
+  unchanged.
+- **Initiatives and goals**: exact transitive rollups (state counts,
+  terminal, effectively ready, dependency-waiting, held, the milestone
+  sum from the new `Fold.Milestone`) and goal-ancestry warnings for
+  open work with no mission on itself or any ancestor, the mission's
+  carrier rendered beside them.
+- **Surfaces**: contracts Version "15" (`topology` per entry), report
+  Version "19" (`topology`: initiatives, warnings, anomalies), cache
+  Version "15" at schema generation 13 (four tables and the report
+  key), each present only when the prefix carries a relation fact, so
+  relation-free chains stay byte-identical.
+- **Drills**: `TestDependencyCascadeWakesAndPolls`,
+  `TestHoldCascadeSuppressesWakeUntilReleased`,
+  `TestInitiativeRollupRendersDescendants`,
+  `TestGoalAncestryWarnsOnlyOpenUnanchoredWork` (`cmd/seed`),
+  `TestTopologyRelationBoundary` and the affordance drill
+  (`internal/admit`), the fold, rule and derivation drills
+  (`internal/topology`), the bridge drill (`internal/offers`).
+- **Spec**: `next/spec/topology.md` (new); `protocol.md`, `actors.md`,
+  `envelope.md`, `offers.md`, `lifecycle.md`, `projections.md` amended;
+  `conformance.json` F.12 `met`, the generated capability, lane and
+  conformance documents regenerated.
+
 ## Frontier
 
 
@@ -2581,10 +2643,11 @@ remains in review at the gate, and it is not a criterion: os-0f924157
 (plan #334) closes #323's review finding, the enforced `seed-admit`
 hook reading the declaration at the default branch's tip, so the
 ceiling refuses at the boundary and not only at the cooperative
-client. The doctor reads 25 outstanding rows: the 18 Phase 13 rows the
-exit record flips (III.D rows 5–7 met by item 8, os-b45c308d), C.4 and
-Q.7 routed to the backlog's scale run and to promotion, and III.R's
-seven, none of which an agent act can supply.
+client. The doctor reads 24 outstanding rows (III.F row 12, the
+catch-all's one row, is `met` by os-f0ae2cdf, #352; III.D rows 5–7 by
+Phase 13 item 8, os-b45c308d): the 17 remaining Phase 13 rows the exit
+record flips, C.4 and Q.7 routed to the backlog's scale run and to
+promotion, and III.R's seven, none of which an agent act can supply.
 What stands between the packet and the Self-hosting question is the
 deployment, which the autonomy contract reserves to the operator: a
 ledger remote whose `pre-receive` is the `seed-admit` binary (the
@@ -2631,11 +2694,14 @@ Of the two rows outside III.R that stood open on the tree's own
 account, III.L row 4 is drilled for allow and deny by os-8ecef90f (plan
 #320, task PR #321, merged) and stands `partial`, its require-approval
 mode being os-5781a026's, and III.A row 7 is met by os-db5cd353 (plan
-#324, task PR #325, merged), so the doctor reads 25 outstanding rows:
-18 Phase 13 rows the exit record flips (III.D rows 5–7 met by Phase 13
-item 8, os-b45c308d), C.4 and Q.7 routed to the backlog run and to
-promotion, and III.R's seven, none of which an agent can supply. (This paragraph carried two overlapping versions of
+#324, task PR #325, merged), so the doctor reads 24 outstanding rows:
+17 Phase 13 rows the exit record flips (III.F row 12 met by
+os-f0ae2cdf, #352; III.D rows 5–7 by Phase 13 item 8, os-b45c308d),
+C.4 and Q.7 routed to the backlog run and to promotion, and III.R's
+seven, none of which an agent can supply. (This paragraph carried two overlapping versions of
 itself after #338 merged; the merged reading is the one above.)
+os-f0ae2cdf (plan #341, task PR #352) then meets III.F row 12, the
+catch-all's one row, and the count reads 27.
 
 The 2026-09-06 formal-methods survey (docs/next-build-plan.md §3)
 filed two backlog cards, listed in the backlog section above:

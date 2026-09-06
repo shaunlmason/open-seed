@@ -13,7 +13,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | C. Streams and the hot path | 4 | 1 | 0 | 0 |
 | D. Projections | 8 | 0 | 0 | 0 |
 | E. Identity, threat model, qualification | 7 | 0 | 2 | 0 |
-| F. Work contracts and lifecycle | 10 | 0 | 1 | 1 |
+| F. Work contracts and lifecycle | 11 | 0 | 0 | 1 |
 | G. Verdicts and evidence | 8 | 0 | 2 | 0 |
 | H. Supervisor and execution | 5 | 1 | 2 | 2 |
 | I. Affordances and the actor interface | 4 | 1 | 0 | 0 |
@@ -26,7 +26,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | P. Distribution, supply chain, adoption | 5 | 0 | 0 | 0 |
 | Q. Quality, docs, community | 6 | 1 | 0 | 0 |
 | R. The autonomy end-state | 0 | 0 | 7 | 0 |
-| **all** | 103 | 5 | 14 | 6 |
+| **all** | 104 | 5 | 13 | 6 |
 
 ## A. The Ledger
 
@@ -108,7 +108,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | F.9 | `met` | 5 | Packets contain exactly four bounded parts — acceptance criteria; verified/asserted-marked settled decisions; commit-anchored artifact references (including the diff vs. merge-base or a range producing it); investigation findings — shape-linted and size-bounded. | #124 (internal/packet strict schema, the 3072 canonical bound, the mandatory base range), #127 (packet-shape hardening) | — |
 | F.10 | `met` | 5 | Packet sufficiency is drilled: a fresh executor completes a killed executor's contract from the packet alone, including not re-trying recorded dead ends (asserted by the drill). | #124, #127 TestPacketResumeDrill (internal/packet/resume_test.go) | — |
 | F.11 | `met` | 5 | Plans are falsifiable: boundary set, retention set, validation commands for both, expected diff shape; missing retention fails lint; plan and implementation PRs are structurally disjoint. | #126 (internal/plan lint and classifier, exit 16 plan_required, plan and task PRs structurally disjoint), #130 (the engine pin for the receipt's plan-line commands) | — |
-| F.12 | `routed` | 5 | Dependencies cascade, with advisory wakes where a channel exists (polling remains the correctness path, consistent with the wakeless run in H); holds cascade with suppression; initiative rollups render; goal ancestry warns. | #145 (advisory wakes: the wakeless poll-only drill, Phase 7) | Phase 5 record: unmet; advisory wakes to Phase 7 (#145 landed them); holds with suppression, initiative rollups and goal-ancestry warnings to Phase 13's catch-all, which names no item |
+| F.12 | `met` | 13 | Dependencies cascade, with advisory wakes where a channel exists (polling remains the correctness path, consistent with the wakeless run in H); holds cascade with suppression; initiative rollups render; goal ancestry warns. | os-f0ae2cdf: TestDependencyCascadeWakesAndPolls (cmd/seed/topology_cli_test.go: a waiting dependent is absent from the queue, the poll and the claim boundary until every requirement is terminal, appears at that prefix, is woken once through a recording channel and claimed by polling alone), TestHoldCascadeSuppressesWakeUntilReleased (cmd/seed/topology_cli_test.go: a blocked root holds its descendants with held_by, a dependency closing under the hold wakes nobody, the unblock exposes each with one wake, base states unchanged), TestInitiativeRollupRendersDescendants (cmd/seed/topology_cli_test.go: exact transitive counts and the milestone sum in the contracts view, the report and the cache, byte-identical across rebuilds, the initiative excluded), TestGoalAncestryWarnsOnlyOpenUnanchoredWork (cmd/seed/topology_cli_test.go: inherited missions do not warn, open orphans and unaligned trees warn with their chains, terminal work does not, raw-pushed relations stay anomalous), TestTopologyRelationBoundary and TestTopologyIsAffordedWhereARelationIsLegal (internal/admit/topology_test.go), TestApplyHoldsTheGraphRule, TestDerivedReadsBothFolds and TestFoldTrustsOnlyWhatPassedTheBoundary (internal/topology), TestBridgeMatchesScopesAndWakesThroughChannels (internal/offers); the correctness path retained from #145: TestWakelessPollOnlyRun (cmd/seed/offer_cli_test.go) | — |
 
 ## G. Verdicts and evidence
 

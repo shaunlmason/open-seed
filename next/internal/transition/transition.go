@@ -1141,6 +1141,18 @@ func (f *Fold) foldErasure(pos int, e *event.Event) {
 	f.erasures = append(f.erasures, ErasureFact{Pos: pos, TS: e.TS, Signer: e.Actor, Subject: e.Subject, Artifact: p.Artifact, Reason: p.Reason})
 }
 
+// Milestone reports the subject's milestone high-water mark: the
+// highest admitted count and the position of the latest milestone
+// (plans/os-f0ae2cdf.md D7: an initiative's rollup sums its
+// descendants' counts, never a percentage).
+func (f *Fold) Milestone(subject string) (count, pos int, ok bool) {
+	m, has := f.milestones[subject]
+	if !has {
+		return 0, 0, false
+	}
+	return m.Count, m.Pos, true
+}
+
 // PlanApproved reports the subject's approved-plan anchor, if any.
 func (f *Fold) PlanApproved(subject string) (string, bool) {
 	ref, ok := f.planned[subject]

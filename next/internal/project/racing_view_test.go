@@ -72,7 +72,7 @@ func TestContractsViewCarriesTheRace(t *testing.T) {
 	if race, _ := view(left)["c-1"].(map[string]any); race == nil || len(race["racers"].([]any)) != 0 || race["settled_at"] != nil {
 		t.Fatalf("after every racer left the object stands, empty and unsettled: %+v", race)
 	}
-	if project.Contracts().Version != "14" {
+	if project.Contracts().Version != "15" {
 		t.Fatalf("the contracts view is version 14 with the racing object, got %s", project.Contracts().Version)
 	}
 }

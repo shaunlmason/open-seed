@@ -116,18 +116,27 @@ Phase 5's transition table replaces the rule with explicit vocabulary.
   `racing` object on a subject that raced (plans/os-56bee171.md D4):
   `racers` (the active claims by fence order), and after settlement
   `settled_at` and `settled_out`; absent on every other subject, so
-  chains without a race are byte-identical.
+  chains without a race are byte-identical. Version 15 adds the
+  `topology` object (plans/os-f0ae2cdf.md D8; [`topology.md`](topology.md)):
+  the relations, the unresolved dependencies, `effective_ready`,
+  `held_by`, the mission anchor and its carrier, the goal-ancestry
+  warning and the rollup, present only when the prefix carries a
+  trusted relation fact, so relation-free chains stay byte-identical.
 
 - **`queue`** (`queue.json`): the claimable-work surface —
   `{schema_version: "1", derivation, ready: […]}`, entries carrying
-  `{subject, since_position}`. The derivation is
+  `{subject, since_position}`. The derivation was
   `"transitions/1"` (`lifecycle.md`; Version "2"): `ready` lists the
   subjects whose folded lifecycle state is `ready`, oldest first,
   `since_position` the chain position that made each ready. The v0
   `"none"` marker is retired exactly as promised — a consumer MUST
   NOT treat an underived queue as meaning "nothing to do", and the
-  marker names which derivation decided. The eligibility filter
-  follows later, per the build plan.
+  marker names which derivation decided. Version "4" narrows the set
+  under the derivation `"transitions/1+topology/1"`
+  (plans/os-f0ae2cdf.md D4; [`topology.md`](topology.md)): the
+  effectively ready, those with every active dependency terminal and
+  no blocked ancestor, read from the topology fold; relation-free
+  chains list the same set as before.
 - **`actors`** (`actors.json`): the per-actor drill-down — the roster
   fields plus `standing_history` (each `actor.*` event on the subject:
   position, verb, acting signer) and `signed` (position, verb, subject
@@ -415,6 +424,16 @@ checkpoint and a build from genesis stay byte-identical; a full
 on nothing but the chain. Consumers that care read it beside the stamp.
 
 ## The adapters section (Phase 13 item 2)
+
+The report gains a `topology` section (version 19; plans/os-f0ae2cdf.md
+D8; [`topology.md`](topology.md)): `initiatives` with their rollups,
+`goal_ancestry_warnings` over open unanchored work, and the relation
+`anomalies` the fold kept but does not trust, present only when the
+prefix carries a relation fact. The cache (Version "15", schema
+generation 13) mirrors it: the `relations`, `topology_state`,
+`topology_anomalies` and `goal_ancestry_warnings` tables, the
+report's `topology` key, and the queue's effective derivation in
+`queue_meta`.
 
 The report gains an `adapters` section (version 17): per executor
 substrate, the runs started under its harness and its budget posture

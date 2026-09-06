@@ -49,12 +49,15 @@ func probeViewAt(ctx *Context, subject string, now time.Time) *probeView {
 		request:     "0",
 		approval:    "0",
 		erasable:    strings.Repeat("0", 64),
+		relative:    subject,
+		unlink:      subject,
 		// The observation probe's defaults, as the production view
 		// carries them (plans/os-0cd18799.md).
 		observationHead:   strings.Repeat("0", 40),
 		observationChecks: "red",
 		observationPR:     "probe",
 	}
+	topologyProbes(ctx, subject, v)
 	if ctx.Lifecycle != nil {
 		// The request probes' citations, as the production view
 		// carries them (next/spec/requests.md): the queried contract
