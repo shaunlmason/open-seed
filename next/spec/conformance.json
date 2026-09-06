@@ -1079,10 +1079,10 @@
           "row": 1,
           "text": "Clone-and-init adoption from tagged releases; three-way template upgrades with rollback; pinned checksum-verified engine, never committed, air-gap paths; checksum/protocol/downgrade-safe engine upgrades; everything executable hash-pinned.",
           "posture": "any",
-          "status": "met",
+          "status": "partial",
           "phase": "12",
           "evidence": "scripts/seed fetching the engine pinned in .seed/engine.lock with checksum verification; seed engine upgrade with rollback and the protocol preflight; seed template upgrade's three-way merge from recorded provenance; the vendored engine for air-gapped machines; checksums.txt with provenance on every release",
-          "note": "residual named and not claimed by the Phase 12 record: Seed's own binary is built from source and not yet a released artifact (promotion, section 5 step 2)"
+          "note": "unmet residual owned by promotion section 5 step 2: Seed's own binary is built from source and no seed/v* release has been cut"
         },
         {
           "row": 2,

@@ -1820,15 +1820,17 @@ credential-free under both postures with the ledger audit
 `internal/simulate/audit_test.go`). *III.P, distribution and
 migration.* Row 1 (tagged releases, three-way template upgrades with
 rollback, the pinned checksum-verified engine never committed,
-air-gap paths, hash-pinning throughout): met by the distribution Seed
-ships inside, `scripts/seed` fetching the engine pinned in
-`.seed/engine.lock` and verifying its checksum, `seed engine upgrade`
-with rollback and the protocol preflight, `seed template upgrade`'s
-three-way merge from recorded provenance, the vendored engine for
-air-gapped machines, and `checksums.txt` with provenance on every
-release; one residual named and not claimed: Seed's own binary is
-built from source and is not yet a released artifact, which is §5
-step 2's cutover (what new users clone) and belongs to promotion. Row
+air-gap paths, hash-pinning throughout): partial. Every clause is met
+by the distribution Seed ships inside — `scripts/seed` fetching the
+engine pinned in `.seed/engine.lock` and verifying its checksum, `seed
+engine upgrade` with rollback and the protocol preflight, `seed
+template upgrade`'s three-way merge from recorded provenance, the
+vendored engine for air-gapped machines, and `checksums.txt` with
+provenance on every release — except the first, clone-and-init adoption
+from tagged releases: Seed's own binary is built from source and no
+seed/v* release has been cut, which is §5 step 2's cutover (what new
+users clone) and belongs to promotion. The conformance table records
+the row as partial accordingly (os-53650015). Row
 2 (hook and service, both stateless and rebuildable): met, the two
 kill-and-replace drills above. Row 3 (the preseed in one idempotent,
 CI-verified file): met by #254, `TestInitPreseedIsIdempotentAndDriftRefuses`
