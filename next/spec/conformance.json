@@ -271,7 +271,7 @@
           "posture": "any",
           "status": "met",
           "phase": "13",
-          "evidence": "#357 TestMirrorExporterSuite, TestMirrorMarkerRefusesRatherThanRepairs, TestMirrorPlanIsDeterministic, TestMirrorExposesNoSeedWritePath (next/mirror); TestMirrorCommandPlansAndApplies (cmd/seed-mirror); TestMirrorExportAndRequestIngressPerExporter (cmd/seed), under make check",
+          "evidence": "#361 TestMirrorExporterSuite, TestMirrorMarkerRefusesRatherThanRepairs, TestMirrorPlanIsDeterministic, TestMirrorExposesNoSeedWritePath (next/mirror); TestMirrorCommandPlansAndApplies (cmd/seed-mirror); TestMirrorExportAndRequestIngressPerExporter (cmd/seed), under make check",
           "note": "Phase 13 item 8 (os-b45c308d): the projection-only mirror component with its sealed exporter registry, one suite per registered exporter, joined to item 4's request ingress (#270)"
         },
         {
@@ -280,7 +280,7 @@
           "posture": "any",
           "status": "met",
           "phase": "13",
-          "evidence": "#357 TestAuthorityBoundaryHoldsInTheTree, TestAuthorityBoundarySelfCheck (internal/authoritylint), under make check",
+          "evidence": "#361 TestAuthorityBoundaryHoldsInTheTree, TestAuthorityBoundarySelfCheck (internal/authoritylint), under make check",
           "note": "Phase 13 item 8 (os-b45c308d): the export and coordination-write classes are derived from each executable's import closure, never listed; the lint self-checks against planted overlaps"
         },
         {
@@ -289,7 +289,7 @@
           "posture": "any",
           "status": "met",
           "phase": "13",
-          "evidence": "#357 TestExternalFactCatalogPins, TestObservationControlLint, TestObservationControlLintSelfCheck (internal/externalfact); TestGovernedObservationIsNotControl, TestCheckObservedNeedsSeed8 (internal/admit); TestExternalFactDischargesNothing (internal/obligation); TestGovernedObservationOverTheForges (cmd/seed), under make check",
+          "evidence": "#361 TestExternalFactCatalogPins, TestObservationControlLint, TestObservationControlLintSelfCheck (internal/externalfact); TestGovernedObservationIsNotControl, TestCheckObservedNeedsSeed8 (internal/admit); TestExternalFactDischargesNothing (internal/obligation); TestGovernedObservationOverTheForges (cmd/seed), under make check",
           "note": "Phase 13 item 8 (os-b45c308d): next/spec/external-facts.md is the closed inventory, pinned to the catalog and the keyring both ways; the forge readers are read-only sources in their own package; the invariance drill pins that an observation narrows and never widens (the observer lane on merge.observed, #137, #212; check.observed, #351)"
         },
         {
