@@ -2153,3 +2153,19 @@ failed step skips the rest of the job.
   commit)` ignores its first argument and always anchors `accept.md`;
   a drill on a second spec file needs its own helper or the wrong spec
   runs silently green.
+- 2026-09-06 (os-21bf939f): a test that needs a package's unexported
+  fixtures AND a package that imports the package under test (here
+  `internal/simulate`'s audit over `internal/admit`) cannot live in
+  the internal test package: the import is a cycle there. Put it in
+  the external `_test` package and hand it the fixtures through an
+  `export_test.go` in the internal one; `_test.go` files of the
+  internal package are visible to that shim, so scenario scripts and
+  helpers defined in tests export the same way.
+- 2026-09-06 (os-21bf939f): the sweep's "independent copy" of the
+  affordance view derivation is only as complete as the scenario that
+  exercises it. A random walk found the copy carried no escalation
+  anchors, so a listed `decision.recorded` re-drafted as an answer to
+  no question and failed the III.I class for a helper gap, not a rule
+  bug. When a re-draft copy exists for drift detection, every anchor
+  the production view carries must be in it, or the class fires on
+  its own instrument.

@@ -4304,3 +4304,77 @@ corrected it, and the implementation holds to the correction.
 - **`defer` stays where it was.** The verdict group's registry row
   lists `receipt, render, check, traces`; `defer` was unlisted before
   this card and this card does not re-home it.
+
+## The admission random walk: an instrument that explores (os-21bf939f)
+
+The III.I class ran over every prefix of one hand-written walk, and
+every generator in the tree walks a scripted shape, so rule
+interactions at positions no script reaches were tested only where
+someone thought of the case. The walk (plans/os-21bf939f.md) draws
+instead: a lane, a subject and a move at every position, the listed
+move re-drafted the way the sweep re-drafts and checked, the
+forbidden move drafted by a lane holding the capability and expected
+to refuse on the table's ground. What it found on its first runs, and
+what was decided about each:
+
+- **The sweep's re-draft copy lacked the escalation anchors.** The
+  first eight walks failed the III.I class at once: `decision.recorded`
+  listed for root on an escalated contract, re-drafted by
+  `probeViewAt` as an answer citing escalation "", refused. The copy
+  is deliberately independent of the production view so drift between
+  them fails the class; here the drift was the copy's, missing an
+  anchor the scenario never needed. Fixed in the copy (the standing
+  question's position and first option, from the fold, as the
+  production view derives them). A test-helper change under D7: no
+  production surface moved.
+- **Verb-scoped rules refuse ahead of the lifecycle rule, by the rule
+  set's order.** The plan's transition oracle asked for the lifecycle
+  rule's own error on every forbidden draft. The rule set runs fence
+  (position 862) and escalation (982) before lifecycle (2340), so a
+  forbidden exit drafted with the catalog's `"fence": "0"` on a
+  subject holding no claim refuses as a fence citing nothing active,
+  and `escalation.raised` while a question stands, or
+  `decision.recorded` where none does, refuses as the escalation
+  rule's. Each is a truthful refusal on a ground the illegal state
+  implies; none masks the transition. The oracle accepts exactly those,
+  enumerated by type and condition (`FenceError` with `Active < 0` on a
+  draft that cites a fence; `EscalationError` on the two verbs that
+  rule scopes) and fails any other earlier refusal as the named
+  refusal-ordering class, so a new case is classified by a human
+  rather than absorbed. The lifecycle rule's `ContentionError` on an
+  exclusive verb counts as reached: it is that rule's refusal of a
+  second claim, the ceiling's claim clause.
+- **Reached is counted per run, not per walk.** At the fast size a
+  walk's six forbidden draws can all land on the fence and escalation
+  rules by chance (seed 20260906001 at 24 steps did), which says
+  nothing about the instrument. The run must reach the lifecycle rule
+  somewhere; a walk need not.
+- **Two holders of the walk's own.** The shared scenario revokes its
+  holder at seed/3, so a walk started from its end had no
+  claim-capable lane. Root enrolls and grants two holders in the
+  preamble, through the same admit path as every step; two rather than
+  one puts contention within the draw.
+- **The walk lives in `admit_test`, behind an export shim.** The end
+  oracle is `simulate.Audit`, and that package imports `admit`, so the
+  walker cannot sit in the internal test package (an import cycle). It
+  sits in the external one and reads the shared scenario, the sweep's
+  re-draft and the fixtures through `export_test.go`; three consumers
+  of one scenario and one re-draft, no copy of either.
+- **The epilogue closes what the walk left open, through the listed
+  path.** The audit's abandonment bar reads an open claim window at the
+  chain's end as silent abandonment, and a walk stops mid-window by
+  construction. The walk lifts a standing halt and releases every
+  active claim by its holder before the audit, each as a listed verb
+  re-drafted and checked, so the epilogue is itself III.I evidence and
+  the walk's exits are the deliberate ones the lease clause names.
+- **Sizes.** Eight walks of forty-eight steps measured about eleven
+  seconds locally, over the plan's five; the steps were halved first,
+  as D6 orders, and eight by twenty-four measures about five. The
+  scheduled size is two hundred by ninety-six, about three seconds a
+  walk on the implementing host, as one step on the weekly
+  `perf-scale` job. Sixty walks of ninety-six steps ran green locally
+  before the sizes were fixed.
+- **Nothing in production moved.** No walk found a forbidden verb
+  admitted, a fold disagreeing with the table, a non-lifecycle verb
+  moving a state, a nondeterministic listing, or a red audit bar. The
+  findings were the instrument's own, above.
