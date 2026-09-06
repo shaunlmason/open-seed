@@ -47,6 +47,11 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 		request:     "0",
 		approval:    "0",
 		erasable:    strings.Repeat("0", 64),
+		// The observation probe's defaults, as the production view
+		// carries them (plans/os-0cd18799.md).
+		observationHead:   strings.Repeat("0", 40),
+		observationChecks: "red",
+		observationPR:     "probe",
 	}
 	if ctx.Lifecycle != nil {
 		// The request probes' citations, as the production view
@@ -94,6 +99,26 @@ func probeViewAt(ctx *Context, subject string) *probeView {
 			}
 			if s.Submission != nil {
 				v.submission = fmt.Sprintf("%d", s.Submission.Pos)
+				// The forge observation's citations, as the production
+				// view carries them (plans/os-0cd18799.md): the head
+				// and pull request the submission names, a check state
+				// differing from the standing observation's, and the
+				// standing red observation the return cites.
+				if head, ok := submissionHead(ctx, subject, s); ok {
+					v.observationHead = head
+				}
+				if s.Submission.PR != "" {
+					v.observationPR = s.Submission.PR
+				}
+			}
+			v.observationChecks = "red"
+			if s.Observation != nil {
+				if s.Observation.Checks == "red" {
+					v.observationChecks = "green"
+				}
+				if s.Observation.Red() && s.Observation.Head == v.observationHead {
+					v.redObservation = fmt.Sprintf("%d", s.Observation.Pos)
+				}
 			}
 			if s.Verdict != nil {
 				v.verdict = fmt.Sprintf("%d", s.Verdict.Pos)

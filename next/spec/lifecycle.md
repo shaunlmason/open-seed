@@ -93,7 +93,12 @@ current submission (`{"verdict": "<position>"}`, the
 whose verdict is pass or pending, and a raw-pushed fail authorizes
 nothing. The subject re-enters `ready` for a fresh
 claim → submission → verdict cycle; prior facts, the sealed
-commitment included, persist as history.
+commitment included, persist as history. From `seed/8` the return
+cites exactly one of the fail verdict or a standing red
+`check.observed` on the head under review, the forge's word that the
+submission is not mergeable, and a return by observation records no
+lockout ([`observations-forge.md`](observations-forge.md)); the row
+is unchanged.
 
 ## Claims and fences
 

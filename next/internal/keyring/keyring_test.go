@@ -375,7 +375,7 @@ func TestCapabilityVocabulary(t *testing.T) {
 		"intent.filed", "contract.specified", "contract.blocked",
 		"contract.unblocked", "contract.cancelled", "claim.taken",
 		"claim.released", "claim.parked", "claim.reaped",
-		"submission.made", "merge.observed", "plan.proposed", "plan.approved",
+		"submission.made", "merge.observed", "check.observed", "plan.proposed", "plan.approved",
 		"merge.requested", "verdict.rendered", "check.sealed",
 		"contract.returned", "merge.overridden", "offer.published", "request.answered",
 		"approval.granted", "approval.denied",

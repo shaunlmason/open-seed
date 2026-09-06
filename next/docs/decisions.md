@@ -4263,3 +4263,58 @@ without a vendor: local lexical BM25 over a git-native markdown store.
 - **Flags first, the query last.** The flag package's shape and every
   other verb's; a query of no searchable term refuses at usage.
 
+## The forge says the submission is not mergeable (os-0cd18799)
+
+Not a plan item: a §3 backlog card against charter §II.4 (`check.observed`,
+named there and in the verb catalog and built nowhere), §II.8, §II.11 and
+§II.13. The gap: after `submission.made` nothing was owed between the pull
+request opening and the merge being observed, the verifier never read the
+forge, and the return cited a fail verdict alone, so an agent opened the
+pull request and stopped. What landed (`next/spec/observations-forge.md`):
+
+- **The fact is the observer's, and it binds to the head.**
+  `check.observed` admits on review subjects from `seed/8` with `{pr, head,
+  checks, unresolved_threads?, review}`; the head must equal the tail of
+  the submission packet's `base` range, so a stale poll never stands for
+  the head being judged. Literals and a count only: the reader carries no
+  thread body, comment, check output or reviewer name, and the injection
+  sweep plants its marker in every field the fakes serve.
+- **Change is the admission condition.** An unchanged observation refuses
+  naming the standing one, at the boundary and before signing in `seed
+  check observe`, so the ledger's share is bounded by change rather than
+  by polling cadence.
+- **Absent is not zero.** Forgejo has no thread resolution, so its
+  observation carries no thread count rather than none; the forges page
+  names it as it names the pull-request rule.
+- **No checks is green.** A head the forge lists no checks for is green,
+  the v1 engine's `checksGate` posture: nothing failed and nothing runs.
+  Pending is neither red nor green and owes nothing.
+- **The return by observation records no lockout.** The v1 `reject` edge
+  blacklists the author; a red pull request wants its author back, so the
+  return adds no fail and no rejected fact and the prior submitter is the
+  natural next claimant. The table row is unchanged; the citation rule
+  widened to exactly one of `verdict` or `observation`, the latest
+  observation only.
+- **`merge.requested` refuses while red on both citation paths.** The
+  override overrules a verdict and says nothing about the forge; a chain
+  branch protection would hold must not sit `unreconciled`.
+- **The verdict is owed only under review.** The drift sweep found the
+  first draft advertising `submission.pending` on a subject a return by
+  observation had re-readied unjudged, a debt nobody could discharge, and
+  `verdict.unmerged` beside a red observation while `merge.requested`
+  refused. Both are suppressed by derivation, not by a special case in the
+  sweep.
+- **The pass re-reads between observe and return.** `maintain.Deps`
+  gains `Observe`, `Refresh` and `ReturnCeiling`; the return reads the
+  fresh fold so it cites the observation the pass just recorded, rather
+  than widening `Append` to return positions.
+- **The ceiling is a count on the chain.** `Returns` on the fold records
+  what each return cited; the fourth observation-cited return under the
+  default of three is `escalation.raised` with the submission packet's
+  base, the observation's position and head, the count, and three
+  answers. Rounds are counted, never timed.
+- **Named follow-ups, not built here.** A forge webhook as an advisory
+  wake adapter (§II.9); preferring the prior submitter's tuple for the
+  re-offer, supervisor ranking policy (Phase 13 item 7), filed as
+  os-29e2fef2.
+

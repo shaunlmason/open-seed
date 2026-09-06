@@ -1987,6 +1987,23 @@ written by the two implementing sessions, one voice.
   for what it shows and flips nothing on it; the run is red on a lost
   append until os-5063e8ba's re-link lands, which is the carded
   defect, not a regression)
+- the forge says the submission is not mergeable (charter §II.4's
+  `check.observed`, §II.13's checks gate on the contract loop, III.D
+  row 7) — os-0cd18799 — **in review** (task PR against plan #344:
+  `check.observed` at `seed/8`, the observer's fact on the head under
+  review bound to the submission's packet head and admitted only when
+  it changes; `submission.made --pr`; the `submission.unmergeable`
+  obligation owed by the dispatch lane with the head on the row;
+  `contract.returned` citing the latest red observation with no
+  lockout, `merge.requested` refusing while the forge says red;
+  `Observer.Checks` over GitHub, Forgejo (thread count nil) and the
+  snapshot; `seed check observe`; the maintenance pass's observe and
+  return steps with the return ceiling escalating on the fourth red
+  return; `next/spec/observations-forge.md`; the implementer fragment's
+  red-return paragraph; the walk's `seed8`, `review-c6`, `observed-c6`
+  and `returned-c6` stations; III.D row 7 met by construction and left
+  for the exit record to flip; the ranking follow-up D8 names filed as
+  os-29e2fef2)
 - sharded admission intake (III.B row 6, MAY) — os-7953612b —
   **backlog** (filed; a true extra whose absence conforms: the row is
   a permission, and os-9ef9ab34 marks it met by abstention, since the

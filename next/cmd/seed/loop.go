@@ -38,7 +38,9 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/loopverb"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
+	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 // The lifecycle verbs the loop takes, read from the registry rather
@@ -644,10 +646,16 @@ func runSubmission(args []string, stdout, stderr io.Writer) int {
 	packetPath := fs.String("packet", "", "four-part handoff packet (JSON file)")
 	base := fs.String("base", "", "resume range <merge-base>..<head>, when the packet does not name it")
 	repo := fs.String("repo", "", "repository the range is derived from, when neither the packet nor --base names it")
+	pr := fs.String("pr", "", "the pull request the submission opened (pr/<n> or <n>), what the maintenance pass polls the forge for")
 	parseErr := fs.Parse(args[1:])
 	missing := ""
 	if *packetPath == "" {
 		missing = "and --packet <file> (every deliberate exit carries one)"
+	}
+	if *pr != "" {
+		if _, err := protections.PRNumber(*pr); err != nil {
+			missing = "and --pr <ref> as pr/<n> or <n>"
+		}
 	}
 	if env := f.usage("submission make", parseErr, fs.NArg(), missing); env != nil {
 		return render(env, stdout, stderr)
@@ -666,7 +674,20 @@ func runSubmission(args []string, stdout, stderr io.Writer) int {
 	}
 	defer ls.done()
 	derive := func(ctx *admit.Context) ([]byte, *envelope.Envelope) {
-		return exitPayload(ctx, *f.subject, body, true)
+		payload, env := exitPayload(ctx, *f.subject, body, true)
+		if env != nil || *pr == "" {
+			return payload, env
+		}
+		// The pull request the submission names (plans/os-0cd18799.md
+		// D2): a sibling of the packet, defined from seed/8, what the
+		// forge observation binds to. Refused before signing on an
+		// earlier chain rather than appended as a field the fold of
+		// that version would not read.
+		if !version.ForgeChecksApply(ctx.Active) {
+			return nil, envelope.Fail(envelope.ExitVersionMismatch, "version_mismatch",
+				fmt.Sprintf("--pr is not defined at %s: naming the pull request needs a chain at %s", ctx.Active, version.Seed8))
+		}
+		return withPR(payload, *pr)
 	}
 	payload, env := derive(ls.ctx)
 	if env != nil {
@@ -674,6 +695,21 @@ func runSubmission(args []string, stdout, stderr io.Writer) int {
 	}
 	return ls.commit(f, loopAct{verb: submissionMadeVerb, payload: payload, derive: derive,
 		resultAt: terse(*f.subject)}, signer, stdout, stderr)
+}
+
+// withPR adds the pull-request reference beside the exit payload's
+// packet, fence and plan.
+func withPR(payload []byte, pr string) ([]byte, *envelope.Envelope) {
+	var out map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &out); err != nil {
+		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
+	}
+	out["pr"] = json.RawMessage(strconv.Quote(pr))
+	b, err := json.Marshal(out)
+	if err != nil {
+		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
+	}
+	return b, nil
 }
 
 // exitPayload assembles a deliberate exit's payload: the validated

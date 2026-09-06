@@ -1286,6 +1286,51 @@ func coreRules() []Rule {
 			}
 			return nil
 		}},
+		{Name: "forge", Check: func(c *Context, rec *event.Record) error {
+			// The forge observation (plans/os-0cd18799.md D1;
+			// next/spec/observations-forge.md): check.observed is a fact
+			// admitted only on review subjects from seed/8, bound to
+			// the head the submission under review names, and
+			// admitted only when it says something the standing
+			// observation does not. Capability rides the grant rule
+			// (the observer's row); this rule holds the shape, the
+			// head binding and the change requirement.
+			if rec.Event.Verb != transition.CheckObservedVerb {
+				return nil
+			}
+			if !keyring.Applies(c.Active) || c.Lifecycle == nil {
+				return nil
+			}
+			if !version.ForgeChecksApply(c.Active) {
+				return &Refusal{Rule: "forge", Err: fmt.Errorf("%s is not defined at %s: the forge observation needs a chain at %s", rec.Event.Verb, c.Active, version.Seed8)}
+			}
+			subject := rec.Event.Subject
+			s, ok := c.Lifecycle.State(subject)
+			if !ok {
+				return &transition.InvalidTransitionError{Subject: subject, Verb: rec.Event.Verb}
+			}
+			if s.State != "review" {
+				return &transition.InvalidTransitionError{Subject: subject, From: s.State, Verb: rec.Event.Verb}
+			}
+			fact, err := transition.ParseCheckObserved(c.Count, &rec.Event)
+			if err != nil {
+				return err
+			}
+			head, ok := submissionHead(c, subject, s)
+			if !ok {
+				return &transition.ChainError{Subject: subject, Verb: rec.Event.Verb, Reason: "the submission under review names no head in its packet's base range — an observation binds to a head, and there is none to bind to"}
+			}
+			if fact.Head != head {
+				return &transition.ChainError{Subject: subject, Verb: rec.Event.Verb, Reason: fmt.Sprintf("head %s is not the submission under review, whose head is %s — a stale poll never stands for the head being judged", fact.Head, head)}
+			}
+			if s.Submission != nil && s.Submission.PR != "" && fact.PR != s.Submission.PR {
+				return &transition.ChainError{Subject: subject, Verb: rec.Event.Verb, Reason: fmt.Sprintf("pr %q is not the submission's, which named %q", fact.PR, s.Submission.PR)}
+			}
+			if s.Observation != nil && s.Observation.Same(fact) {
+				return &transition.ChainError{Subject: subject, Verb: rec.Event.Verb, Reason: fmt.Sprintf("the observation at position %d already says exactly this — an unchanged poll appends nothing, and the subject's share of the ledger is bounded by change", s.Observation.Pos)}
+			}
+			return nil
+		}},
 		{Name: "proposal", Check: func(c *Context, rec *event.Record) error {
 			// Outside text can propose, never arm (III.F row 2,
 			// plans/os-73c00a50.md): request.* payloads structurally
@@ -2098,6 +2143,9 @@ func coreRules() []Rule {
 				if hasV == hasO {
 					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "the request cites exactly one of verdict or override — the two chain paths never blur (plans/os-d2497eb7.md)"}
 				}
+				if ce := forgeRed(c, subject, verb, s); ce != nil {
+					return ce
+				}
 				if hasO {
 					cited, err := strconv.Atoi(strings.TrimSpace(p.Override))
 					if err != nil {
@@ -2257,15 +2305,47 @@ func coreRules() []Rule {
 					return nil
 				}
 				var p struct {
-					Verdict string `json:"verdict"`
+					Verdict     string `json:"verdict"`
+					Observation string `json:"observation"`
 				}
 				dec := json.NewDecoder(bytes.NewReader(rec.Event.Payload))
 				dec.DisallowUnknownFields()
 				if err := dec.Decode(&p); err != nil {
-					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {verdict}: %v", err)}
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the payload is the strict object {verdict} or {observation}: %v", err)}
 				}
-				if strings.TrimSpace(p.Verdict) == "" {
+				hasV, hasO := strings.TrimSpace(p.Verdict) != "", strings.TrimSpace(p.Observation) != ""
+				if !hasV && !hasO {
 					return &transition.IncompleteError{Verb: verb, Subject: subject, Missing: []string{"verdict"}}
+				}
+				if hasV && hasO {
+					return &transition.ChainError{Subject: subject, Verb: verb, Reason: "the return cites exactly one of verdict or observation — the fail verdict's path and the red observation's never blur (plans/os-0cd18799.md D4)"}
+				}
+				if hasO {
+					// The red observation's return (plans/os-0cd18799.md
+					// D4): a routing decision, not a verdict, so it
+					// records no lockout and the prior submitter is the
+					// natural next claimant. Only the LATEST observation
+					// authorizes it: a later green one supersedes a red.
+					if !version.ForgeChecksApply(c.Active) {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("an observation citation is not defined at %s: the forge observation needs a chain at %s", c.Active, version.Seed8)}
+					}
+					cited, err := strconv.Atoi(strings.TrimSpace(p.Observation))
+					if err != nil {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("observation %q is not a chain position", p.Observation)}
+					}
+					if s.Observation == nil {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: "no forge observation stands on this submission — a return by observation cites what the observer recorded"}
+					}
+					if cited != s.Observation.Pos {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("cites position %d; the standing observation on this submission is at position %d — a superseded observation authorizes nothing", cited, s.Observation.Pos)}
+					}
+					if head, ok := submissionHead(c, subject, s); !ok || head != s.Observation.Head {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the observation at position %d names head %s, which is not the submission under review", s.Observation.Pos, s.Observation.Head)}
+					}
+					if !s.Observation.Red() {
+						return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the observation at position %d reports the submission mergeable (%s) — nobody yanks a green pull request", s.Observation.Pos, describeObservation(*s.Observation))}
+					}
+					return nil
 				}
 				cited, err := strconv.Atoi(strings.TrimSpace(p.Verdict))
 				if err != nil {
@@ -2836,6 +2916,52 @@ func authenticFail(c *Context, subject string, s transition.SubjectState) *trans
 
 // windowFail finds the fail verdict at the cited position in the
 // current submission window, nil when no such fail exists there.
+// submissionHead reads the head the submission under review names:
+// the tail of its packet's base range (next/spec/packets.md), the
+// commit the forge's checks and threads are about
+// (plans/os-0cd18799.md D1). A submission whose packet names no
+// parseable head binds no observation.
+func submissionHead(c *Context, subject string, s transition.SubjectState) (string, bool) {
+	if s.Submission == nil || s.Submission.Pos < 0 || s.Submission.Pos >= len(c.Records) {
+		return "", false
+	}
+	p, err := packet.FromPayload(subject, c.Records[s.Submission.Pos].Event.Payload)
+	if err != nil {
+		return "", false
+	}
+	_, head, ok := strings.Cut(p.Base, "..")
+	head = strings.TrimSpace(head)
+	if !ok || head == "" {
+		return "", false
+	}
+	return head, true
+}
+
+// forgeRed refuses a merge request while the forge's latest word on
+// the head under review says the submission is not mergeable
+// (plans/os-0cd18799.md D4): a chain that branch protection would hold
+// anyway must not sit unreconciled behind it. A later observation
+// supersedes; an observation on another head binds nothing here.
+func forgeRed(c *Context, subject, verb string, s transition.SubjectState) *transition.ChainError {
+	if s.Observation == nil || !s.Observation.Red() {
+		return nil
+	}
+	if head, ok := submissionHead(c, subject, s); !ok || head != s.Observation.Head {
+		return nil
+	}
+	return &transition.ChainError{Subject: subject, Verb: verb, Reason: fmt.Sprintf("the forge's latest observation at position %d reports %s on head %s — a red pull request is unmergeable until a later observation supersedes it", s.Observation.Pos, describeObservation(*s.Observation), s.Observation.Head)}
+}
+
+// describeObservation renders an observation's three facts for a
+// refusal: literals and a count, never forge prose.
+func describeObservation(o transition.CheckFact) string {
+	threads := "threads unknown"
+	if o.Threads != nil {
+		threads = fmt.Sprintf("%d unresolved thread(s)", *o.Threads)
+	}
+	return fmt.Sprintf("checks %s, %s, review %s", o.Checks, threads, o.Review)
+}
+
 func windowFail(s transition.SubjectState, pos int) *transition.VerdictFact {
 	for i := range s.SubmissionFails {
 		if s.SubmissionFails[i].Pos == pos {
