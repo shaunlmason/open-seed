@@ -65,6 +65,9 @@ func ledgerCount(t *testing.T, ld string) int {
 func TestMirrorExportAndRequestIngressPerExporter(t *testing.T) {
 	ld, _, _, service, _ := requestLedger(t)
 	out := filepath.Join(t.TempDir(), "projections")
+	// Publication locks the projection tree read-only; unlock it before
+	// testing's own TempDir cleanup, as every rebuild drill does.
+	unlockForCleanup(t, out)
 	current := filepath.Join(t.TempDir(), "current.json")
 	// rebuild publishes, then resolves through the consumer verb: the
 	// mirror reads what `seed project current` printed, never the
