@@ -31,7 +31,7 @@ func catalog(stdin io.Reader) *registry.Registry {
 			// empty one and the caller names a file instead.
 			return runPlan(args, stdin, stdout, stderr)
 		}},
-		registry.Group{Name: "verdict", Subs: []string{"receipt", "render", "check", "traces"}, Run: runVerdict},
+		registry.Group{Name: "verdict", Subs: []string{"receipt", "render", "defer", "check", "traces"}, Run: runVerdict},
 		registry.Group{Name: "seal", Subs: []string{"create", "rotate", "audit"}, Run: runSeal},
 		registry.Group{Name: "artifact", Subs: []string{"erase"}, Run: runArtifact},
 		registry.Group{Name: "offer", Subs: []string{"publish", "list", "wake"}, Run: runOffer},

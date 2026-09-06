@@ -43,7 +43,7 @@ import (
 
 func runVerdict(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict requires a subverb: receipt, render, check, or traces"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict requires a subverb: receipt, render, defer, check, or traces"), stdout, stderr)
 	}
 	switch args[0] {
 	case "receipt":
@@ -57,7 +57,7 @@ func runVerdict(args []string, stdout, stderr io.Writer) int {
 	case "traces":
 		return runVerdictTraces(args[1:], stdout, stderr)
 	}
-	return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict requires a subverb: receipt, render, check, or traces"), stdout, stderr)
+	return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict requires a subverb: receipt, render, defer, check, or traces"), stdout, stderr)
 }
 
 // verdictState is the read side every verdict verb shares: the

@@ -4488,3 +4488,16 @@ to implementation.
   exactly that frame change; `go test ./cmd/seed -run Corpus -update`
   re-recorded `next/trajectories/lanes/{dispatcher,maintenance}.json`
   on purpose, the scenario and the posture unchanged.
+
+## Verdict defer on the machine surface (os-ef2e3134)
+
+The gap os-7fc2ca38's last bullet recorded: the dispatcher routed
+`verdict defer` while the registry row and the usage line omitted it,
+so `seed serve` derived a method set without the human-verdict
+deferral and a lane over the machine surface had no way to route a
+low-confidence item to a human (III.I). One word in the row, one in
+each usage string, in the dispatcher's order; the vocabulary drill
+holds row and line equal in both directions, and
+`TestVerdictDeferExposed` names the method. No flag, refusal or
+posture of the verb changed, and no spec text: the method set is
+derived from the catalog, never listed.

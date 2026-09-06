@@ -2518,6 +2518,14 @@ row asks for is derived. What landed (`next/docs/decisions.md`
   `conformance.json` F.12 `met`, the generated capability, lane and
   conformance documents regenerated.
 
+## Verdict defer on the machine surface (os-ef2e3134)
+
+Not a plan item: the follow-up os-7fc2ca38's decision log left for its
+own card (plan #355). `defer` joins the verdict group's registry row
+and usage line, so `serve --list` carries `verdict.defer` and the
+registry resolves it (III.I); `TestVerdictDeferExposed` holds it. No
+verb behavior, spec or conformance change.
+
 ## Frontier
 
 
