@@ -89,8 +89,11 @@ type writer struct {
 	landedAt  int // node id
 	// afterRollback marks a landing that happened once the remote had
 	// rolled back: the healing push, or a fresh writer on the
-	// rolled-back tip.
-	afterRollback bool
+	// rolled-back tip. lostAfterRollback marks a race lost once the
+	// remote had rolled back: the in-flight writer of the fork shape,
+	// whose next fetch refuses regression.
+	afterRollback     bool
+	lostAfterRollback bool
 }
 
 // step is one atomic move of the model; a trace is a list of them.
@@ -134,7 +137,7 @@ func (s *state) key() string {
 	}
 	b.WriteString("|")
 	for _, w := range s.writers {
-		fmt.Fprintf(&b, "%d.%d.%d.%d.%d.%d.%d.%v;", w.kind, w.attempts, w.phase, w.fetched, w.persisted, w.outcome, w.landedAt, w.afterRollback)
+		fmt.Fprintf(&b, "%d.%d.%d.%d.%d.%d.%d.%v.%v;", w.kind, w.attempts, w.phase, w.fetched, w.persisted, w.outcome, w.landedAt, w.afterRollback, w.lostAfterRollback)
 	}
 	return b.String()
 }
@@ -253,6 +256,9 @@ func (s *state) apply(st step) *state {
 			return n
 		}
 		w.attempts--
+		if n.rolledBack {
+			w.lostAfterRollback = true
+		}
 		if w.attempts == 0 {
 			w.outcome, w.phase = retriesSpent, done
 			return n
@@ -294,8 +300,14 @@ type exploration struct {
 	// depth-first walk found to it.
 	traces [][]step
 	finals []*state
-	// Named shapes (plan P3): a rollback healed by an in-flight push,
-	// and a fork where a fresh writer landed on the rolled-back tip.
+	// Named shapes (plan P3), classified by the roles the plan names
+	// rather than by the chain's shape alone (review finding on the
+	// task PR): healing is an in-flight writer, fetched before the
+	// rollback, landing after it and restoring the old line; the fork
+	// is a fresh writer landing on the rolled-back tip first, after
+	// which an in-flight writer loses the race and then refuses
+	// regression at its re-fetch. Three roles, so the cooperative
+	// configuration carries three writers.
 	healing, fork []int // indexes into traces
 	spent         int   // terminal states with a retries-spent writer
 }
@@ -322,10 +334,10 @@ func explore(t *testing.T, c config) *exploration {
 			ex.traces = append(ex.traces, append([]step(nil), path...))
 			ex.finals = append(ex.finals, s)
 			idx := len(ex.traces) - 1
-			if s.rolledBack && s.descends(s.tip, s.rollbackFrom) {
+			if s.isHealing() {
 				ex.healing = append(ex.healing, idx)
 			}
-			if s.rolledBack && s.tip != s.rollbackTo && !s.descends(s.tip, s.rollbackFrom) {
+			if s.isFork() {
 				ex.fork = append(ex.fork, idx)
 			}
 			for _, w := range s.writers {
@@ -346,6 +358,37 @@ func explore(t *testing.T, c config) *exploration {
 	}
 	walk(c.initial(), nil)
 	return ex
+}
+
+// isHealing: the remote rolled back, and a writer that fetched the old
+// line before the rollback landed on it afterwards, so the terminal
+// chain carries the rolled-back records again.
+func (s *state) isHealing() bool {
+	if !s.rolledBack || !s.descends(s.tip, s.rollbackFrom) {
+		return false
+	}
+	for _, w := range s.writers {
+		if w.outcome == landed && w.afterRollback && s.descends(w.fetched, s.rollbackFrom) {
+			return true
+		}
+	}
+	return false
+}
+
+// isFork: the remote rolled back, a fresh writer landed on the
+// rolled-back tip so the terminal chain leaves the old line behind, and
+// an in-flight writer of the old line lost a race after the rollback
+// and then refused regression at its re-fetch.
+func (s *state) isFork() bool {
+	if !s.rolledBack || s.tip == s.rollbackTo || s.descends(s.tip, s.rollbackFrom) {
+		return false
+	}
+	for _, w := range s.writers {
+		if w.outcome == headRegression && w.lostAfterRollback && !s.descends(s.tip, w.persisted) {
+			return true
+		}
+	}
+	return false
 }
 
 func traceText(path []step) string {
@@ -444,7 +487,7 @@ func fastConfigs() []config {
 		{name: "2x2-enforced", kinds: []draftKind{normalDraft, normalDraft}, attempts: 2, enforced: true},
 		{name: "3x3-enforced", kinds: []draftKind{normalDraft, normalDraft, normalDraft}, attempts: 3, enforced: true},
 		{name: "2+halt-x3-enforced", kinds: []draftKind{normalDraft, normalDraft, haltDraft}, attempts: 3, enforced: true},
-		{name: "2x2-cooperative-rollback", kinds: []draftKind{normalDraft, normalDraft}, attempts: 2, enforced: false},
+		{name: "3x2-cooperative-rollback", kinds: []draftKind{normalDraft, normalDraft, normalDraft}, attempts: 2, enforced: false},
 	}
 }
 
@@ -484,7 +527,7 @@ func TestAppendInterleavings(t *testing.T) {
 				t.Fatalf("%s: P3's healing shape (an in-flight push restores the rolled-back line) is unreachable", c.name)
 			}
 			if len(ex.fork) == 0 {
-				t.Fatalf("%s: P3's fork shape (a fresh writer lands on the rolled-back tip first) is unreachable", c.name)
+				t.Fatalf("%s: P3's fork shape (a fresh writer lands on the rolled-back tip first, an in-flight writer loses and then refuses regression) is unreachable", c.name)
 			}
 		}
 	}

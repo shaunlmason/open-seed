@@ -77,32 +77,39 @@ func sampleTraces(t *testing.T, n int) []sampledTrace {
 		}
 		perConfig = append(perConfig, mine)
 	}
-	// Round-robin across the configurations, so a sample of a few
-	// traces touches each of them rather than the largest alone.
-	var rest []sampledTrace
-	for i := 0; ; i++ {
-		any := false
+	total := len(named)
+	for _, mine := range perConfig {
+		total += len(mine)
+	}
+	if n <= 0 || n >= total {
+		out := named
 		for _, mine := range perConfig {
-			if i < len(mine) {
-				rest = append(rest, mine[i])
-				any = true
-			}
+			out = append(out, mine...)
 		}
-		if !any {
-			break
-		}
+		return out
 	}
-	if n <= 0 || n >= len(named)+len(rest) {
-		return append(named, rest...)
-	}
+	// The remaining quota is dealt round-robin across the
+	// configurations, and each configuration's share is spread evenly
+	// over its own traces, so a sample of a few touches every
+	// configuration rather than the largest alone.
 	want := n - len(named)
 	if want <= 0 {
 		return named[:n]
 	}
-	k := len(rest) / want
+	quota := make([]int, len(perConfig))
+	for i := 0; i < want; i++ {
+		quota[i%len(perConfig)]++
+	}
 	out := named
-	for i := 0; i < len(rest) && len(out) < n; i += k {
-		out = append(out, rest[i])
+	for ci, mine := range perConfig {
+		q := min(quota[ci], len(mine))
+		if q == 0 {
+			continue
+		}
+		stride := len(mine) / q
+		for i := 0; i < q; i++ {
+			out = append(out, mine[i*stride])
+		}
 	}
 	return out
 }
