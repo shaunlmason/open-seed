@@ -1822,3 +1822,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T09:45:00Z"},"task":"os-29e2fef2","ts":"2026-09-06T08:45:00Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-5539a6ee","kind":"pr"},"task":"os-ef2e3134","ts":"2026-09-06T08:46:17Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-ef2e3134","ts":"2026-09-06T08:46:20Z","verb":"transition"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-29e2fef2","ts":"2026-09-06T08:50:12Z","verb":"transition"}
