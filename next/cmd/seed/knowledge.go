@@ -28,7 +28,7 @@ import (
 
 func runKnowledge(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "knowledge requires a subverb: deadend [retire | unretire] | propose | validate | contest | promote | retire | lint | show"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "knowledge requires a subverb: deadend [retire | unretire] | propose | validate | contest | promote | retire | lint | show | search"), stdout, stderr)
 	}
 	switch args[0] {
 	case "deadend":
@@ -50,8 +50,10 @@ func runKnowledge(args []string, stdout, stderr io.Writer) int {
 		return runKnowledgeLint(args[1:], stdout, stderr)
 	case "show":
 		return runKnowledgeShow(args[1:], stdout, stderr)
+	case "search":
+		return runKnowledgeSearch(args[1:], stdout, stderr)
 	}
-	return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown knowledge subverb %q: deadend [retire | unretire] | propose | validate | contest | promote | retire | lint | show", args[0])), stdout, stderr)
+	return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown knowledge subverb %q: deadend [retire | unretire] | propose | validate | contest | promote | retire | lint | show | search", args[0])), stdout, stderr)
 }
 
 // runKnowledgeDeadEndRetire is the curator's act on a dead end whose
@@ -592,4 +594,75 @@ func mustJSON(v any) []byte {
 		return []byte("null")
 	}
 	return b
+}
+
+// runKnowledgeSearch is the advisory lexical read (next/spec/curation.md
+// "Search"): BM25 over the surfacing set at the instant (verified
+// against --repo, the delivery posture: without it no lesson is
+// indexed and every candidate is reported unresolved), the standing
+// dead ends in the fold, and the sections of every --doc named under
+// the repository. Ranked, never delivered: nothing here changes what a
+// claim receives.
+func runKnowledgeSearch(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("knowledge search", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	f := bindLoopFlags(fs)
+	repo := fs.String("repo", "", "repository the lessons are verified against and the docs are read under (default: none, so no lesson is indexed)")
+	nowFlag := fs.String("now", "", "RFC3339: the instant expiry is judged at (default: the wall clock)")
+	limit := fs.Int("limit", 10, "at most this many hits (0: every hit)")
+	var docs listFlag
+	fs.Var(&docs, "doc", "a markdown file under --repo to index by section (repeatable)")
+	const usage = "knowledge search requires --ledger <dir> or --remote <repo> (not both) [--repo <dir>] [--now <RFC3339>] [--limit <n>] [--doc <path>]... then the query, one or more words"
+	if err := fs.Parse(args); err != nil || (*f.dir == "") == (*f.remote == "") || fs.NArg() == 0 || *limit < 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", usage), stdout, stderr)
+	}
+	query := strings.Join(fs.Args(), " ")
+	terms := curation.QueryTerms(query)
+	if len(terms) == 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "the query carries no searchable term (two or more letters or digits)"), stdout, stderr)
+	}
+	if len(docs) > 0 && *repo == "" {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "--doc names a path under --repo, which is not given"), stdout, stderr)
+	}
+	at := time.Now().UTC()
+	if *nowFlag != "" {
+		parsed, err := time.Parse(time.RFC3339, *nowFlag)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--now %q is not RFC3339", *nowFlag)), stdout, stderr)
+		}
+		at = parsed.UTC()
+	}
+	var sections []curation.Document
+	for _, d := range docs {
+		if !curation.CleanRelative(d) {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--doc %q is not a clean relative path under the repository", d)), stdout, stderr)
+		}
+		b, err := os.ReadFile(filepath.Join(*repo, filepath.FromSlash(d)))
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--doc %s is not readable under %s: %v", d, *repo, err)), stdout, stderr)
+		}
+		sections = append(sections, curation.SectionDocuments(d, string(b))...)
+	}
+	ls, failEnv := openLoopSession(f)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	defer ls.done()
+	st := curation.Fold(ls.ctx.Records)
+	lessons, unresolved := curation.LessonDocuments(st, *repo, at)
+	deadEnds := curation.DeadEndDocuments(st)
+	corpus := append(append(lessons, deadEnds...), sections...)
+	hits := curation.NewIndex(corpus).Search(query, *limit)
+	out := map[string]any{
+		"query":     query,
+		"terms":     terms,
+		"as_of":     at.Format(time.RFC3339),
+		"documents": map[string]int{curation.SearchKindLesson: len(lessons), curation.SearchKindDeadEnd: len(deadEnds), curation.SearchKindDoc: len(sections)},
+		"hits":      hits,
+		// The same rows delivery reports: a candidate the repository
+		// does not verify is named, never indexed.
+		"lessons_unresolved": unresolved,
+		"advisory":           "ranked by lexical match; a lesson surfaces at claim time by its applies-when alone",
+	}
+	return render(stampTip(envelope.OK(out), ls.ctx.Count), stdout, stderr)
 }

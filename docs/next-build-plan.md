@@ -468,9 +468,70 @@ stream, whose roadmap is cards on the state ref (`docs/build-plan.md`, Phase 7).
 It is filed there as card os-a7b5dffb under that authority and protected-path
 review; it is listed here only so the survey's trail is complete.
 
+**Borrowed from practice (2026-09-06).** One idea from a project outside this
+tree: test harnesses that attach a trace to every test run (a trace id and a span
+tree carrying structured outcome attributes such as `outcome=failure`,
+`reason=malformed_json`) proved reusable across projects once the emitting
+primitives were nailed down, because the contract is a file the harness writes,
+never a vendor SDK. Filed against the charter section it extends; record-shaped;
+no Part III row changes.
+
+- **Trace-shaped test evidence in the receipt** (§II.8 receipts; III.G "distinct
+  evidence-acquisition paths"). Today a receipt transcript binds a command, its
+  exit, and the digest of its combined output (`next/spec/verdicts.md`). The card
+  adds an optional `traces` entry per transcript: the trace id, the artifact-store
+  digest of the spans the harness exported to a declared path, and the digest of
+  the trace's **normalized shape** (the span tree by name, kind, status, and
+  declared attributes, with ids, timestamps, and durations stripped). The shape
+  digest is what `verdict check` recomputes and what L3's "reproduces" predicate
+  compares, since raw spans never reproduce byte-for-byte; the raw export is
+  bulk content and lives in the artifact store by hash per §II.1's data
+  classification, with the erasure path. Three rules the charter already states
+  fix the rest: the verifier's own run produces the trace (III.G, "no
+  implementer-claims channel"), so an implementer-attached trace is a claim and
+  never a receipt input; rubric verdicts cite evidence per item, so a span
+  becomes citable as `trace:<id>/span:<id>`; and the III.G evidence query joins
+  verdict outcome to span status and outcome attributes. Not an observability
+  subsystem: §II.18 forbids a second run log, so any exporter or collector is an
+  adapter detail on the observation channel, and a harness that emits no trace
+  loses only the richer evidence. Source: the HerdrTestServer harness in
+  herdr-sdk-development and its runSdkLab trace (2026-09-05).
+
 Phase 13 is exhausted on the frontier (`next/docs/progress.md`), so these are
 filable now; none blocks promotion (§5) and none may be scheduled ahead of an
 open Phase 13 row.
+
+**Borrowed from a formal-methods survey (2026-09-06).** A survey asked whether Lean 4
+belongs in Seed and answered no: a proof would be about a model of `internal/admit`,
+with no extraction to the Go rule set that enforces, so the model and the code would
+be two implementations and the bugs that matter live in the gap between them. Two
+cheaper instruments cover the same ground from inside the one toolchain the ground
+rules (§0) name. They test different layers and overlap only at racing mode, so both
+are filed; the second depends on the first for its generator and predicates. Neither
+changes a Part III row; the same filable-now rule applies.
+
+- **A random-walk property test over admission** (os-21bf939f; charter III.I and the
+  §I.2 ceiling as it lands in admission). The III.I sweep checks listed-implies-admits
+  at every prefix of one hand-written walk, and every generator in the tree walks a
+  scripted shape, so rule interactions at positions no script reaches are tested only
+  where someone thought of the case. The card: a seeded walker that reads a random
+  lane's affordances at each position and drafts a listed verb or, some fraction of
+  the time, a verb `transitions.json` forbids there; four oracles (listed admits,
+  forbidden refuses with the transition rule's reason, the fold follows the table's
+  `to`, and the finished chain passes the five-bar audit and the red-team clause
+  table read as predicates). Shrinking is prefix truncation, so no dependency is
+  added; the iteration count splits between `make check-next` and the scheduled run
+  the way the perf storm does.
+- **An exhaustive interleaving check of the append loop and halt** (os-07e6e76c;
+  charter §II.1 freshness and halt, III.A row 7). The race drill and the perf storm
+  are executions, not enumerations. The card: an abstract state machine of fetch,
+  attempt, push and halt with an explorer that walks every interleaving for small N,
+  asserting no lost update, `prev` equals the tip at admission, the persisted head
+  never regresses, halt is refused at the boundary, and bounded termination. The
+  toolchain default is Go-native, under `make check-next` at small N; TLA+ is the
+  fallback if the model outgrows it, kept under `next/spec/` with a `last-verified`
+  stamp and off the fast gate. The verdict-then-merge reconciliation and racing mode
+  are the named follow-on once the explorer's shape is known.
 
 ## 4. Progress tracking
 
