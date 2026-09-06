@@ -1765,3 +1765,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T05:49:56Z"},"task":"os-0cd18799","ts":"2026-09-06T04:49:56Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-0cd18799","ts":"2026-09-06T04:50:05Z","verb":"transition"}
 {"actor":"seed-next-implementer","data":{"title":"next: III.I random-walk property test over admission (listed admits, forbidden refuses, fold follows the table, ceiling holds)"},"task":"os-21bf939f","ts":"2026-09-06T04:53:42Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"title":"next: exhaustive interleaving check of the append loop and halt (no lost update, prev is tip at admission, monotonic head, halt at the boundary)"},"task":"os-07e6e76c","ts":"2026-09-06T04:53:46Z","verb":"create"}
