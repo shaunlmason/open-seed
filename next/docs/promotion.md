@@ -490,12 +490,14 @@ Criterion 5, in the build plan's three clauses.
 Today `scripts/seed` (v1, the pinned engine) is the only coordination
 entry point, and the build plan's ground rules keep it so "until
 spin-out". The flip is one change, made only when the seven criteria
-are all `met`, criterion 4 included: build plan §5 counts the cutover
-on all seven and puts the shadow run before it on the critical path,
-and the substitution section 4 records does not move the criterion,
-so the flip waits on the shadow window closed with its divergences
-reconciled, or on the amendment "The two cutovers are escalations"
-names. The change itself: the root `AGENTS.md` section "How work
+are all `met`, criterion 4 included. They are: build plan §5 counts
+the cutover on all seven, and criterion 4 is met on §5's amended text
+by the operator's recorded decision
+(`decisions/0004-shadow-run-substitution.md`, section 4), so the flip
+no longer waits on a shadow window; what it waits on is the
+deployment and the operator's answer to the Self-hosting question,
+and the decision binds the five-bar audit over the real chain at day
+7 after the flip. The change itself: the root `AGENTS.md` section "How work
 happens" is rewritten
 around the Seed loop verbs (`seed situation`, `seed claim take`,
 `seed submission make`, `seed claim release|park`, `seed escalation
@@ -520,9 +522,10 @@ of the import. So the ledger holds the whole history at the flip.
 
 ### What stays authoritative where during the window
 
-During the shadow window, v1 is authoritative for every card,
-sliced or not; the ledger is a shadow that records the slice and is
-read for orientation only. From the cutover's merge, the ledger is
+Until the cutover's merge, v1 is authoritative for every card; if a
+shadow window is ever run (decision 0004 makes it optional, before or
+after the cutover), the ledger it writes is a shadow that records the
+slice and is read for orientation only. From the cutover's merge, the ledger is
 authoritative for every contract filed after it and for every
 imported contract, and v1's `seed-state` ref is frozen at its final
 anchor and kept read-only for history, never written again. CI's
