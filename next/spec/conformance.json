@@ -550,7 +550,7 @@
           "posture": "any",
           "status": "met",
           "phase": "10",
-          "evidence": "#135 (JCS receipts binding contract, plan at merge-base, diff, inventory, transcripts, environment; recompute-and-mismatch exit 21), #139 (sealed transcripts inside the recompute boundary)",
+          "evidence": "#135 (JCS receipts binding contract, plan at merge-base, diff, inventory, transcripts, environment; recompute-and-mismatch exit 21), #139 (sealed transcripts inside the recompute boundary); os-7fc2ca38 TestReceiptBindsTraceShape (internal/verdict), TestTraceShapeNormalizes (internal/traceshape), TestTraceArtifactsStoredAndChecked (cmd/seed): trace-shaped entries bind what a harness's export reproduces, and check verifies the shapes",
           "note": ""
         },
         {
@@ -577,7 +577,7 @@
           "posture": "any",
           "status": "met",
           "phase": "10",
-          "evidence": "#238 TestRubricVerdictsAtTheTerminal (cmd/seed), TestHumanVerdictAndTheDeferral, TestScorecardDerivationAtAdmission, TestCalibrationQualifiesTheVerifierAndBindsItsRenders (internal/admit), TestCalibrationOwesMintsDriftAndTheDefect (internal/eval), TestSmallTeamRubricContractsReachDone (cmd/seed)",
+          "evidence": "#238 TestRubricVerdictsAtTheTerminal (cmd/seed), TestHumanVerdictAndTheDeferral, TestScorecardDerivationAtAdmission, TestCalibrationQualifiesTheVerifierAndBindsItsRenders (internal/admit), TestCalibrationOwesMintsDriftAndTheDefect (internal/eval), TestSmallTeamRubricContractsReachDone (cmd/seed); os-7fc2ca38 TestScorecardCitesTraceSpansInPackage (internal/verdict), TestTraceArtifactsStoredAndChecked (cmd/seed): a span is cited by its path in the shape",
           "note": "residual stated by the Phase 10 record: no calibration definition ships; the gold set is held outside the tree and committed to by digest"
         },
         {

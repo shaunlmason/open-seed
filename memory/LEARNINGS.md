@@ -2130,3 +2130,13 @@ failed step skips the rest of the job.
   bytes, and an index over the checkout would rank text nobody
   reviewed. The same `Verify` delivery uses is the gate for indexing.
 
+- 2026-09-06 (os-7fc2ca38): a receipt field must reproduce from a fresh
+  run or it cannot be in the receipt at all: `verdict check` compares
+  the whole canonical digest. Anything per-run (ids, timestamps, a raw
+  export's digest) goes to the artifact store as a sidecar the receipt
+  never names. Normalize first, digest second, and let the acceptance
+  spec declare (allowlist) what survives normalization.
+- 2026-09-06 (os-7fc2ca38): `internal/verdict`'s test helper `gated(spec,
+  commit)` ignores its first argument and always anchors `accept.md`;
+  a drill on a second spec file needs its own helper or the wrong spec
+  runs silently green.

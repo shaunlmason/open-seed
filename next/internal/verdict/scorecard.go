@@ -17,7 +17,9 @@ import (
 
 	"github.com/gowebpki/jcs"
 
+	"github.com/shaunlmason/open-seed/next/internal/artifact"
 	"github.com/shaunlmason/open-seed/next/internal/plan"
+	"github.com/shaunlmason/open-seed/next/internal/traceshape"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -108,7 +110,7 @@ func ParseScorecard(raw []byte) (*Scorecard, error) {
 // given) or a transcript index the receipt carries, and every note
 // within the budget. The contract and submission must be the ones
 // under judgment.
-func Validate(s *Scorecard, contract string, submission int, rubric []plan.Item, r *Receipt, repo string) error {
+func Validate(s *Scorecard, contract string, submission int, rubric []plan.Item, r *Receipt, repo string, store *artifact.Store) error {
 	if s.Contract != contract {
 		return &ScorecardError{Part: "contract", Reason: fmt.Sprintf("%q is not the contract under judgment (%s)", s.Contract, contract)}
 	}
@@ -142,7 +144,7 @@ func Validate(s *Scorecard, contract string, submission int, rubric []plan.Item,
 			return &ScorecardError{Part: "evidence", Reason: fmt.Sprintf("item %q cites no evidence: every item cites an anchored path or a transcript, never prose", it.ID)}
 		}
 		for _, ev := range it.Evidence {
-			if err := resolveEvidence(ev, transcripts, repo); err != nil {
+			if err := resolveEvidence(ev, transcripts, repo, r, store); err != nil {
 				return &ScorecardError{Part: "evidence", Reason: fmt.Sprintf("item %q: %v", it.ID, err)}
 			}
 		}
@@ -158,10 +160,20 @@ func Validate(s *Scorecard, contract string, submission int, rubric []plan.Item,
 	return nil
 }
 
+// traceRE is a span citation (plans/os-7fc2ca38.md D6):
+// "trace:<n>/<path>" or "sealed-trace:<n>/<path>", the path
+// dot-separated child indexes into transcript n's shape.
+var traceRE = regexp.MustCompile(`^(sealed-)?trace:(\d+)/(\d+(?:\.\d+)*)$`)
+
 // resolveEvidence accepts "transcript:<n>" for n the receipt carries,
-// or an anchored path, resolving the path at the commit in the
-// repository when one is given.
-func resolveEvidence(ev string, transcripts int, repo string) error {
+// a span citation resolving in the shape the receipt binds for that
+// transcript (the shape the run just produced, or the stored one when
+// a store is given), or an anchored path, resolving the path at the
+// commit in the repository when one is given.
+func resolveEvidence(ev string, transcripts int, repo string, r *Receipt, store *artifact.Store) error {
+	if m := traceRE.FindStringSubmatch(ev); m != nil {
+		return resolveTrace(ev, m[1] != "", m[2], m[3], r, store)
+	}
 	if strings.HasPrefix(ev, "transcript:") {
 		n, err := strconv.Atoi(strings.TrimPrefix(ev, "transcript:"))
 		if err != nil || n < 0 || n >= transcripts {
@@ -184,6 +196,41 @@ func resolveEvidence(ev string, transcripts int, repo string) error {
 		if err := exec.Command("git", "-C", repo, "cat-file", "-e", m[2]+":"+m[1]).Run(); err != nil {
 			return fmt.Errorf("evidence %q does not resolve in the repository at its commit", ev)
 		}
+	}
+	return nil
+}
+
+// resolveTrace resolves one span citation: the receipt carries an
+// entry for the transcript, the entry bound a shape (a malformed
+// export bound nothing), the shape is at hand or retrieves intact, and
+// the path names a node in it.
+func resolveTrace(ev string, sealed bool, index, path string, r *Receipt, store *artifact.Store) error {
+	n, err := strconv.Atoi(index)
+	if err != nil || r == nil {
+		return fmt.Errorf("evidence %q names no trace entry the receipt carries", ev)
+	}
+	entry := r.TraceEntry(sealed, n)
+	if entry == nil {
+		return fmt.Errorf("evidence %q names no trace entry the receipt carries: the command wrote no export", ev)
+	}
+	if entry.Malformed {
+		return fmt.Errorf("evidence %q cites a malformed export: the receipt bound no shape for it", ev)
+	}
+	body := r.ShapeBytes(sealed, n)
+	if body == nil {
+		if store == nil {
+			return fmt.Errorf("evidence %q: the shape %s is not at hand and no store was given", ev, entry.ShapeSHA256)
+		}
+		if body, err = store.Get(entry.ShapeSHA256); err != nil {
+			return fmt.Errorf("evidence %q: the shape %s is not retrievable intact: %v", ev, entry.ShapeSHA256, err)
+		}
+	}
+	shape, err := traceshape.Parse(body)
+	if err != nil {
+		return fmt.Errorf("evidence %q: %v", ev, err)
+	}
+	if _, err := shape.Resolve(path); err != nil {
+		return fmt.Errorf("evidence %q names no span in the shape: %v", ev, err)
 	}
 	return nil
 }

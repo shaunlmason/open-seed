@@ -34,6 +34,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/plan"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
+	"github.com/shaunlmason/open-seed/next/internal/traceshape"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -42,7 +43,7 @@ import (
 
 func runVerdict(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict requires a subverb: receipt, render, or check"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict requires a subverb: receipt, render, check, or traces"), stdout, stderr)
 	}
 	switch args[0] {
 	case "receipt":
@@ -53,8 +54,10 @@ func runVerdict(args []string, stdout, stderr io.Writer) int {
 		return runVerdictDefer(args[1:], stdout, stderr)
 	case "check":
 		return runVerdictCheck(args[1:], stdout, stderr)
+	case "traces":
+		return runVerdictTraces(args[1:], stdout, stderr)
 	}
-	return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict requires a subverb: receipt, render, or check"), stdout, stderr)
+	return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict requires a subverb: receipt, render, check, or traces"), stdout, stderr)
 }
 
 // verdictState is the read side every verdict verb shares: the
@@ -162,13 +165,57 @@ func verdictFailEnvelope(err error) *envelope.Envelope {
 }
 
 // storeReceipt writes the canonical receipt into the content-addressed
-// artifact store and returns its digest.
+// artifact store, with the trace evidence the run produced beside it
+// (plans/os-7fc2ca38.md D5): each shape under the digest the receipt
+// binds, each raw export under its own digest as the shape's sidecar.
+// It returns the receipt's digest.
 func storeReceipt(r *verdict.Receipt, artifacts string) (string, error) {
 	canonical, err := r.Canonical()
 	if err != nil {
 		return "", err
 	}
-	return artifact.Open(artifacts).Put(canonical)
+	store := artifact.Open(artifacts)
+	for _, ev := range r.Evidence {
+		shape, err := store.Put(ev.Shape)
+		if err != nil {
+			return "", err
+		}
+		raw, err := store.Put(ev.Raw)
+		if err != nil {
+			return "", err
+		}
+		if err := store.PutTraceRaw(shape, raw); err != nil {
+			return "", err
+		}
+	}
+	return store.Put(canonical)
+}
+
+// tracesUnretrievable names the first trace shape a receipt binds that
+// the store cannot produce intact, or "" (plans/os-7fc2ca38.md D5):
+// the evidence a citation points at must survive verbatim, the
+// receipt's own rule one artifact over. The raw sidecar is never
+// checked; erasing it costs a reader the raw export and a check
+// nothing.
+func tracesUnretrievable(r *verdict.Receipt, store *artifact.Store) string {
+	for _, list := range []struct {
+		sealed  bool
+		entries []verdict.TraceEntry
+	}{{false, r.Traces}, {true, r.SealedTraces}} {
+		for _, e := range list.entries {
+			if e.Malformed {
+				continue
+			}
+			if _, err := store.Get(e.ShapeSHA256); err != nil {
+				which := "transcript"
+				if list.sealed {
+					which = "sealed transcript"
+				}
+				return fmt.Sprintf("the trace shape %s the receipt binds for %s %d is not retrievable intact from the artifact store: %v", e.ShapeSHA256, which, e.Transcript, err)
+			}
+		}
+	}
+	return ""
 }
 
 func redTranscript(r *verdict.Receipt) (verdict.Transcript, bool) {
@@ -213,6 +260,9 @@ func receiptSummary(subject string, r *verdict.Receipt, digest string) map[strin
 	if r.Commitment != "" {
 		out["commitment"] = r.Commitment
 		out["sealed_transcripts"] = fmt.Sprintf("%d", len(r.SealedTranscripts))
+	}
+	if n := len(r.Traces) + len(r.SealedTraces); n > 0 {
+		out["traces"] = fmt.Sprintf("%d", n)
 	}
 	return out
 }
@@ -449,7 +499,7 @@ func runVerdictRender(args []string, stdout, stderr io.Writer) int {
 	// as from the transcripts.
 	var scoreRef *transition.ScorecardRef
 	if *scorecardPath != "" {
-		sc, failEnv := loadScorecard(*scorecardPath, *subject, s, rubric, r, *repo, st.count)
+		sc, failEnv := loadScorecard(*scorecardPath, *subject, s, rubric, r, *repo, artifact.Open(artifactsDir(*artifacts, *repo)), st.count)
 		if failEnv != nil {
 			return render(failEnv, stdout, stderr)
 		}
@@ -542,7 +592,7 @@ func rubricAt(repo string, s transition.SubjectState, count int) ([]plan.Item, *
 // loadScorecard reads and validates the verifier's scorecard against
 // the rubric, the receipt and the repository, naming the part that
 // refuses.
-func loadScorecard(path, subject string, s transition.SubjectState, rubric []plan.Item, r *verdict.Receipt, repo string, count int) (*verdict.Scorecard, *envelope.Envelope) {
+func loadScorecard(path, subject string, s transition.SubjectState, rubric []plan.Item, r *verdict.Receipt, repo string, store *artifact.Store, count int) (*verdict.Scorecard, *envelope.Envelope) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --scorecard: %v", err))
@@ -554,7 +604,7 @@ func loadScorecard(path, subject string, s transition.SubjectState, rubric []pla
 	if s.Submission == nil {
 		return nil, stampTip(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no submission stands on %s", subject)), count)
 	}
-	if err := verdict.Validate(sc, subject, s.Submission.Pos, rubric, r, repo); err != nil {
+	if err := verdict.Validate(sc, subject, s.Submission.Pos, rubric, r, repo, store); err != nil {
 		return nil, stampTip(envelope.Fail(envelope.ExitUsage, "usage", err.Error()), count)
 	}
 	return sc, nil
@@ -645,7 +695,7 @@ func runVerdictDefer(args []string, stdout, stderr io.Writer) int {
 	scorecard := ""
 	var deferred []string
 	if *scorecardPath != "" {
-		sc, failEnv := loadScorecard(*scorecardPath, *subject, s, rubric, r, *repo, st.count)
+		sc, failEnv := loadScorecard(*scorecardPath, *subject, s, rubric, r, *repo, artifact.Open(artifactsDir(*artifacts, *repo)), st.count)
 		if failEnv != nil {
 			return render(failEnv, stdout, stderr)
 		}
@@ -808,9 +858,24 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 	// over a store that lost or corrupted the cited artifact, however
 	// clean the recomputation (review finding on the task PR).
 	// artifact.Get digest-verifies content on the way out.
-	if _, err := artifact.Open(artifactsDir(*artifacts, *repo)).Get(strings.TrimSpace(cited.Receipt)); err != nil {
+	citedBody, err := artifact.Open(artifactsDir(*artifacts, *repo)).Get(strings.TrimSpace(cited.Receipt))
+	if err != nil {
 		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
 			fmt.Sprintf("the cited receipt %s is not retrievable intact from the artifact store: %v — the evidence a verdict points at must survive verbatim (6.2 reconciliation input)", cited.Receipt, err)), st.count), stdout, stderr)
+	}
+	// The trace shapes the receipt binds are retrievable evidence too
+	// (plans/os-7fc2ca38.md D5): a citation into a shape the store lost
+	// points at nothing, so the check is red over it however clean the
+	// recomputation.
+	var citedReceipt verdict.Receipt
+	if err := json.Unmarshal(citedBody, &citedReceipt); err != nil {
+		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
+			fmt.Sprintf("the cited receipt %s does not parse: %v", cited.Receipt, err)), st.count), stdout, stderr)
+	}
+	tracesBound := len(citedReceipt.Traces)+len(citedReceipt.SealedTraces) > 0
+	if why := tracesUnretrievable(&citedReceipt, artifact.Open(artifactsDir(*artifacts, *repo))); why != "" {
+		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
+			why+" — the evidence a citation points at must survive verbatim"), st.count), stdout, stderr)
 	}
 	// A rubric verdict's other artifact (plans/os-2e34f66a.md D3;
 	// review finding on the task PR): the cited scorecard retrieves
@@ -875,7 +940,115 @@ func runVerdictCheck(args []string, stdout, stderr io.Writer) int {
 	if cited.Scorecard != nil {
 		result["scorecard"] = "verified"
 	}
+	if tracesBound {
+		result["traces"] = "verified"
+	}
 	return render(stampTip(envelope.OK(result), st.count), stdout, stderr)
+}
+
+// runVerdictTraces renders the trace shapes a subject's receipt binds
+// (plans/os-7fc2ca38.md D7): every node with the citation path a
+// scorecard names it by, its kind, status and declared attributes;
+// malformed entries by name; the raw export's digest where its
+// sidecar still stands. It reads the receipt the latest rendered
+// verdict cites, else the standing deferral's, else the one --receipt
+// names, and refuses not_found with none. A read verb: the
+// surface a verifier scores a rubric from, and nothing is written.
+func runVerdictTraces(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("verdict traces", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	dir := fs.String("ledger", "", "ledger directory")
+	subject := fs.String("subject", "", "contract whose receipt binds traces")
+	repo := fs.String("repo", "", "repository whose artifact store holds the receipt")
+	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
+	receiptFlag := fs.String("receipt", "", "a stored receipt's digest, when no verdict or deferral cites one yet")
+	transcript := fs.Int("transcript", -1, "render one transcript's trace only")
+	if err := fs.Parse(args); err != nil || *dir == "" || *subject == "" || (*repo == "" && *artifacts == "") || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "verdict traces requires --ledger <dir> --subject <id> --repo <dir> (or --artifacts <dir>) [--receipt <digest>] [--transcript <n>]"), stdout, stderr)
+	}
+	st, failEnv := loadVerdictState(*dir)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	s, ok := st.fold.State(*subject)
+	if !ok {
+		return render(stampTip(envelope.Fail(envelope.ExitNotFound, "not_found",
+			fmt.Sprintf("no contract %s in the fold", *subject)), st.count), stdout, stderr)
+	}
+	digest := *receiptFlag
+	source := "flag"
+	switch {
+	case s.Verdict != nil && s.Verdict.Receipt != "":
+		digest, source = s.Verdict.Receipt, "verdict"
+	case s.Deferred != nil && s.Deferred.Receipt != "":
+		digest, source = s.Deferred.Receipt, "deferral"
+	}
+	if digest == "" {
+		return render(stampTip(envelope.Fail(envelope.ExitNotFound, "not_found",
+			fmt.Sprintf("no rendered verdict or deferral on %s cites a receipt; name a stored one with --receipt", *subject)), st.count), stdout, stderr)
+	}
+	store := artifact.Open(artifactsDir(*artifacts, *repo))
+	body, err := store.Get(strings.TrimSpace(digest))
+	if err != nil {
+		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
+			fmt.Sprintf("the receipt %s is not retrievable intact from the artifact store: %v", digest, err)), st.count), stdout, stderr)
+	}
+	var r verdict.Receipt
+	if err := json.Unmarshal(body, &r); err != nil {
+		return render(stampTip(envelope.Fail(envelope.ExitReceiptMismatch, "receipt_mismatch",
+			fmt.Sprintf("the receipt %s does not parse: %v", digest, err)), st.count), stdout, stderr)
+	}
+	traces := []map[string]any{}
+	for _, list := range []struct {
+		sealed  bool
+		entries []verdict.TraceEntry
+	}{{false, r.Traces}, {true, r.SealedTraces}} {
+		for _, e := range list.entries {
+			if *transcript >= 0 && e.Transcript != *transcript {
+				continue
+			}
+			row := map[string]any{"transcript": e.Transcript, "sealed": list.sealed}
+			if e.Malformed {
+				row["malformed"] = true
+				traces = append(traces, row)
+				continue
+			}
+			row["shape"] = e.ShapeSHA256
+			row["spans"] = e.Spans
+			row["errors"] = e.Errors
+			if raw, err := store.TraceRaw(e.ShapeSHA256); err == nil && raw != "" {
+				row["raw"] = raw
+			}
+			shapeBody, err := store.Get(e.ShapeSHA256)
+			if err != nil {
+				row["shape_missing"] = err.Error()
+				traces = append(traces, row)
+				continue
+			}
+			shape, err := traceshape.Parse(shapeBody)
+			if err != nil {
+				row["shape_missing"] = err.Error()
+				traces = append(traces, row)
+				continue
+			}
+			prefix := "trace:"
+			if list.sealed {
+				prefix = "sealed-trace:"
+			}
+			nodes := []map[string]any{}
+			shape.Walk(func(path string, depth int, nd *traceshape.Node) {
+				nodes = append(nodes, map[string]any{
+					"cite": fmt.Sprintf("%s%d/%s", prefix, e.Transcript, path), "depth": depth,
+					"name": nd.Name, "kind": nd.Kind, "status": nd.Status, "attributes": nd.Attributes,
+				})
+			})
+			row["nodes"] = nodes
+			traces = append(traces, row)
+		}
+	}
+	return render(stampTip(envelope.OK(map[string]any{
+		"subject": *subject, "receipt": digest, "receipt_from": source, "traces": traces,
+	}), st.count), stdout, stderr)
 }
 
 // renderLocked finds the authenticated fail that locks pass out of the
