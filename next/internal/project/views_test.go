@@ -117,7 +117,7 @@ func TestQueueEmptyWhenNothingIsReady(t *testing.T) {
 		out := rebuildAll(t, fx.dir, fx.res)
 		var q project.QueueView
 		readView(t, out, "queue", project.QueueFile, &q)
-		if q.SchemaVersion != project.QueueSchemaVersion || q.Derivation != project.QueueDerivationTransitions {
+		if q.SchemaVersion != project.QueueSchemaVersion || q.Derivation != project.QueueDerivationEffective {
 			t.Fatalf("the queue must name the transition derivation: %+v", q)
 		}
 		if q.Ready == nil || len(q.Ready) != 0 {

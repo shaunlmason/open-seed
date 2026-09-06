@@ -30,6 +30,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
+	"github.com/shaunlmason/open-seed/next/internal/topology"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -170,6 +171,11 @@ func dispatchWalk(t *testing.T, ctx *Context, root, dispatcher ed25519.PrivateKe
 	ctx = step(dispatcher, "intent.filed", "c-2", filed)
 	ctx = step(root, "contract.specified", "c-2", spec)
 	ctx = step(dispatcher, "contract.blocked", "c-2", `{}`)
+	sample(ctx, "c-2")
+	// c-2 requires c-1, so dependency.unlinked is legal somewhere: a
+	// residual list that omitted it because no link stood would be a
+	// shorter list, not a safer system (plans/os-f0ae2cdf.md).
+	ctx = step(dispatcher, topology.DependVerb, "c-2", `{"requires": "c-1"}`)
 	sample(ctx, "c-2")
 
 	// c-3: carried to a red verdict, which is what contract.returned

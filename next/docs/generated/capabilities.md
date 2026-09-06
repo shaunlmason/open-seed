@@ -11,6 +11,10 @@ Every verb the affordance catalog drafts, with the capability set the keyring ac
 | `system.protocol.upgraded` | `operator` |
 | `system.imported` | `operator` |
 | `request.filed` | — (standing only) |
+| `dependency.linked` | `dispatch`, `operator` |
+| `dependency.unlinked` | `dispatch`, `operator` |
+| `hierarchy.parented` | `dispatch`, `operator` |
+| `goal.aligned` | `dispatch`, `operator` |
 | `artifact.erased` | `operator` |
 | `request.answered` | `dispatch`, `operator` |
 | `approval.requested` | — (standing only) |

@@ -21,6 +21,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/offers"
 	"github.com/shaunlmason/open-seed/next/internal/ranking"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
@@ -28,15 +29,17 @@ import (
 
 func runOffer(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer requires a subverb: publish or list"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer requires a subverb: publish, list or wake"), stdout, stderr)
 	}
 	switch args[0] {
+	case "wake":
+		return runOfferWake(args[1:], stdout, stderr)
 	case "publish":
 		return runOfferPublish(args[1:], stdout, stderr)
 	case "list":
 		return runOfferList(args[1:], stdout, stderr)
 	}
-	return render(envelope.Fail(envelope.ExitUsage, "usage", "offer requires a subverb: publish or list"), stdout, stderr)
+	return render(envelope.Fail(envelope.ExitUsage, "usage", "offer requires a subverb: publish, list or wake"), stdout, stderr)
 }
 
 // offerEligibility is the published eligibility scope: empty arrays
@@ -161,32 +164,6 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	}), *dir, signer, *subject), pos+1), *dir, signer, "offer.published", *subject, []byte(payload)), stdout, stderr)
 }
 
-// offerAuthorized replays the keyring to the offer's own position and
-// checks the supervise boundary retroactively: the tolerant fold
-// records raw pushes, so a foreign offer folds as a fact and must be
-// inert at the consuming surface — the laundering-countermeasure
-// shape (validate the signer against the authoring boundary where the
-// fact is trusted), replayed against offers.
-func offerAuthorized(records []*event.Record, o transition.OfferFact) bool {
-	if o.Pos < 0 || o.Pos >= len(records) {
-		return false
-	}
-	ring, _, err := keyring.StateAt(records[:o.Pos])
-	return err == nil && ring != nil &&
-		ring.HasAnyCapability(o.Signer, keyring.AcceptedCapabilities(transition.OfferPublishedVerb))
-}
-
-// offerRow is one live, eligible offer in the list envelope.
-type offerRow struct {
-	Subject      string        `json:"subject"`
-	Position     string        `json:"position"`
-	Tier         string        `json:"tier,omitempty"`
-	Capabilities []string      `json:"capabilities,omitempty"`
-	Tiers        []string      `json:"tiers,omitempty"`
-	Tuples       []tuple.Tuple `json:"tuples,omitempty"`
-	Expires      string        `json:"expires"`
-}
-
 func runOfferList(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("offer list", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -195,6 +172,53 @@ func runOfferList(args []string, stdout, stderr io.Writer) int {
 	nowFlag := fs.String("now", "", "RFC3339 liveness instant (default: now)")
 	if err := fs.Parse(args); err != nil || !posture.resolved() || *actor == "" || fs.NArg() != 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer list requires --ledger <dir> or --remote <repo> (not both), --actor <fingerprint> [--now <RFC3339>]"), stdout, stderr)
+	}
+	now := time.Now().UTC()
+	if *nowFlag != "" {
+		parsed, err := time.Parse(time.RFC3339, *nowFlag)
+		if err != nil {
+			return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("--now %q is not an RFC3339 timestamp", *nowFlag)), stdout, stderr)
+		}
+		now = parsed
+	}
+	st, ctx, closePosture, failEnv := posture.open()
+	defer closePosture()
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	ring, _, err := keyring.StateAt(st.records)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
+	}
+	// One derivation (next/internal/offers): the fold's liveness, the
+	// actor's standing, the signer's position-accurate authorization,
+	// the scopes, and effective readiness (plans/os-f0ae2cdf.md D4), the
+	// same predicate the queue and the claim boundary read.
+	rows := offers.Live(st.records, admit.Topology(ctx), ring, *actor, now)
+	return render(stampTip(envelope.OK(map[string]any{
+		"actor":  *actor,
+		"now":    now.Format(time.RFC3339),
+		"offers": rows,
+	}), st.count), stdout, stderr)
+}
+
+// runOfferWake is the supervisor's advisory bridge (plans/os-f0ae2cdf.md
+// D6; next/spec/topology.md "Advisory wakes"): the subjects effectively
+// ready at the tip and not at --since, each matched to the active
+// actors eligible for a live offer on it. The CLI registers no wake
+// channel (every shipped adapter's Wake is the documented no-op, and
+// the worker pulls), so the pass reports its candidates and wakes
+// nobody; a caller that holds channels drives offers.Bridge directly.
+// Polling remains the correctness path: a pass that never runs loses
+// latency, never a claim.
+func runOfferWake(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("offer wake", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	posture := bindReadPosture(fs)
+	since := fs.Int("since", -1, "the supervisor's last observed position, the delta cursor")
+	nowFlag := fs.String("now", "", "RFC3339 liveness instant (default: now)")
+	if err := fs.Parse(args); err != nil || !posture.resolved() || *since < 0 || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer wake requires --ledger <dir> or --remote <repo> (not both), --since <position> [--now <RFC3339>]"), stdout, stderr)
 	}
 	now := time.Now().UTC()
 	if *nowFlag != "" {
@@ -213,84 +237,15 @@ func runOfferList(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), stdout, stderr)
 	}
-	rows := []offerRow{}
-	if ring != nil {
-		if e, ok := ring.Get(*actor); ok && e.Standing == keyring.StandingActive {
-			for _, subject := range st.fold.Subjects() {
-				s, ok := st.fold.State(subject)
-				if !ok {
-					continue
-				}
-				for _, o := range s.LiveOffers(now) {
-					if !eligibleFor(ring, *actor, s.Tier, o) || !offerAuthorized(st.records, o) {
-						continue
-					}
-					rows = append(rows, offerRow{
-						Subject:      subject,
-						Position:     fmt.Sprintf("%d", o.Pos),
-						Tier:         s.Tier,
-						Capabilities: o.Capabilities,
-						Tiers:        o.Tiers,
-						Tuples:       o.Tuples,
-						Expires:      o.Expires,
-					})
-				}
-			}
-		}
-	}
+	res := offers.Bridge(st.records, st.table, ring, now, *since, nil)
 	return render(stampTip(envelope.OK(map[string]any{
-		"actor":  *actor,
-		"now":    now.Format(time.RFC3339),
-		"offers": rows,
+		"since":        res.Since,
+		"position":     res.Position,
+		"now":          now.Format(time.RFC3339),
+		"became_ready": res.BecameReady,
+		"candidates":   res.Candidates,
+		"woken":        res.Woken,
+		"channels":     0,
+		"advisory":     "polling is the correctness path; a wake is a hint to re-read, never a grant",
 	}), st.count), stdout, stderr)
-}
-
-// eligibleFor applies the offer's scopes to the polling worker: every
-// scoped capability must be held, with operator standing satisfying
-// every scope (a root's implicit operator included) — scopes describe
-// the taking lane, and admission already lets the operator act
-// everywhere in it, so hiding offers from operators would let them
-// claim work they cannot discover. The subject's filed tier must be
-// in the scoped tier set. A scoped tuple set is met by a worker whose
-// claim grants cite one of its members, per field
-// (plans/os-8e53ffd9.md D6): the supervisor named the configurations
-// it wants, and a worker with none on record, or with only others, is
-// not among them. Empty scopes match any active worker, any tier, any
-// configuration.
-func eligibleFor(ring *keyring.State, fp, tier string, o transition.OfferFact) bool {
-	for _, c := range o.Capabilities {
-		if !ring.HasAnyCapability(fp, []string{c, keyring.CapOperator}) {
-			return false
-		}
-	}
-	if len(o.Tiers) > 0 {
-		found := false
-		for _, t := range o.Tiers {
-			if t == tier {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	if len(o.Tuples) > 0 && !ring.HasAnyCapability(fp, []string{keyring.CapOperator}) {
-		found := false
-		for _, cited := range ring.GrantTuples(fp, keyring.CapClaim) {
-			for _, want := range o.Tuples {
-				if cited.Equal(want) {
-					found = true
-					break
-				}
-			}
-			if found {
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
 }
