@@ -1750,3 +1750,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T05:00:58Z"},"task":"os-f0ae2cdf","ts":"2026-09-06T04:00:58Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"title":"next: knowledge search, a lexical BM25 read over lessons, dead ends and named docs (source: okf-agent-memory)"},"task":"os-405d3b20","ts":"2026-09-06T04:01:05Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-d5d080d5","kind":"pr"},"task":"os-53650015","ts":"2026-09-06T04:03:16Z","verb":"attach-evidence"}
+{"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-405d3b20","ts":"2026-09-06T04:06:06Z","verb":"promote"}
