@@ -1844,3 +1844,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T12:48:00Z"},"task":"os-29e2fef2","ts":"2026-09-06T11:48:00Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T12:48:56Z"},"task":"os-b45c308d","ts":"2026-09-06T11:48:56Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-81ffd94c","kind":""},"task":"os-b45c308d","ts":"2026-09-06T11:50:49Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-b45c308d","ts":"2026-09-06T11:50:58Z","verb":"transition"}
