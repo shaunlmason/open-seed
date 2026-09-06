@@ -2117,6 +2117,22 @@ failed step skips the rest of the job.
   Read the declaration back off the remote's default-branch tip the way
   the hook does and pass it through — the invariant then holds under a
   live guardrail, not an absent one.
+<<<<<<< HEAD
+- 2026-09-06 (os-7b6afa4d): the GitHub **rulesets list** endpoint
+  (`GET /rulesets`) carries only name/target/enforcement/id: the ref
+  patterns (`conditions.ref_name.include`) and rule types live on the
+  per-ruleset **detail** endpoint, and a fresh repo's list 404s (not `[]`)
+  while an existing one returns `[]`. Any ruleset read-back must fetch
+  detail per id and match by ref pattern, never by name.
+- 2026-09-06 (os-7b6afa4d): the state-ref `HALT` marker is a plain file at
+  the ref root written as one commit (engine: `statelint.go` — `HALT` file
+  + a run-log `halt` event, author `seed <seed@open-seed>`); the replay
+  lint requires a run-log line ONLY when `tasks/*.md` changed, so a
+  HALT-only commit is replay-legal, and `stateref.Halted` reads the file by
+  name — a sh+git writer can mint it without the engine (a self-contained
+  temp repo, not a worktree of the caller's, so the commit roots in the
+  right history and the push fast-forwards the protected ref).
+=======
 - 2026-09-06 (os-405d3b20): Go's `flag` package stops at the first
   non-flag argument, so a `seed` verb that takes free text must take
   it LAST (`knowledge search --ledger … <query>...`); a usage string
@@ -2130,3 +2146,4 @@ failed step skips the rest of the job.
   bytes, and an index over the checkout would rank text nobody
   reviewed. The same `Verify` delivery uses is the gate for indexing.
 
+>>>>>>> origin/main
