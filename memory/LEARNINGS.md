@@ -2111,3 +2111,16 @@ failed step skips the rest of the job.
   Read the declaration back off the remote's default-branch tip the way
   the hook does and pass it through — the invariant then holds under a
   live guardrail, not an absent one.
+- 2026-09-06 (os-405d3b20): Go's `flag` package stops at the first
+  non-flag argument, so a `seed` verb that takes free text must take
+  it LAST (`knowledge search --ledger … <query>...`); a usage string
+  that shows the positional first documents an order the parser
+  refuses. Every existing verb already follows flags-then-positional
+  (`knowledge lint --ledger … <file>`); match it rather than
+  hand-rolling a reorder.
+- 2026-09-06 (os-405d3b20): a lexical index over promoted lessons must
+  read each file at its promotion anchor (`git show <commit>:<path>`),
+  not from the working tree: the digest in the fact binds the anchor's
+  bytes, and an index over the checkout would rank text nobody
+  reviewed. The same `Verify` delivery uses is the gate for indexing.
+
