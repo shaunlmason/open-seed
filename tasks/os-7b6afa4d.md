@@ -1,12 +1,17 @@
 ---
 id: os-7b6afa4d
 title: 'CI: verify server-side seed-state protections (Phase 2 API-side check, unlanded)'
-state: review
+state: done
 priority: P2
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: seed-maintenance
+    reviewed_at: "2026-09-06T07:26:15Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/338
 created_at: "2026-08-24T02:19:59Z"
-updated_at: "2026-09-06T03:43:13Z"
+updated_at: "2026-09-06T07:26:15Z"
 ---
 
 Build plan Phase 2 shipped `seed init-github` as a printed checklist only, deferring the API-side verification "to Phase 5's workflows" (docs/build-plan.md:100). Phase 5 closed (build-plan.md:184) and none of the five live workflows performs that read-back: no `.github/workflows/*.yml` calls the GitHub API to confirm the branch protection / rulesets on `seed-state` and the tag rules are still active (grep of .github/workflows shows no protection/ruleset read-back).
