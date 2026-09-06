@@ -2460,26 +2460,31 @@ attempts journal (os-a9e715dc, plan #332; the section above).
 
 **Next action: the operator's deployment, then the operator's
 answer.** `next/docs/promotion.md` presents the seven criteria of
-build plan §5: 1, 2, 3, 5, 6 and 7 met, 4 `partial` by the operator's
-own substitution of the credential-free accelerated simulation for
-the live seven-day shadow run (os-f79bc5a0, #316, the deviation named
-in the packet's section 4; every III.R row stays `not measured`,
-because the simulation raises no escalation and runs no real backlog
-for a real week). The agent-side remainder at the gate is four cards
-in review, each a plan PR and a draft task PR waiting on the owner's
-merge: os-8ecef90f (plan #320, task #321) drills III.L row 4 on the
-machine-protocol surface and flips it; os-b5051f2e (plan #322, task
-#323) gives the five-bar audit's guardrail bar its ceiling arm under
-the declaration `seed ledger audit --config` reads; os-db5cd353 (plan
-#324, task #325) adds `artifact.erased`, so an erasure is an
-attributable event, and flips III.A row 7; and os-0f924157 (plan #334)
-closes #323's review finding — the enforced `seed-admit` hook reading
-the declaration at the default branch's tip, so the ceiling refuses at
-the boundary, not only at the cooperative client. this card (os-4fde2bdf,
-plan #326) re-derives the packet and this frontier. Once they merge
-the doctor reads 28 outstanding rows: the 21 Phase 13 rows the exit
-record flips, C.4 and Q.7 routed to the backlog's scale run and to
-promotion, and III.R's seven, none of which an agent act can supply.
+build plan §5, all `met`. Criterion 4 is met on §5's amended text: the
+operator's recorded decision `decisions/0004-shadow-run-substitution.md`
+(2026-09-06) amends the criterion to accept the credential-free
+accelerated simulation in place of the live seven-day shadow run for
+the self-hosting cutover, names what it trades away, carries its risk
+statement, and moves the five-bar audit over the real chain to day 7
+after the flip. That closes the loop os-f79bc5a0 (#316) opened and
+os-4fde2bdf (#327) re-derived: the packet could record the substitution
+but not amend the plan, so the criterion stood `partial` until the
+operator amended §5 by a decision, which is what the decision does.
+Every III.R row stays `not measured`, because the simulation raises no
+escalation and runs no real backlog for a real week, and III.R is the
+charter's, which no build plan decision amends. The last three
+agent-side cards at the gate merged: os-8ecef90f (#321) drilled III.L
+row 4 on the machine-protocol surface; os-b5051f2e (#323) gave the
+five-bar audit's guardrail bar its ceiling arm; os-db5cd353 (#325)
+added `artifact.erased` and flipped III.A row 7. One agent-side card
+remains in review at the gate, and it is not a criterion: os-0f924157
+(plan #334) closes #323's review finding, the enforced `seed-admit`
+hook reading the declaration at the default branch's tip, so the
+ceiling refuses at the boundary and not only at the cooperative
+client. The doctor reads 28 outstanding rows: the 21 Phase 13 rows the
+exit record flips, C.4 and Q.7 routed to the backlog's scale run and
+to promotion, and III.R's seven, none of which an agent act can
+supply.
 What stands between the packet and the Self-hosting question is the
 deployment, which the autonomy contract reserves to the operator: a
 ledger remote whose `pre-receive` is the `seed-admit` binary (the
@@ -2492,11 +2497,10 @@ which `TestPacketDeclarationLints` holds to `seed preseed check` and
 `TestPacketDeclarationInitializesUnderTheRootKey` initializes under a
 real key. After the deployment: the operator's answer to the
 Self-hosting question at the position they record; then the flip,
-which waits on criterion 4 `met`, because build plan §5 counts the
-cutover on all seven criteria and puts the shadow run before it, and
-the substitution does not supply it: the shadow run on that
-deployment, or an amendment of §5 the operator records as the
-deviation it is, neither of them agent work. At the flip, in the order
+which no longer waits on a shadow window, because decision 0004
+supplies criterion 4 and moves the audit to day 7 after the cutover
+(a red bar then is a defect card and a candidate for the rollback the
+packet writes down). At the flip, in the order
 the packet's "The deployment" gives and `TestPacketProcedureReachesTheFlip`
 follows: the v1 state anchored and imported into the deployment's
 empty ledger (the import is the genesis transform and refuses a ledger

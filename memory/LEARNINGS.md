@@ -2085,6 +2085,12 @@ failed step skips the rest of the job.
   pin it: the version register in the spec and the pins in the
   flywheel, knowledge, lanes and refusals report drills all name the
   number and what each increment added.
+- 2026-09-06 (decision 0004): the promotion packet presents and never
+  decides, so an operator acceptance recorded only in the packet leaves
+  the criterion `partial` (#316 then #327). A criterion the plan states is
+  changed by amending `docs/next-build-plan.md` §5 with a `decisions/`
+  record the owner merges; the packet then reads `met` on the amended
+  text and says so. Charter III.R rows are outside that route entirely.
 
 ## The enforced boundary reads its own declaration (os-0f924157)
 
