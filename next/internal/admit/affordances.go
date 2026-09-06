@@ -28,6 +28,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/flywheel"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"github.com/shaunlmason/open-seed/next/internal/topology"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/version"
@@ -108,6 +109,16 @@ type probeView struct {
 	// guess (plans/os-5781a026.md D7).
 	actor    string
 	approval string
+	// relative is another open contract on the chain, the target a
+	// dependency.linked or hierarchy.parented probe on the queried
+	// subject names, the queried subject itself when no other stands
+	// (a self edge the rule refuses, so the verb is drafted exactly
+	// where something is linkable); unlink is the first active
+	// dependency of the queried subject, the queried subject itself
+	// when it has none (an absent unlink the rule refuses)
+	// (plans/os-f0ae2cdf.md).
+	relative string
+	unlink   string
 	// erasable is the digest the queried subject's fold references
 	// (its sealed commitment, else its latest verdict's receipt), the
 	// artifact an artifact.erased probe on it names; a zero digest
@@ -502,6 +513,30 @@ var probeSubjects = map[string]func(v *probeView) string{
 	},
 }
 
+// topologyProbes derives the relation probes' targets
+// (plans/os-f0ae2cdf.md): the first other open contract in the fold's
+// order for a link or a parent, and the queried subject's first active
+// dependency for an unlink, both read through the graph that passed
+// the boundary, so the verbs are drafted exactly where the rule would
+// admit them.
+func topologyProbes(ctx *Context, subject string, v *probeView) {
+	if ctx.Lifecycle == nil || ctx.Table == nil {
+		return
+	}
+	for _, other := range ctx.Lifecycle.Subjects() {
+		if other == subject {
+			continue
+		}
+		if s, ok := ctx.Lifecycle.State(other); ok && s.State != "" && !ctx.Table.Terminal(s.State) {
+			v.relative = other
+			break
+		}
+	}
+	if links := Topology(ctx).Graph.Requires(subject); len(links) > 0 {
+		v.unlink = links[0].Target
+	}
+}
+
 var affordanceCatalog = []struct {
 	verb  string
 	synth func(v *probeView) string
@@ -527,6 +562,18 @@ var affordanceCatalog = []struct {
 			about = `, "about": "` + v.requestAbout + `"`
 		}
 		return `{"origin": "probe", "kind": "dashboard-action", "reference": "probe @ ` + strings.Repeat("0", 7) + `", "summary": "probe"` + about + `}`
+	}},
+	{topology.DependVerb, func(v *probeView) string {
+		return `{"requires": "` + v.relative + `"}`
+	}},
+	{topology.UndependVerb, func(v *probeView) string {
+		return `{"requires": "` + v.unlink + `"}`
+	}},
+	{topology.ParentVerb, func(v *probeView) string {
+		return `{"parent": "` + v.relative + `"}`
+	}},
+	{topology.AlignVerb, func(v *probeView) string {
+		return `{"mission": "probe/mission.md @ ` + strings.Repeat("0", 7) + `"}`
 	}},
 	{"artifact.erased", func(v *probeView) string {
 		return `{"artifact": "` + v.erasable + `", "reason": "probe"}`
@@ -770,6 +817,8 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 		actor:       fp,
 		approval:    "0",
 		erasable:    strings.Repeat("0", 64),
+		relative:    subject,
+		unlink:      subject,
 		// A head the rule refuses where no submission stands: a
 		// well-formed citation, so illegality is the rule set's.
 		observationHead:   strings.Repeat("0", 40),
@@ -778,6 +827,7 @@ func Affordances(ctx *Context, key ed25519.PrivateKey, subject string) []string 
 	}
 	v.version = ctx.Active
 	v.qualify, v.disqualify = qualificationProbes(ctx, subject)
+	topologyProbes(ctx, subject, v)
 	curationProbes(ctx, subject, v)
 	v.flywheelShape, v.flywheelOccurrences, v.flywheelStanding, v.flywheelPath, v.flywheelRepair = flywheelProbes(ctx)
 	if ctx.Lifecycle != nil {

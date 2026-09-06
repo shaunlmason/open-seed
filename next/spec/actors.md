@@ -148,6 +148,10 @@ ending standing is deferred until the catalog grows a verb for it.
 | `contract.blocked` | `dispatch`, `operator` |
 | `contract.unblocked` | `dispatch`, `operator` |
 | `claim.reaped` | `dispatch`, `operator` (reaping is queue management, not worker self-service) |
+| `dependency.linked` | `dispatch`, `operator` (the relation facts are queue shaping: a dependency, a parent and a mission anchor decide what is claimable and what is held, on a known open contract, and grant nothing, so the standard operator fallback stands; [topology.md](topology.md)) |
+| `dependency.unlinked` | `dispatch`, `operator` (the link's reverse; [topology.md](topology.md)) |
+| `hierarchy.parented` | `dispatch`, `operator` (the parent, replaced by a repeat; [topology.md](topology.md)) |
+| `goal.aligned` | `dispatch`, `operator` (the mission anchor, replaced by a repeat; [topology.md](topology.md)) |
 | `claim.taken` | `claim`, `operator` |
 | `claim.released` | `claim`, `operator` |
 | `claim.parked` | `claim`, `operator` |

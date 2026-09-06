@@ -179,6 +179,11 @@ func AcceptedCapabilities(verb string) []string {
 	case "intent.filed", "contract.specified", "contract.blocked",
 		"contract.unblocked", "claim.reaped":
 		return []string{CapDispatch, CapOperator}
+	// The relation facts (plans/os-f0ae2cdf.md D2; next/spec/topology.md):
+	// dependency links, the parent and the mission anchor are queue
+	// shaping, the dispatcher's, with the standard operator fallback.
+	case "dependency.linked", "dependency.unlinked", "hierarchy.parented", "goal.aligned":
+		return []string{CapDispatch, CapOperator}
 	case "claim.taken", "claim.released", "claim.parked", "submission.made":
 		return []string{CapClaim, CapOperator}
 	case "contract.cancelled":

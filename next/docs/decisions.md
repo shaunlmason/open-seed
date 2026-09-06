@@ -4263,7 +4263,6 @@ without a vendor: local lexical BM25 over a git-native markdown store.
 - **Flags first, the query last.** The flag package's shape and every
   other verb's; a query of no searchable term refuses at usage.
 
-
 ## Trace-shaped evidence (os-7fc2ca38)
 
 The build plan's §3 entry put "the artifact-store digest of the
@@ -4434,6 +4433,61 @@ pull request and stopped. What landed (`next/spec/observations-forge.md`):
   re-offer, supervisor ranking policy (Phase 13 item 7), filed as
   os-29e2fef2.
 
+## III.F row 12: the graph beside the lifecycle (os-f0ae2cdf)
+
+Plan #341 (`plans/os-f0ae2cdf.md`) bound eight decisions; the task PR
+exercised them as written and refined three at the seams the plan left
+to implementation.
+
+- **The fold judges each fact at its own position, and the boundary
+  reuses the fold.** D3 asked for one trustworthy graph; the task has
+  `topology.Fold` replay the keyring and the lifecycle to every
+  relation's own prefix and `Graph.Apply` serve both the admission rule
+  (the candidate against the admitted graph) and the fold (each
+  admitted fact in turn). A raw-pushed edge therefore never reaches
+  the cycle check as an edge: it is an anomaly before any later fact
+  is judged. The cost is a prefix fold per relation fact, paid only on
+  chains that carry one (`topology.Carries` is the fast path).
+- **The claim boundary refuses with its own code.** D4 said
+  `claim.taken` consumes the predicate; `not_effectively_ready` (exit
+  3) names the unresolved dependencies and the holding ancestors so a
+  worker reading the refusal knows why the queue hid the subject. A
+  subject that is not `ready` at all keeps the table's refusal: the
+  graph judges claimability, never legality.
+- **`seed offer wake` registers no channel.** D6 reuses
+  `executor.Adapter.Wake`, and every shipped adapter's `Wake` is the
+  documented no-op because workers pull. The CLI pass therefore
+  reports the delta and its candidates and says `channels: 0`; the
+  drills drive `offers.Bridge` with a recording channel, which is the
+  seam a deployment with a real channel plugs into. No per-actor
+  adapter registry was invented for a channel nobody has.
+- **The graph renders only where the chain carries it.** D8 named the
+  fields; the task gates every surface on the fold carrying a trusted
+  relation (the report also on an anomaly), the knowledge and
+  requests sections' posture, so relation-free chains keep
+  byte-identical bodies and only the version in the build id moves.
+  The queue's derivation string moves with the semantics
+  (`transitions/1+topology/1`), the old constant kept for the bump
+  drills.
+- **Versions: contracts "15", queue "4", report "19", cache "15" at
+  schema generation 13.** Seven pins moved in the projection drills
+  (the four report pins, the racing view's contracts pin, the cache
+  time drill's stamp, and the lifecycle views' build ids).
+- **Eligibility left `cmd/seed`.** Step 3 asked for one shared helper;
+  `internal/offers` now holds `Eligible`, `Authorized` and `Live`, and
+  the report's private copy of the authorization check reads the
+  shared one, so the poll, the bridge and the report cannot drift.
+- **`Fold.Milestone` is exported.** D7's rollup sums the descendants'
+  admitted high-water counts, which the fold held unexported; the
+  accessor is the one addition to `internal/transition`, beside no
+  change to the table.
+- **The lane trajectory corpus is re-recorded.** The dispatcher's
+  affordance frame at every position now carries the relation verbs
+  (and the maintenance lane's replay reads the dispatcher's), so the
+  committed trajectories differed from the recorder's scenario by
+  exactly that frame change; `go test ./cmd/seed -run Corpus -update`
+  re-recorded `next/trajectories/lanes/{dispatcher,maintenance}.json`
+  on purpose, the scenario and the posture unchanged.
 
 ## Verdict defer on the machine surface (os-ef2e3134)
 

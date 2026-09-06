@@ -19,6 +19,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/request"
+	"github.com/shaunlmason/open-seed/next/internal/topology"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -110,6 +111,16 @@ func Envelope(err error) *envelope.Envelope {
 	var eras *erasure.Error
 	if errors.As(err, &eras) {
 		return envelope.Fail(envelope.ExitInvalidTransition, "erasure_refused", err.Error())
+	}
+	// The relation facts and the claim boundary's effective-readiness
+	// read (plans/os-f0ae2cdf.md; next/spec/topology.md).
+	var topo *topology.Error
+	if errors.As(err, &topo) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "topology_refused", err.Error())
+	}
+	var notReady *topology.NotReadyError
+	if errors.As(err, &notReady) {
+		return envelope.Fail(envelope.ExitInvalidTransition, "not_effectively_ready", err.Error())
 	}
 	var ceil *admit.CeilingError
 	if errors.As(err, &ceil) {

@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.0",
+  "task": "os-f0ae2cdf",
+  "plan_path": "plans/os-f0ae2cdf.md",
+  "plan_sha256": "e7e5fa0df0e6f5948f248b80c29728e9748110898710fef03d5b488c661f356f",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/topology/ ./internal/admit/ ./internal/project/ ./cmd/seed/ -run 'DependencyCascade|HoldCascade|InitiativeRollup|GoalAncestry|TopologyRelationBoundary' -count=1",
+    "cd next \u0026\u0026 go test ./cmd/seed/ ./executor/ -run 'DependencyCascadeWakesAndPolls|HoldCascadeSuppressesWakeUntilReleased|WakelessPollOnly|Wake' -count=1",
+    "cd next \u0026\u0026 go test ./internal/conformance/ ./internal/docs/ ./cmd/seed/ -run 'Conformance|Charter|Docs' -count=1",
+    "cd next \u0026\u0026 go test ./internal/transition/ ./internal/project/ ./internal/admit/ ./cmd/seed/ ./executor/ -run 'Lifecycle|Transition|Queue|Offer|Claim|Projection|Cache|Adapter|Wakeless' -count=1",
+    "make check"
+  ],
+  "generated_by": "seed-next-implementer"
+}

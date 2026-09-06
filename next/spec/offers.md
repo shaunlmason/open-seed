@@ -87,6 +87,14 @@ fold is erased. An offer is **live** exactly when:
    its expiry window. Re-offering re-readied work carries current
    supervisor intent by construction, never a stale one.
 
+The listing narrows the live set further by **effective readiness**
+([`topology.md`](topology.md); plans/os-f0ae2cdf.md D4): a ready
+subject that waits on an open dependency or sits under a blocked
+ancestor lists nothing, its live offers kept folded and listed again
+the moment it becomes effectively ready, with no fresh publication.
+The advisory wake over that moment is `seed offer wake`, the bridge
+described there; polling remains the correctness path.
+
 ## Foreign offers are inert
 
 The tolerant fold records any well-shaped `offer.published`, raw

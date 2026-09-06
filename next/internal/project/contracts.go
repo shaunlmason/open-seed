@@ -39,27 +39,32 @@ type ContractEvent struct {
 // per the cooperative posture, skipped by the fold, surfaced here,
 // never silent (plans/os-d69a6c91.md).
 type ContractEntry struct {
-	Subject       string                `json:"subject"`
-	State         *string               `json:"state"`
-	Anomalies     int                   `json:"anomalies"`
-	Claim         *ContractClaim        `json:"claim,omitempty"`
-	Racing        *ContractRacing       `json:"racing,omitempty"`
-	Acceptance    *ContractAcceptance   `json:"acceptance,omitempty"`
-	Verdict       *ContractVerdict      `json:"verdict"`
-	Requested     *string               `json:"requested"`
-	Merged        *ContractMerge        `json:"merged"`
-	Sealed        *ContractSealed       `json:"sealed"`
-	Override      *ContractOverride     `json:"override"`
-	Offers        []ContractOffer       `json:"offers,omitempty"`
-	LastClaim     *string               `json:"last_claim,omitempty"`
-	Budget        *ContractBudget       `json:"budget,omitempty"`
-	Reservations  []ContractReservation `json:"reservations,omitempty"`
-	RunStarts     []ContractRunStart    `json:"run_starts,omitempty"`
-	Runs          []ContractRun         `json:"runs,omitempty"`
-	Interrupts    []ContractInterrupt   `json:"interrupts,omitempty"`
-	FirstPosition int                   `json:"first_position"`
-	LastPosition  int                   `json:"last_position"`
-	Events        []ContractEvent       `json:"events"`
+	Subject      string                `json:"subject"`
+	State        *string               `json:"state"`
+	Anomalies    int                   `json:"anomalies"`
+	Claim        *ContractClaim        `json:"claim,omitempty"`
+	Racing       *ContractRacing       `json:"racing,omitempty"`
+	Acceptance   *ContractAcceptance   `json:"acceptance,omitempty"`
+	Verdict      *ContractVerdict      `json:"verdict"`
+	Requested    *string               `json:"requested"`
+	Merged       *ContractMerge        `json:"merged"`
+	Sealed       *ContractSealed       `json:"sealed"`
+	Override     *ContractOverride     `json:"override"`
+	Offers       []ContractOffer       `json:"offers,omitempty"`
+	LastClaim    *string               `json:"last_claim,omitempty"`
+	Budget       *ContractBudget       `json:"budget,omitempty"`
+	Reservations []ContractReservation `json:"reservations,omitempty"`
+	RunStarts    []ContractRunStart    `json:"run_starts,omitempty"`
+	Runs         []ContractRun         `json:"runs,omitempty"`
+	Interrupts   []ContractInterrupt   `json:"interrupts,omitempty"`
+	// Topology is the contract's graph view (plans/os-f0ae2cdf.md D8;
+	// next/spec/topology.md), present only when the prefix carries a
+	// trusted relation fact, so relation-free chains keep byte-identical
+	// bodies.
+	Topology      *ContractTopology `json:"topology,omitempty"`
+	FirstPosition int               `json:"first_position"`
+	LastPosition  int               `json:"last_position"`
+	Events        []ContractEvent   `json:"events"`
 }
 
 // ContractBudget is the derived budget view (plans/os-cecac5de.md;
@@ -233,7 +238,7 @@ type ContractRacing struct {
 // republishing under a new build id via the version-in-identity
 // machinery.
 func Contracts() Projection {
-	return Projection{Name: "contracts", Version: "14", Build: buildContracts}
+	return Projection{Name: "contracts", Version: "15", Build: buildContracts}
 }
 
 // isWorkVerb is the v0 classifier: everything outside the governance
@@ -273,6 +278,7 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 		return nil, err
 	}
 	fold := table.FoldRecords(records)
+	graph := deriveTopology(records, table, fold)
 	budgetOf := func(subject string, s transition.SubjectState) (*ContractBudget, []ContractReservation) {
 		if len(s.Reservations) == 0 && len(s.BudgetCloses) == 0 {
 			return nil, nil
@@ -359,6 +365,7 @@ func buildContracts(records []*event.Record, _ Inputs) (map[string][]byte, error
 				e.LastClaim = &lc
 			}
 			e.Budget, e.Reservations = budgetOf(e.Subject, s)
+			e.Topology = contractTopology(graph, e.Subject)
 			for _, st := range s.RunStarts {
 				e.RunStarts = append(e.RunStarts, ContractRunStart{
 					Position:    fmt.Sprintf("%d", st.Pos),

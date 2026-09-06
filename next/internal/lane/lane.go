@@ -31,6 +31,7 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/loopverb"
+	"github.com/shaunlmason/open-seed/next/internal/topology"
 )
 
 // Manifest is one lane's declaration. The four obligation fields are
@@ -574,7 +575,11 @@ func intersects(a, b []string) bool {
 // (next/spec/requests.md). A lane that declares one alone runs no
 // worker loop, so the liveness obligation does not apply to it.
 var laneActs = map[string]string{
-	"request answer": "request.answered",
+	"request answer":    "request.answered",
+	"topology depend":   topology.DependVerb,
+	"topology undepend": topology.UndependVerb,
+	"topology parent":   topology.ParentVerb,
+	"topology align":    topology.AlignVerb,
 }
 
 func laneActNames() []string {

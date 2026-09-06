@@ -47,7 +47,7 @@ func TestLifecycleViews(t *testing.T) {
 	// The queue: exactly c-B, since the position of its specification.
 	var q project.QueueView
 	readView(t, out, "queue", project.QueueFile, &q)
-	if q.Derivation != project.QueueDerivationTransitions {
+	if q.Derivation != project.QueueDerivationEffective {
 		t.Fatalf("queue derivation: %+v", q)
 	}
 	if len(q.Ready) != 2 || q.Ready[0].Subject != "c-B" || q.Ready[0].SincePosition != 7 ||
@@ -114,7 +114,7 @@ func TestLifecycleViews(t *testing.T) {
 	// version-in-identity machinery on real derivation changes): the
 	// queue is at v2 (5.1), contracts and cache at v4 (5.2's claim
 	// object, 5.4's acceptance field).
-	for name, want := range map[string]string{"queue": "-v3", "contracts": "-v14", "cache": "-v14"} {
+	for name, want := range map[string]string{"queue": "-v4", "contracts": "-v15", "cache": "-v15"} {
 		b, err := os.ReadFile(filepath.Join(out, name, "CURRENT"))
 		if err != nil {
 			t.Fatal(err)
