@@ -68,6 +68,19 @@ an unmerged pull request — the ledger fact records a merge, never an
 intention. The snapshot arm answers the same shape from a file, so the
 drills run credential-free.
 
+From `seed/8` the observer also answers `Checks(pr)`, what the forge
+says about the pull request's head
+([`observations-forge.md`](observations-forge.md)): the head sha, the
+combined check state, the unresolved review threads and the review
+state, forge-neutral. GitHub reads the pull request, its check runs,
+the GraphQL review-thread query (paged) and its reviews; Forgejo reads
+the pull request, the commit's combined status and its reviews, and
+its thread count is **nil**, the thread-resolution gap above named in
+the observation rather than reported as zero. The snapshot answers the
+same shape from the file's `head`, `checks`, `unresolved_threads` and
+`review` beside the merge fields. `seed check observe --forge
+github|forgejo|snapshot` and the maintenance pass's `--forge` read it.
+
 ## Conformance
 
 - III.N row 2 "at least one non-primary forge is supported by adapters"

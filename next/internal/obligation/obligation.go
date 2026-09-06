@@ -49,6 +49,14 @@ const (
 	// KindContractBlocked is a blocked subject awaiting whoever the
 	// block named.
 	KindContractBlocked = "contract.blocked"
+	// KindSubmissionUnmergeable is a submission the forge's latest
+	// observation says is not mergeable as it stands: a red check, an
+	// unresolved review thread, or a review requesting changes
+	// (plans/os-0cd18799.md D3). Owed by the dispatch lane, since the
+	// return is queue management, and discharged by contract.returned
+	// citing the observation. Not emitted once a fail verdict stands,
+	// because the return is then owed on the verdict's account.
+	KindSubmissionUnmergeable = "submission.unmergeable"
 	// KindEscalationPending is a standing blocked(needs-you): a
 	// question addressed to a human gate that nothing else about the
 	// contract moves past (plans/os-f781f0da.md). It is the narrower
@@ -103,6 +111,11 @@ var factDischargers = map[string][]string{
 	KindBudgetOpen: {"budget.settle", "budget.release"},
 	// next/spec/verdicts.md: the verdict is a fact, not a transition.
 	KindSubmissionPending: {"verdict.rendered"},
+	// next/spec/observations-forge.md: the return cites the red
+	// observation; the row exists in the table (review to ready) but
+	// the kind is fact-shaped, since it arises from the observation and
+	// not from the state.
+	KindSubmissionUnmergeable: {"contract.returned"},
 	// next/spec/escalation.md: both answers close the question, and
 	// cancelling counts because it must cite the escalation it
 	// closes — an answer of "this work should not happen".
@@ -141,6 +154,10 @@ type Row struct {
 	// obligation, so a kind with no reachable discharger is not
 	// emitted at all.
 	DischargedBy []string `json:"discharged_by"`
+	// Head is the commit the obligation is about, present only on the
+	// forge-observed kind (plans/os-0cd18799.md D3), so the situation
+	// read says which revision is red.
+	Head string `json:"head,omitempty"`
 	// TS is the raising event's own timestamp, present only where the
 	// obligation's age is meaningful in elapsed time. Positions order
 	// without measuring: an escalation untouched for hours has the
@@ -252,8 +269,22 @@ func subjectRows(subject string, s transition.SubjectState, table *transition.Ta
 		// (next/spec/escalation.md).
 		add(KindEscalationPending, LaneOperator, s.Escalation.Pos, s.Escalation.TS, factDischargers[KindEscalationPending])
 	}
-	if s.Submission != nil && (s.Verdict == nil || s.Verdict.Submission != s.Submission.Pos) {
+	// A verdict is owed only while the subject is under review: a
+	// return by observation (plans/os-0cd18799.md D4) re-readies the
+	// subject with its submission unjudged, and a verdict there is a
+	// debt nobody can discharge, which the drift sweep names.
+	if s.State == "review" && s.Submission != nil && (s.Verdict == nil || s.Verdict.Submission != s.Submission.Pos) {
 		add(KindSubmissionPending, LaneVerifier, s.Submission.Pos, "", factDischargers[KindSubmissionPending])
+	}
+	// The forge's latest word on the head under review says it is not
+	// mergeable (plans/os-0cd18799.md D3): the dispatch lane owes the
+	// return, unless a fail verdict already stands, in which case the
+	// return is owed on the verdict's account and this row would name
+	// the same debt twice.
+	red := s.State == "review" && s.Observation != nil && s.Observation.Red() && len(s.SubmissionFails) == 0
+	if red {
+		rows = append(rows, Row{Subject: subject, Kind: KindSubmissionUnmergeable, OwedBy: LaneDispatcher, Since: s.Observation.Pos,
+			Head: s.Observation.Head, DischargedBy: append([]string(nil), factDischargers[KindSubmissionUnmergeable]...)})
 	}
 	// A deferral on the current window with no render after it: the
 	// verifier could not judge, and the debt moved to the human.
@@ -264,7 +295,10 @@ func subjectRows(subject string, s transition.SubjectState, table *transition.Ta
 	// it is never merged, its consequence is a qualification or a
 	// disqualification, and a merge owed forever would be a debt
 	// nobody can pay.
-	if s.Verdict != nil && s.Verdict.Verdict == "pass" && s.Merged == nil && s.Eval == nil {
+	// While the forge says red, merge.requested refuses (D4), so the
+	// merge debt is not advertised: the return is the debt that
+	// stands, and an obligation nobody can discharge is an anomaly.
+	if s.Verdict != nil && s.Verdict.Verdict == "pass" && s.Merged == nil && s.Eval == nil && !red {
 		// One kind, two shapes, because the merge chain is two
 		// events: until a request cites the verdict the debt is the
 		// operator's and merge.requested pays it; after that the

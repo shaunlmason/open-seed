@@ -35,6 +35,7 @@ Every verb the affordance catalog drafts, with the capability set the keyring ac
 | `escalation.raised` | `claim`, `dispatch`, `verdict`, `supervise`, `operator`, `curate` |
 | `decision.recorded` | `operator` |
 | `contract.returned` | `dispatch`, `operator` |
+| `check.observed` | `observer`, `operator` |
 | `claim.taken` | `claim`, `operator` |
 | `claim.released` | `claim`, `operator` |
 | `claim.parked` | `claim`, `operator` |

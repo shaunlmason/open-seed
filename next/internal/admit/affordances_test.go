@@ -40,7 +40,7 @@ var specCatalogVerbs = []string{
 	"offer.published", "budget.reserve", "budget.settle", "budget.release",
 	"run.started", "run.settled", "run.interrupted",
 	"verdict.rendered", "verdict.deferred", "check.sealed",
-	"merge.requested", "merge.observed", "merge.overridden",
+	"merge.requested", "merge.observed", "merge.overridden", "check.observed",
 	"message.sent", "request.filed", "request.answered", "artifact.erased",
 	"dependency.linked", "dependency.unlinked", "hierarchy.parented", "goal.aligned",
 	"approval.requested", "approval.granted", "approval.denied",
@@ -258,8 +258,37 @@ func walkScript(t *testing.T, lanes map[string]ed25519.PrivateKey) []walkStep {
 			t.Fatal("no pending approval to grant")
 			return ""
 		}, "approval-granted"},
+		// seed/8: the forge observation (plans/os-0cd18799.md). The
+		// operator claims and submits c-6 naming its pull request and
+		// a full-sha base range (the holder is revoked by now), the
+		// observer records a red observation on the head, and the
+		// operator returns the contract citing it: the observation is
+		// afforded to the observer on a review subject, the return to
+		// the dispatch lane while the observation stands red, and the
+		// unmergeable obligation is dischargeable at every position.
+		walkStep{"root", version.Seed7, ledger.UpgradeVerb, "system", static(`{"to": "` + version.Seed8 + `"}`), "seed8"},
+		walkStep{"root", version.Seed8, "intent.filed", "c-6", static(filedBody), ""},
+		walkStep{"root", version.Seed8, "contract.specified", "c-6", static(specBody), ""},
+		walkStep{"root", version.Seed8, "claim.taken", "c-6", static(`{}`), ""},
+		walkStep{"root", version.Seed8, "submission.made", "c-6", func(t *testing.T, ctx *Context) string {
+			return `{"fence": "` + fenceOf(t, ctx, "c-6") + `", "pr": "pr/6", "packet": ` + walkForgePacket + `}`
+		}, "review-c6"},
+		walkStep{"observer", version.Seed8, "check.observed", "c-6", static(`{"pr": "pr/6", "head": "` + walkHead + `", "checks": "red", "unresolved_threads": 2, "review": "none"}`), "observed-c6"},
+		walkStep{"root", version.Seed8, "contract.returned", "c-6", func(t *testing.T, ctx *Context) string {
+			s, ok := ctx.Lifecycle.State("c-6")
+			if !ok || s.Observation == nil {
+				t.Fatal("no observation stands on c-6")
+			}
+			return fmt.Sprintf(`{"observation": "%d"}`, s.Observation.Pos)
+		}, "returned-c6"},
 	)
 }
+
+// walkHead is the head c-6's submission names, a full sha the forge
+// observation binds to; the base is a distinct full sha.
+const walkHead = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+const walkForgePacket = `{"acceptance": ["c-6"], "decisions": [], "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..` + walkHead + `", "refs": [], "findings": []}`
 
 // evalFiledBody is a filing marked as an eval (plans/os-03e47abb.md D1).
 const evalFiledBody = `{"intent": "eval", "tier": "trivial", "budget": "small", "routing": "core", "eval": {"name": "walk"}}`
@@ -383,6 +412,39 @@ func TestAffordancesWalk(t *testing.T) {
 		"approval-granted": func() {
 			if l := list(signer, "system"); has(l, "approval.granted") || has(l, "approval.denied") {
 				t.Fatalf("an answered approval lists no second answer: %v", l)
+			}
+		},
+		"seed8": func() {
+			// A blocked subject is not under review: nothing to observe.
+			if l := list(keys["observer"], "c-3"); has(l, "check.observed") {
+				t.Fatalf("the observation lists only on a review subject: %v", l)
+			}
+		},
+		"review-c6": func() {
+			if l := list(keys["observer"], "c-6"); !has(l, "check.observed") {
+				t.Fatalf("the observer lists the forge observation on the submission under review: %v", l)
+			}
+			if l := list(signer, "c-6"); !has(l, "check.observed") || has(l, "contract.returned") {
+				t.Fatalf("the operator fallback lists the observation and no return before one stands: %v", l)
+			}
+			if l := list(keys["verifier"], "c-6"); has(l, "check.observed") {
+				t.Fatalf("the verifier never observes the forge: %v", l)
+			}
+		},
+		"observed-c6": func() {
+			if l := list(signer, "c-6"); !has(l, "contract.returned") {
+				t.Fatalf("a red observation lists the return for the dispatch lane: %v", l)
+			}
+			if l := list(keys["observer"], "c-6"); !has(l, "check.observed") {
+				t.Fatalf("a differing observation still lists: %v", l)
+			}
+		},
+		"returned-c6": func() {
+			if l := list(signer, "c-6"); !has(l, "claim.taken") || has(l, "contract.returned") {
+				t.Fatalf("the returned subject is ready again: %v", l)
+			}
+			if l := list(keys["observer"], "c-6"); has(l, "check.observed") {
+				t.Fatalf("nothing to observe once the window closed: %v", l)
 			}
 		},
 		"filed-c1": func() {

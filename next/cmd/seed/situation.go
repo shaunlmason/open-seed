@@ -238,6 +238,9 @@ func runSituation(args []string, stdout, stderr io.Writer) int {
 		// event count wearing a clock's clothes: an escalation
 		// untouched for hours has the same one as an answer given
 		// instantly after a burst of unrelated traffic.
+		if row.Head != "" {
+			r["head"] = row.Head
+		}
 		if row.TS != "" {
 			r["ts"] = row.TS
 			if raised, err := time.Parse(time.RFC3339, row.TS); err == nil {
