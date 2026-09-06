@@ -2454,6 +2454,14 @@ its outcome attributes collapsed into it. What landed
   and 8 keep their status with the drills added to their evidence; row
   10 stays as the Phase 10 record left it.
 
+## Verdict defer on the machine surface (os-ef2e3134)
+
+Not a plan item: the follow-up os-7fc2ca38's decision log left for its
+own card (plan #355). `defer` joins the verdict group's registry row
+and usage line, so `serve --list` carries `verdict.defer` and the
+registry resolves it (III.I); `TestVerdictDeferExposed` holds it. No
+verb behavior, spec or conformance change.
+
 ## Frontier
 
 
