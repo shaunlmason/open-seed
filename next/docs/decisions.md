@@ -4578,8 +4578,12 @@ tree rather than about itself. What was decided and found:
   rest dealt round-robin across the three replay configurations and
   spread evenly within each, take about two seconds locally; every
   trace (348) takes about 133, which is the scheduled size on the
-  weekly `perf-scale` job. The Windows leg's time is read off the task
-  PR's CI.
+  weekly `perf-scale` job. On the task PR's CI the Windows leg that
+  carries `internal/gitref` ran the whole package in 98.5 seconds
+  (the platform matrix runs packages without `-v`, so the replay's own
+  share is not separable there; the package was already the
+  git-heaviest in the tree before this card); the Ubuntu and macOS
+  legs finished the package inside their usual bounds.
 - **Nothing in production moved.** No interleaving lost an update,
   landed a record off the fetched tip, moved a head backward, landed a
   normal record after a halt, or failed to terminate, and no replayed
