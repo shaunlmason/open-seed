@@ -23,10 +23,10 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | M. Workflows | 1 | 0 | 0 | 0 |
 | N. Interoperability and federation | 2 | 0 | 0 | 3 |
 | O. Evaluation infrastructure | 5 | 0 | 0 | 0 |
-| P. Distribution, supply chain, adoption | 5 | 0 | 0 | 0 |
+| P. Distribution, supply chain, adoption | 4 | 1 | 0 | 0 |
 | Q. Quality, docs, community | 6 | 1 | 0 | 0 |
 | R. The autonomy end-state | 0 | 0 | 7 | 0 |
-| **all** | 100 | 5 | 14 | 9 |
+| **all** | 99 | 6 | 14 | 9 |
 
 ## A. The Ledger
 
@@ -216,7 +216,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 
 | row | status | phase | criterion | evidence | note |
 |---|---|---|---|---|---|
-| P.1 | `met` | 12 | Clone-and-init adoption from tagged releases; three-way template upgrades with rollback; pinned checksum-verified engine, never committed, air-gap paths; checksum/protocol/downgrade-safe engine upgrades; everything executable hash-pinned. | scripts/seed fetching the engine pinned in .seed/engine.lock with checksum verification; seed engine upgrade with rollback and the protocol preflight; seed template upgrade's three-way merge from recorded provenance; the vendored engine for air-gapped machines; checksums.txt with provenance on every release | residual named and not claimed by the Phase 12 record: Seed's own binary is built from source and not yet a released artifact (promotion, section 5 step 2) |
+| P.1 | `partial` | 12 | Clone-and-init adoption from tagged releases; three-way template upgrades with rollback; pinned checksum-verified engine, never committed, air-gap paths; checksum/protocol/downgrade-safe engine upgrades; everything executable hash-pinned. | scripts/seed fetching the engine pinned in .seed/engine.lock with checksum verification; seed engine upgrade with rollback and the protocol preflight; seed template upgrade's three-way merge from recorded provenance; the vendored engine for air-gapped machines; checksums.txt with provenance on every release | unmet residual owned by promotion section 5 step 2: Seed's own binary is built from source and no seed/v* release has been cut |
 | P.2 | `met` | 12 | The admission validator ships in hook and service form, both stateless, both rebuildable from a clone. | #99 TestDrillKillAndReplace (cmd/seed-admit/drill_test.go); #252 TestServiceKillAndReplace (cmd/seed-admit/serve_test.go) | — |
 | P.3 | `met` | 12 | Preseed bootstraps config, guardrails, teams, protections, and the declared admission posture in one idempotent, CI-verified file. | #254 TestInitPreseedIsIdempotentAndDriftRefuses (cmd/seed/preseed_cli_test.go); seed preseed check on the fixture deployment under make check-next | — |
 | P.4 | `met` | 12 | Predecessor import is a drilled two-command path: lossless export → genesis import (refusing non-empty ledgers), source tamper-evidence verified before conversion, against a real predecessor fixture in CI. | #255 TestRealFixtureImports (internal/importer/fixture_test.go), TestAnchorRefusalsPrecedeEveryWrite, TestNonEmptyLedgerRefuses, TestUnmappedVerbRefuses (internal/importer/drills_test.go), TestImportCommandEnvelopes (cmd/seed/import_cli_test.go) | — |
