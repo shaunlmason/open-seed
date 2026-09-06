@@ -1779,3 +1779,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T07:59:55Z"},"task":"os-21bf939f","ts":"2026-09-06T06:59:55Z","verb":"claim"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T08:01:04Z"},"task":"os-7fc2ca38","ts":"2026-09-06T07:01:04Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T08:03:51Z"},"task":"os-0cd18799","ts":"2026-09-06T07:03:51Z","verb":"lease-renew"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-21bf939f","ts":"2026-09-06T07:04:06Z","verb":"transition"}
