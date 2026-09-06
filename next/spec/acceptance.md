@@ -40,6 +40,24 @@ rubric and the scorecard"). A duplicate, empty or non-slug id refuses
 at render as `spec_unrunnable`: a rubric that cannot be scored item by
 item cannot decide.
 
+## Trace attributes
+
+A spec whose commands run a harness that attaches a trace to its run
+may carry a **`## Trace attributes`** section (plans/os-7fc2ca38.md
+D3): bullets `- <key>`, one attribute key each, the key one token
+unique within the spec. It declares which span attributes the
+receipt's trace shape retains ([`verdicts.md`](verdicts.md),
+"Trace-shaped evidence"); everything undeclared is stripped, so only
+what the spec names can enter a receipt that must reproduce. An absent
+section declares nothing, which is valid: name, kind and status alone
+reproduce. It merges through the same gate as the commands and the
+rubric, read at the anchor by `plan.TraceAttributes` exactly as
+`plan.Rubric` reads its section, so an implementer cannot widen what
+reproduces without review, and a per-run key such as a run id stays
+undeclared or the receipt stops reproducing. A duplicate, empty or
+whitespace-bearing key refuses at receipt as `spec_unrunnable`: a
+declaration the verifier cannot read cannot bound what reproduces.
+
 ## The gate rule: no tier exemption
 
 `executable: true` REQUIRES `gate`, **at every tier**. The charter's

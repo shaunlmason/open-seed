@@ -105,6 +105,13 @@ func EvidenceAt(id string, s transition.SubjectState, store *artifact.Store, rep
 			out = append(out, *f)
 		}
 	}
+	// The trace shapes the receipt binds (plans/os-7fc2ca38.md D5, D6)
+	// are graded wherever the verdict stands, like the scorecard: a
+	// shape the store lost is evidence a citation points at and cannot
+	// reach.
+	if s.Verdict != nil && store != nil {
+		out = append(out, TracesAt(id, s.Verdict, store)...)
+	}
 	if s.Merged == nil || s.Merged.SHA == "" || s.Verdict == nil {
 		// Record-derivable classes already cover chains this
 		// incomplete; there is no evidence to grade.
@@ -250,4 +257,37 @@ func reproduce(records []*event.Record, fold *transition.Fold, s transition.Subj
 		return "", err
 	}
 	return r.Digest()
+}
+
+// TracesAt is the evidence-grade half of the trace rule
+// (plans/os-7fc2ca38.md D5): every shape the cited receipt binds
+// retrieves intact. A receipt that itself does not retrieve is graded
+// where the merge chain grades it and yields nothing here; the raw
+// sidecar is never graded, since erasing it is the erasure path the
+// shape was designed to survive.
+func TracesAt(id string, v *transition.VerdictFact, store *artifact.Store) []Finding {
+	body, err := store.Get(v.Receipt)
+	if err != nil {
+		return nil
+	}
+	var r verdict.Receipt
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil
+	}
+	var out []Finding
+	for _, list := range []struct {
+		which   string
+		entries []verdict.TraceEntry
+	}{{"transcript", r.Traces}, {"sealed transcript", r.SealedTraces}} {
+		for _, e := range list.entries {
+			if e.Malformed {
+				continue
+			}
+			if _, err := store.Get(e.ShapeSHA256); err != nil {
+				out = append(out, Finding{Subject: id, Class: ClassEvidenceMissing,
+					Detail: fmt.Sprintf("the trace shape %s bound by receipt %s for %s %d (verdict at position %d) is not retrievable intact: %v — the evidence a citation points at must survive verbatim", e.ShapeSHA256, v.Receipt, list.which, e.Transcript, v.Pos, err)})
+			}
+		}
+	}
+	return out
 }
