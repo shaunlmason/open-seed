@@ -1783,3 +1783,4 @@
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T08:05:28Z"},"task":"os-7fc2ca38","ts":"2026-09-06T07:05:28Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T08:11:49Z"},"task":"os-7fc2ca38","ts":"2026-09-06T07:11:49Z","verb":"lease-renew"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T08:12:50Z"},"task":"os-0cd18799","ts":"2026-09-06T07:12:50Z","verb":"lease-renew"}
+{"actor":"seed-next-implementer","data":{"evidence_id":"ev-97dcfd4a","kind":"pr"},"task":"os-7fc2ca38","ts":"2026-09-06T07:17:40Z","verb":"attach-evidence"}
