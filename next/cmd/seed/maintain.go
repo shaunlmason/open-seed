@@ -30,8 +30,10 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/maintain"
+	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/project"
+	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -61,9 +63,23 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 	artifacts := fs.String("artifacts", "", "artifact store root (default <repo>/next/var/artifacts)")
 	asOf := fs.String("as-of", "", "declared classification instant (RFC3339; defaults to now)")
 	staleAfter := fs.Duration("stale-after", 0, "how long past its expiry an unrevalidated, unretired lesson stands before lesson_stale files it (default: on expiry)")
-	if err := fs.Parse(args); err != nil || *dir == "" || *repo == "" || *keyPath == "" || *obsDir == "" || fs.NArg() != 0 || *staleAfter < 0 {
+	forgeKind := fs.String("forge", "", "poll the forge for every submission under review that names a pull request: snapshot | github | forgejo (default: the observe step is skipped, with the reason)")
+	github := fs.String("github", "", "owner/name of the repository (github or forgejo forge)")
+	api := fs.String("api", "", "forge API base URL")
+	tokenEnv := fs.String("token-env", "GITHUB_TOKEN", "environment variable holding the forge token")
+	prSnapshot := fs.String("snapshot", "", "pull-request snapshot file (snapshot forge)")
+	ceiling := fs.Int("return-ceiling", maintain.DefaultReturnCeiling, "observation-cited returns one subject may carry before the pass escalates instead")
+	if err := fs.Parse(args); err != nil || *dir == "" || *repo == "" || *keyPath == "" || *obsDir == "" || fs.NArg() != 0 || *staleAfter < 0 || *ceiling <= 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
-			"maintain run requires --ledger <dir> --repo <dir> --key <path> --obs <dir> [--out <dir>] [--artifacts <dir>] [--as-of <ts>] [--stale-after <duration>]"), stdout, stderr)
+			"maintain run requires --ledger <dir> --repo <dir> --key <path> --obs <dir> [--out <dir>] [--artifacts <dir>] [--as-of <ts>] [--stale-after <duration>] [--forge <kind> ...] [--return-ceiling <n>]"), stdout, stderr)
+	}
+	var observe func(pr string) (protections.Observation, error)
+	if *forgeKind != "" {
+		reader, failEnv := mergeObserver(*forgeKind, *github, *api, *tokenEnv, *prSnapshot)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
+		}
+		observe = reader.Checks
 	}
 	keyBytes, err := os.ReadFile(*keyPath)
 	if err != nil {
@@ -134,6 +150,22 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 		},
 		Append: sess.append,
 		File:   sess.file,
+		// The forge poll and the fresh view the return reads
+		// (plans/os-0cd18799.md D6): a pass with no forge reports the
+		// observe step skipped, never passed over silently.
+		Observe:       observe,
+		ReturnCeiling: *ceiling,
+		Refresh: func() (*transition.Fold, []obligation.Row, error) {
+			fresh, failEnv := loadVerdictState(*dir)
+			if failEnv != nil {
+				return nil, nil, errors.New(failEnv.Error.Message)
+			}
+			rows, err := project.DeriveObligations(fresh.records)
+			if err != nil {
+				return nil, nil, err
+			}
+			return fresh.fold, rows, nil
+		},
 	}
 	if *out != "" {
 		deps.Rebuild = func() ([]string, error) { return sess.rebuild(*out) }

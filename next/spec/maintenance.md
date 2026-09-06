@@ -14,9 +14,17 @@ acts, and this lane acts on the raw append seam. What it holds is
 
 ## The pass
 
-`seed maintain run` runs one pass in a fixed order: reap, lint, file,
-rebuild, checkpoint. The checkpoint is last because it attests to the
-state the rest of the pass produced.
+`seed maintain run` runs one pass in a fixed order: reap, observe,
+return, lint, file, rebuild, checkpoint. The observations come before
+the lints so the lints read fresh facts, the return before the filing
+so a returned subject is not also filed as a finding, and the
+checkpoint is last because it attests to the state the rest of the
+pass produced. The observe and return steps, and the return ceiling
+that turns the fourth red return into an escalation, are
+[`observations-forge.md`](observations-forge.md) (plans/os-0cd18799.md
+D6, D7): with no `--forge` the observe step reports every observable
+submission skipped with that reason, and a key holding `maintenance`
+alone meets `out_of_grant` on both acts, reported like every refusal.
 
 The decision logic is `internal/maintain` with its effects injected,
 so every rule below is drillable without a ledger. A retry rule, a

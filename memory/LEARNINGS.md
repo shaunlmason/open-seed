@@ -2169,3 +2169,25 @@ failed step skips the rest of the job.
   bug. When a re-draft copy exists for drift detection, every anchor
   the production view carries must be in it, or the class fires on
   its own instrument.
+
+- 2026-09-06 (os-0cd18799): the obligation drift sweep is the fastest
+  reviewer of a new fact. Adding a return path that re-readies a subject
+  without a verdict left `submission.pending` standing in `ready`, where
+  `verdict.rendered` is illegal, and a red observation left
+  `verdict.unmerged` advertising a `merge.requested` the new rule
+  refused; the sweep named both at the exact position. Derive the
+  suppression from the state (a verdict is owed under review; a merge
+  is owed while the forge is not red) rather than exempting the sweep.
+- 2026-09-06 (os-0cd18799): an affordance probe for a fact whose
+  admission requires CHANGE from the standing fact must vary its payload
+  against the fold (a check state differing from the standing one) and
+  speak the subject's own citations (the submission's pull request), or
+  the list says the verb is unavailable exactly when a new fact would
+  admit. The sweep's own probe view (`probeViewAt`) mirrors the
+  production one and must gain the same fields.
+- 2026-09-06 (os-0cd18799): `cmd/seed/forge_cli_test.go` already exists
+  (the forge-hosted admission posture). Name a new drill file by the
+  loop it drives, not by the noun it shares with another card, and check
+  `ls` before `Write`: an overwrite of a test file is invisible until
+  `writeDeclaration` goes undefined three files away.
+

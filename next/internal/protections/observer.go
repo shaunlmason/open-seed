@@ -8,7 +8,6 @@ package protections
 // snapshot arm answers the same shape from a file for the drills.
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,10 +15,19 @@ import (
 	"strings"
 )
 
-// Observer answers a pull request's merge state.
+// Observer answers a pull request's merge state, and from
+// plans/os-0cd18799.md D5 what the forge says about its head: the
+// checks, the review threads, the review state (checks.go). It never
+// writes.
 type Observer interface {
 	Merged(pr string) (sha string, merged bool, err error)
+	Checks(pr string) (Observation, error)
 }
+
+// PRNumber extracts the numeric id from a pr reference ("pr/12" or
+// "12"): the merge.observed ref grammar, shared with submission.made's
+// pr field and check.observed.
+func PRNumber(pr string) (string, error) { return prNumber(pr) }
 
 // prNumber extracts the numeric id from a pr reference ("pr/12" or "12").
 func prNumber(pr string) (string, error) {
@@ -71,17 +79,22 @@ func (f *Forgejo) Merged(pr string) (string, bool, error) {
 // {"pulls": {"pr/1": {"merged": true, "merge_commit_sha": "<sha>"}}}.
 type SnapshotObserver struct{ Path string }
 
+// readSnapshot reads the snapshot file, naming it in the error.
+func readSnapshot(path string) ([]byte, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading the pull-request snapshot: %w", err)
+	}
+	return b, nil
+}
+
 // Merged reads the pull request's state from the snapshot.
 func (s SnapshotObserver) Merged(pr string) (string, bool, error) {
-	b, err := os.ReadFile(s.Path)
-	if err != nil {
-		return "", false, fmt.Errorf("reading the pull-request snapshot: %w", err)
-	}
 	var doc struct {
 		Pulls map[string]prState `json:"pulls"`
 	}
-	if err := json.Unmarshal(b, &doc); err != nil {
-		return "", false, fmt.Errorf("the pull-request snapshot does not parse: %w", err)
+	if err := s.load(&doc); err != nil {
+		return "", false, err
 	}
 	st, ok := doc.Pulls[pr]
 	if !ok {

@@ -141,6 +141,15 @@ from the claimant's is required (independence):
 seed verdict render --ledger ./ledger --subject c-1 --repo ./work --key ./verify_ed25519 --verdict pass
 ```
 
+The observer records what the forge says about the submission under
+review, read from the forge or given by hand; a red observation is the
+dispatch lane's cue to return the contract, and the maintenance pass
+does both on its own (§8):
+
+```sh
+seed check observe --ledger ./ledger --subject c-1 --key ./observer_ed25519 --forge snapshot --snapshot ./pulls.json
+```
+
 The observer records the merge that ends the contract at `done`:
 
 ```sh
@@ -164,6 +173,15 @@ admission itself reads no clock:
 
 ```sh
 seed maintain run --ledger ./ledger --key ./maintenance_ed25519 --as-of 2026-09-03T00:00:00Z
+```
+
+With a forge named it also polls every submission under review that
+names a pull request, records what the forge says, and returns the ones
+the forge says are not mergeable, escalating at the return ceiling
+instead of returning a fourth time:
+
+```sh
+seed maintain run --ledger ./ledger --key ./maintenance_ed25519 --as-of 2026-09-03T00:00:00Z --forge github --github owner/name --return-ceiling 3
 ```
 
 ## 9. Migration from open-seed

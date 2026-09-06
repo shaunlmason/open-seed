@@ -131,6 +131,21 @@
     than as corruption. At `seed/6` positions both verbs stay
     unknown-and-refused under a `seed/7` validator too, no table row
     changes, and every existing chain verifies byte for byte.
+  - `seed/8` — activates the forge observation
+    ([`observations-forge.md`](observations-forge.md)):
+    `check.observed`, the observer's record of what the forge's checks
+    and review threads say about the head under review, a fact on
+    review subjects that changes no state; `submission.made`'s
+    optional `pr`; and `contract.returned`'s second citation, a red
+    observation beside a fail verdict. A `seed/7` validator's
+    unknown-verb arm fails a chain carrying the fact and its strict
+    return decode refuses the citation, so the two judge a `seed/8`
+    record differently, hence the bump, which makes a `seed/7`-only
+    validator refuse an upgraded chain at the first observation by
+    version rather than as corruption. At `seed/7` positions the fact
+    stays unknown-and-refused under a `seed/8` validator too, a return
+    cites a verdict only, the `pr` field is not read, no table row
+    changes, and every existing chain verifies byte for byte.
 
 ## The machine surface
 
@@ -254,7 +269,9 @@ admission).
   (packet ref), `wedge.declared`.
 - `plan.*` — `proposed`, `approved` (observation of the plan PR merge).
 - `progress.*` — `milestone` (coarse; bounded frequency).
-- `submission.*` — `made` (branch, evidence refs).
+- `submission.*` — `made` (branch, evidence refs; from `seed/8` the
+  optional `pr` the forge observation binds to,
+  [`observations-forge.md`](observations-forge.md)).
 - `verdict.*` — `rendered` (pass/fail, receipt, independence level
   achieved: `L1` alone before `seed/4`, `L1`/`L2`/`L3` with the
   verifier's declared tuple from it, and from `seed/4` the optional
@@ -263,7 +280,8 @@ admission).
   human-verdict deferral, the receipt and the items the verifier
   could not judge, on the bound submission).
 - `merge.*` / `check.*` — `requested`, `observed` (external-fact
-  observations).
+  observations; `check.observed` from `seed/8`, the forge's word on
+  the head under review, [`observations-forge.md`](observations-forge.md)).
 - `offer.*` — `published` (the supervisor's eligibility-scoped,
   expiring invitation to claim; a fact, never a transition —
   [`offers.md`](offers.md), active from `seed/1`. Catalog growth here
