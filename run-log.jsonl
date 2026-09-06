@@ -1735,3 +1735,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: neither the CLI nor the machine surface offers usable command discovery: seed and seed --help dead-end at seed version, which lists nothing"},"task":"os-699ea5fd","ts":"2026-09-05T19:48:03Z","verb":"create"}
 {"actor":"shaunlmason","data":{"comment_id":"cm-c2a209a0","kind":"comment"},"task":"os-a7b5dffb","ts":"2026-09-06T01:20:28Z","verb":"comment"}
 {"actor":"shaunlmason","data":{"comment_id":"cm-dedb4cb8","kind":"comment"},"task":"os-d76b7d6c","ts":"2026-09-06T01:20:31Z","verb":"comment"}
+{"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-0f924157","ts":"2026-09-06T02:23:21Z","verb":"close"}
