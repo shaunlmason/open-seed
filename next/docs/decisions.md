@@ -4434,3 +4434,69 @@ pull request and stopped. What landed (`next/spec/observations-forge.md`):
   re-offer, supervisor ranking policy (Phase 13 item 7), filed as
   os-29e2fef2.
 
+## The projection boundary has three sides (os-b45c308d)
+
+Plan #350 charters Phase 13 item 8: III.D rows 5, 6 and 7 at the
+projection boundary. What landed (`next/spec/projections.md`
+"Components" and "The mirror", `next/spec/external-facts.md`):
+
+- **The mirror is a component, not a verb.** `seed-mirror` reads the
+  contracts build `seed project current` resolved (the envelope, then
+  the view inside the named build: the write-boundary lint forbids the
+  published layout's vocabulary outside the engine, and the consumer
+  verb is where freshness is demanded anyway) and writes a forge's
+  issues through one adapter interface; it imports no Seed internal at all, so
+  the authority lint's claim about it is about an executable's import
+  closure, not a naming convention. The marker is base64 of the subject
+  so an opaque subject cannot escape the comment, and the planner
+  refuses a duplicate, an undecodable marker, or a marker naming a
+  subject the projection does not hold, rather than choosing.
+- **The classes are derived, never listed.** The export path is the
+  sealed registry and what it contains; the write path is the packages
+  owning an append, a commit, a push or a proposal and every call site
+  of one. A component is a `main` under `cmd/`. Both classes come out of
+  `go/parser` over the tree with no `x/tools` dependency, the
+  write-boundary lint's precedent, and the real-tree walk asserts both
+  classes non-empty so the lint is proving something.
+- **The plan's D5 was already on `main`.** The plan describes
+  `check.observed` as a new verb at the next protocol version with
+  `{name, status, commit, reference}`; #351 (os-0cd18799) had landed
+  the verb at `seed/8` with `{pr, head, checks, unresolved_threads?,
+  review}` between the plan's writing and this card's claim. A second
+  verb wearing the same name would be a design violation, so this card
+  pins the landed verb into the catalog and proves the plan's
+  properties against it: observer or operator, the strict shape, the
+  version boundary (`TestCheckObservedNeedsSeed8`), no transition row,
+  no discharge, no verdict. The plan's "pending emits no fact" arm is
+  not adopted either: the landed verb records pending as the forge's
+  word, and the obligation drill already pins that pending alone owes
+  nothing.
+- **An observation narrows, never widens.** The plan's AC6 says the
+  fact changes no obligation; on the tree a red `check.observed` raises
+  `submission.unmergeable` and makes `merge.requested` refuse, which is
+  the charter's checks gate. The invariance drill pins the exact shape
+  instead: a green observation leaves state, every lane's affordances,
+  obligations, budget, submission and verdict identical to a chain
+  without it; a red one adds exactly the unmergeable debt and the
+  return that discharges it, and legalizes nothing. That is what
+  "nothing treats an observation as control" means here.
+- **GET only, with one named variance.** GitHub exposes review-thread
+  resolution only through GraphQL, a POST. The source sends one paged
+  `query` through a helper that refuses any operation not beginning
+  with `query`; the lint allows POST in that helper alone and counts
+  exactly one in the package. Forgejo's thread count stays nil.
+- **The readers moved, the mutators stayed.** `protections.Observer`,
+  `Observation`, `PRNumber` and the three readers are now
+  `externalfact.Source`, `Observation`, `PRNumber`, `GitHub`, `Forgejo`
+  and `Snapshot`; `externalfact.Open` replaces the CLI's forge switch,
+  returning `NoCredential` (exit 5, naming the variable) apart from
+  usage errors. Protection reconciliation is untouched.
+- **The raw seam stays raw.** `seed ledger append` without `--remote`
+  appends without judging grants, the cooperative posture's documented
+  consequence, so the drill proves the service key's direct acts refuse
+  through admission (`admit.Check`) and the loop transport
+  (`request answer`), not through the raw seam.
+- **Named follow-ups, not built here.** A `seed-mirror` build in the
+  release workflow (a protected path); an `Observation` field on the
+  contracts view, should the mirror ever need check state in a label.
+

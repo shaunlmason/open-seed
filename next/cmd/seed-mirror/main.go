@@ -1,7 +1,7 @@
 // Command seed-mirror is the projection-only issue mirror
 // (plans/os-b45c308d.md D1; SEED-NEXT.md III.D rows 5 and 6): it reads
-// a PUBLISHED contracts projection and plans or applies the one-way
-// export of its rows to a forge's issues. It is a separate deployable
+// the contracts projection `seed project current` resolved and plans
+// or applies the one-way export of its rows to a forge's issues. It is a separate deployable
 // component from `seed` by design: it takes no ledger, no Seed key, no
 // remote and no admission endpoint, and its import closure holds no
 // coordination write path (internal/authoritylint pins that). The only
@@ -33,7 +33,8 @@ func main() {
 
 func usage(stderr io.Writer, msg string) int {
 	fmt.Fprintln(stderr, msg)
-	fmt.Fprintln(stderr, "usage: seed-mirror plan|apply --projections <dir> --forge github|forgejo|snapshot [--owner <o> --repo <r>] [--base-url <url>] [--token-env <VAR>] [--snapshot <file>]")
+	fmt.Fprintln(stderr, "usage: seed-mirror plan|apply --current <file> --forge github|forgejo|snapshot [--owner <o> --repo <r>] [--base-url <url>] [--token-env <VAR>] [--snapshot <file>]")
+	fmt.Fprintln(stderr, "  --current is the envelope `seed project current --name contracts` printed, which names the published build")
 	return exitUsage
 }
 
@@ -48,7 +49,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	fs := flag.NewFlagSet("seed-mirror "+sub, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	projections := fs.String("projections", "projections", "projection output root holding the published contracts projection")
+	current := fs.String("current", "", "the `seed project current --name contracts` envelope, saved to a file")
 	forge := fs.String("forge", "", "the exporter: github | forgejo | snapshot")
 	owner := fs.String("owner", "", "repository owner (github, forgejo)")
 	repo := fs.String("repo", "", "repository name (github, forgejo)")
@@ -58,10 +59,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if err := fs.Parse(args[1:]); err != nil {
 		return usage(stderr, err.Error())
 	}
-	if fs.NArg() != 0 || *forge == "" {
-		return usage(stderr, "--forge <exporter> is required")
+	if fs.NArg() != 0 || *forge == "" || *current == "" {
+		return usage(stderr, "--current <file> and --forge <exporter> are required")
 	}
-	rows, stamp, err := mirror.Load(*projections)
+	rows, stamp, err := mirror.Load(*current)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return exitFailure

@@ -382,34 +382,46 @@ func TestMirrorPlanIsDeterministic(t *testing.T) {
 	}
 }
 
-// conformance: plans/os-b45c308d.md D1 — the mirror reads a PUBLISHED
-// projection: the CURRENT pointer, the stamp and the view, files and
-// nothing else.
+// conformance: plans/os-b45c308d.md D1 — the mirror reads what the
+// consumer verb resolved: the `seed project current` envelope naming
+// the published build, and the view inside it; a refusal, another
+// projection's build, or an inconsistent stamp refuses.
 func TestMirrorLoadsThePublishedProjection(t *testing.T) {
-	out := t.TempDir()
-	build := filepath.Join(out, "contracts", "builds", "b1")
+	dir := t.TempDir()
+	build := filepath.Join(dir, "b1")
 	if err := os.MkdirAll(build, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := Load(out); err == nil {
-		t.Fatal("no CURRENT pointer refuses")
+	current := filepath.Join(dir, "current.json")
+	write := func(body string) {
+		t.Helper()
+		if err := os.WriteFile(current, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := os.WriteFile(filepath.Join(out, "contracts", "CURRENT"), []byte("b1\n"), 0o644); err != nil {
-		t.Fatal(err)
+	if _, _, err := Load(current); err == nil {
+		t.Fatal("no resolved projection refuses")
 	}
-	if err := os.WriteFile(filepath.Join(build, "projection.json"), []byte(`{"name":"queue","position":3,"tip":"`+stamp.Tip+`","version":"1"}`), 0o644); err != nil {
-		t.Fatal(err)
+	write(`{"ok":false,"error":{"code":"stale","message":"below the demanded minimum"}}`)
+	if _, _, err := Load(current); err == nil || !strings.Contains(err.Error(), "stale") {
+		t.Fatalf("the consumer verb's refusal is carried: %v", err)
+	}
+	write(`{"ok":true,"result":{"name":"queue","position":"3","tip":"` + stamp.Tip + `","version":"1","path":"` + build + `"}}`)
+	if _, _, err := Load(current); err == nil {
+		t.Fatal("another projection's build refuses")
+	}
+	write(`{"ok":true,"result":{"name":"contracts","position":"3","tip":"abc","version":"1","path":"` + build + `"}}`)
+	if _, _, err := Load(current); err == nil {
+		t.Fatal("an inconsistent stamp refuses")
+	}
+	write(`{"ok":true,"result":{"name":"contracts","position":"3","tip":"` + stamp.Tip + `","version":"1","path":"` + build + `"}}`)
+	if _, _, err := Load(current); err == nil {
+		t.Fatal("a build without its view refuses")
 	}
 	if err := os.WriteFile(filepath.Join(build, "contracts.json"), []byte(`[{"subject":"c-1","state":"ready"},{"subject":"c-0","state":null}]`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := Load(out); err == nil {
-		t.Fatal("a stamp of another projection refuses")
-	}
-	if err := os.WriteFile(filepath.Join(build, "projection.json"), []byte(`{"name":"contracts","position":3,"tip":"`+stamp.Tip+`","version":"1"}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	rows, st, err := Load(out)
+	rows, st, err := Load(current)
 	if err != nil || st.Position != 3 || len(rows) != 2 {
 		t.Fatalf("loaded: %v %+v %+v", err, st, rows)
 	}

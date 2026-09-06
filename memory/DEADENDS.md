@@ -157,3 +157,16 @@ rather than guessed.
   `verdict.rendered` was the second shape considered and rejected: the
   payload is a strict object, so the field would have been a `seed/8`
   bump for a reference the shape already covers.
+- 2026-09-06 (os-b45c308d): implementing the plan's D5 as written, a
+  second `check.observed` at `seed/9` with `{name, status, commit,
+  reference}`. The name was already taken at `seed/8` by #351 with an
+  incompatible payload and a different subject window (review subjects,
+  head-bound), so a second verb would have split one fact across two
+  shapes and two version gates. The catalog pins the landed verb
+  instead; the plan's properties hold against it.
+- 2026-09-06 (os-b45c308d): a strict GET-only lint over the observation
+  sources. GitHub has no REST endpoint for review-thread resolution, so
+  the lint failed the real tree on day one; the named variance (one
+  GraphQL query helper, POST allowed there alone, the helper refusing a
+  non-query at runtime) is the version that holds.
+

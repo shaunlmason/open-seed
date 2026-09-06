@@ -81,14 +81,33 @@ same shape from the file's `head`, `checks`, `unresolved_threads` and
 `review` beside the merge fields. `seed check observe --forge
 github|forgejo|snapshot` and the maintenance pass's `--forge` read it.
 
+Both readers live in `internal/externalfact` behind the read-only
+`Source` interface ([`external-facts.md`](external-facts.md)), a
+different package from the mutating protections adapters above: the
+observation component holds a token that reads and issues GET alone
+(one named GraphQL query on GitHub), and a lint pins that it stays so.
+
+## The mirror exporters
+
+The issue mirror ([`projections.md`](projections.md), "The mirror") has
+its own GitHub and Forgejo adapters under `next/mirror`, one-way from
+the published contracts projection to the forge's issues, opened only
+by `seed-mirror` and only through the sealed registry. They share no
+code with the protections adapters or the observation sources: the
+authority lint keeps the export path and every coordination write path
+in different executables. Every registered exporter passes the same
+conformance suite, and the drills run against in-process fakes.
+
 ## Conformance
 
 - III.N row 2 "at least one non-primary forge is supported by adapters"
   — `internal/protections/forgejo.go`, drilled against a fake Forgejo API
   (`TestForgejoAdapterReconciles`, `TestForgejoObserver`).
 - §II.15 "forge extras are adapters" — one `Forge` interface, one
-  `Observer` interface, two forges plus the snapshot arm, one `Desired`
-  table.
+  read-only `externalfact.Source`, one mirror `Adapter`, two forges
+  plus the snapshot arm on each, one `Desired` table.
+- III.D rows 5 and 6 — the mirror exporters and the component
+  boundary, [`projections.md`](projections.md).
 - Credential-free CI, live drills opt-in: the fakes run always; a live
   Forgejo drill runs when `SEED_FORGEJO_URL`, `SEED_FORGEJO_REPO` and
   `FORGEJO_TOKEN` are set and skips with the reason named otherwise.

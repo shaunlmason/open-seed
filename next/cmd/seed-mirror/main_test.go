@@ -12,23 +12,26 @@ import (
 	"github.com/shaunlmason/open-seed/next/mirror/mirrortest"
 )
 
+// publish writes a build holding the rows and the envelope `seed
+// project current --name contracts` would print for it, returning the
+// envelope's path.
 func publish(t *testing.T, rows string) string {
 	t.Helper()
-	out := t.TempDir()
-	build := filepath.Join(out, "contracts", "builds", "b1")
+	dir := t.TempDir()
+	build := filepath.Join(dir, "b1")
 	if err := os.MkdirAll(build, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	current := filepath.Join(dir, "current.json")
 	for name, body := range map[string]string{
-		filepath.Join(out, "contracts", "CURRENT"): "b1\n",
-		filepath.Join(build, "projection.json"):    `{"name":"contracts","position":4,"tip":"` + strings.Repeat("cd", 32) + `","version":"1"}`,
-		filepath.Join(build, "contracts.json"):     rows,
+		current:                                `{"ok":true,"result":{"name":"contracts","position":"4","tip":"` + strings.Repeat("cd", 32) + `","version":"1","path":"` + build + `"}}`,
+		filepath.Join(build, "contracts.json"): rows,
 	} {
 		if err := os.WriteFile(name, []byte(body), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
-	return out
+	return current
 }
 
 // conformance: plans/os-b45c308d.md D1 — seed-mirror plan|apply over
@@ -53,7 +56,7 @@ func TestMirrorCommandPlansAndApplies(t *testing.T) {
 			case "snapshot":
 				extra = []string{"--snapshot", filepath.Join(t.TempDir(), "issues.json")}
 			}
-			args := append([]string{"--projections", out, "--forge", name}, extra...)
+			args := append([]string{"--current", out, "--forge", name}, extra...)
 			var stdout, stderr bytes.Buffer
 			if code := run(append([]string{"plan"}, args...), &stdout, &stderr); code != 0 {
 				t.Fatalf("plan: %d %s", code, stderr.String())
@@ -104,20 +107,23 @@ func TestMirrorCommandRefusals(t *testing.T) {
 	if code := run([]string{"sync"}, &stdout, &stderr); code != exitUsage {
 		t.Fatalf("unknown subverb: %d", code)
 	}
-	if code := run([]string{"plan", "--projections", t.TempDir()}, &stdout, &stderr); code != exitUsage {
+	if code := run([]string{"plan", "--current", "x.json"}, &stdout, &stderr); code != exitUsage {
 		t.Fatalf("no forge: %d", code)
 	}
-	if code := run([]string{"plan", "--projections", t.TempDir(), "--forge", "snapshot"}, &stdout, &stderr); code != exitFailure {
+	if code := run([]string{"plan", "--forge", "snapshot", "--snapshot", "s.json"}, &stdout, &stderr); code != exitUsage {
+		t.Fatalf("no resolved projection named: %d", code)
+	}
+	if code := run([]string{"plan", "--current", filepath.Join(t.TempDir(), "missing.json"), "--forge", "snapshot", "--snapshot", "s.json"}, &stdout, &stderr); code != exitFailure {
 		t.Fatalf("no published projection: %d", code)
 	}
 	out := publish(t, `[]`)
-	if code := run([]string{"plan", "--projections", out, "--forge", "gitlab"}, &stdout, &stderr); code != exitUsage || !strings.Contains(stderr.String(), "no exporter named") {
+	if code := run([]string{"plan", "--current", out, "--forge", "gitlab"}, &stdout, &stderr); code != exitUsage || !strings.Contains(stderr.String(), "no exporter named") {
 		t.Fatalf("an unregistered exporter: %d %s", code, stderr.String())
 	}
 	stderr.Reset()
 	// Every Seed-side flag is unknown here: the component has none.
 	for _, f := range []string{"--ledger", "--key", "--remote", "--config", "--as"} {
-		if code := run([]string{"plan", f, "x", "--forge", "snapshot", "--snapshot", "s.json", "--projections", out}, &stdout, &stderr); code != exitUsage {
+		if code := run([]string{"plan", f, "x", "--forge", "snapshot", "--snapshot", "s.json", "--current", out}, &stdout, &stderr); code != exitUsage {
 			t.Fatalf("%s is not a seed-mirror flag: %d", f, code)
 		}
 	}

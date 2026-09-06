@@ -269,28 +269,28 @@
           "row": 5,
           "text": "External mirrors are one-way exporters; mirror-side edits arrive only as request events from governed identities, validated at admission; a conformance suite passes per exporter/adapter.",
           "posture": "any",
-          "status": "open",
-          "phase": "",
-          "evidence": "",
-          "note": "not walked by any exit record; the request-event ingress landed with Phase 13 item 4 (#270), and exporter conformance suites are named only under III.Q row 2"
+          "status": "met",
+          "phase": "13",
+          "evidence": "#357 TestMirrorExporterSuite, TestMirrorMarkerRefusesRatherThanRepairs, TestMirrorPlanIsDeterministic, TestMirrorExposesNoSeedWritePath (next/mirror); TestMirrorCommandPlansAndApplies (cmd/seed-mirror); TestMirrorExportAndRequestIngressPerExporter (cmd/seed), under make check",
+          "note": "Phase 13 item 8 (os-b45c308d): the projection-only mirror component with its sealed exporter registry, one suite per registered exporter, joined to item 4's request ingress (#270)"
         },
         {
           "row": 6,
           "text": "Bidirectional synchronization is structurally impossible: no component holds both an export path and a coordination write path.",
           "posture": "any",
-          "status": "open",
-          "phase": "",
-          "evidence": "",
-          "note": "not walked by any exit record"
+          "status": "met",
+          "phase": "13",
+          "evidence": "#357 TestAuthorityBoundaryHoldsInTheTree, TestAuthorityBoundarySelfCheck (internal/authoritylint), under make check",
+          "note": "Phase 13 item 8 (os-b45c308d): the export and coordination-write classes are derived from each executable's import closure, never listed; the lint self-checks against planted overlaps"
         },
         {
           "row": 7,
           "text": "External facts enter only as observations by governed observers; nothing treats an observation as control.",
           "posture": "any",
-          "status": "open",
-          "phase": "",
-          "evidence": "",
-          "note": "not walked by any exit record; the nearest statements are the observer lane on merge.observed (#137, #212) and the reap that answers an admitted interrupt, never silence (#205)"
+          "status": "met",
+          "phase": "13",
+          "evidence": "#357 TestExternalFactCatalogPins, TestObservationControlLint, TestObservationControlLintSelfCheck (internal/externalfact); TestGovernedObservationIsNotControl, TestCheckObservedNeedsSeed8 (internal/admit); TestExternalFactDischargesNothing (internal/obligation); TestGovernedObservationOverTheForges (cmd/seed), under make check",
+          "note": "Phase 13 item 8 (os-b45c308d): next/spec/external-facts.md is the closed inventory, pinned to the catalog and the keyring both ways; the forge readers are read-only sources in their own package; the invariance drill pins that an observation narrows and never widens (the observer lane on merge.observed, #137, #212; check.observed, #351)"
         },
         {
           "row": 8,

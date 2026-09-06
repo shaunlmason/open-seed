@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -128,33 +129,50 @@ func Render(rows []Row, stamp Stamp) []Desired {
 	return out
 }
 
-// Load reads a published contracts projection under the projection
-// tree (next/spec/projections.md: `<out>/contracts/CURRENT` names the
-// build directory holding `contracts.json` and `projection.json`).
-// It reads files and nothing else.
-func Load(out string) ([]Row, Stamp, error) {
-	root := filepath.Join(out, "contracts")
-	cur, err := os.ReadFile(filepath.Join(root, "CURRENT"))
+// Load reads the contracts projection the consumer verb resolved:
+// current is the envelope `seed project current --name contracts`
+// printed (next/spec/projections.md "The consumer verb and
+// staleness"), which names the published build's directory, position,
+// tip and version; the view is `contracts.json` inside it. The mirror
+// never resolves the published layout itself, so the projection
+// engine's vocabulary stays the engine's, and a consumer demanding
+// freshness passes --min-position to that verb, not to the mirror.
+func Load(current string) ([]Row, Stamp, error) {
+	raw, err := os.ReadFile(current)
 	if err != nil {
-		return nil, Stamp{}, fmt.Errorf("no published contracts projection under %s: %v", out, err)
+		return nil, Stamp{}, fmt.Errorf("reading the resolved projection: %v", err)
 	}
-	id := strings.TrimSpace(string(cur))
-	if id == "" {
-		return nil, Stamp{}, fmt.Errorf("the contracts projection's CURRENT pointer is empty")
+	var env struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			Name     string `json:"name"`
+			Position string `json:"position"`
+			Tip      string `json:"tip"`
+			Version  string `json:"version"`
+			Path     string `json:"path"`
+		} `json:"result"`
+		Error *struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
 	}
-	build := filepath.Join(root, "builds", id)
-	var stamp Stamp
-	sb, err := os.ReadFile(filepath.Join(build, "projection.json"))
-	if err != nil {
-		return nil, Stamp{}, err
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return nil, Stamp{}, fmt.Errorf("the resolved projection does not parse as a seed envelope: %v", err)
 	}
-	if err := json.Unmarshal(sb, &stamp); err != nil {
-		return nil, Stamp{}, fmt.Errorf("the projection stamp does not parse: %v", err)
+	if !env.OK {
+		msg := "the consumer verb refused"
+		if env.Error != nil {
+			msg = env.Error.Code + ": " + env.Error.Message
+		}
+		return nil, Stamp{}, fmt.Errorf("no published contracts projection to mirror: %s", msg)
 	}
-	if stamp.Name != "contracts" || len(stamp.Tip) != 64 {
-		return nil, Stamp{}, fmt.Errorf("the stamp is not a contracts stamp: %+v", stamp)
+	r := env.Result
+	pos, perr := strconv.Atoi(r.Position)
+	if r.Name != "contracts" || r.Path == "" || r.Version == "" || perr != nil || pos < 0 || (pos > 0 && len(r.Tip) != 64) {
+		return nil, Stamp{}, fmt.Errorf("the resolved projection is not a contracts build: %+v", r)
 	}
-	vb, err := os.ReadFile(filepath.Join(build, "contracts.json"))
+	stamp := Stamp{Name: r.Name, Position: pos, Tip: r.Tip, Version: r.Version}
+	vb, err := os.ReadFile(filepath.Join(r.Path, "contracts.json"))
 	if err != nil {
 		return nil, Stamp{}, err
 	}
