@@ -402,6 +402,66 @@ held subject and without `--repo` reports only the count as
 `lessons_unverified`, naming the flag. Contested lessons appear on
 none of them.
 
+## Search: an advisory lexical read
+
+Delivery answers one question, exactly and auditably: which promoted
+lessons select THIS subject. A worker with a question mid-task (has
+anyone hit this before? what did the decision log say about
+lockfiles?) had no surface for it short of reading the store, the
+dead ends by contract and the decision log top to bottom, which at
+this repository's size is several thousand lines the packet never
+carried. `seed knowledge search … <query>...` is that surface: BM25
+(`curation.Index`, k1 1.2, b 0.75, the Lucene idf, tokens the
+lowercase runs of letters and digits of two or more runes, no
+stemming and no stop list) over three kinds of document, ranked by
+score with ties broken on kind then id, so the ranking is a function
+of the corpus and the query alone.
+
+The corpus is what the pipeline already holds and nothing else.
+**Lessons**: the surfacing set at the read's instant, subject-less
+(promoted, uncontested, unretired, unexpired: `CandidatesAt` with no
+subject), each verified against `--repo` exactly as delivery verifies
+it and read at its anchor, so the indexed text is the reviewed bytes
+and never the working tree's; a candidate that does not resolve is
+reported as `lessons_unresolved` with the reason and never indexed,
+and without `--repo` no lesson is indexed and every candidate is
+unresolved, the delivery posture (`LessonDocuments`). **Dead ends**:
+every standing one in the fold, a retired one staying out as the
+held-out listing keeps it out (`DeadEndDocuments`). **Docs**: the
+sections, by level-one or level-two heading, of every markdown file
+`--doc` names under `--repo` (`SectionDocuments`; a path that is not
+clean and relative refuses at usage, the store's own rule). A hit
+carries its rank, score, kind, id (the lesson anchor, the
+`<contract>@<position>`, or `<path>#<heading slug>`), title, the
+first body line a query term matched, and the terms that matched; the
+envelope counts the corpus by kind, echoes the query, its distinct
+terms and the instant (`--now`, else the wall clock), and says it is
+advisory.
+
+**Never a delivery path.** The search changes nothing a claim
+receives: the applies-when predicate remains the only claim-time
+surface, contested, retired and expired lessons are as absent here as
+they are there, and a hit is a pointer the reader follows, not a
+lesson the reader was shown. Text from either side is data: a query
+is tokens, a document is bytes at an anchor, and neither is executed
+or obeyed.
+
+**Source, adopted and rejected.** The retrieval idea is
+okf-agent-memory's (github.com/okf-memory/okf-agent-memory: local
+lexical BM25 over a git-native markdown store, no embeddings, no
+vendor, progressive disclosure against context bloat), recorded here
+per III.Q row 4. Its Open Knowledge Format and its convention were
+not adopted, and the rejection is a standing one: OKF's `generated`
+versus `verified` is a frontmatter label an agent sets on itself, its
+search-before-write is a convention, and its `stale_after` is a field
+nobody enforces; the pipeline above has four stages with distinct
+storage and a gate between each, enforced at the boundary and drilled
+against poisoning, and a lesson reaches the store through a PR, never
+a label. Reimplemented rather than imported: the corpus is derived
+from the fold and verified against the repository, which no external
+index knows to do, and the scorer is two hundred lines against a
+dependency on the trust surface.
+
 ## The adversarial evaluation
 
 A counter-trajectory is an eval definition under `next/evals/<name>/`
@@ -516,6 +576,12 @@ anomalies.
   `contested`), lessons with `surfaces`, `stale`, `retired` and the
   reason, the standing retirements, the unbound promotions; `as_of`
   with `--now`, else `staleness` saying the instant is undeclared.
+- `seed knowledge search (--ledger <dir> | --remote <repo>) [--repo <dir>]
+  [--now <RFC3339>] [--limit <n>] [--doc <path>]... <query>...` —
+  the advisory lexical read ("Search" above): BM25 over the verified
+  surfacing set at the instant, the standing dead ends and the named
+  docs' sections; `hits` ranked, `documents` counted by kind,
+  `lessons_unresolved` as delivery reports them; never a delivery path.
 - `seed maintain run … [--stale-after <duration>]` — the `lesson_stale`
   lint at the pass's declared instant ([`maintenance.md`](maintenance.md)).
 - The `knowledge` projection (`knowledge.json`, version 3) publishes the

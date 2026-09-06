@@ -4220,3 +4220,46 @@ the clause's evidence, and says the accelerated simulation cannot show
 it because its deployment appends through the remote posture, which
 keeps no journal by declaration.
 
+## Knowledge search: an advisory read, reimplemented (os-405d3b20)
+
+The claim-time delivery is an exact predicate match, and that is
+right: a lesson a worker is shown must be auditable to the fold. It
+leaves the other question unanswered, the one a worker has mid-task:
+has anyone hit this before, what did the decision log say. The
+surfaces for that were the whole store, the dead ends by contract and
+`next/docs/decisions.md` end to end. The retrieval idea in
+okf-agent-memory (github.com/okf-memory/okf-agent-memory) answers it
+without a vendor: local lexical BM25 over a git-native markdown store.
+
+- **The idea is adopted; the format is rejected.** OKF's `generated`
+  and `verified` are labels a file gives itself, its
+  search-before-write a convention, its `stale_after` an unenforced
+  field. The pipeline has four stages with distinct storage and a
+  gate between each, drilled against poisoning, and a lesson reaches
+  the store by PR. Adopting the format would replace an enforced
+  pipeline with a convention, the posture Part III refuses. Recorded
+  as a standing rejection in `curation.md` "Search" (III.Q row 4).
+- **Reimplemented, not imported.** The scorer is two hundred lines;
+  the corpus derivation is the part that matters and no external index
+  knows how to do it: the surfacing set at an instant, verified
+  against the repository and read at the anchor, the standing dead
+  ends from the fold. An import would have added a dependency to the
+  trust surface for the part that is trivial.
+- **Never a delivery path.** `seed knowledge search` ranks and points;
+  the envelope says `advisory`; contested, retired and expired lessons
+  are as absent as at claim time; without `--repo` no lesson is
+  indexed and every candidate is `lessons_unresolved`, the delivery
+  posture exactly. The predicate remains the only claim-time surface.
+- **No knobs.** k1 1.2 and b 0.75, the Lucene idf, lowercase
+  alphanumeric runs of two or more runes, no stemming and no stop
+  list; ties break on kind then id. One derivation whose ranking is a
+  function of the corpus and the query alone, so two readers of one
+  tip see one ranking.
+- **Docs are named, never discovered.** `--doc <path>` under `--repo`,
+  a clean relative path (the store's own rule), split by level-one and
+  level-two heading into sections with a `<path>#<slug>` id. The verb
+  does not walk the tree: what a reader searches is what the reader
+  said, and an adopter's decision log is wherever they keep it.
+- **Flags first, the query last.** The flag package's shape and every
+  other verb's; a query of no searchable term refuses at usage.
+
