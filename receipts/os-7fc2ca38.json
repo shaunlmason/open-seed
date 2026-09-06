@@ -1,0 +1,13 @@
+{
+  "schema_version": "2.0",
+  "task": "os-7fc2ca38",
+  "plan_path": "plans/os-7fc2ca38.md",
+  "plan_sha256": "169965172f3dcb141e62f1512434d4dc755f18c3a8a32277c97b897f2a357cbc",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/traceshape/ ./internal/verdict/ ./internal/plan/ ./internal/artifact/ ./cmd/seed/ -run 'TraceShape|ReceiptBindsTrace|TraceArtifacts|ScorecardCitesTrace|VerdictTraces' -count=1",
+    "cd next \u0026\u0026 go test ./internal/reconcile/ ./cmd/seed/ -run 'Reconcile|Evidence|ScorecardCitesTrace' -count=1",
+    "cd next \u0026\u0026 go test ./internal/verdict/ ./internal/artifact/ ./internal/reconcile/ ./internal/admit/ ./internal/plan/ ./cmd/seed/ -run 'Receipt|Verdict|Scorecard|Seal|Artifact|Reconcile|Independence|Rubric|Protocol' -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}
