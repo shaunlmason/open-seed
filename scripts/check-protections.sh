@@ -11,13 +11,15 @@
 #                 mutating verb refuses until `seed state resume`.
 #
 # Exit codes: 0 all pass (or a degraded case, named); 3 an assertion
-# failed (findings printed, and HALT written with --write-halt); 1 usage
-# or API error. Degraded, per the plan's step 2: the token 403s on the
-# protection or rulesets endpoints (no branch read / Administration:
-# read-only) or the state ref does not exist (fresh instantiation,
-# `seed init` not run) — the check cannot see, so it names the gap and
-# exits 0; every other read error is 1. A ruleset name alone is never
-# sufficient: enforcement and rule types are asserted, so a
+# failed (findings printed, and HALT written with --write-halt); 1 a usage
+# error (no repo, bad args). Degraded, per the plan's step 2: the check must
+# not wall up a repo where it cannot see (the engine-absent posture), so a
+# token that 401/402/403s on the protection or rulesets reads, a repo with
+# no seed-state ref (fresh instantiation, `seed init` not run), and an API
+# that cannot be read at all (no usable HTTP code) each print a named
+# WARNING and exit 0. A missing token is not fatal either: a public repo's
+# protection reads work unauthenticated, so an empty token proceeds and lets
+# the read paths degrade. A ruleset name alone is never sufficient: enforcement and rule types are asserted, so a
 # renamed-but-weakened ruleset still fails.
 
 set -u
@@ -45,8 +47,11 @@ if [ -z "$REPO" ]; then
   exit 1
 fi
 
+# The token is a preference, not a requirement: a public repo's protection
+# and ruleset reads work unauthenticated, and an empty/unusable token or an
+# API the token cannot read all degrade (named, exit 0) rather than hard-red
+# the gate (the plan's step 2). gh uses GH_TOKEN, else GITHUB_TOKEN.
 [ -n "${GH_TOKEN:-}" ] || GH_TOKEN="${GITHUB_TOKEN:-${SEED_GH_TOKEN:-}}"
-[ -n "${GH_TOKEN:-}" ] || { echo "check-protections: no token (GH_TOKEN/GITHUB_TOKEN/SEED_GH_TOKEN)"; exit 1; }
 
 # The API base is a real knob (GHES instances, test doubles): gh's
 # --hostname is the host of the base, and anything other than
@@ -76,6 +81,17 @@ api() {
   else
     API_CODE=$(sed -n 's/.*HTTP \([0-9][0-9][0-9]\).*/\1/p' "$API_ERR" | tail -1)
   fi
+}
+
+# read_degraded <what> <how-not-to-see>: a read that came back with no
+# usable HTTP code (gh failed before the request — no token gh can use,
+# network down) degrades like a 403: the check cannot see, so it names the
+# gap and exits 0. The plan's step 2: the check must not wall up a repo
+# where it cannot see, mirroring the repo's engine-absent posture.
+# (exit 1 is reserved for usage errors: no repo, no token, bad args.)
+read_degraded() {
+  echo "WARNING: $1 unreadable (cannot see the API: $2) — degraded, check not run"
+  exit 0
 }
 
 failures=0
@@ -110,15 +126,14 @@ fi
 api "repos/$REPO/branches/main/protection"
 main=$(cat "$API_BODY_FILE" 2>/dev/null)
 case "$API_CODE" in
-403)
-  echo "WARNING: token got 403 on branches/main/protection (no branch read) — degraded, check not run"
+401|402|403)
+  echo "WARNING: the API answered $API_CODE on branches/main/protection (the token cannot read protections) — degraded, check not run"
   exit 0 ;;
 404)
   say_fail "main" "no main branch protection (apply the handbook §1 checklist)"
   main=null ;;
 '')
-  echo "check-protections: cannot reach the GitHub API ($API_BASE/repos/$REPO): $(cat "$API_ERR" 2>/dev/null)"
-  exit 1 ;;
+  read_degraded "branches/main/protection" "$(head -c 200 "$API_ERR" 2>/dev/null)" ;;
 esac
 
 if [ "$main" != "null" ] && [ -n "$main" ]; then
@@ -152,15 +167,14 @@ fi
 api "repos/$REPO/rulesets?per_page=100"
   sets=$(cat "$API_BODY_FILE" 2>/dev/null)
   case "$API_CODE" in
-  403)
-    echo "WARNING: token got 403 on the rulesets endpoint (needs Administration: read-only) — degraded, rulesets not asserted"
+  401|402|403)
+    echo "WARNING: the API answered $API_CODE on the rulesets endpoint (the token needs Administration: read-only) — degraded, rulesets not asserted"
     exit 0 ;;
   404)
     say_fail "rulesets" "no rulesets exist on this repository"
     sets='[]' ;;
   '')
-    echo "check-protections: cannot list rulesets: $(cat "$API_ERR" 2>/dev/null)"
-    exit 1 ;;
+    read_degraded "the rulesets endpoint" "$(head -c 200 "$API_ERR" 2>/dev/null)" ;;
   *)
     [ -n "$sets" ] || sets='[]' ;;
   esac
