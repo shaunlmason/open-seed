@@ -56,7 +56,7 @@ func catalog(stdin io.Reader) *registry.Registry {
 		registry.Group{Name: "preseed", Subs: []string{"check"}, Run: runPreseed},
 		registry.Group{Name: "run", Subs: []string{"start"}, Run: runRun},
 		registry.Group{Name: "eval", Subs: []string{"list", "check", "file", "status", "act"}, Run: runEval},
-		registry.Group{Name: "knowledge", Subs: []string{"deadend", "propose", "validate", "contest", "promote", "retire", "lint", "show"}, Run: runKnowledge},
+		registry.Group{Name: "knowledge", Subs: []string{"deadend", "propose", "validate", "contest", "promote", "retire", "lint", "show", "search"}, Run: runKnowledge},
 		registry.Group{Name: "flywheel", Subs: []string{"shapes", "draft", "propose", "repair", "observe", "status"}, Run: runFlywheel},
 		registry.Group{Name: "trajectory", Subs: []string{"record", "replay"}, Run: runTrajectory},
 		registry.Group{Name: "docs", Subs: []string{"generate", "check"}, Run: runDocs},

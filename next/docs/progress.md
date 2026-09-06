@@ -2345,6 +2345,40 @@ read the declaration, and `declared` states what each of them read.
 `postures.md`'s hook paragraph names the parse-failure refusal. The
 ceiling rule itself is unchanged.
 
+## Knowledge search: an advisory lexical read (os-405d3b20)
+
+Not a plan item: a backlog card filed from a review of okf-agent-memory
+(github.com/okf-memory/okf-agent-memory) against Phase 11. The
+pipeline already exceeded the format on every axis the format cares
+about; its one idea Seed lacked was retrieval. What landed
+(`next/docs/decisions.md` "Knowledge search"):
+
+- **`curation.Index`**: BM25 in `internal/curation/search.go` (k1
+  1.2, b 0.75, the Lucene idf, lowercase alphanumeric tokens of two or
+  more runes, no stemming, no stop list), ties on kind then id, a hit
+  carrying rank, score, kind, id, title, the first body line a term
+  matched and the matched terms.
+- **The corpus**: `LessonDocuments` (the subject-less surfacing set at
+  the instant, verified against the repository, read at the anchor,
+  frontmatter stripped; the unresolved reported as delivery reports
+  them), `DeadEndDocuments` (the fold's standing dead ends) and
+  `SectionDocuments` (a named markdown file by level-one and
+  level-two heading, `<path>#<slug>` ids).
+- **`seed knowledge search (--ledger | --remote) [--repo] [--now]
+  [--limit] [--doc]... <query>...`**: the envelope echoes the query,
+  its terms and the instant, counts the corpus by kind, ranks the
+  hits, carries `lessons_unresolved` and says `advisory`. Never a
+  delivery path: the predicate stays the only claim-time surface.
+- **Drills**: the scorer's ranking properties (tf saturation, idf,
+  length normalization, ties, limit), the section split, the standing
+  dead ends, the verified surfacing set against a real repository
+  (working-tree edits invisible, unmerged anchors unresolved, expired
+  and retired and contested out), the CLI's usage refusals, and the
+  small-team end-to-end: the promoted lesson found by its words with
+  `--repo`, unresolved without, gone after the contest.
+- **Spec**: `curation.md` "Search" records the source, the adoption
+  and the standing rejection of the OKF format (III.Q row 4).
+
 ## Frontier
 
 
