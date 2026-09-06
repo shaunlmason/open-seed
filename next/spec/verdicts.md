@@ -166,6 +166,20 @@ profile slots in at the executor-adapter seam (build plan Phase 7
 item 3, Phase 12 hardening) without touching verdict logic, and every
 receipt names the profile its transcripts ran under.
 
+The profile sets one more variable per command, **`SEED_TRACE_EXPORT`**
+(plans/os-7fc2ca38.md D2): `<per-run root>/traces/<n>.json` for
+visible command `n` and `<per-run root>/sealed-traces/<n>.json` for
+sealed command `n`, where `n` is the command's index in the receipt's
+transcript list, the same `n` a scorecard's `transcript:<n>` names. A
+harness that attaches a trace to its run writes one OTLP/JSON
+`ExportTraceServiceRequest` there and the receipt binds its shape
+("Trace-shaped evidence" below); a harness that ignores the variable
+writes nothing, binds nothing, and loses only the richer evidence.
+The path is outside the clone, so `diff_sha256` and `files` never see
+it, and inside the per-run root, so cleanup removes it pass or fail.
+The profile's name stays `exec`: a transcript of a command that
+ignores the variable is byte-identical to one run without it.
+
 **The verifier's inputs are enumerable and exclusively self-executed or
 self-read** (III.G row 4): the submission packet's anchors are used
 only to *name* the range; every hash, diff, inventory, and transcript
@@ -191,7 +205,9 @@ store (`internal/artifact`, filesystem-rooted under
   "transcripts": [{"cmd": "<command>", "exit": 0, "output_sha256": "<hex>", "output_bytes": 0}, ...],
   "environment": {"os": "<GOOS>", "arch": "<GOARCH>", "go": "<version>", "runner": "exec"},
   "commitment": "<hex, sealed subjects only>",
-  "sealed_transcripts": [{"cmd": "...", "exit": 0, "output_sha256": "<hex>", "output_bytes": 0}, ...]
+  "sealed_transcripts": [{"cmd": "...", "exit": 0, "output_sha256": "<hex>", "output_bytes": 0}, ...],
+  "traces": [{"transcript": 0, "shape_sha256": "<hex>", "spans": 3, "errors": 1} | {"transcript": 2, "malformed": true}, ...],
+  "sealed_traces": [...]
 }
 ```
 
@@ -236,6 +252,109 @@ empty-checks envelope) refuses exit **22 `seal_broken`**. There is no
 silent partial verification of a sealed subject. `verdict receipt`
 stays the visible-half preview; the render is the authoritative
 sealed run.
+
+## Trace-shaped evidence
+
+A test harness that attaches a trace to its run (a span tree whose
+spans carry a status and structured outcome attributes) has more to
+say than one output digest holds: which span failed, and how. The
+receipt binds that structure without breaking the rule that makes a
+receipt evidence, because only the part that reproduces enters it
+(plans/os-7fc2ca38.md D2 to D8; charter §II.1, §II.8, III.G rows 5
+and 8; build plan §3 "Borrowed from practice").
+
+**The contract is a file.** The runner sets `SEED_TRACE_EXPORT` per
+command (the profile, above); the harness writes an OTLP/JSON export
+there, the format every OpenTelemetry SDK's file exporter emits and a
+shell script can write by hand. Seed reads the documented span fields
+(`resourceSpans[].scopeSpans[].spans[]`, in proto3 JSON or snake_case
+names) with `encoding/json` and imports no OpenTelemetry package
+(`internal/traceshape`).
+
+**The shape is what reproduces.** From one export, spans group by
+trace id and form a tree by parent id; a span whose parent is absent
+from the export is a root, and a trace with orphaned spans yields one
+root per orphan. A node is `{"name", "kind", "status", "attributes",
+"children"}`: `kind` the span kind as a word (`unspecified`,
+`internal`, `server`, `client`, `producer`, `consumer`), `status` the
+status code as `unset`, `ok` or `error`, `attributes` the **declared**
+keys only with each value rendered to its plain JSON counterpart, and
+`children` sorted by their own JCS bytes; roots sort the same way. The
+shape document is `{"transcript": n, "sealed"?: true, "traces":
+[...]}`, JCS-canonicalized; `shape_sha256` is the SHA-256 of those
+bytes. Stripped by construction: trace, span and parent ids, start and
+end times, durations, events, links, resource, scope, the status
+message, dropped counts and every undeclared attribute. Declared keys
+come from the acceptance spec's `## Trace attributes` section
+([`acceptance.md`](acceptance.md)), read at the anchor exactly as the
+commands and the rubric are (`plan.TraceAttributes`); an absent
+section declares nothing, so name, kind and status alone reproduce; a
+duplicate, empty or whitespace-bearing key refuses at receipt as
+`spec_unrunnable`. Because the spec merges through the acceptance
+gate, an implementer cannot widen the retained set without review, and
+a per-run key such as a run id stays undeclared or the receipt stops
+reproducing, which is the honest outcome.
+
+**The receipt gains `traces` and `sealed_traces`**, both omitted when
+no command wrote an export, so every earlier receipt's canonical bytes
+and digest are unchanged. An entry is `{"transcript": n,
+"shape_sha256", "spans", "errors"}`, the counts derived from the shape
+(`errors` counting nodes whose status is `error`). An export that
+exists but does not parse yields `{"transcript": n, "malformed":
+true}` and nothing else: a fact the receipt records, with no effect on
+pass or fail (exit codes decide that), surfaced by `seed verdict
+traces` and uncitable. Reproduction needs no new predicate: `verdict
+check` recomputes the receipt from its own run, the shape digest is
+part of the canonical bytes, and the whole-receipt comparison at exit
+21 covers it; L3's "reproduces" gains coverage, not a rule.
+
+**The shape is an artifact; the raw export is its sidecar.** The
+verifier stores the shape document content-addressed (its digest is
+`shape_sha256`) and the raw export content-addressed on its own, with
+a pointer under `traces/<shape_sha256>` naming the raw digest
+(`internal/artifact`, the sealed bucket's sibling). The raw digest
+enters neither the receipt nor the ledger: it never reproduces (ids
+and timestamps differ on every run), so it cannot live in a receipt
+that must, and `verdict.rendered`'s payload is a strict object, so an
+optional field there would be a protocol bump for a reference the
+shape already covers. `verdict check` verifies that every entry's
+shape retrieves intact, the scorecard's rule one artifact over, and
+never reads the sidecar; `seed reconcile` grades a shape the store
+lost `evidence_missing` wherever the verdict stands. `seed artifact
+erase` of the raw digest removes the export a reader could open and
+costs a check nothing; erasing the shape digest removes the shape and
+its pointer, and the check is red until the evidence is restored.
+Check never writes to the store.
+
+**A span is cited by its path in the shape.** The scorecard evidence
+grammar gains `trace:<n>/<path>` and `sealed-trace:<n>/<path>`, the
+path dot-separated child indexes from the root list down: `trace:2/0`
+is the first root of transcript 2's shape, `trace:2/0.3.1` its fourth
+child's second child. A citation resolves only when the receipt
+carries the entry, the entry bound a shape, the shape is at hand (the
+run just produced it) or retrieves intact from the store, and the path
+names a node; anything else refuses at render naming the citation, as
+an unknown transcript does. Because children sort by canonical bytes,
+the path is as reproducible as the digest.
+
+**One read verb.** `seed verdict traces --ledger <dir> --subject <id>
+--repo <dir> (or --artifacts <dir>) [--receipt <digest>]
+[--transcript <n>]` renders each entry's tree with every node's
+citation path, kind, status and declared attributes, names malformed
+entries and missing shapes, and carries the raw export's digest where
+the sidecar stands. It reads the receipt the latest rendered verdict
+cites, else the standing deferral's, else the one `--receipt` names,
+and refuses `not_found` with none. This is the surface a verifier
+scores a rubric from. III.G row 10's query is unchanged: the cache's
+`verdict_receipt` digest retrieves the receipt, whose entries retrieve
+the shapes; the projection build carries no artifact store, so no
+cache table is added.
+
+**Not an observability subsystem.** No collector, no exporter, no
+live stream, no change to the observation channel or to `run.settled`:
+§II.18 forbids a second run log, and a trace is evidence a verdict
+cites, not a signal a supervisor reads. Any exporter or collector a
+deployment runs is an adapter detail; the receipt sees a file.
 
 ## Gate-before-run
 
@@ -310,7 +429,8 @@ derivation-bearing half travels in the signed payload.** The
 verifier's scoring is one JCS-canonical scorecard in the artifact
 store, `{"contract", "submission", "items": [{"id", "score":
 "pass"|"fail", "evidence": ["<path> @ <commit>#L<a>-L<b>" |
-"transcript:<n>", …], "uncertainty": "low"|"high", "note"?}]}`, and
+"transcript:<n>" | "trace:<n>/<path>" | "sealed-trace:<n>/<path>",
+…], "uncertainty": "low"|"high", "note"?}]}`, and
 `verdict.rendered` gains optional **`scorecard`** from `seed/4`:
 `{"digest", "items": [{"id", "score", "uncertainty"}]}`, the
 artifact's digest and, per item, exactly the two enums the derivation
@@ -321,8 +441,9 @@ consumes a verdict reapplies the derivation from the record alone
 --scorecard <file>` validates it against the rubric and the receipt:
 every rubric item scored exactly once, an unknown id refuses, every
 item cites at least one evidence reference (an anchored path resolving
-in the repository at its commit, or a transcript the receipt carries,
-never prose), `note` within the classification budget (512 bytes),
+in the repository at its commit, a transcript the receipt carries, or
+a span in a shape the receipt binds, never prose), `note` within the
+classification budget (512 bytes),
 `uncertainty` two values because the charter asks for explicit
 uncertainty and a routing decision, and three would invite the middle.
 A spec with a rubric renders only over a scorecard; a scorecard on a
@@ -445,7 +566,13 @@ and disjointness checks above.
 - III.G row 5 (receipts bind contract id, plan hash at merge-base,
   diff hash, inventory, transcripts, environment fingerprint;
   verification recomputes and fails on mismatch) — the receipt schema
-  and `seed verdict check`; sealed-check transcripts join in 6.3.
+  and `seed verdict check`; sealed-check transcripts join in 6.3; the
+  trace-shaped entries (os-7fc2ca38) bind what a harness's trace
+  export reproduces, and check verifies their shapes beside the
+  receipt.
+- III.G row 8, the cited-evidence clause (os-7fc2ca38) — a scorecard
+  cites a span by its path in the shape, and `seed verdict traces` is
+  the surface the paths are read from.
 - III.G rows 1–2 (the reconciliation chain and divergence) — 6.2, with
   the verdict's immutable head attestation as its comparison anchor.
 - Part II §6 (sandbox with declared, minimal capability) — the runner

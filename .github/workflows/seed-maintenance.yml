@@ -48,6 +48,40 @@ jobs:
             echo "no seed-state ref — run scripts/seed init first"; echo "active=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: 'Verify server-side protections (read-back, plans/os-7b6afa4d.md)'
+        # Runs before reaping: a drifted-protections job must not mutate state.
+        # On drift the check writes the HALT marker to seed-state itself
+        # (the engine's write: one commit, seed identity, HALT + run-log line)
+        # and exits 3, so the job stops here and every mutating verb refuses
+        # until an operator re-applies the rule and runs seed state resume.
+        # The default token 403s on the ruleset reads, so the fine-grained
+        # PAT is preferred; its absence degrades (named WARNING, exit 0) per
+        # the plan's step 2 rather than walling a repo it cannot see.
+        if: steps.gate.outputs.active == 'true'
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          # The read-back needs ruleset + branch-protection reads the default
+          # GITHUB_TOKEN cannot make (403), so a repository-scoped fine-grained
+          # PAT (Administration: read; Contents: read&write for the HALT push)
+          # is preferred; its absence falls back to the default token, which
+          # then degrades the check with a named gap (plan step 2) rather than
+          # failing a repo it cannot see.
+          GH_TOKEN: ${{ secrets.SEED_GH_TOKEN || github.token }}
+        run: |
+          # The default shell runs with errexit and the assignment below
+          # would inherit the checker's exit status: capturing through an
+          # `if` keeps a nonzero (drift/API error) from stopping the job on
+          # this line before rc is even assigned, so the findings reach the
+          # log instead of vanishing into the captured output.
+          if out=$(sh scripts/check-protections.sh --write-halt 2>&1); then rc=0; else rc=$?; fi
+          if [ "$rc" -eq 0 ]; then
+            # Green or degraded: carry the read-back in the job summary.
+            printf '%s\n' "$out" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '%s\n' "$out" >&2
+          fi
+          exit "$rc"
+
       - name: Reap expired leases (handoff stubs, §7.1)
         if: steps.gate.outputs.active == 'true'
         run: scripts/seed maintain reap --actor "$ACTOR"

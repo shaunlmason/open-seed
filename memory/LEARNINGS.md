@@ -2129,6 +2129,31 @@ failed step skips the rest of the job.
   not from the working tree: the digest in the fact binds the anchor's
   bytes, and an index over the checkout would rank text nobody
   reviewed. The same `Verify` delivery uses is the gate for indexing.
+- 2026-09-06 (os-7b6afa4d): the GitHub **rulesets list** endpoint
+  (`GET /rulesets`) carries only name/target/enforcement/id: the ref
+  patterns (`conditions.ref_name.include`) and rule types live on the
+  per-ruleset **detail** endpoint, and a fresh repo's list 404s (not `[]`)
+  while an existing one returns `[]`. Any ruleset read-back must fetch
+  detail per id and match by ref pattern, never by name.
+- 2026-09-06 (os-7b6afa4d): the state-ref `HALT` marker is a plain file at
+  the ref root written as one commit (engine: `statelint.go` — `HALT` file
+  + a run-log `halt` event, author `seed <seed@open-seed>`); the replay
+  lint requires a run-log line ONLY when `tasks/*.md` changed, so a
+  HALT-only commit is replay-legal, and `stateref.Halted` reads the file by
+  name — a sh+git writer can mint it without the engine (a self-contained
+  temp repo, not a worktree of the caller's, so the commit roots in the
+  right history and the push fast-forwards the protected ref).
+- 2026-09-06 (os-7fc2ca38): a receipt field must reproduce from a fresh
+  run or it cannot be in the receipt at all: `verdict check` compares
+  the whole canonical digest. Anything per-run (ids, timestamps, a raw
+  export's digest) goes to the artifact store as a sidecar the receipt
+  never names. Normalize first, digest second, and let the acceptance
+  spec declare (allowlist) what survives normalization.
+- 2026-09-06 (os-7fc2ca38): `internal/verdict`'s test helper `gated(spec,
+  commit)` ignores its first argument and always anchors `accept.md`;
+  a drill on a second spec file needs its own helper or the wrong spec
+  runs silently green.
+
 - 2026-09-06 (os-0cd18799): the obligation drift sweep is the fastest
   reviewer of a new fact. Adding a return path that re-readies a subject
   without a verdict left `submission.pending` standing in `ready`, where

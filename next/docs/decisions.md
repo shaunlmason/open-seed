@@ -4263,6 +4263,48 @@ without a vendor: local lexical BM25 over a git-native markdown store.
 - **Flags first, the query last.** The flag package's shape and every
   other verb's; a query of no searchable term refuses at usage.
 
+
+## Trace-shaped evidence (os-7fc2ca38)
+
+The build plan's §3 entry put "the artifact-store digest of the
+exported spans" in the receipt. It cannot go there: a receipt must
+recompute from a fresh run to the cited digest, and a raw trace export
+never does (ids and timestamps differ every time). The plan's D5
+corrected it, and the implementation holds to the correction.
+
+- **The variable, not a flag.** `SEED_TRACE_EXPORT` is set by the
+  profile for every command, visible and sealed, and read after each
+  exits. A flag on the spec would have made the harness's behavior a
+  spec author's claim; the variable makes it the runner's fact, and a
+  harness that ignores it is indistinguishable from one that ran
+  before the variable existed.
+- **Declared keys, allowlist not denylist.** A denylist of "known
+  nondeterministic" keys would have let the next per-run key through
+  and broken reproduction on the first real harness. The spec declares
+  what reproduces; the gate reviews the declaration; an undeclared
+  run id stays out.
+- **One root per orphan, sorted.** A span whose parent is absent from
+  the export is a root rather than a refusal: file exporters truncate,
+  and a shape that refuses on a truncated export would bind nothing on
+  exactly the runs a verifier most wants to cite.
+- **The sidecar is a pointer, not a slot.** The raw export is
+  content-addressed like everything else; `traces/<shape>` holds its
+  digest. Erasing the raw digest through `seed artifact erase` removes
+  the export and leaves the pointer dangling, which `TraceRaw` reports
+  as a digest `Get` cannot produce; erasing the shape digest removes
+  the pointer with the shape. No named mutable slot to rotate.
+- **No protocol bump.** `verdict.rendered` is a strict object and a
+  new optional field would be `seed/8` for a reference the receipt's
+  shape digest already covers. The receipt schema grows two omitempty
+  fields, the rule `commitment` and `sealed_transcripts` set.
+- **No cache table.** The projection build carries no artifact store
+  by design (admission has none either); III.G row 10's query joins
+  through `verdict_receipt` as #119 made it. `seed verdict traces` is
+  the read surface, over the store.
+- **`defer` stays where it was.** The verdict group's registry row
+  lists `receipt, render, check, traces`; `defer` was unlisted before
+  this card and this card does not re-home it.
+
 ## The forge says the submission is not mergeable (os-0cd18799)
 
 Not a plan item: a §3 backlog card against charter §II.4 (`check.observed`,

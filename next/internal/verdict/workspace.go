@@ -35,6 +35,12 @@ type Workspace struct {
 	Repo string
 	home string
 	tmp  string
+	// traces and sealedTraces hold the exports commands write to
+	// SEED_TRACE_EXPORT (plans/os-7fc2ca38.md D2): outside the clone,
+	// so the diff and the inventory never see them, and inside the
+	// per-run root, so cleanup removes them pass or fail.
+	traces       string
+	sealedTraces string
 }
 
 // NewWorkspace clones repoDir at head into a fresh per-run root. The
@@ -46,8 +52,9 @@ func NewWorkspace(repoDir, head string) (*Workspace, error) {
 	if err != nil {
 		return nil, fmt.Errorf("verdict workspace: %w", err)
 	}
-	ws := &Workspace{root: root, Repo: filepath.Join(root, "repo"), home: filepath.Join(root, "home"), tmp: filepath.Join(root, "tmp")}
-	for _, d := range []string{ws.home, ws.tmp} {
+	ws := &Workspace{root: root, Repo: filepath.Join(root, "repo"), home: filepath.Join(root, "home"), tmp: filepath.Join(root, "tmp"),
+		traces: filepath.Join(root, "traces"), sealedTraces: filepath.Join(root, "sealed-traces")}
+	for _, d := range []string{ws.home, ws.tmp, ws.traces, ws.sealedTraces} {
 		if err := os.Mkdir(d, 0o755); err != nil {
 			ws.Cleanup()
 			return nil, fmt.Errorf("verdict workspace: %w", err)
@@ -141,11 +148,37 @@ type Transcript struct {
 	OutputBytes  int    `json:"output_bytes"`
 }
 
+// TraceExportVar is the environment variable the exec profile sets
+// per command (plans/os-7fc2ca38.md D2): the path a harness that
+// attaches a trace to its run writes one OTLP/JSON export to. A
+// harness that ignores it loses only the richer evidence, and its
+// transcript is byte-identical to one run without the variable.
+const TraceExportVar = "SEED_TRACE_EXPORT"
+
+// tracePath is the export path for command n of the visible or the
+// sealed list.
+func (w *Workspace) tracePath(n int, sealed bool) string {
+	dir := w.traces
+	if sealed {
+		dir = w.sealedTraces
+	}
+	return filepath.Join(dir, fmt.Sprintf("%d.json", n))
+}
+
 // Run executes one spec command in the workspace under the exec
 // profile and returns its transcript. The command's exit never aborts
 // the run: a red check is a fact the receipt records and the render
 // rule consumes.
 func (r Runner) Run(ws *Workspace, command string) Transcript {
+	t, _, _ := r.RunTraced(ws, command, "")
+	return t
+}
+
+// RunTraced is Run with SEED_TRACE_EXPORT set to export (an empty
+// export sets nothing); it returns the export's bytes and true when
+// the command wrote one. The bytes are what the caller normalizes;
+// the file itself stays in the per-run root for cleanup.
+func (r Runner) RunTraced(ws *Workspace, command, export string) (Transcript, []byte, bool) {
 	timeout := r.Timeout
 	if timeout <= 0 {
 		timeout = DefaultTimeout
@@ -160,6 +193,12 @@ func (r Runner) Run(ws *Workspace, command string) Transcript {
 		"TMPDIR=" + ws.tmp,
 		"GIT_CONFIG_NOSYSTEM=1",
 		"LANG=C",
+	}
+	if export != "" {
+		// Forward slashes: the value is read by a shell, and a Windows
+		// sh takes a drive path with either separator while a
+		// backslash inside a double-quoted redirection is an escape.
+		cmd.Env = append(cmd.Env, TraceExportVar+"="+filepath.ToSlash(export))
 	}
 	// The process group and its kill are platform code
 	// (workspace_unix.go, workspace_windows.go; next/spec/platform.md):
@@ -181,7 +220,12 @@ func (r Runner) Run(ws *Workspace, command string) Transcript {
 			t.Exit = -1
 		}
 	}
-	return t
+	if export != "" {
+		if raw, rerr := os.ReadFile(export); rerr == nil {
+			return t, raw, true
+		}
+	}
+	return t, nil, false
 }
 
 // withoutGitConfigSelection drops GIT_CONFIG, the variable that

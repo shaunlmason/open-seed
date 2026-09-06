@@ -2394,6 +2394,52 @@ about; its one idea Seed lacked was retrieval. What landed
 - **Spec**: `curation.md` "Search" records the source, the adoption
   and the standing rejection of the OKF format (III.Q row 4).
 
+## Trace-shaped test evidence in the receipt (os-7fc2ca38)
+
+Not a plan item: the build plan §3 "Borrowed from practice
+(2026-09-06)" card (#343; plan #347), from a test harness outside
+this tree that attaches a trace to every run. A receipt transcript
+bound one output digest; a span tree that names the failing span and
+its outcome attributes collapsed into it. What landed
+(`next/docs/decisions.md` "Trace-shaped evidence"):
+
+- **The contract is one variable.** The `exec` profile sets
+  `SEED_TRACE_EXPORT` per command (`verdict.Runner.RunTraced`); a
+  harness writes an OTLP/JSON export there; Seed reads the documented
+  span fields with `encoding/json` (`internal/traceshape`) and imports
+  no OpenTelemetry package.
+- **Only the shape reproduces.** Name, kind, status code, the keys a
+  `## Trace attributes` section of the spec declares
+  (`plan.TraceAttributes`), children sorted by canonical bytes; ids,
+  times, durations, events, links, resource, scope, the status message
+  and undeclared attributes stripped. The receipt gains `traces` and
+  `sealed_traces`, omitted when nothing was written, so every earlier
+  receipt's bytes are unchanged; a malformed export is
+  `{transcript, malformed: true}`.
+- **Shape as artifact, raw export as sidecar.** The shape under its
+  digest, the raw export under its own with a pointer at
+  `traces/<shape>` (`artifact.PutTraceRaw`, `TraceRaw`, an `Erase`
+  bucket); no raw digest in the receipt or on the ledger, so no
+  protocol bump. `verdict check` verifies the shapes and never the
+  sidecar; `reconcile.TracesAt` grades a lost shape
+  `evidence_missing`.
+- **Citation by path.** `trace:<n>/<path>` and
+  `sealed-trace:<n>/<path>` in the scorecard grammar
+  (`verdict.Validate` now takes the store), resolving in the shape the
+  run produced or the stored one.
+- **`seed verdict traces`**: the read verb rendering every node with
+  its citation path, kind, status and declared attributes; malformed
+  and missing named; the raw digest where the sidecar stands.
+- **Drills**: `TestTraceShapeNormalizes`, `TestReceiptBindsTraceShape`,
+  `TestScorecardCitesTraceSpansInPackage`, `TestTraceAttributesSection`
+  and the CLI stand `TestTraceArtifactsStoredAndChecked` (store,
+  render, cite, check, erase the sidecar, erase the shape, reconcile,
+  the invented entry, the silent spec, the malformed export).
+- **Spec**: `verdicts.md` "Trace-shaped evidence" and the runner
+  profile's variable, `acceptance.md` "Trace attributes"; III.G rows 5
+  and 8 keep their status with the drills added to their evidence; row
+  10 stays as the Phase 10 record left it.
+
 ## Frontier
 
 
