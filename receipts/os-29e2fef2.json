@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-29e2fef2",
+  "plan_path": "plans/os-29e2fef2.md",
+  "plan_sha256": "0887d2371b301a5c90b9e0d09a3c42e8c6f3b0b418722e21be8de894bade4146",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./internal/ranking/ ./internal/maintain/ ./cmd/seed/ -run 'Resume|Reoffer|OfferPublish|MaintainObserves|MaintainReturns' -count=1",
+    "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./... \u0026\u0026 go test ./... -count=1",
+    "make check"
+  ],
+  "generated_by": "local"
+}
