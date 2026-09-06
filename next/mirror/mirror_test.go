@@ -402,6 +402,15 @@ func TestMirrorLoadsThePublishedProjection(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// The envelope names the build by path, so the path is JSON-encoded
+	// (a Windows path carries backslashes).
+	envelope := func(name, position, tip string) string {
+		b, err := json.Marshal(map[string]any{"ok": true, "result": map[string]string{"name": name, "position": position, "tip": tip, "version": "1", "path": build}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
 	if _, _, err := Load(current); err == nil {
 		t.Fatal("no resolved projection refuses")
 	}
@@ -409,15 +418,15 @@ func TestMirrorLoadsThePublishedProjection(t *testing.T) {
 	if _, _, err := Load(current); err == nil || !strings.Contains(err.Error(), "stale") {
 		t.Fatalf("the consumer verb's refusal is carried: %v", err)
 	}
-	write(`{"ok":true,"result":{"name":"queue","position":"3","tip":"` + stamp.Tip + `","version":"1","path":"` + build + `"}}`)
+	write(envelope("queue", "3", stamp.Tip))
 	if _, _, err := Load(current); err == nil {
 		t.Fatal("another projection's build refuses")
 	}
-	write(`{"ok":true,"result":{"name":"contracts","position":"3","tip":"abc","version":"1","path":"` + build + `"}}`)
+	write(envelope("contracts", "3", "abc"))
 	if _, _, err := Load(current); err == nil {
 		t.Fatal("an inconsistent stamp refuses")
 	}
-	write(`{"ok":true,"result":{"name":"contracts","position":"3","tip":"` + stamp.Tip + `","version":"1","path":"` + build + `"}}`)
+	write(envelope("contracts", "3", stamp.Tip))
 	if _, _, err := Load(current); err == nil {
 		t.Fatal("a build without its view refuses")
 	}

@@ -23,8 +23,13 @@ func publish(t *testing.T, rows string) string {
 		t.Fatal(err)
 	}
 	current := filepath.Join(dir, "current.json")
+	// The build path is JSON-encoded: on Windows it carries backslashes.
+	env, err := json.Marshal(map[string]any{"ok": true, "result": map[string]string{"name": "contracts", "position": "4", "tip": strings.Repeat("cd", 32), "version": "1", "path": build}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	for name, body := range map[string]string{
-		current:                                `{"ok":true,"result":{"name":"contracts","position":"4","tip":"` + strings.Repeat("cd", 32) + `","version":"1","path":"` + build + `"}}`,
+		current:                                string(env),
 		filepath.Join(build, "contracts.json"): rows,
 	} {
 		if err := os.WriteFile(name, []byte(body), 0o644); err != nil {
