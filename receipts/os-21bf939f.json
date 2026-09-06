@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "task": "os-21bf939f",
+  "plan_path": "plans/os-21bf939f.md",
+  "plan_sha256": "99539559d25046c72d6aa23842f73ea9068535329fc6c5eddf3bd08d7f2304af",
+  "validation_commands": [
+    "cd next \u0026\u0026 gofmt -l . \u0026\u0026 go vet ./... \u0026\u0026 go build ./...",
+    "cd next \u0026\u0026 go test ./internal/admit/ -run 'TestAdmissionRandomWalk|TestAffordanceRegressionClass' -count=1",
+    "make check"
+  ],
+  "generated_by": "seed-next-implementer"
+}
