@@ -472,6 +472,38 @@ Phase 13 is exhausted on the frontier (`next/docs/progress.md`), so these are
 filable now; none blocks promotion (§5) and none may be scheduled ahead of an
 open Phase 13 row.
 
+**Borrowed from a formal-methods survey (2026-09-06).** A survey asked whether Lean 4
+belongs in Seed and answered no: a proof would be about a model of `internal/admit`,
+with no extraction to the Go rule set that enforces, so the model and the code would
+be two implementations and the bugs that matter live in the gap between them. Two
+cheaper instruments cover the same ground from inside the one toolchain the ground
+rules (§0) name. They test different layers and overlap only at racing mode, so both
+are filed; the second depends on the first for its generator and predicates. Neither
+changes a Part III row; the same filable-now rule applies.
+
+- **A random-walk property test over admission** (os-21bf939f; charter III.I and the
+  §I.2 ceiling as it lands in admission). The III.I sweep checks listed-implies-admits
+  at every prefix of one hand-written walk, and every generator in the tree walks a
+  scripted shape, so rule interactions at positions no script reaches are tested only
+  where someone thought of the case. The card: a seeded walker that reads a random
+  lane's affordances at each position and drafts a listed verb or, some fraction of
+  the time, a verb `transitions.json` forbids there; four oracles (listed admits,
+  forbidden refuses with the transition rule's reason, the fold follows the table's
+  `to`, and the finished chain passes the five-bar audit and the red-team clause
+  table read as predicates). Shrinking is prefix truncation, so no dependency is
+  added; the iteration count splits between `make check-next` and the scheduled run
+  the way the perf storm does.
+- **An exhaustive interleaving check of the append loop and halt** (os-07e6e76c;
+  charter §II.1 freshness and halt, III.A row 7). The race drill and the perf storm
+  are executions, not enumerations. The card: an abstract state machine of fetch,
+  attempt, push and halt with an explorer that walks every interleaving for small N,
+  asserting no lost update, `prev` equals the tip at admission, the persisted head
+  never regresses, halt is refused at the boundary, and bounded termination. The
+  toolchain default is Go-native, under `make check-next` at small N; TLA+ is the
+  fallback if the model outgrows it, kept under `next/spec/` with a `last-verified`
+  stamp and off the fast gate. The verdict-then-merge reconciliation and racing mode
+  are the named follow-on once the explorer's shape is known.
+
 ## 4. Progress tracking
 
 Maintain `next/docs/progress.md`: one line per plan item — `phase.item — card id —
