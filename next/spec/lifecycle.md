@@ -329,7 +329,13 @@ that made them ready (queue `Version: "2"`) — retiring the v0
 promised. Every derivation change republishes under a new
 version-bearing build id at an unchanged tip; the cache mirrors the
 same derivations (`contract_state` with the claim columns, the
-derived `queue` rows, schema generation 3).
+derived `queue` rows, schema generation 3). Since queue Version "4"
+the derivation is `transitions/1+topology/1`
+([`topology.md`](topology.md)): the table's ready set narrowed to the
+effectively ready. A dependency that waits and an ancestor's hold are
+derived from the relation facts beside the lifecycle and never mutate
+a subject's folded state: the table stays the sole authority on what
+a subject IS, the graph on whether it is claimable now.
 
 ## Conformance mapping
 

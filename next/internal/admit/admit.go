@@ -37,6 +37,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/packet"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/request"
+	"github.com/shaunlmason/open-seed/next/internal/topology"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -1167,6 +1168,23 @@ func coreRules() []Rule {
 				return &erasure.Error{Subject: subject, Reason: fmt.Sprintf("artifact %s was erased at position %d by %s on %s: an artifact is erased once, wherever it was recorded, and a second record would attribute an act that did nothing", p.Artifact, prior.Pos, prior.Signer, prior.Subject)}
 			}
 			return nil
+		}},
+		{Name: "topology", Check: func(c *Context, rec *event.Record) error {
+			// The relation facts (plans/os-f0ae2cdf.md D2, D3;
+			// next/spec/topology.md): dependency.linked and unlinked,
+			// hierarchy.parented and goal.aligned are facts beside the
+			// lifecycle, additive catalog growth active from seed/1,
+			// admitted with their strict shape on a known nonterminal
+			// contract, naming a known target, never a self edge or a
+			// cycle, links a set. Standing and the dispatch grant are
+			// the keyring and grant rules'; this rule holds the shape
+			// and the graph rule, judged against the graph that passed
+			// the boundary (a raw-pushed edge shapes no cycle check).
+			if !topology.IsRelationVerb(rec.Event.Verb) || !keyring.Applies(c.Active) {
+				return nil
+			}
+			g := topology.Fold(c.Records, c.Table)
+			return g.Apply(c.Lifecycle, c.Table, c.Count, &rec.Event)
 		}},
 		{Name: "request", Check: func(c *Context, rec *event.Record) error {
 			// The request ingress (plans/os-48df10a2.md D1, D2;
@@ -2484,8 +2502,19 @@ func coreRules() []Rule {
 				// table refuses stays the table's refusal.
 				return &transition.InvalidTransitionError{Subject: rec.Event.Subject, From: current, Verb: verb, Reason: transition.RespecificationNeeds(c.Active)}
 			}
-			_, err := c.Table.Check(rec.Event.Subject, current, verb)
-			return err
+			if _, err := c.Table.Check(rec.Event.Subject, current, verb); err != nil {
+				return err
+			}
+			if verb == "claim.taken" {
+				// Effective readiness (plans/os-f0ae2cdf.md D4, D5): the
+				// table admits a claim on ready; the graph refuses one
+				// on a subject that waits on an open dependency or sits
+				// under a blocked ancestor, the same predicate the
+				// queue and the poll hide it by. Relation-free chains
+				// never reach the fold.
+				return Topology(c).Check(rec.Event.Subject)
+			}
+			return nil
 		}},
 		{Name: "flywheel", Check: func(c *Context, rec *event.Record) error {
 			// The flywheel's two facts (plans/os-9075c308.md D4;
@@ -3232,6 +3261,19 @@ func RunStartValid(records []*event.Record, table *transition.Table, subject str
 		}
 	}
 	return false
+}
+
+// Topology is the graph derived at the context's prefix
+// (plans/os-f0ae2cdf.md D3): the relation facts that passed the
+// boundary at their own positions, read against the lifecycle fold.
+// Every consumer (the claim rule, the queue, the poll, the report)
+// derives from this one function; a prefix carrying no relation fact
+// folds nothing and costs nothing.
+func Topology(c *Context) *topology.Derived {
+	if c == nil {
+		return topology.Derive(nil, nil, nil)
+	}
+	return topology.Derive(topology.Fold(c.Records, c.Table), c.Lifecycle, c.Table)
 }
 
 // ErasureValid reports whether a folded artifact.erased passed the

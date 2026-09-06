@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
@@ -44,16 +45,21 @@ const CacheFile = "cache.db"
 // generation 9 the reservations table and the budget columns
 // (plans/os-cecac5de.md); generation 10 the runs table
 // (plans/os-1dad487d.md); generation 11 the interrupts table
-// (plans/os-0f718b4e.md).
-const cacheSchemaVersion = 12
+// (plans/os-0f718b4e.md); generation 13 the relations,
+// topology_state, topology_anomalies and goal_ancestry_warnings
+// tables (plans/os-f0ae2cdf.md D8).
+const cacheSchemaVersion = 13
 
 // cacheVersion is the projection's derivation version, carried in the
 // stamp table and the build id alike.
 // Generation 13 split the report's lanes by kind (plans/os-0d4f2af3.md
 // D6) and landed first; generation 14 adds `ts` and `ts_unix` to every
 // per-event table (plans/os-74ce2261.md; charter III.G row 10), so
-// evidence is queryable by time.
-const cacheVersion = "14"
+// evidence is queryable by time. Generation 15 mirrors the graph
+// (plans/os-f0ae2cdf.md D8): the relation facts, the derived
+// effective-readiness, hold, mission and rollup fields, the anomalies
+// and the goal-ancestry warnings, and the queue's effective derivation.
+const cacheVersion = "15"
 
 // Cache returns the cache projection.
 func Cache() Projection {
@@ -84,6 +90,11 @@ var cacheDDL = []string{
 	`CREATE TABLE actor_signed (fingerprint TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, verb TEXT NOT NULL, subject TEXT NOT NULL)`,
 	`CREATE INDEX actor_signed_fp ON actor_signed(fingerprint)`,
 	`CREATE TABLE report (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID`,
+	`CREATE TABLE relations (subject TEXT NOT NULL, position INTEGER NOT NULL, ts TEXT NOT NULL, ts_unix INTEGER, actor TEXT NOT NULL, kind TEXT NOT NULL, target TEXT NOT NULL)`,
+	`CREATE INDEX relations_subject ON relations(subject)`,
+	`CREATE TABLE topology_state (subject TEXT PRIMARY KEY, effective_ready INTEGER NOT NULL, unresolved TEXT NOT NULL, held_by TEXT NOT NULL, parent TEXT, mission_anchor TEXT, mission_from TEXT, initiative INTEGER NOT NULL, rollup TEXT) WITHOUT ROWID`,
+	`CREATE TABLE topology_anomalies (position INTEGER NOT NULL, verb TEXT NOT NULL, subject TEXT NOT NULL, reason TEXT NOT NULL)`,
+	`CREATE TABLE goal_ancestry_warnings (subject TEXT PRIMARY KEY, ancestry TEXT NOT NULL) WITHOUT ROWID`,
 }
 
 func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err error) {
@@ -163,6 +174,7 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 		return nil, err
 	}
 	fold := table.FoldRecords(records)
+	graph := deriveTopology(records, table, fold)
 	// at is the event's instant for a per-event row (plans/os-74ce2261.md
 	// D1; charter III.G row 10): the envelope's ts verbatim, and the
 	// instant it names as nanoseconds since the epoch for range queries
@@ -266,6 +278,42 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 			}
 		}
 		w.exec(`INSERT INTO contract_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, state, anomalies, holder, fence, accRef, accExec, accGated, verdictPos, verdictVal, verdictReceipt, requestedPos, mergedPos, mergedSHA, sealedPos, sealedCommitment, overridePos, overrideReason, lastClaim, budgetClass, budgetCapacity, budgetRemaining)
+		// The graph, mirrored from the same derivation the contracts
+		// view renders (plans/os-f0ae2cdf.md D8): rows only when the
+		// prefix carries a trusted relation, so relation-free chains
+		// keep their bodies apart from the version.
+		if tv := contractTopology(graph, c.Subject); tv != nil {
+			for _, r := range tv.Requires {
+				pos, _ := strconv.Atoi(r.Position)
+				ts, tsUnix := at(pos)
+				w.exec(`INSERT INTO relations VALUES (?, ?, ?, ?, ?, 'requires', ?)`, c.Subject, pos, ts, tsUnix, r.Actor, r.Target)
+			}
+			var parent, missionAnchor, missionFrom, rollup any
+			if tv.Parent != nil {
+				pos, _ := strconv.Atoi(tv.Parent.Position)
+				ts, tsUnix := at(pos)
+				w.exec(`INSERT INTO relations VALUES (?, ?, ?, ?, ?, 'parent', ?)`, c.Subject, pos, ts, tsUnix, tv.Parent.Actor, tv.Parent.Target)
+				parent = tv.Parent.Target
+			}
+			if tv.Mission != nil {
+				pos, _ := strconv.Atoi(tv.Mission.Position)
+				ts, tsUnix := at(pos)
+				w.exec(`INSERT INTO relations VALUES (?, ?, ?, ?, ?, 'mission', ?)`, c.Subject, pos, ts, tsUnix, tv.Mission.Actor, tv.Mission.Target)
+			}
+			if tv.MissionAnchor != "" {
+				missionAnchor, missionFrom = tv.MissionAnchor, tv.MissionFrom
+			}
+			if tv.Rollup != nil {
+				rollup = w.jsonOf(tv.Rollup)
+			}
+			w.exec(`INSERT INTO topology_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, c.Subject, boolInt(tv.EffectiveReady), w.jsonOf(tv.Unresolved), w.jsonOf(tv.HeldBy), parent, missionAnchor, missionFrom, boolInt(tv.Rollup != nil), rollup)
+			if tv.Warning != nil {
+				w.exec(`INSERT INTO goal_ancestry_warnings VALUES (?, ?)`, c.Subject, w.jsonOf(tv.Warning.Ancestry))
+			}
+		}
+	}
+	for _, a := range graph.Graph.Anomalies {
+		w.exec(`INSERT INTO topology_anomalies VALUES (?, ?, ?, ?)`, a.Pos, a.Verb, a.Subject, a.Reason)
 	}
 	// The queue mirrors the JSON view's derivation exactly: the
 	// transition table's ready set, oldest first.
@@ -273,7 +321,7 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 	if err != nil {
 		return nil, err
 	}
-	w.exec(`INSERT INTO queue_meta VALUES (?, ?)`, QueueSchemaVersion, QueueDerivationTransitions)
+	w.exec(`INSERT INTO queue_meta VALUES (?, ?)`, QueueSchemaVersion, QueueDerivationEffective)
 	for _, q := range ready {
 		w.exec(`INSERT INTO queue VALUES (?, ?)`, q.Subject, q.SincePosition)
 	}
@@ -297,6 +345,9 @@ func buildCache(records []*event.Record, _ Inputs) (files map[string][]byte, err
 	w.exec(`INSERT INTO report VALUES ('contracts', ?)`, w.jsonOf(view.Contracts))
 	if view.Reconciliation != nil {
 		w.exec(`INSERT INTO report VALUES ('reconciliation', ?)`, w.jsonOf(view.Reconciliation))
+	}
+	if view.Topology != nil {
+		w.exec(`INSERT INTO report VALUES ('topology', ?)`, w.jsonOf(view.Topology))
 	}
 	w.exec(`INSERT INTO stamp VALUES (?, ?, ?, ?)`, "cache", position, tip, cacheVersion)
 	if err = w.err; err != nil {

@@ -45,6 +45,26 @@
       "verb": "approval.requested",
       "why_admitted": "NO CAPABILITY AT ALL - the per-verb approval request is in the standing-only class, like request.filed, because asking grants nothing (plans/os-5781a026.md D2)",
       "consequence": "a persuaded dispatcher can put a REQUEST in the operator's inbox: an approval.pending obligation owed by lane:operator, naming a catalog verb and an enrolled actor with a one-line reason bounded at 200 bytes. It admits nothing by itself: only the operator's approval.granted (operator-only, no fallback) opens the act, the grant is spent by one act and names the actor the request named, so the requester cannot widen anyone's reach, and the request is attributable and position-stamped. What it can inflict is inbox noise, one row per subject, visible as such. Owner: the maintenance lints, where a flood of requests with no plausible act should surface."
+    },
+    {
+      "verb": "dependency.linked",
+      "why_admitted": "queue shaping is the dispatcher's job: a dependency is the graph half of routing (plans/os-f0ae2cdf.md D2)",
+      "consequence": "HIDES WORK: a persuaded dispatcher can link a ready contract to an open one, and the dependent leaves the queue, the poll, the wake delta and the claim boundary until the required contract is terminal. Bounded by the graph rule (a known open source, a known target, no self edge, no cycle, so nothing waits on itself) and by visibility: the link is attributable and position-stamped, the contracts view names it under `unresolved`, and dependency.unlinked by dispatch or operator reverses it. It grants nothing and moves no lifecycle state. Owner: the maintenance lints, where a contract linked to work nobody plausibly needs should surface."
+    },
+    {
+      "verb": "dependency.unlinked",
+      "why_admitted": "the reverse of the link, the same queue shaping",
+      "consequence": "EXPOSES WORK EARLY: removing the last link makes a ready dependent claimable before the work it needed is done. Attributable, position-stamped, and only an existing link unlinks; the claim it exposes still settles at admission like any claim. Owner: the maintenance lints."
+    },
+    {
+      "verb": "hierarchy.parented",
+      "why_admitted": "placing a contract under an initiative is queue shaping (plans/os-f0ae2cdf.md D2, D5)",
+      "consequence": "INHERITS A HOLD and LENDS A MISSION: a persuaded dispatcher can parent a ready contract under a blocked initiative, which hides it (held_by) until the hold lifts, or under an aligned one, which silences its goal-ancestry warning. Bounded by the graph rule (a known open source, a known target, no cycle) and by visibility: the contracts view names the parent, the held_by set and the mission's carrier, the report's rollup counts the descendant, and a re-parent replaces rather than accumulates. Lifecycle state never moves. Owner: the maintenance lints."
+    },
+    {
+      "verb": "goal.aligned",
+      "why_admitted": "naming an initiative's mission is queue shaping (plans/os-f0ae2cdf.md D7)",
+      "consequence": "SILENCES A WARNING: a persuaded dispatcher can align an open contract to any commit-anchored path, and every descendant stops warning. The anchor must be a reference (a path at a commit, never prose), so the ledger carries no hostile text through it; the carrier is rendered beside every warning-free descendant, so the silence is falsifiable from the same view; a repeat replaces. Owner: the maintenance lints."
     }
   ],
   "_vocabulary": "The vocabulary swept is admit.affordanceCatalog, whose completeness against the spec table is TestAffordanceCatalogCompleteness's job (both directions: a catalog verb needs a spec row and a spec verb needs a catalog entry). The honest limit: message.acked, request.* and curation.* are named in next/spec/protocol.md but are in neither, being unimplemented, so this suite cannot speak about them. Whichever card lands them inherits their classification."

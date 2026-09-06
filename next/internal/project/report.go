@@ -20,6 +20,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/halt"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
+	"github.com/shaunlmason/open-seed/next/internal/offers"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/refusals"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
@@ -173,6 +174,13 @@ type ReportView struct {
 	// stay byte-identical. A cloud or remote adapter never reads
 	// enforced; the safe default for an unknown harness is a risk limit.
 	Adapters []ReportAdapter `json:"adapters,omitempty"`
+	// Topology is the graph section (plans/os-f0ae2cdf.md D8;
+	// next/spec/topology.md): initiatives with their rollups, the
+	// goal-ancestry warnings over open work, and the relation facts the
+	// fold kept but does not trust. Present only when the prefix
+	// carries a relation fact, so chains that carry none stay
+	// byte-identical.
+	Topology *ReportTopology `json:"topology,omitempty"`
 }
 
 // ReportAdapter is one executor substrate's report row.
@@ -295,7 +303,7 @@ type ReportReconciliation struct {
 // other since version "3", and everything else stays byte-identical
 // with and without inputs by construction.
 func Report() Projection {
-	return Projection{Name: "report", Version: "18", Inputs: true, Build: buildReport}
+	return Projection{Name: "report", Version: "19", Inputs: true, Build: buildReport}
 }
 
 // reportView is the report derivation shared by the JSON view and the
@@ -386,6 +394,7 @@ func reportView(records []*event.Record) (*ReportView, error) {
 	if ads := adaptersSection(folded); len(ads) > 0 {
 		view.Adapters = ads
 	}
+	view.Topology = reportTopology(deriveTopology(records, table, folded))
 	return &view, nil
 }
 
@@ -477,7 +486,7 @@ func strongestOffered(records []*event.Record, fold *transition.Fold) []tuple.Tu
 			continue
 		}
 		for _, o := range s.Offers {
-			if len(o.Tuples) == 0 || o.Pos <= latest || !offerAuthorized(records, o) {
+			if len(o.Tuples) == 0 || o.Pos <= latest || !offers.Authorized(records, o) {
 				continue
 			}
 			latest = o.Pos
@@ -485,16 +494,6 @@ func strongestOffered(records []*event.Record, fold *transition.Fold) []tuple.Tu
 		}
 	}
 	return out
-}
-
-// offerAuthorized replays the keyring to the offer's own position and
-// asks whether the signer held the supervise boundary there.
-func offerAuthorized(records []*event.Record, o transition.OfferFact) bool {
-	if o.Pos < 0 || o.Pos >= len(records) {
-		return false
-	}
-	ring, _, err := keyring.StateAt(records[:o.Pos])
-	return err == nil && ring != nil && ring.HasAnyCapability(o.Signer, keyring.AcceptedCapabilities(transition.OfferPublishedVerb))
 }
 
 // reportRate is a ratio as a fixed three-decimal string, null at a

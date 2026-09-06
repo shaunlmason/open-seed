@@ -26,9 +26,16 @@ const QueueSchemaVersion = "1"
 // table existed; it survives for the derivation-bump drills.
 const QueueDerivationNone = "none"
 
-// QueueDerivationTransitions is the live derivation: the transition
-// table's ready set (next/spec/transitions.json, schema generation 1).
+// QueueDerivationTransitions was the live derivation from Version "2"
+// to "3": the transition table's ready set (next/spec/transitions.json,
+// schema generation 1). It survives for the derivation-bump drills.
 const QueueDerivationTransitions = "transitions/1"
+
+// QueueDerivationEffective is the live derivation (plans/os-f0ae2cdf.md
+// D4): the table's ready set narrowed to the effectively ready, those
+// with every dependency terminal and no blocked ancestor, read from
+// the topology fold (next/spec/topology.md).
+const QueueDerivationEffective = "transitions/1+topology/1"
 
 // QueueEntry is one claimable subject. The field set is minimal by
 // design; Phase 5 extends it with what the transition table derives.
@@ -48,24 +55,30 @@ type QueueView struct {
 // underived v0 marker with the transition table's ready set; Version
 // "3" republishes the fold's seed/1 activation boundary, since a
 // pre-activation record can no longer occupy or vacate ready — each
-// via the version-in-identity machinery.
+// via the version-in-identity machinery. Version "4" narrows the set
+// to the effectively ready (plans/os-f0ae2cdf.md D4): a dependent that
+// waits or a descendant that is held leaves the queue and returns at
+// the prefix that frees it, with no lifecycle event written.
 func Queue() Projection {
-	return Projection{Name: "queue", Version: "3", Build: buildQueue}
+	return Projection{Name: "queue", Version: "4", Build: buildQueue}
 }
 
 // readyEntries derives the claimable set: subjects whose folded state
-// is ready, since_position the position that made them ready, oldest
-// first (deterministic; the queue surfaces the longest-waiting work
-// first).
+// is ready AND who are effectively ready (every active dependency
+// terminal, no blocked ancestor), since_position the position that
+// made them ready, oldest first (deterministic; the queue surfaces
+// the longest-waiting work first). Relation-free chains reduce to the
+// table's ready set.
 func readyEntries(records []*event.Record) ([]QueueEntry, error) {
 	table, err := transition.Default()
 	if err != nil {
 		return nil, err
 	}
 	fold := table.FoldRecords(records)
+	graph := deriveTopology(records, table, fold)
 	ready := []QueueEntry{}
 	for _, subject := range fold.Subjects() {
-		if s, ok := fold.State(subject); ok && s.State == "ready" {
+		if s, ok := fold.State(subject); ok && s.State == "ready" && graph.EffectiveReady(subject) {
 			ready = append(ready, QueueEntry{Subject: subject, SincePosition: s.Since})
 		}
 	}
@@ -80,7 +93,7 @@ func buildQueue(records []*event.Record, _ Inputs) (map[string][]byte, error) {
 	}
 	view := QueueView{
 		SchemaVersion: QueueSchemaVersion,
-		Derivation:    QueueDerivationTransitions,
+		Derivation:    QueueDerivationEffective,
 		Ready:         ready,
 	}
 	b, err := json.MarshalIndent(view, "", "  ")
