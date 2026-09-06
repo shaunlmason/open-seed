@@ -294,6 +294,30 @@ func TestSmallTeamPromotionDeliversLessonsAtClaimTime(t *testing.T) {
 	if code != 0 || e.Result["lessons_unverified"] == nil {
 		t.Fatalf("the orienting read without --repo reports the lesson unverified: %d %+v", code, e.Result)
 	}
+	// The advisory read finds the promoted lesson by its words, read
+	// at its anchor and verified against the repository; without one
+	// it is reported unresolved, never indexed.
+	search := func(extra ...string) map[string]any {
+		t.Helper()
+		e, code := runEnv(t, append(append(append([]string{"knowledge", "search"}, m.posture()...), extra...), "mirror", "temperature")...)
+		if code != 0 {
+			t.Fatalf("knowledge search: %d %+v", code, e.Error)
+		}
+		return e.Result
+	}
+	found := search("--repo", m.src, "--now", "2026-10-01T00:00:00Z")
+	if hits, _ := found["hits"].([]any); len(hits) != 3 || hits[0].(map[string]any)["kind"] != "lesson" || hits[0].(map[string]any)["id"] != carrier || hits[0].(map[string]any)["snippet"] != "Record the mirror's temperature" {
+		t.Fatalf("the promoted lesson is the first hit by its anchor, ahead of the two dead ends that say mirror: %+v", found)
+	}
+	blind := search("--now", "2026-10-01T00:00:00Z")
+	for _, h := range blind["hits"].([]any) {
+		if h.(map[string]any)["kind"] == "lesson" {
+			t.Fatalf("without a repository no lesson is indexed: %+v", blind)
+		}
+	}
+	if unresolved, _ := blind["lessons_unresolved"].([]any); len(unresolved) != 1 || unresolved[0].(map[string]any)["lesson"] != carrier {
+		t.Fatalf("the candidate is reported unresolved: %+v", blind)
+	}
 
 	// A contest over held-out evidence (impl's dead end on c-c, a
 	// selected contract outside the support set) removes the lesson
@@ -350,6 +374,15 @@ func TestSmallTeamPromotionDeliversLessonsAtClaimTime(t *testing.T) {
 	}
 	if lessons, _ := e.Result["lessons"].([]any); len(lessons) != 0 {
 		t.Fatalf("a contested hypothesis's lesson reaches no claim, even when the contest lands mid-flight: %+v", lessons)
+	}
+	// A contested lesson is as absent from the advisory read as from
+	// the claim; the held-out dead end that contested it is found.
+	contested := search("--repo", m.src, "--now", "2026-10-01T00:00:00Z")
+	if hits, _ := contested["hits"].([]any); len(hits) != 3 || hits[0].(map[string]any)["kind"] != "deadend" {
+		t.Fatalf("after the contest only the three dead ends hit: %+v", contested)
+	}
+	if counts, _ := contested["documents"].(map[string]any); counts["lesson"] != 0.0 {
+		t.Fatalf("the contested lesson leaves the corpus: %+v", counts)
 	}
 	if remoteTip(t, m.remote) == rival {
 		t.Fatal("fixture: the claim must have landed after the rival")
