@@ -61,6 +61,13 @@ var ErrMalformed = errors.New("malformed seed-mirror marker")
 // one that does not decode.
 func ParseMarker(body string) (subject string, managed bool, err error) {
 	found := markerRE.FindAllStringSubmatch(body, -1)
+	// A fragment of the marker (an opener with no complete marker
+	// behind it, a truncated close) is a managed issue whose marker was
+	// damaged, never an unmanaged one: refused, so the planner cannot
+	// create a second issue beside it.
+	if strings.Count(body, markerOpen) != len(found) {
+		return "", true, fmt.Errorf("%w: a marker fragment that is not one complete marker", ErrMalformed)
+	}
 	switch len(found) {
 	case 0:
 		return "", false, nil

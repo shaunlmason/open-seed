@@ -9,7 +9,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
+
+// requestTimeout bounds every forge call: a forge that accepts the
+// connection and never answers must not hang an apply.
+const requestTimeout = 60 * time.Second
+
+func newClient() *http.Client { return &http.Client{Timeout: requestTimeout} }
 
 // forgeClient is the HTTP seam the two forge exporters share: a base
 // URL, the token read once from the named environment variable, and

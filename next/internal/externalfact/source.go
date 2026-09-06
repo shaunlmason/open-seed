@@ -21,7 +21,15 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// requestTimeout bounds every forge read: a forge that accepts the
+// connection and never answers must not hang an observer or an
+// unattended maintenance pass.
+const requestTimeout = 60 * time.Second
+
+func newClient() *http.Client { return &http.Client{Timeout: requestTimeout} }
 
 // Source is the read-only forge interface every observer reads
 // through. It never writes.
@@ -145,7 +153,7 @@ func NewGitHub(base, owner, repo, token string) *GitHub {
 	if base == "" {
 		base = "https://api.github.com"
 	}
-	return &GitHub{c: &reader{base: base, token: token, scheme: "Bearer", accept: "application/vnd.github+json"}, repo: "/repos/" + owner + "/" + repo}
+	return &GitHub{c: &reader{base: strings.TrimRight(base, "/"), token: token, scheme: "Bearer", accept: "application/vnd.github+json", http: newClient()}, repo: "/repos/" + owner + "/" + repo}
 }
 
 // Merged reads a GitHub pull request's merge state.
@@ -304,7 +312,7 @@ type Forgejo struct {
 
 // NewForgejo returns a Forgejo source; base is the instance URL.
 func NewForgejo(base, owner, repo, token string) *Forgejo {
-	return &Forgejo{c: &reader{base: base, token: token, scheme: "token", accept: "application/json"}, repo: "/api/v1/repos/" + owner + "/" + repo}
+	return &Forgejo{c: &reader{base: strings.TrimRight(base, "/"), token: token, scheme: "token", accept: "application/json", http: newClient()}, repo: "/api/v1/repos/" + owner + "/" + repo}
 }
 
 // Merged reads a Forgejo pull request's merge state.

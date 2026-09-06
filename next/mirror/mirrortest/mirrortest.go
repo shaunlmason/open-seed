@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -35,7 +36,7 @@ type Forge struct {
 	mu     sync.Mutex
 	next   int
 	issues map[int]*Issue
-	labels map[string]int64 // forgejo only: name to id
+	labels map[string]int64 // name to id (forgejo), or defined (github: id unused)
 	// Calls is every request served, "METHOD path", in order.
 	Calls []string
 	// FailWrites makes every mutating request answer 500 while set.
@@ -71,7 +72,30 @@ func (f *Forge) Plant(title, body string, labels []string, closed bool) int {
 	n := f.next
 	f.next++
 	f.issues[n] = &Issue{Number: n, Title: title, Body: body, Labels: append([]string{}, labels...), Closed: closed}
+	for _, l := range labels {
+		f.define(l)
+	}
 	return n
+}
+
+// define registers a label as the repository would hold it, as a
+// person's edit at the forge does.
+func (f *Forge) define(name string) {
+	if _, ok := f.labels[name]; !ok {
+		f.labels[name] = int64(len(f.labels) + 1)
+	}
+}
+
+// Defined lists the repository's labels, sorted.
+func (f *Forge) Defined() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]string, 0, len(f.labels))
+	for n := range f.labels {
+		out = append(out, n)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Edit changes an issue in place, as a person at the forge would.
@@ -80,6 +104,9 @@ func (f *Forge) Edit(n int, fn func(*Issue)) {
 	defer f.mu.Unlock()
 	if i, ok := f.issues[n]; ok {
 		fn(i)
+		for _, l := range i.Labels {
+			f.define(l)
+		}
 	}
 }
 
@@ -121,6 +148,20 @@ func (f *Forge) sorted() []*Issue {
 	return out
 }
 
+// hexColor is the label color both forges accept: exactly six hex
+// digits, no leading hash.
+func hexColor(c string) bool {
+	if len(c) != 6 {
+		return false
+	}
+	for _, ch := range c {
+		if !strings.ContainsRune("0123456789abcdefABCDEF", ch) {
+			return false
+		}
+	}
+	return true
+}
+
 func decode(r *http.Request, into any) error {
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -149,6 +190,66 @@ func GitHub() (*httptest.Server, *Forge) {
 			state = "closed"
 		}
 		return map[string]any{"number": i.Number, "title": i.Title, "body": i.Body, "state": state, "labels": labels}
+	}
+	// Labels are repository objects on GitHub: an issue may name only
+	// a label that exists, and nothing but the label API defines one.
+	mux.HandleFunc("/repos/o/r/labels", func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		f.record(r)
+		if r.Header.Get("Authorization") != "Bearer "+Token {
+			write(w, 401, map[string]any{"message": "bad credentials"})
+			return
+		}
+		if r.Method != http.MethodPost {
+			write(w, 405, nil)
+			return
+		}
+		if f.FailWrites {
+			write(w, 500, map[string]any{"message": "refused"})
+			return
+		}
+		var in struct {
+			Name  string `json:"name"`
+			Color string `json:"color"`
+		}
+		if err := decode(r, &in); err != nil || in.Name == "" || !hexColor(in.Color) {
+			write(w, 422, map[string]any{"message": "a label needs a name and a six-digit hex color"})
+			return
+		}
+		if _, dup := f.labels[in.Name]; dup {
+			write(w, 422, map[string]any{"message": "label exists"})
+			return
+		}
+		f.define(in.Name)
+		write(w, 201, map[string]any{"name": in.Name, "color": in.Color})
+	})
+	mux.HandleFunc("/repos/o/r/labels/", func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		f.record(r)
+		if r.Header.Get("Authorization") != "Bearer "+Token {
+			write(w, 401, map[string]any{"message": "bad credentials"})
+			return
+		}
+		name, err := url.PathUnescape(strings.TrimPrefix(r.URL.Path, "/repos/o/r/labels/"))
+		if r.Method != http.MethodGet || err != nil {
+			write(w, 405, nil)
+			return
+		}
+		if _, ok := f.labels[name]; !ok {
+			write(w, 404, map[string]any{"message": "not found"})
+			return
+		}
+		write(w, 200, map[string]any{"name": name})
+	})
+	known := func(labels []string) bool {
+		for _, l := range labels {
+			if _, ok := f.labels[l]; !ok {
+				return false
+			}
+		}
+		return true
 	}
 	mux.HandleFunc("/repos/o/r/issues", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
@@ -188,6 +289,10 @@ func GitHub() (*httptest.Server, *Forge) {
 			}
 			if err := decode(r, &in); err != nil {
 				write(w, 422, map[string]any{"message": err.Error()})
+				return
+			}
+			if !known(in.Labels) {
+				write(w, 422, map[string]any{"message": "an issue may name only a label the repository defines"})
 				return
 			}
 			n := f.next
@@ -240,6 +345,10 @@ func GitHub() (*httptest.Server, *Forge) {
 		if v, ok := in["labels"]; ok {
 			var ls []string
 			_ = json.Unmarshal(v, &ls)
+			if !known(ls) {
+				write(w, 422, map[string]any{"message": "an issue may name only a label the repository defines"})
+				return
+			}
 			i.Labels = ls
 		}
 		write(w, 200, ghIssue(i))
@@ -257,7 +366,6 @@ func GitHub() (*httptest.Server, *Forge) {
 // labels by id.
 func Forgejo() (*httptest.Server, *Forge) {
 	f := newForge()
-	nextLabel := int64(1)
 	mux := http.NewServeMux()
 	fjLabel := func(name string) map[string]any {
 		return map[string]any{"id": f.labels[name], "name": name}
@@ -321,18 +429,18 @@ func Forgejo() (*httptest.Server, *Forge) {
 				return
 			}
 			var in struct {
-				Name string `json:"name"`
+				Name  string `json:"name"`
+				Color string `json:"color"`
 			}
-			if err := decode(r, &in); err != nil || in.Name == "" {
-				write(w, 422, map[string]any{"message": "bad label"})
+			if err := decode(r, &in); err != nil || in.Name == "" || !hexColor(in.Color) {
+				write(w, 422, map[string]any{"message": "a label needs a name and a six-digit hex color"})
 				return
 			}
 			if _, dup := f.labels[in.Name]; dup {
 				write(w, 422, map[string]any{"message": "label exists"})
 				return
 			}
-			f.labels[in.Name] = nextLabel
-			nextLabel++
+			f.define(in.Name)
 			write(w, 201, fjLabel(in.Name))
 		default:
 			write(w, 405, nil)

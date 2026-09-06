@@ -333,6 +333,9 @@ func TestMirrorMarkerRefusesRatherThanRepairs(t *testing.T) {
 		"truncated":  markerOpen + m[:len(m)-1] + markerClose,
 		"empty":      markerOpen + "" + markerClose,
 		"doubled":    body + body,
+		"no close":   markerOpen + m,
+		"cut close":  markerOpen + m + " --",
+		"fragment":   "a person's edit kept " + markerOpen + " and lost the rest",
 	}
 	for name, b := range cases {
 		if _, _, err := ParseMarker(b); !errors.Is(err, ErrMalformed) {

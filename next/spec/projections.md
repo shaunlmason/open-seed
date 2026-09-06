@@ -505,9 +505,12 @@ bytes on disk the component never opened.
 GitHub, Forgejo and the file-backed snapshot are the three registered
 exporters, behind one adapter interface (`Name`, `List`, `Create`,
 `Update`, nothing else); the registry is sealed, so an exporter the
-conformance suite never ran cannot be opened. Forgejo names labels by
-id, which the exporter resolves and creates as needed: a transport
-variance, not a contract one. Tokens come from `SEED_MIRROR_GITHUB_TOKEN`
+conformance suite never ran cannot be opened. Labels are repository
+objects on both forges, so an exporter defines a managed label through
+the label API before an issue names it (Forgejo by id, GitHub by name,
+a person's label defined meanwhile re-read rather than duplicated): a
+transport variance, not a contract one. Every forge call is bounded by
+a timeout, so an unanswered connection cannot hang an apply. Tokens come from `SEED_MIRROR_GITHUB_TOKEN`
 or `SEED_MIRROR_FORGEJO_TOKEN` (or `--token-env`), never a flag, the
 projection, the plan, the output or a fixture.
 

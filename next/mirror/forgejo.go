@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // ForgejoTokenEnv is the environment variable the Forgejo exporter
@@ -38,7 +39,7 @@ func newForgejo(cfg Config) (Adapter, error) {
 		return nil, err
 	}
 	return &forgejo{
-		c:    &forgeClient{base: cfg.BaseURL, token: tok, scheme: "token", accept: "application/json", http: http.DefaultClient},
+		c:    &forgeClient{base: strings.TrimRight(cfg.BaseURL, "/"), token: tok, scheme: "token", accept: "application/json", http: newClient()},
 		repo: "/api/v1/repos/" + cfg.Owner + "/" + cfg.Repo,
 	}, nil
 }
@@ -82,30 +83,45 @@ func (f *forgejo) List(ctx context.Context) ([]Issue, error) {
 	}
 }
 
+// loadLabels reads the repository's labels into the cache.
+func (f *forgejo) loadLabels(ctx context.Context) error {
+	f.labels = map[string]int64{}
+	for page := 1; ; page++ {
+		var got []fjLabel
+		if _, err := f.c.do(ctx, http.MethodGet, fmt.Sprintf("%s/labels?limit=50&page=%d", f.repo, page), nil, &got); err != nil {
+			return err
+		}
+		for _, l := range got {
+			f.labels[l.Name] = l.ID
+		}
+		if len(got) < 50 {
+			return nil
+		}
+	}
+}
+
 // labelIDs resolves label names to the repository's label ids,
-// creating a label the repository lacks.
+// creating a label the repository lacks. A miss re-reads the
+// repository first: a person may have defined the label since the
+// cache was filled, and Forgejo refuses a duplicate.
 func (f *forgejo) labelIDs(ctx context.Context, names []string) ([]int64, error) {
 	if f.labels == nil {
-		f.labels = map[string]int64{}
-		for page := 1; ; page++ {
-			var got []fjLabel
-			if _, err := f.c.do(ctx, http.MethodGet, fmt.Sprintf("%s/labels?limit=50&page=%d", f.repo, page), nil, &got); err != nil {
-				return nil, err
-			}
-			for _, l := range got {
-				f.labels[l.Name] = l.ID
-			}
-			if len(got) < 50 {
-				break
-			}
+		if err := f.loadLabels(ctx); err != nil {
+			return nil, err
 		}
 	}
 	ids := make([]int64, 0, len(names))
 	for _, n := range names {
 		id, ok := f.labels[n]
 		if !ok {
+			if err := f.loadLabels(ctx); err != nil {
+				return nil, err
+			}
+			id, ok = f.labels[n]
+		}
+		if !ok {
 			var made fjLabel
-			if _, err := f.c.do(ctx, http.MethodPost, f.repo+"/labels", map[string]any{"name": n, "color": "#5b6ee1"}, &made); err != nil {
+			if _, err := f.c.do(ctx, http.MethodPost, f.repo+"/labels", map[string]any{"name": n, "color": labelColor}, &made); err != nil {
 				return nil, err
 			}
 			f.labels[n] = made.ID
