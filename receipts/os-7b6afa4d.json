@@ -1,0 +1,13 @@
+{
+  "schema_version": "2.0",
+  "task": "os-7b6afa4d",
+  "plan_path": "plans/os-7b6afa4d.md",
+  "plan_sha256": "fe0bacea9e67e2dff9465f686d671a5a0065e2214fefca5e1e23cffd5c9f55da",
+  "validation_commands": [
+    "make check",
+    "sh scripts/seed workflow validate --all",
+    "sh -n scripts/check-protections.sh",
+    "GITHUB_REPOSITORY=shaunlmason/open-seed sh scripts/check-protections.sh"
+  ],
+  "generated_by": "local"
+}
