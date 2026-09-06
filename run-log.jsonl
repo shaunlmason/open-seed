@@ -1763,3 +1763,4 @@
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-7fc2ca38","ts":"2026-09-06T04:45:35Z","verb":"promote"}
 {"actor":"shaunlmason","data":{"to":"ready","transitioned":true},"task":"os-0cd18799","ts":"2026-09-06T04:49:23Z","verb":"promote"}
 {"actor":"seed-next-implementer","data":{"lease_expires":"2026-09-06T05:49:56Z"},"task":"os-0cd18799","ts":"2026-09-06T04:49:56Z","verb":"claim"}
+{"actor":"seed-next-implementer","data":{"to":"blocked","transitioned":true},"task":"os-0cd18799","ts":"2026-09-06T04:50:05Z","verb":"transition"}
