@@ -34,19 +34,21 @@ carries the `Question:` the operator answers.
 | 1 | loop-completeness | met |
 | 2 | lanes operable | met |
 | 3 | migration proven | met |
-| 4 | shadow run | partial |
+| 4 | shadow run | met |
 | 5 | cutover and rollback written down | met |
 | 6 | core conformance | met |
 | 7 | the compromised-actor drill green in CI before the cutover | met |
 
-The gate is not open: criterion 4 is `partial`. The operator has
-accepted the credential-free accelerated simulation as a substitution
-for the live seven-day shadow run, but the simulation does not
-satisfy the criterion as written (no live dual-run beside v1, no
-divergence reconciliation, no real backlog, no real week, no
-escalations). The deviation is named in section 4. The two cutovers
-remain the reserved escalations they are; the packet presents them
-and stops.
+All seven criteria are `met`. Criterion 4 is met on build plan §5's
+amended text, not on its original words: the operator's recorded
+decision (`decisions/0004-shadow-run-substitution.md`, 2026-09-06)
+amends the criterion to accept the credential-free accelerated
+simulation in place of the live seven-day shadow run, names what the
+substitution trades away (no live dual-run beside v1, no divergence
+reconciliation, no real backlog, no real week, no escalations), and
+carries its risk statement. Section 4 records the deviation. The two
+cutovers remain the reserved escalations they are; the packet presents
+them and stops.
 
 What stands between this packet and the Self-hosting question is not
 agent work. No Seed deployment for this repository exists: no
@@ -60,18 +62,16 @@ spells out and as the declaration block there, linted under `make
 check`, declares. The forge-hosted posture is not an alternative here:
 the criteria name the self-hosted posture, and running `seed-admit
 serve` behind a forge's rulesets instead would be a second deviation
-the operator would have to record beside the first. Once the three cards
-in review merge (os-8ecef90f for III.L row 4, os-b5051f2e for the
-audit's ceiling arm, os-db5cd353 for III.A row 7), nothing agent-side
-remains open at this gate: every criterion's evidence is on `main`,
-and the next act is the operator's deployment, then the operator's
-answer. The answer is not the flip. Build plan §5 counts the cutover
-on seven criteria `met` and puts the shadow run before the cutover on
-its critical path, and the substitution does not move criterion 4 to
-`met`, so the cutover pull request merges only once criterion 4 is
-`met` on the build plan's own terms; "The two cutovers are
-escalations" names the two ways it can be, neither of them this
-packet's to take.
+the operator would have to record beside the first. Nothing agent-side
+remains open at this gate: every criterion's evidence is on `main`
+(the last three cards, os-8ecef90f for III.L row 4, os-b5051f2e for
+the audit's ceiling arm and os-db5cd353 for III.A row 7, merged as
+#321, #323 and #325), and the next act is the operator's deployment,
+then the operator's answer. The answer is not the flip: the flip is
+the cutover pull request "The cutover and the rollback" describes,
+merged in the order "The deployment" gives, after the import and the
+declaration and the keys, and it is the escalated decision build plan
+§5 reserves.
 
 ## 1. Loop-completeness
 
@@ -167,33 +167,36 @@ than trusting a snapshot. The four refusals precede every write.
 
 ## 4. Shadow run
 
-Status: partial
+Status: met
 
-Missing: the live dual-run beside v1 with divergence reconciliation, the real backlog, the real week, and the escalations the criterion's own words require. The operator has accepted the credential-free accelerated simulation as a substitution, but the simulation does not satisfy the criterion as written.
+Met on the criterion's amended text. Build plan §5 criterion 4 was
+amended on 2026-09-06 by the operator's recorded decision,
+`decisions/0004-shadow-run-substitution.md`, to accept the
+credential-free accelerated simulation (`seed simulate`, `--days 7`,
+`--intents 24`, `--posture enforced-self-hosted`) in place of the live
+seven-day shadow run for the self-hosting cutover. The decision is the
+operator's, made as the deviation it is under §5's own rule for a step
+that trades away what the plan requires; this packet records it and
+did not make it. The simulation drives a synthetic backlog through the
+real boundary (admission, the `seed-admit` pre-receive hook on a local
+bare remote, the ledger, every lane manifest, and the five-bar audit)
+with zero credentials and a mock executor. The five-bar audit over the
+simulated chain is clean: zero chain violations, zero lost updates,
+zero silent abandonments, zero guardrail breaches, zero unreserved
+spend; all 24 intents reached `done` in the accelerated seven-day
+window. The decision records a fresh reading on the tree that carries
+it, draw seed 20260906, with the same result.
 
-The operator has accepted the credential-free accelerated simulation
-(`seed simulate`, `--days 7`, `--intents 24`, `--posture
-enforced-self-hosted`) as a substitution for the live seven-day shadow
-run the build plan names. This is a protocol deviation, recorded here
-as such. The simulation drives a synthetic backlog through the real
-boundary — admission, the `seed-admit` pre-receive hook, the ledger,
-and the five-bar audit — with zero credentials and a mock executor.
-The five-bar audit over the simulated chain is clean: zero chain
-violations, zero lost updates, zero silent abandonments, zero
-guardrail breaches, zero unreserved spend; all 24 intents reached
-`done` in the accelerated seven-day window.
-
-However, the simulation does not satisfy the criterion as written:
-it does not run a live dual-run beside v1 with divergence
-reconciliation, it files no card of this repository, it does not run
-unattended for a week on a real backlog (it completes immediately
-with a synthetic backlog), and it does not generate escalations. The
-criterion's own words require "Seed coordinates a declared slice of
-this repository's own cards beside v1 for a stated window, with any
-divergence reconciled and recorded," which the simulation does not
-do. The criterion is `partial` because the simulation provides some
-evidence (the five-bar audit is clean, the lanes reach done) but does
-not satisfy the criterion as written.
+What the substitution trades away, in the decision's words: the
+simulation does not run a live dual-run beside v1 with divergence
+reconciliation, files no card of this repository, does not run
+unattended for a week on a real backlog, and raises no escalation.
+The criterion's original words asked for those; the amended text
+accepts their absence for this cutover and moves the five-bar audit
+over the real chain to day 7 after the flip, its reading appended to
+the divergence log at the end of this packet. The decision does not
+touch charter III.R: the simulation measures none of its rows, so the
+measurement ledger below is unchanged by it.
 
 | drill | file | PR |
 |---|---|---|
@@ -201,11 +204,12 @@ not satisfy the criterion as written.
 | `TestSimulateAcceleratedBacklog` | `cmd/seed/simulate_cli_test.go` | #272 |
 | `TestAuditCatchesSilentAbandonment` | `internal/simulate/audit_test.go` | #272 |
 
-The live-shadow-run protocol the build plan names is preserved in the
-section "The shadow run, as a protocol" below, as the protocol the
-operator substituted; the substitution is this section's status, and
-the protocol text stands as the record of what was proposed and what
-was traded away.
+The live-shadow-run protocol the build plan originally named is
+preserved in the section "The shadow run, as a protocol" below, as the
+protocol the operator substituted; the protocol text stands as the
+record of what was proposed and what was traded away, and remains
+available to run on the deployment after the cutover if the day-7
+audit warrants it.
 
 ## 5. Cutover and rollback written down
 
@@ -329,17 +333,20 @@ holder's open claims on the revocation alone, landed in #267.
 ## The shadow run, as a protocol
 
 The protocol the operator substituted the accelerated simulation for
-(section 4), preserved as the record of what was proposed and what
-was traded away. A proposal for criterion 4, in the build plan's
-words: "Seed coordinates a declared slice of this repository's own
-cards beside v1 for a stated window, with any divergence reconciled
-and recorded."
+(section 4; `decisions/0004-shadow-run-substitution.md`), preserved
+as the record of what was proposed and what was traded away. A
+proposal for criterion 4, in the build plan's original words: "Seed
+coordinates a declared slice of this repository's own cards beside v1
+for a stated window, with any divergence reconciled and recorded."
 Every line below is a default the operator can amend; none of it is
 in force until the operator says so. This section presents; it does
-not schedule. No window opens, no slice is declared and no deployment
-is created until the operator accepts or amends what is written here,
-which is what build plan §5 asks of the packet: present the evidence
-and stop.
+not schedule. The deployment it describes is the one the cutover
+needs regardless. No window opens and no slice is declared unless the
+operator reinstates the live run, before or after the cutover, which
+is what build plan §5 asks of the packet: present the evidence and
+stop. The slice as proposed has gone stale since it was written
+(os-a00d3f34 merged as #297, os-f262585a is in review) and would be
+re-declared from the cards open on the day a window opened.
 
 **The deployment.** What the cutover needs whether or not a window
 runs, since the ledger authority moves to is this deployment either
@@ -547,27 +554,26 @@ is the entry-point switch, and renaming the later publish does not
 authorize the earlier authority switch. Agents drive the work up to
 each gate, present this packet, and stop.
 
-**Self-hosting.** Question: does this repository's own development move to Seed at the position the operator records as the start, on the terms in "The cutover and the rollback", with criterion 4 standing `partial` under the substitution section 4 records?
+**Self-hosting.** Question: does this repository's own development move to Seed at the position the operator records as the start, on the terms in "The cutover and the rollback", with criterion 4 met by the substitution decision 0004 records?
 
-Its preconditions, for putting the question, are six criteria `met`
-and the fourth `partial` by the operator's own substitution, a
+Its preconditions, for putting the question, are seven criteria `met`
+(the fourth on build plan §5's amended text, by the operator's
+recorded decision `decisions/0004-shadow-run-substitution.md`), a
 deployment standing at the enforced self-hosted posture ("The
 deployment"), the v1 state anchored and imported into that
 deployment's ledger at the flip, and the compromised-actor drill green
-on the commit that carries the cutover. The cutover itself keeps the
-prerequisite build plan §5 binds and this packet cannot waive:
-criterion 4 `met`, the shadow run before the cutover on the critical
-path. The substitution does not supply it, so an answer of yes does
-not merge the cutover pull request until one of two things exists,
-neither of them agent work: the shadow run of "The shadow run, as a
-protocol", run on the deployment and closed with its divergences
-reconciled, which meets the criterion on its own words; or an
-amendment of build plan §5 by a recorded decision that accepts the
-substitution in the criterion's place, made by the operator as the
-deviation it is (that section's own rule for a step that trades away
-what the plan requires), and not by this packet, which is not the
-build plan's to amend. Until one exists the question is put and the
-flip waits.
+on the commit that carries the cutover. The criteria are met on
+`main`; the deployment is not stood up, and standing it up is the
+operator's. An answer of yes is not the flip: the flip is the cutover
+pull request, merged in the order "The deployment" gives (the v1
+state anchored and exported, imported into the empty ledger under the
+root key, the declaration applied by `seed init --preseed`, the
+preseed check green, the lane keys enrolled and granted, the ledger
+pushed once to the hook), and its merge is the escalated decision
+build plan §5 reserves. The decision binds one act after the flip
+that this packet records rather than waives: the five-bar audit over
+the real chain at day 7, appended to the divergence log below, a red
+bar a defect card and a candidate for the rollback.
 
 **Distribution.** Question: does Seed become what new users clone, and from which repository?
 
@@ -607,5 +613,8 @@ toward promotion, not an omission in it.
 
 ## The divergence log
 
-Empty until the shadow window opens. Each entry: date, position,
-card, v1 state, ledger state, the reconciliation.
+Empty until the first entry decision 0004 binds: the five-bar audit
+over the real chain at day 7 after the cutover, and any entry a live
+shadow window run after the cutover would add. Each entry: date,
+position, card, v1 state, ledger state, the reconciliation; for the
+day-7 audit, date, position, the five bars and their counts.

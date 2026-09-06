@@ -460,6 +460,15 @@ posture:
    against a real export of *this* repository's v1 state, not only a fixture.
 4. **Shadow run.** Seed coordinates a declared slice of this repository's own cards
    beside v1 for a stated window, with any divergence reconciled and recorded.
+   *Amended 2026-09-06 by
+   [`decisions/0004-shadow-run-substitution.md`](../decisions/0004-shadow-run-substitution.md):
+   for the self-hosting cutover the operator accepts the credential-free accelerated
+   simulation (`seed simulate --days 7 --intents 24 --posture enforced-self-hosted`,
+   five-bar audit clean) in this criterion's place. The decision names what the
+   substitution trades away, carries its risk statement, and moves the five-bar audit
+   over the real chain to day 7 after the cutover. The live protocol stays written
+   down in the packet; this is a recorded deviation, not a reading of the original
+   words.*
 5. **Cutover and rollback written down.** Which entry point flips when, what stays
    authoritative where during the window, and the documented path back.
 6. **Core conformance.** Phases 0 through 12 complete, so every pillar's mechanisms
@@ -484,9 +493,10 @@ be accepted by a human as the deviation it is, never presented as consistent wit
 this phasing.
 
 **Critical path.** Phase 9 (including item 5) → Phases 10 and 11, which both declare
-`deps: 9` and therefore run in parallel with each other → Phase 12 in full → shadow
-run → the escalated self-hosting cutover → the escalated distribution step. Phase 13
-follows. Promotion is gated by four more phases, not one.
+`deps: 9` and therefore run in parallel with each other → Phase 12 in full →
+criterion 4's evidence (the shadow run, or the accelerated simulation decision 0004
+accepts in its place) → the escalated self-hosting cutover → the escalated
+distribution step. Phase 13 follows. Promotion is gated by four more phases, not one.
 
 This section is the plan's, not the charter's: it schedules and defines a milestone
 and is never itself a Part III criterion.
