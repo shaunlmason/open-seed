@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -168,7 +169,8 @@ func (s *Store) GetSealed(commitment string) ([]byte, error) {
 
 // Erase removes the bytes a digest keys, in whichever buckets hold
 // them: the sealed ciphertext under the commitment, the content under
-// the digest, or both. It returns the buckets it emptied ("sealed",
+// the digest, the raw-export sidecar a shape digest names, or any of
+// them. It returns the buckets it emptied ("sealed",
 // "content"), empty when nothing was stored, which is not an error:
 // the erasure record is the attribution (plans/os-db5cd353.md D5), and
 // an erasure after the fact is still an erasure. This is the charter's
@@ -184,6 +186,7 @@ func (s *Store) Erase(digest string) ([]string, error) {
 	for _, b := range []struct{ name, path string }{
 		{"sealed", s.sealedPath(digest)},
 		{"content", s.path(digest)},
+		{"trace_raw", s.tracePath(digest)},
 	} {
 		if _, err := os.Stat(b.path); err != nil {
 			if os.IsNotExist(err) {
@@ -197,4 +200,70 @@ func (s *Store) Erase(digest string) ([]string, error) {
 		removed = append(removed, b.name)
 	}
 	return removed, nil
+}
+
+// The trace bucket (plans/os-7fc2ca38.md D5; next/spec/verdicts.md
+// "Trace-shaped evidence") sits beside the content-addressed tree as
+// the sealed bucket does: under a shape digest, the digest of the raw
+// export the shape was normalized from. The shape is content the
+// receipt binds and check verifies; the raw export is bulk the
+// verifier stored beside it for a reader, content-addressed on its
+// own, reachable only through this pointer, and erasable on its own
+// digest without touching the shape. Nothing on the ledger or in a
+// receipt names the raw digest, because it never reproduces.
+
+func (s *Store) tracePath(shape string) string {
+	return filepath.Join(s.root, "traces", shape)
+}
+
+// PutTraceRaw records raw as the sidecar of shape: both are digests of
+// content the caller already put.
+func (s *Store) PutTraceRaw(shape, raw string) error {
+	if !digestRE.MatchString(shape) || !digestRE.MatchString(raw) {
+		return fmt.Errorf("artifact store: %q -> %q is not a pair of lowercase-hex sha256 digests", shape, raw)
+	}
+	dst := s.tracePath(shape)
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(dst), "trace-*")
+	if err != nil {
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	if _, err := tmp.WriteString(raw + "\n"); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	if err := os.Rename(tmp.Name(), dst); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("artifact store: %w", err)
+	}
+	return nil
+}
+
+// TraceRaw returns the raw export's digest recorded as the sidecar of
+// shape, or "" with no error when no sidecar was recorded (a shape
+// checks the same either way). The pointer names content; whether the
+// content is still held is Get's answer.
+func (s *Store) TraceRaw(shape string) (string, error) {
+	if !digestRE.MatchString(shape) {
+		return "", fmt.Errorf("artifact store: %q is not a lowercase-hex sha256 digest", shape)
+	}
+	b, err := os.ReadFile(s.tracePath(shape))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("artifact store: %w", err)
+	}
+	raw := strings.TrimSpace(string(b))
+	if !digestRE.MatchString(raw) {
+		return "", fmt.Errorf("artifact store: the sidecar under %s names %q, not a digest", shape, raw)
+	}
+	return raw, nil
 }

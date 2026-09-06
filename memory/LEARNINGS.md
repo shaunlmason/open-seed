@@ -2117,7 +2117,18 @@ failed step skips the rest of the job.
   Read the declaration back off the remote's default-branch tip the way
   the hook does and pass it through — the invariant then holds under a
   live guardrail, not an absent one.
-<<<<<<< HEAD
+- 2026-09-06 (os-405d3b20): Go's `flag` package stops at the first
+  non-flag argument, so a `seed` verb that takes free text must take
+  it LAST (`knowledge search --ledger … <query>...`); a usage string
+  that shows the positional first documents an order the parser
+  refuses. Every existing verb already follows flags-then-positional
+  (`knowledge lint --ledger … <file>`); match it rather than
+  hand-rolling a reorder.
+- 2026-09-06 (os-405d3b20): a lexical index over promoted lessons must
+  read each file at its promotion anchor (`git show <commit>:<path>`),
+  not from the working tree: the digest in the fact binds the anchor's
+  bytes, and an index over the checkout would rank text nobody
+  reviewed. The same `Verify` delivery uses is the gate for indexing.
 - 2026-09-06 (os-7b6afa4d): the GitHub **rulesets list** endpoint
   (`GET /rulesets`) carries only name/target/enforcement/id: the ref
   patterns (`conditions.ref_name.include`) and rule types live on the
@@ -2132,18 +2143,13 @@ failed step skips the rest of the job.
   name — a sh+git writer can mint it without the engine (a self-contained
   temp repo, not a worktree of the caller's, so the commit roots in the
   right history and the push fast-forwards the protected ref).
-=======
-- 2026-09-06 (os-405d3b20): Go's `flag` package stops at the first
-  non-flag argument, so a `seed` verb that takes free text must take
-  it LAST (`knowledge search --ledger … <query>...`); a usage string
-  that shows the positional first documents an order the parser
-  refuses. Every existing verb already follows flags-then-positional
-  (`knowledge lint --ledger … <file>`); match it rather than
-  hand-rolling a reorder.
-- 2026-09-06 (os-405d3b20): a lexical index over promoted lessons must
-  read each file at its promotion anchor (`git show <commit>:<path>`),
-  not from the working tree: the digest in the fact binds the anchor's
-  bytes, and an index over the checkout would rank text nobody
-  reviewed. The same `Verify` delivery uses is the gate for indexing.
-
->>>>>>> origin/main
+- 2026-09-06 (os-7fc2ca38): a receipt field must reproduce from a fresh
+  run or it cannot be in the receipt at all: `verdict check` compares
+  the whole canonical digest. Anything per-run (ids, timestamps, a raw
+  export's digest) goes to the artifact store as a sidecar the receipt
+  never names. Normalize first, digest second, and let the acceptance
+  spec declare (allowlist) what survives normalization.
+- 2026-09-06 (os-7fc2ca38): `internal/verdict`'s test helper `gated(spec,
+  commit)` ignores its first argument and always anchors `accept.md`;
+  a drill on a second spec file needs its own helper or the wrong spec
+  runs silently green.

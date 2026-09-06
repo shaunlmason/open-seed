@@ -146,3 +146,14 @@ the client's reconciled tip inside the pushed 2026-09-04.jsonl) needs
 more than the split. The drill stays as a regression; the loop's
 seventh shape keeps the refused tree, so the next occurrence is read
 rather than guessed.
+- 2026-09-06 (os-7fc2ca38): **the raw trace export's digest in the
+  receipt**, as the build plan's §3 entry first wrote it. The receipt's
+  digest is what `verdict check` recomputes and compares, and a raw
+  OTLP export carries fresh span ids and timestamps on every run, so
+  the receipt would never reproduce and every L3 verdict over a traced
+  spec would grade `independence_unverified`. The shape digest went in
+  the receipt instead and the raw export became a store-side sidecar
+  the receipt never names. Putting the raw digest on
+  `verdict.rendered` was the second shape considered and rejected: the
+  payload is a strict object, so the field would have been a `seed/8`
+  bump for a reference the shape already covers.
