@@ -1838,3 +1838,4 @@
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-53650015","ts":"2026-09-06T10:24:04Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-ef2e3134","ts":"2026-09-06T10:24:08Z","verb":"close"}
 {"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-f0ae2cdf","ts":"2026-09-06T10:24:11Z","verb":"close"}
+{"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-29e2fef2","ts":"2026-09-06T11:22:10Z","verb":"transition"}
