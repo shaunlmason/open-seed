@@ -1853,3 +1853,4 @@
 {"actor":"seed-next-implementer","data":{"title":"next: the interleaving explorer over verdict-then-merge reconciliation and racing mode (the follow-on os-07e6e76c named)"},"task":"os-873b5153","ts":"2026-09-07T06:08:34Z","verb":"create"}
 {"actor":"seed-next-implementer","data":{"comment_id":"cm-00ab13e2","kind":"comment"},"task":"os-873b5153","ts":"2026-09-07T06:08:52Z","verb":"comment"}
 {"actor":"seed-next-implementer","data":{"title":"next: tool-edge authority passes over a declared policy map (backlog, §II.5 capability scoping, §II.9 executor adapters, §II.10 least standing capability)"},"task":"os-a8d51baf","ts":"2026-09-07T06:09:29Z","verb":"create"}
+{"actor":"seed-next-implementer","data":{"comment_id":"cm-1785a1db","kind":"comment"},"task":"os-46f19906","ts":"2026-09-07T06:09:40Z","verb":"comment"}
