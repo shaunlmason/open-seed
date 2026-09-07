@@ -38,6 +38,14 @@ jobs:
       - name: 'The admission random walk at the scheduled size'
         run: go test ./internal/admit -run TestAdmissionRandomWalk -count=1 -args -walks=200 -steps=96
         working-directory: next
+      # The append-loop interleaving check at the scheduled size
+      # (plans/os-07e6e76c.md D5): the fast gate's four configurations
+      # plus four writers with four attempts, and every terminal trace of
+      # the replay configurations driven through real clients. A red run
+      # names the trace.
+      - name: 'The append-loop interleaving check at the scheduled size'
+        run: go test ./internal/gitref -run 'TestAppendInterleavings|TestAppendInterleavingReplay' -count=1 -args -writers=4 -attempts=4 -replay=0
+        working-directory: next
       - name: 'Attach the reading, pass or fail'
         if: always()
         uses: actions/upload-artifact@v4
