@@ -1862,3 +1862,4 @@
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-b86dab4c","ts":"2026-09-07T06:26:13Z","verb":"accept"}
 {"actor":"seed-maintenance","data":{"failures":3},"task":"","ts":"2026-09-07T06:52:10Z","verb":"halt"}
 {"actor":"shaunlmason","task":"","ts":"2026-09-07T07:18:54Z","verb":"state-resume"}
+{"actor":"seed-next-implementer","data":{"title":"the frontier's status words drift: twenty stale claims in next/docs/progress.md, and nothing checks them"},"task":"os-d82cd66c","ts":"2026-09-07T07:19:43Z","verb":"create"}
