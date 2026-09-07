@@ -1884,3 +1884,4 @@
 {"actor":"seed-maintenance","data":{"auto_path":"plan_unblock","removed":"plan:368","to":"ready"},"task":"os-f11601e0","ts":"2026-09-07T12:38:36Z","verb":"plan-unblock"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-c2095601","kind":"pr"},"task":"os-873b5153","ts":"2026-09-07T12:40:48Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-be68b5df","kind":"receipt"},"task":"os-873b5153","ts":"2026-09-07T12:40:55Z","verb":"attach-evidence"}
+{"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-873b5153","ts":"2026-09-07T12:40:59Z","verb":"transition"}
