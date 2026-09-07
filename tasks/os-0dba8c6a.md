@@ -1,12 +1,17 @@
 ---
 id: os-0dba8c6a
 title: 'plan PR: os-2e34f66a''s dangling obligations.md citation'
-state: review
+state: done
 priority: P3
 squad: core
 author: seed-next-implementer
+review:
+    reviewer: shaunlmason
+    reviewed_at: "2026-09-07T06:26:03Z"
+    outcome: accepted
+    evidence: https://github.com/shaunlmason/open-seed/pull/319 merged as e848631
 created_at: "2026-09-04T13:15:10Z"
-updated_at: "2026-09-04T21:28:58Z"
+updated_at: "2026-09-07T06:26:03Z"
 ---
 
 plans/os-2e34f66a.md line 130 writes ([`obligations.md`](obligations.md)) inside a plan file, so the target resolves against plans/, where no such file is. The document it means is next/spec/obligations.md, and the correction is one link target: `](obligations.md)` becomes `](../next/spec/obligations.md)`. The plan's substance does not change.
