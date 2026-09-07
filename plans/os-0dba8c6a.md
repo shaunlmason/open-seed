@@ -15,8 +15,15 @@ work.
 
 `plans/os-2e34f66a.md` line 130 wrote ``([`obligations.md`](obligations.md))``
 inside a plan file, so the relative target resolved against `plans/`, where no
-such file is. The document it meant is `next/spec/obligations.md`. The citation
-checker os-5fe43832 landed (`seed docs check`) is what surfaced it.
+such file is. The document it meant is `next/spec/obligations.md`.
+
+The manual sweep of 2026-09-04 (os-5fe43832's card) is what surfaced it, **not**
+the gate that card landed. `seed docs check` does not read `plans/` at all:
+`next/internal/docs/citations.go` lists it in `governedElsewhere`, because a
+whole-tree gate refusing a citation under `plans/` would be unsatisfiable while
+a plan file may change only through its own plan PR. Dangling citations there
+stay real, stay carded, and are repaired by a plan PR, which is what this card
+was.
 
 ## Steps
 
@@ -33,17 +40,20 @@ No other file: the card is a citation repair, not a behavior change.
 
 ## Acceptance Criteria
 
-- The citation in `plans/os-2e34f66a.md` resolves to a path the tree holds.
-- `seed docs check` reports no drift and no unresolvable relative citation.
+- The citation in `plans/os-2e34f66a.md` resolves, from `plans/`, to a path the
+  tree holds.
 - No behavior, spec or conformance row moves: the diff is one link target.
+- The whole-tree citation gate is untouched and still excludes `plans/`: this
+  card repairs one citation, it does not widen the gate's scope.
 
 ## Validation Commands
 
 - `git show e848631 --stat`: exactly one file changed,
   `plans/os-2e34f66a.md`, one insertion and one deletion.
-- `grep -n 'obligations.md' plans/os-2e34f66a.md`: the target resolves from
-  `plans/`, so the link is not the bare `obligations.md` that failed.
-- `cd next && go run ./cmd/seed docs check --root ..`: exits 0 with an empty
-  `drift` array, the gate that would have caught the original.
+- `grep -c '](\.\./next/spec/obligations\.md)' plans/os-2e34f66a.md`: the link
+  names that exact relative target, not the bare `obligations.md` that failed.
+- `test -f next/spec/obligations.md`: that target, resolved from `plans/`, is a
+  path the tree holds. The two together resolve the link; neither alone does,
+  and `seed docs check` cannot, since it does not read `plans/`.
 - Evidence record: card `os-0dba8c6a` review block, accepted by `shaunlmason`
   2026-09-07T06:26:03Z, evidence PR #319 merged as `e848631`.
