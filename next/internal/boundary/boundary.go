@@ -22,6 +22,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gowebpki/jcs"
+
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
 	"github.com/shaunlmason/open-seed/next/internal/request"
@@ -129,9 +131,19 @@ func Render(cfg *posture.Config, name string) (*Card, error) {
 	return c, nil
 }
 
-// Canonical is the card's JCS-canonical bytes without its signature:
-// object members sorted, no whitespace, no HTML escaping, the value
-// domain strings and arrays only.
+// Canonical is the card's RFC 8785 (JCS) bytes without its signature,
+// through the same transform the event model signs over
+// (internal/event.Canonical). One canonicalizer for the tree: a
+// signature made here is one an independent JCS verifier reconstructs.
+//
+// It was hand-rolled once, on the reasoning that a compact encoding
+// with sorted members and no HTML escaping is JCS-canonical for a
+// value domain of strings and arrays (next/docs/decisions.md,
+// "Canonical bytes without a JCS library"). That premise is false for
+// the string domain: encoding/json escapes U+2028 and U+2029, which
+// JCS emits literally, and check constrains Name only to be
+// non-empty, so a deployment name carrying either character signed
+// over bytes no other implementation produces.
 func (c *Card) Canonical() ([]byte, error) {
 	unsigned := *c
 	unsigned.Signature = ""
@@ -144,13 +156,11 @@ func (c *Card) Canonical() ([]byte, error) {
 		return nil, err
 	}
 	delete(generic, "signature")
-	var out bytes.Buffer
-	enc := json.NewEncoder(&out)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(generic); err != nil {
+	stripped, err := json.Marshal(generic)
+	if err != nil {
 		return nil, err
 	}
-	return bytes.TrimRight(out.Bytes(), "\n"), nil
+	return jcs.Transform(stripped)
 }
 
 // Sign sets the signer and the signature from the operator key.

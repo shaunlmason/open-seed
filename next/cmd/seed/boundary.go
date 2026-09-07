@@ -40,15 +40,78 @@ import (
 // re-renders and diffs it (`boundary check`).
 const DefaultCardPath = "boundary/card.json"
 
+// readPublicKey resolves the operator public key a reader was given
+// out of band, from a hex string or a file holding one
+// (plans/os-f11601e0.md D5). It is the only way a signature is checked,
+// because the key never comes from the card: a card that carried the
+// key that signed it would prove nothing.
+func readPublicKey(hexKey, path string) (ed25519.PublicKey, *envelope.Envelope) {
+	text := hexKey
+	if path != "" {
+		if text != "" {
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", "give --pubkey or --pubkey-file, not both")
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --pubkey-file: %v", err))
+		}
+		text = string(raw)
+	}
+	key, err := hex.DecodeString(strings.TrimSpace(text))
+	if err != nil || len(key) != ed25519.PublicKeySize {
+		return nil, envelope.Fail(envelope.ExitUsage, "usage", "the operator key is an ed25519 public key in hex")
+	}
+	return ed25519.PublicKey(key), nil
+}
+
+// runBoundaryVerify is the reader's half of the boundary
+// (plans/os-f11601e0.md D5; next/spec/boundary.md): a stranger holding
+// a fetched card and the operator key it was given out of band checks
+// one against the other. It takes no declaration and no name, because
+// the stranger has neither — `boundary check` is the publisher's verb
+// and needs both.
+func runBoundaryVerify(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("boundary verify", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	cardPath := fs.String("card", DefaultCardPath, "the card to verify")
+	pub := fs.String("pubkey", "", "the operator's public key (hex), given out of band")
+	pubFile := fs.String("pubkey-file", "", "a file holding that key")
+	if err := fs.Parse(args); err != nil || (*pub == "" && *pubFile == "") || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage",
+			"boundary verify requires --pubkey <hex> or --pubkey-file <path> [--card <file>]"), stdout, stderr)
+	}
+	key, failEnv := readPublicKey(*pub, *pubFile)
+	if failEnv != nil {
+		return render(failEnv, stdout, stderr)
+	}
+	raw, err := os.ReadFile(*cardPath)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitNotFound, "not_found", fmt.Sprintf("no card at %s", *cardPath)), stdout, stderr)
+	}
+	card, err := boundary.Parse(raw)
+	if err != nil {
+		return render(boundaryEnvelope(err), stdout, stderr)
+	}
+	if err := boundary.Verify(card, key); err != nil {
+		return render(boundaryEnvelope(err), stdout, stderr)
+	}
+	return render(envelope.OK(map[string]any{
+		"card": *cardPath, "name": card.Name, "signer": card.Signer,
+		"protocol": card.Protocol, "verified": true,
+	}), stdout, stderr)
+}
+
 func runBoundary(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "boundary requires a subverb: card, check, serve, tasks, fetch"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "boundary requires a subverb: card, check, verify, serve, tasks, fetch"), stdout, stderr)
 	}
 	switch args[0] {
 	case "card":
 		return runBoundaryCard(args[1:], stdout, stderr)
 	case "check":
 		return runBoundaryCheck(args[1:], stdout, stderr)
+	case "verify":
+		return runBoundaryVerify(args[1:], stdout, stderr)
 	case "serve":
 		return runBoundaryServe(args[1:], stdout, stderr)
 	case "tasks":
@@ -56,7 +119,7 @@ func runBoundary(args []string, stdout, stderr io.Writer) int {
 	case "fetch":
 		return runBoundaryFetch(args[1:], stdout, stderr)
 	}
-	return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown boundary subverb %q — card, check, serve, tasks, fetch", args[0])), stdout, stderr)
+	return render(envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown boundary subverb %q — card, check, verify, serve, tasks, fetch", args[0])), stdout, stderr)
 }
 
 func readOperatorKey(path string) (ed25519.PrivateKey, *envelope.Envelope) {
@@ -130,8 +193,9 @@ func runBoundaryCheck(args []string, stdout, stderr io.Writer) int {
 	cardPath := fs.String("card", DefaultCardPath, "the checked-in card")
 	name := fs.String("name", "", "the deployment's name the card must carry")
 	pub := fs.String("pubkey", "", "the operator's public key (hex), to verify the signature")
+	pubFile := fs.String("pubkey-file", "", "a file holding that key")
 	if err := fs.Parse(args); err != nil || *config == "" || *name == "" || fs.NArg() != 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "boundary check requires --config <file> --name <name> [--card <file>] [--pubkey <hex>]"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "boundary check requires --config <file> --name <name> [--card <file>] [--pubkey <hex> | --pubkey-file <path>]"), stdout, stderr)
 	}
 	cfg, err := posture.Load(*config)
 	if err != nil {
@@ -162,16 +226,27 @@ func runBoundaryCheck(args []string, stdout, stderr io.Writer) int {
 	if string(gotCanon) != string(wantCanon) {
 		return render(envelope.Fail(envelope.ExitDrift, "card_drift", fmt.Sprintf("%s does not say what the declaration renders: re-render it with boundary card", *cardPath)), stdout, stderr)
 	}
-	if *pub != "" {
-		key, err := hex.DecodeString(strings.TrimSpace(*pub))
-		if err != nil || len(key) != ed25519.PublicKeySize {
-			return render(envelope.Fail(envelope.ExitUsage, "usage", "--pubkey is the operator's ed25519 public key in hex"), stdout, stderr)
+	// The gate this verb backs is a CONTENT gate unless a key is given
+	// (plans/os-f11601e0.md D1): with no key it proves the card says
+	// what the declaration renders, and nothing about who signed it.
+	// The repository's own `make check` runs it that way deliberately,
+	// because the tree holds no operator key to check against; a reader
+	// supplies one out of band, through `boundary verify`.
+	verified := *pub != "" || *pubFile != ""
+	if verified {
+		key, failEnv := readPublicKey(*pub, *pubFile)
+		if failEnv != nil {
+			return render(failEnv, stdout, stderr)
 		}
-		if err := boundary.Verify(card, ed25519.PublicKey(key)); err != nil {
+		if err := boundary.Verify(card, key); err != nil {
 			return render(boundaryEnvelope(err), stdout, stderr)
 		}
 	}
-	return render(envelope.OK(map[string]any{"card": *cardPath, "name": card.Name, "signer": card.Signer, "verified": *pub != ""}), stdout, stderr)
+	result := map[string]any{"card": *cardPath, "name": card.Name, "signer": card.Signer, "verified": verified}
+	if !verified {
+		result["note"] = "content only: the card says what the declaration renders. No key was given, so nothing here checks who signed it; a reader supplies the operator key out of band and runs `seed boundary verify`."
+	}
+	return render(envelope.OK(result), stdout, stderr)
 }
 
 // boundaryService is the read-only surface: a clone (the ledger dir,

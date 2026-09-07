@@ -2266,3 +2266,35 @@ failed step skips the rest of the job.
   `Deps.AppendAt`); an offer whose `expires` is computed from another
   clock than the record's `ts` can be born dead under admission's
   strictly-after rule.
+- 2026-09-07 (os-f11601e0): "the value domain is only strings and
+  arrays, so a compact sorted encoding is JCS-canonical" is false. Go's
+  `encoding/json` escapes U+2028 and U+2029 unconditionally, even with
+  `SetEscapeHTML(false)`; RFC 8785 emits them literally. Any
+  hand-rolled canonicalizer over a string domain diverges the moment an
+  input carries either character, and a validator that constrains a
+  field only to be non-empty admits both. One canonicalizer per tree,
+  through the library, is the only version of this that stays true.
+- 2026-09-07 (os-f11601e0): a signature-verifying function with no
+  caller but an optional flag is an unenforced capability wearing the
+  shape of a gate. The tell is the success envelope: an OK carrying
+  `"verified": false` is a gate reporting that it checked nothing. Say
+  so in the envelope and in the spec, or someone reads the exit code
+  and believes the signature was checked.
+- 2026-09-07 (os-f11601e0): a public key checked in beside the artifact
+  it authenticates, on neither the `protected` list nor `CODEOWNERS`,
+  is worse than no key: both files move in one non-owner change and the
+  gate still passes, having verified only that the card matches
+  whichever key the last committer supplied. Pin the key and the
+  protection in the same change, or pin neither.
+- 2026-09-07 (os-f11601e0): to prove a canonicalization swap invalidates
+  no signature, assert the bytes, not the verification. The fixture
+  card's signing key is a throwaway kept out of the tree, so nothing in
+  the repository can verify that card; a test that tried would have had
+  to skip, and a skipped test in place of a measurement reads as
+  coverage. Capture the byte length and digest before touching the
+  code, and let the test say in its comment why it stops there.
+- 2026-09-07 (os-f11601e0): a property test written after the fix is
+  worth nothing until it is run against the code the fix replaced.
+  Revert the body, watch it fail at exactly the cases the defect
+  predicts, restore. Cheap, and it is the difference between a
+  regression test and a tautology.

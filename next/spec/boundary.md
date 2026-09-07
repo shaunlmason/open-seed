@@ -34,9 +34,15 @@ strict object of exactly these fields (the pin `CardFields`):
 - `artifacts` — the kinds a task returns: `receipt`, `plan`, `body`,
   each by digest;
 - `signer`, `signature` — the operator key's fingerprint and its
-  ed25519 signature, lowercase hex, over the card's canonical bytes
-  without the signature (object members sorted, no whitespace, no
-  HTML escaping).
+  ed25519 signature, lowercase hex, over the card's **RFC 8785 (JCS)**
+  bytes without the signature.
+
+The canonical form is RFC 8785 exactly, through the same transform the
+event model signs over: one canonicalizer for the tree, so a signature
+made here is one an independent JCS verifier reconstructs. A compact
+`encoding/json` encoding with sorted members is *not* a substitute:
+Go escapes U+2028 and U+2029 where JCS emits them literally, and a
+card's `name` may carry either.
 
 The card carries no fingerprint but the signer's, no lane manifest,
 no fragment, no prompt, no budget, no position. Refused
@@ -47,14 +53,42 @@ that is no request kind; an artifact kind a task does not publish.
 
 **Publication is bound.** The card is checked in at
 `next/boundary/card.json`, the file `seed boundary card` writes;
-`seed boundary check --config --name [--card] [--pubkey]` re-renders
-the content from the declaration and diffs it (`card_drift`, exit 28,
-on a stale card) and, given the operator's public key, verifies the
-signature. `make check` runs the check over the repository's own
-fixture deployment, so a declaration that moved without its card fails
-the gate. The boundary surface serves the same file at `/card`. A
-reader verifies against the operator key it was given out of band, and
-against no other.
+`seed boundary check --config <declaration> --name <name> [--card]
+[--pubkey <hex> | --pubkey-file <path>]` re-renders the content from
+the declaration and diffs it (`card_drift`, exit 28, on a stale card)
+and, given the operator's public key, verifies the signature. The
+boundary surface serves the same file at `/card`.
+
+**The repository's gate is a content gate, and says so.** `make check`
+runs `boundary check` over the fixture deployment with no key, so what
+it proves is that the card says what the declaration renders: a
+declaration that moved without its card fails, and nothing there checks
+who signed the card. The success envelope reports `"verified": false`
+and a note saying as much. This is deliberate: verifying a signature
+needs a public key, and the tree holds none, because a card's key is
+exchanged out of band by people rather than published beside the thing
+it authenticates.
+
+**A key pinned in-tree is a trust anchor or it is nothing.** Should a
+deployment ever check its operator's public key in beside its card, the
+key file joins the declaration's `protected` list and `CODEOWNERS` in
+the same change that introduces it. A key on neither list can be
+swapped together with the card in one non-owner change, and a gate
+reading it would still pass: it would verify that the card matches
+whichever key the last committer supplied, which is no property at all.
+
+**The reader's half takes no declaration.** `seed boundary verify
+--card <file> --pubkey <hex> | --pubkey-file <path>` parses a fetched
+card, verifies its signature against the operator key given out of
+band, and reports the signer. It takes no `--config` and no `--name`,
+because a stranger holding a card from someone else's `/card` has
+neither: `boundary check` is the publisher's verb, comparing a card
+against the declaration that renders it, and only the publisher has
+that declaration. A card that does not verify is `card_refused`
+(exit 3), never `card_drift`: drift is the publisher's finding that its
+own card is stale, and a reader is not in a position to make it. The
+key never comes from the card, and no flag lets it: a card that carried
+the key that signed it would prove nothing.
 
 **The card's word binds the ingress.** A deployment that declares a
 `boundary` block accepts the request kinds it names and no other: the
