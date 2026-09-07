@@ -543,6 +543,71 @@ changes a Part III row; the same filable-now rule applies.
   stamp and off the fast gate. The verdict-then-merge reconciliation and racing mode
   are the named follow-on once the explorer's shape is known.
 
+**Borrowed from surveyed tools (2026-09-06, pigeon).** One idea from
+[pigeonlabsHQ/pigeon](https://github.com/pigeonlabsHQ/pigeon), a v0.1 delegated-authority
+credential (the "Pigeon Pass"): an Ed25519-signed chain of grants in which every child is
+provably narrower than its parent (capability subset, trailing-wildcard resource
+narrowing, a closed constraint set whose `rate` and `count` are metered against every
+ancestor, expiry no later than the parent's), and a verifier that fails closed on
+anything it cannot prove. Seed already holds the ledger half of this: grants are admitted
+events checked per verb (§II.5), verdict and sealer keys are provably disjoint from
+implementing keys, and a stolen key's ceiling is signed garbage attributed to itself
+(§I.2). What Seed lacks is the same discipline at the **tool edge**: the tuple's
+`tool_policy` is an opaque string (`next/spec/qualification.md`), and "least standing
+capability" (§II.10) is a lane's grant set, not a bound on the side effects its runtime
+performs on behalf of one contract. One card, and not a dependency: the reference is
+Python, one commit old, with in-memory replay and usage stores; its canonical form is
+its own rather than JCS; and its verifier proves that each link's issuer signed but never
+that the leaf subject holds its key, so a pass is a bearer credential in practice and the
+harness must bind it.
+
+- **Tool-edge authority passes over a declared policy map** (§II.5 capability scoping,
+  §II.9 executor adapters, §II.10 least standing capability). At wake, the executor
+  adapter mints a short-lived pass for the run and a tool proxy it runs outside the agent
+  process (the container and cloud adapters; the local adapter declares it cannot, as it
+  does for the tuple) verifies before each side effect and refuses on denial; a harness
+  that spawns subagents hands each an attenuated child, so a spawned worker holds a subset
+  of its parent's edge authority by construction. **The card's first item is the mapping,
+  because the pass's inputs do not exist yet.** `tool_policy` is an opaque tuple string;
+  a contract's `routing` is one squad name (`internal/transition`); branch names are forge
+  state the ledger cannot see (`next/spec/verdicts.md`); and Seed holds no lease at all —
+  a claim stands until a deliberate exit or a reap (`next/spec/observations.md`). So the
+  capability set, the resource set and the TTL come from a **declared tool-policy map**
+  keyed by the tuple's `tool_policy` value, beside the lane manifest's grants, read the
+  way the claim ceiling and the routing rule already read the declaration: **admission
+  policy, not chain validity** (`next/spec/postures.md`), by the cooperative client from
+  its working tree and by the hook at the default branch's tip. The subject is the run's
+  key and the contract, squad and tuple it was minted for; the adapter re-mints once per
+  metering/poll cycle (`next/spec/executors.md`), so the pass dies with the run's silence
+  rather than pretending to a deadline the ledger does not record. Three rules keep the
+  ledger the one authority (§I.3, §II.18): the pass is a projection of the declaration
+  plus the chain, never presented at admission, so `actor.granted` stays the only
+  capability data admission reads; the pass's operation cap is a **declared number, not
+  the budget reservation** — reservation units are abstract until Phase 7.3 metering gives
+  them adapter meaning (`next/spec/budgets.md`), so converting one to the other would deny
+  a run with budget left or spend past it, and the two stay separate until units mean
+  something; and denials are metered onto the observation stream as `tool.refused` (§II.9
+  telemetry, never an escalation) and surface in the packet and the supervisor's report,
+  **never in a receipt** — a verifier's inputs are exclusively self-executed or self-read
+  and reproducible from the submission head (`next/spec/verdicts.md`), and a proxy refusal
+  during implementation is an implementer claim on a channel declared lossy. Format:
+  pigeon's SPEC §4 to §9 in Go under `next/internal/pass`, with its `fixtures/` as the
+  conformance corpus, so a pass minted here verifies under its MCP middleware unchanged;
+  the credential never enters the ledger, so the JCS default (§1) governs nothing it
+  touches, recorded as one decision-log line. Mock-total like every adapter (§II.13): a
+  harness with no proxy loses the bound and nothing else, which is the honest v0 and the
+  reason this is a backlog extra.
+
+Two uses the survey considered and does not file. A pass as the cross-organization
+ingress credential: `next/spec/requests.md` enrolls the ingress key as a service holding
+`dispatch`, and the `boundary` rule already refuses request kinds the card does not name,
+so a second gate on the same question is the second authority §II.18 forbids. Pass-shaped
+grants at admission: `actor.granted` carries no expiry and a grant's standing ends only
+with its key's, which the survey notes as a real gap (`next/spec/actors.md` defers
+grant-level withdrawal "until the catalog grows a verb for it"), but a lease on grants is
+a chain-validity rule and so a protocol bump under `next/spec/protocol.md`'s discipline: a
+card for that decision, not for this format.
+
 ## 4. Progress tracking
 
 Maintain `next/docs/progress.md`: one line per plan item — `phase.item — card id —
