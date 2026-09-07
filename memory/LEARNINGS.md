@@ -2351,3 +2351,23 @@ failed step skips the rest of the job.
   usage. Refuse a malformed invocation in the flag validation, before
   anything is opened: a data error reported for a usage error sends the
   reader looking in the wrong place.
+- 2026-09-07 (os-c4f25e13): a terminal state needs its precondition at the
+  door, not a repair behind it. `accept` checked that evidence was present
+  but not what it said, so a plan-less close minted a card the D3/D7 lint
+  failed forever; `done` is terminal, so every remedy was out of band and
+  every one was paid under a halt, since a failing conformance lint refuses
+  all mutating verbs for all actors. Whenever a lint judges a state that
+  only one transition reaches, check the lint's own condition on that
+  transition. Do not reflexively share the lint's own helper to supply the
+  fact: a lint re-runs, so it may trust the checkout, while an irreversible
+  gate must not. Here the shared helper let a plan that existed only on the
+  accepting branch satisfy the door, recreating the very halt it closed. The
+  gate is the stricter of the two, and the drills that passed under the
+  shared helper passed because of that hole.
+- 2026-09-07 (os-c4f25e13): closing a door makes the state behind it
+  unreachable through the happy path, which breaks exactly the tests that
+  exercise the lint and the repair for that state. That is the change
+  working, not a regression: those fixtures should build the legacy card
+  deliberately (here one `closePlanless` helper that lends a plan for the
+  transition and takes it back), so the test says out loud that it is
+  exercising a state the CLI can no longer mint.
