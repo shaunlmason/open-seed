@@ -2190,6 +2190,26 @@ failed step skips the rest of the job.
   loop it drives, not by the noun it shares with another card, and check
   `ls` before `Write`: an overwrite of a test file is invisible until
   `writeDeclaration` goes undefined three files away.
+- 2026-09-06 (os-b45c308d): a plan can be stale by the time it is
+  claimed. #351 landed `check.observed` between plan #350's writing and
+  its implementation, with a different payload than the plan's D5.
+  Read the tree for every verb a plan says "does not exist" before
+  writing one, and record the reconciliation in decisions rather than
+  landing a second verb under the same name.
+- 2026-09-06 (os-b45c308d): `seed ledger append` without `--remote` is
+  the raw seam and judges no grants; a drill that wants "this key is
+  refused" must go through `admitAppend` (the library's `admit.Check`)
+  or a loop verb, or a standing-only key will cancel a contract with
+  exit 0 and the assertion will pass for the wrong reason.
+- 2026-09-06 (os-b45c308d): an import-closure lint needs no `x/tools`:
+  `go/parser` with `ImportsOnly` over the module, the module path from
+  `go.mod`, and a call-site walk for the primitives is enough, and the
+  real-tree walk should assert the derived classes are non-empty or an
+  empty class passes vacuously.
+- 2026-09-06 (os-b45c308d): a mirror suite that renders one subject
+  against a forge holding others refuses by design (a marker naming a
+  subject the projection does not hold is malformed); render the whole
+  set every time, as the projection does.
 
 ## The graph beside the lifecycle (os-f0ae2cdf)
 

@@ -199,6 +199,17 @@ machine consumer needs it.
   code: it travels in the replay result and shares the `trajectory_diverged`
   refusal (exit 26 `lane_invalid`). See [`trajectories.md`](trajectories.md).
 
+## Components outside the envelope
+
+`seed-mirror` (Phase 13 item 8, [`projections.md`](projections.md)) is
+a separate executable that never touches a ledger, so it speaks no
+envelope of its own: it consumes the one `seed project current`
+printed and prints one JSON document (`exporter`, `plan`, and on
+`apply` the `applied` result and any `error`) and exits 0, 1 on a
+failure at the forge or in the projection, or 64 on usage. The
+authority lint keeps it that way by construction: a component with no
+coordination write path has no admission refusal to render.
+
 ## The machine framing
 
 Under `seed serve` ([`platform.md`](platform.md)) an envelope travels

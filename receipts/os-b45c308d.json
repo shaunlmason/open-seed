@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.0",
+  "task": "os-b45c308d",
+  "plan_path": "plans/os-b45c308d.md",
+  "plan_sha256": "0d0fa1f745c402401ec0869cf61106ff38e015c46434f644f90cc34202f86231",
+  "validation_commands": [
+    "cd next \u0026\u0026 go test ./mirror/... ./internal/authoritylint/... ./internal/externalfact/... ./internal/admit/... ./internal/keyring/... ./internal/transition/... ./cmd/seed-mirror/... ./cmd/seed/... -run 'Mirror|Exporter|AuthorityBoundary|ExternalFact|CheckObserved|GovernedObservation|ObservationControl' -count=1",
+    "cd next \u0026\u0026 go test ./internal/project/... ./internal/request/... ./internal/protections/... ./internal/reconcile/... ./cmd/seed/... -run 'WriteBoundary|RebuildByteIdentical|Request|Federation|Injection|MergeObserve|Divergence|ForgejoAdapter|GitHubAdapter|RegistryMirrors' -count=1",
+    "cd next \u0026\u0026 go test ./... -count=1",
+    "cd next \u0026\u0026 go run ./cmd/seed docs check --root ..",
+    "make check"
+  ],
+  "generated_by": "seed-next-implementer"
+}

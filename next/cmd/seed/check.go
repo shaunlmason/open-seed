@@ -15,8 +15,8 @@ import (
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/externalfact"
 	"github.com/shaunlmason/open-seed/next/internal/maintain"
-	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -78,7 +78,7 @@ func runCheckObserve(args []string, stdout, stderr io.Writer) int {
 				"--pr <ref> is required: the submission under review names no pull request"), stdout, stderr)
 		}
 	}
-	var obs protections.Observation
+	var obs externalfact.Observation
 	if *forgeKind != "" {
 		reader, env := mergeObserver(*forgeKind, *github, *api, *tokenEnv, *snapshot)
 		if env != nil {
@@ -90,7 +90,7 @@ func runCheckObserve(args []string, stdout, stderr io.Writer) int {
 		}
 		obs = read
 	} else {
-		obs = protections.Observation{Head: *head, Checks: *checks, Review: *review}
+		obs = externalfact.Observation{Head: *head, Checks: *checks, Review: *review}
 		if *threads >= 0 {
 			n := *threads
 			obs.UnresolvedThreads = &n

@@ -106,6 +106,15 @@ nowhere, and `request.answered` over a hostile request yields only
 what the dispatcher's allowlist already permitted.
 [`lanes.md`](lanes.md) records the row as met.
 
+III.D row 5's other half joins here (Phase 13 item 8,
+[`projections.md`](projections.md) "The mirror"): the mirror is a
+separate projection-only component with no key, no ledger and no
+admission endpoint, and its per-exporter drill files a mirror-side
+edit through this ingress with the enrolled standing-only service key,
+proves the request admitted and changed no lifecycle state, proves the
+same key's direct coordination acts refuse out of grant, and restores
+the mirror from the projection.
+
 ## Federation: uniform read remotes (normative)
 
 A deployment reads other ledgers; it never writes them and nothing

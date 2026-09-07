@@ -192,6 +192,9 @@ ending standing is deferred until the catalog grows a verb for it.
 
 A signer holding none of a verb's accepted capabilities refuses at exit
 14 `out_of_grant` (`envelope.md`), the message naming the accepted set.
+The rows accepting `observer` are exactly the external-fact inventory
+in [`external-facts.md`](external-facts.md), pinned both ways: a verb
+cannot join the observer's row without joining that table.
 Later phases append rows (claim rights by squad and tier, verdict
 rights, curation-proposal rights) when their verbs land.
 

@@ -281,7 +281,9 @@ admission).
   could not judge, on the bound submission).
 - `merge.*` / `check.*` — `requested`, `observed` (external-fact
   observations; `check.observed` from `seed/8`, the forge's word on
-  the head under review, [`observations-forge.md`](observations-forge.md)).
+  the head under review, [`observations-forge.md`](observations-forge.md);
+  the closed inventory of every external-fact verb and what each may
+  do is [`external-facts.md`](external-facts.md)).
 - `offer.*` — `published` (the supervisor's eligibility-scoped,
   expiring invitation to claim; a fact, never a transition —
   [`offers.md`](offers.md), active from `seed/1`. Catalog growth here

@@ -1616,6 +1616,28 @@ record's own position through one derivation, `curation.AuthenticPass`
   13's rows `open` until its exit record flips them, III.R's routed
   to promotion's measures; `next/spec/conformance.md` new, the
   handbook following)
+- 13.8 projection integration boundaries: mirror exporter conformance,
+  no bidirectional component, and governed external-fact observations
+  (III.D rows 5–7) — os-b45c308d — **in review** (task PR against plan
+  #350: `next/mirror`, the projection-only issue mirror with its
+  base64 marker, deterministic planner, sealed registry of GitHub,
+  Forgejo and snapshot exporters, and `seed-mirror plan|apply` over
+  the build `seed project current` resolved, a separate executable
+  with no ledger, key or remote; one conformance
+  suite iterating the registry plus the per-exporter
+  export/edit/request/restore drill joined to item 4's ingress;
+  `internal/authoritylint` deriving the export and coordination-write
+  classes from each executable's import closure, self-checked against
+  planted overlaps, and green over the tree; `internal/externalfact`,
+  the closed external-fact catalog pinned both ways to
+  `next/spec/external-facts.md` and the keyring, the forge readers
+  moved out of the mutating protections package behind a read-only
+  `Source` with the observation-control lint, the fake-forge
+  governed-observation drill recording every request, and the
+  admission invariance drill pinning that an observation narrows and
+  never widens; D.5, D.6 and D.7 met; the plan's D5 second
+  `check.observed` shape superseded by #351's landed verb, recorded in
+  decisions)
 
 ## Phase 12 — Hardening, distribution, migration (docs/next-build-plan.md Phase 12; deps: all)
 
@@ -2580,7 +2602,8 @@ Phase 13 declares `deps: 12`, so its gate opened when the Phase 12
 exit record merged (#284), and every numbered item has a merged PR: 1
 in #269, 2 in #282, 3 in #281, 4 in #270, 5 in #279 (its
 canonicalization follow-up os-1c284ba8 merged, #290), 6 in #273, 7
-in #286; the two routed gaps (#265, #266) are merged. The conformance report
+in #286, and item 8, added by plan #350 for III.D rows 5–7, is
+os-b45c308d's task PR in review; the two routed gaps (#265, #266) are merged. The conformance report
 (os-83bc3d84, #289) is merged, so the doctor reports the open rows;
 the promotion evidence packet (os-98ce6f8a, plan #291 open, task PR
 #294 in review) is the other thing the phase's exit line needs. The exit record (os-d63c7441, plan #288 merged) is parked
@@ -2637,11 +2660,11 @@ remains in review at the gate, and it is not a criterion: os-0f924157
 (plan #334) closes #323's review finding, the enforced `seed-admit`
 hook reading the declaration at the default branch's tip, so the
 ceiling refuses at the boundary and not only at the cooperative
-client. The doctor reads 27 outstanding rows once os-f0ae2cdf merges
-(III.F row 12, the catch-all's one row, is `met` by its task PR): the
-20 remaining Phase 13 rows the exit record flips, C.4 and Q.7 routed
-to the backlog's scale run and to promotion, and III.R's seven, none
-of which an agent act can supply.
+client. The doctor reads 24 outstanding rows (III.F row 12, the
+catch-all's one row, is `met` by os-f0ae2cdf, #352; III.D rows 5–7 by
+Phase 13 item 8, os-b45c308d): the 17 remaining Phase 13 rows the exit
+record flips, C.4 and Q.7 routed to the backlog's scale run and to
+promotion, and III.R's seven, none of which an agent act can supply.
 What stands between the packet and the Self-hosting question is the
 deployment, which the autonomy contract reserves to the operator: a
 ledger remote whose `pre-receive` is the `seed-admit` binary (the
@@ -2688,10 +2711,11 @@ Of the two rows outside III.R that stood open on the tree's own
 account, III.L row 4 is drilled for allow and deny by os-8ecef90f (plan
 #320, task PR #321, merged) and stands `partial`, its require-approval
 mode being os-5781a026's, and III.A row 7 is met by os-db5cd353 (plan
-#324, task PR #325, merged), so the doctor reads 28 outstanding rows:
-21 Phase 13 rows the exit record flips, C.4 and Q.7 routed to the
-backlog run and to promotion, and III.R's seven, none of which an
-agent can supply. (This paragraph carried two overlapping versions of
+#324, task PR #325, merged), so the doctor reads 24 outstanding rows:
+17 Phase 13 rows the exit record flips (III.F row 12 met by
+os-f0ae2cdf, #352; III.D rows 5–7 by Phase 13 item 8, os-b45c308d),
+C.4 and Q.7 routed to the backlog run and to promotion, and III.R's
+seven, none of which an agent can supply. (This paragraph carried two overlapping versions of
 itself after #338 merged; the merged reading is the one above.)
 os-f0ae2cdf (plan #341, task PR #352) then meets III.F row 12, the
 catch-all's one row, and the count reads 27.

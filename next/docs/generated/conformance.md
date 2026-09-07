@@ -11,7 +11,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | A. The Ledger | 12 | 0 | 0 | 0 |
 | B. The Admission Boundary | 6 | 0 | 0 | 0 |
 | C. Streams and the hot path | 4 | 1 | 0 | 0 |
-| D. Projections | 5 | 0 | 0 | 3 |
+| D. Projections | 8 | 0 | 0 | 0 |
 | E. Identity, threat model, qualification | 7 | 0 | 2 | 0 |
 | F. Work contracts and lifecycle | 11 | 0 | 0 | 1 |
 | G. Verdicts and evidence | 8 | 0 | 2 | 0 |
@@ -26,7 +26,7 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | P. Distribution, supply chain, adoption | 4 | 1 | 0 | 0 |
 | Q. Quality, docs, community | 6 | 1 | 0 | 0 |
 | R. The autonomy end-state | 0 | 0 | 7 | 0 |
-| **all** | 100 | 6 | 13 | 9 |
+| **all** | 103 | 6 | 13 | 6 |
 
 ## A. The Ledger
 
@@ -74,9 +74,9 @@ Every row of the charter's Part III with the status the phase exit records gave 
 | D.2 | `met` | 4 | No code path writes a projection directly or treats one as authoritative; the write-boundary lint enforces it. | #118 (the write-boundary lint under check-next, seam/write-separation, locked trees) | no Phase 4 exit line in progress.md; traced to the item entries (4.3 records the phase complete) |
 | D.3 | `met` | 4 | Staleness is visible everywhere projected state is shown; consumers can demand a minimum position. | #117 (seed project current, exit 15 stale, the stale envelope position, --min-position) | no Phase 4 exit line in progress.md; traced to the item entries (4.3 records the phase complete) |
 | D.4 | `met` | 4 | The cache projection delivers single-machine read throughput with zero authority (mid-operation deletion loses nothing). | #119 (the SQLite cache as a registered projection; the mid-operation deletion drill) | no Phase 4 exit line in progress.md; traced to the item entries (4.3 records the phase complete) |
-| D.5 | `open` | — | External mirrors are one-way exporters; mirror-side edits arrive only as request events from governed identities, validated at admission; a conformance suite passes per exporter/adapter. | — | not walked by any exit record; the request-event ingress landed with Phase 13 item 4 (#270), and exporter conformance suites are named only under III.Q row 2 |
-| D.6 | `open` | — | Bidirectional synchronization is structurally impossible: no component holds both an export path and a coordination write path. | — | not walked by any exit record |
-| D.7 | `open` | — | External facts enter only as observations by governed observers; nothing treats an observation as control. | — | not walked by any exit record; the nearest statements are the observer lane on merge.observed (#137, #212) and the reap that answers an admitted interrupt, never silence (#205) |
+| D.5 | `met` | 13 | External mirrors are one-way exporters; mirror-side edits arrive only as request events from governed identities, validated at admission; a conformance suite passes per exporter/adapter. | #361 TestMirrorExporterSuite, TestMirrorMarkerRefusesRatherThanRepairs, TestMirrorPlanIsDeterministic, TestMirrorExposesNoSeedWritePath (next/mirror); TestMirrorCommandPlansAndApplies (cmd/seed-mirror); TestMirrorExportAndRequestIngressPerExporter (cmd/seed), under make check | Phase 13 item 8 (os-b45c308d): the projection-only mirror component with its sealed exporter registry, one suite per registered exporter, joined to item 4's request ingress (#270) |
+| D.6 | `met` | 13 | Bidirectional synchronization is structurally impossible: no component holds both an export path and a coordination write path. | #361 TestAuthorityBoundaryHoldsInTheTree, TestAuthorityBoundarySelfCheck (internal/authoritylint), under make check | Phase 13 item 8 (os-b45c308d): the export and coordination-write classes are derived from each executable's import closure, never listed; the lint self-checks against planted overlaps |
+| D.7 | `met` | 13 | External facts enter only as observations by governed observers; nothing treats an observation as control. | #361 TestExternalFactCatalogPins, TestObservationControlLint, TestObservationControlLintSelfCheck (internal/externalfact); TestGovernedObservationIsNotControl, TestCheckObservedNeedsSeed8 (internal/admit); TestExternalFactDischargesNothing (internal/obligation); TestGovernedObservationOverTheForges (cmd/seed), under make check | Phase 13 item 8 (os-b45c308d): next/spec/external-facts.md is the closed inventory, pinned to the catalog and the keyring both ways; the forge readers are read-only sources in their own package; the invariance drill pins that an observation narrows and never widens (the observer lane on merge.observed, #137, #212; check.observed, #351) |
 | D.8 | `met` | 4 | The rebuild-everything-from-genesis drill runs green in CI. | #109 TestRebuildByteIdenticalAndStamped (internal/project), under make check | named among III.O row 4's standing drills by the Phase 10 and 12 records |
 
 ## E. Identity, threat model, qualification

@@ -25,6 +25,7 @@ var knownGroups = map[string]bool{
 	"doctor": true, "protections": true, "perf": true, "import": true,
 	"preseed": true, "run": true, "eval": true, "knowledge": true,
 	"flywheel": true, "trajectory": true, "docs": true, "simulate": true,
+	"request": true,
 }
 
 // handbookCommands extracts the token lists of every `seed` command in a

@@ -18,16 +18,15 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"io"
-	"os"
 	"strconv"
-	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
+	"github.com/shaunlmason/open-seed/next/internal/externalfact"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 )
 
@@ -184,36 +183,24 @@ func runMergeObserve(args []string, stdout, stderr io.Writer) int {
 		resultAt: terse(*f.subject)}, signer, stdout, stderr)
 }
 
-// mergeObserver constructs the forge observer merge observe fills the
-// merge sha from (plans/os-ad610334.md D4), the same forge vocabulary as
-// protections reconcile.
-func mergeObserver(kind, github, api, tokenEnv, snapshot string) (protections.Observer, *envelope.Envelope) {
-	switch kind {
-	case "snapshot":
-		if snapshot == "" {
-			return nil, envelope.Fail(envelope.ExitUsage, "usage", "the snapshot forge needs --snapshot <file>")
-		}
-		return protections.SnapshotObserver{Path: snapshot}, nil
-	case "github", "forgejo":
-		owner, name, ok := strings.Cut(github, "/")
-		if !ok || owner == "" || name == "" {
-			return nil, envelope.Fail(envelope.ExitUsage, "usage", "the "+kind+" forge needs --github <owner/name>")
-		}
-		env := tokenEnv
-		if kind == "forgejo" && env == "GITHUB_TOKEN" {
-			env = "FORGEJO_TOKEN"
-		}
-		token := os.Getenv(env)
-		if token == "" {
-			return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", fmt.Sprintf("the %s forge needs a token in $%s", kind, env))
-		}
-		if kind == "forgejo" {
-			if api == "" {
-				return nil, envelope.Fail(envelope.ExitUsage, "usage", "the forgejo forge needs its instance URL in --api")
-			}
-			return protections.NewForgejo(api, owner, name, token), nil
-		}
-		return protections.NewGitHub(api, owner, name, token), nil
+// mergeObserver opens the read-only source merge observe, check
+// observe and the maintenance pass fill forge facts from
+// (plans/os-ad610334.md D4; plans/os-b45c308d.md D6): the observation
+// component, which holds no mutating forge client, its token read
+// from the environment and never a flag.
+func mergeObserver(kind, github, api, tokenEnv, snapshot string) (externalfact.Source, *envelope.Envelope) {
+	env := tokenEnv
+	if kind == "forgejo" && env == "GITHUB_TOKEN" {
+		env = "FORGEJO_TOKEN"
 	}
-	return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("unknown forge %q (snapshot | github | forgejo)", kind))
+	src, err := externalfact.Open(kind, github, api, env, snapshot)
+	var missing *externalfact.NoCredential
+	switch {
+	case err == nil:
+		return src, nil
+	case errors.As(err, &missing):
+		return nil, envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error())
+	default:
+		return nil, envelope.Fail(envelope.ExitUsage, "usage", err.Error())
+	}
 }

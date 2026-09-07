@@ -395,8 +395,21 @@ files.
   equal the views, deletion under an open read handle loses nothing
   (the ledger byte-unchanged, one rebuild republishing the identical
   build), and a poisoned copy never feeds a rebuild.
-- III.D mirrors, observation inputs, and the CI rebuild-everything
-  drill — with their phases.
+- III.D "External mirrors are one-way exporters; mirror-side edits
+  arrive only as request events from governed identities, validated at
+  admission; a conformance suite passes per exporter/adapter" — Phase
+  13 item 8: "The mirror" below, `TestMirrorExporterSuite` over every
+  registered exporter and `TestMirrorExportAndRequestIngressPerExporter`
+  joining the export to [`requests.md`](requests.md)'s ingress.
+- III.D "Bidirectional synchronization is structurally impossible: no
+  component holds both an export path and a coordination write path"
+  — Phase 13 item 8: "Components" below, `internal/authoritylint`
+  (`TestAuthorityBoundaryHoldsInTheTree`, self-checked by
+  `TestAuthorityBoundarySelfCheck`).
+- III.D "External facts enter only as observations by governed
+  observers; nothing treats an observation as control" — Phase 13 item
+  8: [`external-facts.md`](external-facts.md).
+- The CI rebuild-everything drill — with its phase.
 
 ## The basis file
 
@@ -431,3 +444,82 @@ carries no tuple and adds nothing, so chains without one stay
 byte-identical. A cloud or remote adapter
 never reads `enforced`, and an unknown harness defaults to a risk limit.
 See [`executors.md`](executors.md).
+
+## Components (Phase 13 item 8)
+
+A **component** is a deployable executable: a `main` package under
+`next/cmd/`. Its **closure** is the transitive import graph of
+production packages within the module, parsed from source. Two classes
+are derived from the closure, never listed by hand:
+
+- the **export path**: the sealed mirror registry (`next/mirror`) and
+  every package under it, the only construction path `seed-mirror`
+  opens an exporter through;
+- the **coordination write path**: the packages owning a ledger append,
+  a git-ref commit or push, or a proposal primitive
+  (`internal/ledger`, `internal/gitref`, `internal/propose`), and every
+  package with a call site of one, seen through aliased imports.
+
+III.D row 6 is then a falsifiable structural claim, and
+`internal/authoritylint` makes it under `go test`: **no component's
+closure holds both classes.** `seed-mirror` is on the export path and
+holds no writer; `seed` and `seed-admit` are writers and do not import
+the registry. The lint also refuses an export package importing a
+writer, a type declaring the adapter method set outside the registry
+(an exporter the suite never ran), and an export component defining a
+Seed-side flag (`--ledger`, `--key`, `--remote`, `--config`, `--as`,
+`--propose`, `--admission`). It self-checks against synthetic package
+graphs: a clean split passes with both classes derived non-empty, and
+each planted overlap fails by name. Bidirectional synchronization would
+need one executable to hold both, which the lint turns red before it
+ships.
+
+## The mirror (Phase 13 item 8)
+
+`seed-mirror plan|apply --current <file> --forge github|forgejo|snapshot`
+reads the `contracts` build the consumer verb resolved (`--current` is
+the envelope `seed project current --name contracts` printed, naming
+the published build's path, position, tip and version; the mirror
+reads the view inside it and resolves no layout itself, so the
+engine's vocabulary stays the engine's and freshness is demanded at
+the consumer verb) and exports one issue per
+contract with a valid lifecycle state: title the opaque subject, body
+exactly two markers, one managed `seed:<state>` label; `done` and
+`cancelled` closed, every other state open. The marker is
+`<!-- seed-mirror: <base64 of the subject's UTF-8 bytes> -->`, so no
+subject can terminate or re-open the comment, and decoding is the only
+parse path; the second marker carries the stamp's `position` and
+`tip`, so a reader can name which projection the mirror reflects.
+
+The plan is sorted by subject and byte-deterministic. Unmanaged issues
+and foreign labels are untouched; a managed issue whose title, body,
+managed label or open/closed state drifted is overwritten from the
+projection, foreign labels kept; a subject with no issue is created; a
+duplicate marker, a marker that does not decode, or a marker naming a
+subject the projection does not hold refuses rather than choosing an
+authority by accident. Applying a plan twice is a no-op the second
+time, because the second plan is empty. An adapter failure is reported
+with the exporter's name and the failed action, and the Seed side is
+bytes on disk the component never opened.
+
+GitHub, Forgejo and the file-backed snapshot are the three registered
+exporters, behind one adapter interface (`Name`, `List`, `Create`,
+`Update`, nothing else); the registry is sealed, so an exporter the
+conformance suite never ran cannot be opened. Labels are repository
+objects on both forges, so an exporter defines a managed label through
+the label API before an issue names it (Forgejo by id, GitHub by name,
+a person's label defined meanwhile re-read rather than duplicated): a
+transport variance, not a contract one. Every forge call is bounded by
+a timeout, so an unanswered connection cannot hang an apply. Tokens come from `SEED_MIRROR_GITHUB_TOKEN`
+or `SEED_MIRROR_FORGEJO_TOKEN` (or `--token-env`), never a flag, the
+projection, the plan, the output or a fixture.
+
+The mirror has no way back in. A person's edit at the forge is
+overwritten by the next export; what it has is a proposal, and that
+enters Seed by exactly one door, `seed request file` with an enrolled
+standing-only service key ([`requests.md`](requests.md)), a different
+component. The per-exporter drill proves the round trip: export,
+edit, the ledger byte-unchanged, the request admitted and changing no
+lifecycle state, a direct coordination act by the service key refused
+out of grant, and the export restoring the mirror.
+

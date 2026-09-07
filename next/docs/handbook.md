@@ -258,3 +258,38 @@ the reserved decisions they are, and the ledger of the III.R
 measurements the shadow run supplies. `make check` holds every drill
 the packet cites to the tree, so the packet cannot claim what the tree
 no longer holds.
+
+## 13. Mirroring to a forge
+
+The issue mirror is a separate binary, `seed-mirror`, with no ledger,
+no key and no remote: it reads the published `contracts` projection and
+plans or applies a one-way export to a forge's issues (one issue per
+contract, the managed `seed:<state>` label, terminal states closed).
+Build the projection, resolve it through the consumer verb (demanding
+freshness there with `--min-position` if you need it), then plan and
+apply from what it printed; the token comes from
+`SEED_MIRROR_GITHUB_TOKEN` or `SEED_MIRROR_FORGEJO_TOKEN`, never a flag:
+
+```sh
+seed project rebuild --ledger ./ledger --out ./projections
+seed project current --name contracts --out ./projections > current.json
+```
+
+```sh
+seed-mirror plan --current current.json --forge github --owner org --repo work
+seed-mirror apply --current current.json --forge github --owner org --repo work
+```
+
+An edit made at the forge is overwritten by the next apply. What the
+forge has is a proposal, and it enters the ledger by one door, signed
+by an enrolled standing-only service key:
+
+```sh
+seed request file --ledger ./ledger --key ./mirror_ed25519 --subject c-1 --origin mirror --kind mirror-edit --reference "issues/12 @ 0123456" --summary "rename c-1"
+```
+
+The observers in §6 and §8 read the forge through the same read-only
+sources for GitHub, Forgejo and the snapshot file; nothing they run can
+merge, rerun, label or protect, and `next/spec/external-facts.md` is
+the closed list of what an observation may record.
+

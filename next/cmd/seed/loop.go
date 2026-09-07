@@ -35,10 +35,10 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/escalation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/externalfact"
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/loopverb"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
-	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
@@ -653,7 +653,7 @@ func runSubmission(args []string, stdout, stderr io.Writer) int {
 		missing = "and --packet <file> (every deliberate exit carries one)"
 	}
 	if *pr != "" {
-		if _, err := protections.PRNumber(*pr); err != nil {
+		if _, err := externalfact.PRNumber(*pr); err != nil {
 			missing = "and --pr <ref> as pr/<n> or <n>"
 		}
 	}

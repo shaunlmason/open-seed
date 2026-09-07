@@ -160,32 +160,3 @@ func TestLintWorkflowsWithoutTheDirectory(t *testing.T) {
 		t.Fatalf("an absent workflows directory is silent, got %v %v", findings, err)
 	}
 }
-
-func TestSnapshotObserverRefusalsNameTheCause(t *testing.T) {
-	dir := t.TempDir()
-
-	absent := SnapshotObserver{Path: filepath.Join(dir, "nope.json")}
-	if _, _, err := absent.Merged("pr/1"); err == nil || !strings.Contains(err.Error(), "reading the pull-request snapshot") {
-		t.Errorf("an absent snapshot names itself, got %v", err)
-	}
-
-	bad := filepath.Join(dir, "bad.json")
-	if err := os.WriteFile(bad, []byte("{"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := (SnapshotObserver{Path: bad}).Merged("pr/1"); err == nil || !strings.Contains(err.Error(), "does not parse") {
-		t.Errorf("a malformed snapshot names itself, got %v", err)
-	}
-
-	empty := filepath.Join(dir, "empty.json")
-	if err := os.WriteFile(empty, []byte(`{"pulls": {}}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	_, merged, err := (SnapshotObserver{Path: empty}).Merged("pr/7")
-	if err == nil || !strings.Contains(err.Error(), "pr/7") {
-		t.Errorf("an unknown pull request refuses by name rather than reading as unmerged, got %v", err)
-	}
-	if merged {
-		t.Error("a refusal never reports merged")
-	}
-}

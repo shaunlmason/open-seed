@@ -414,10 +414,18 @@ adapter), and the doctor reports which Phase 13 criteria remain open until then.
    into the `tuples` scope Phase 10 item 1 landed as the scheduling input (III.J row 3's
    policy clause, routed here by the Phase 10 exit record: Phase 10 item 2 deferred
    ranking by name and no later item re-homed it).
+8. Projection integration boundaries: mirror exporter conformance, no bidirectional
+   component, and governed external-fact observations (III.D rows 5–7). A separate
+   projection-only mirror component with a sealed exporter registry and one conformance
+   suite every registered exporter runs, joined to item 4's request ingress; an
+   authority lint deriving from each executable's import closure that no component
+   holds both an export path and a coordination write path; and a closed external-fact
+   catalog pinned to its spec table, with the forge observation sources read-only and
+   drilled never to act as control.
 
-*Exit:* the named III.F/III.H/III.I/III.N criteria green, and III.J rows 2 and 3 beside
-III.I; the conformance report shows Part III complete at the enforced self-hosted
-posture.
+*Exit:* the named III.F/III.H/III.I/III.N criteria green, III.J rows 2 and 3 beside
+III.I, and III.D rows 5–7 by item 8; the conformance report shows Part III complete at
+the enforced self-hosted posture.
 
 ## 3. Backlog (true extras, not conformance-blocking)
 

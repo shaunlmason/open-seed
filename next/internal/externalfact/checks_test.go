@@ -1,4 +1,4 @@
-package protections
+package externalfact
 
 // The forge observation's readers (plans/os-0cd18799.md D5, AC4): the
 // fake GitHub, the fake Forgejo and a snapshot answer the same shape;
@@ -186,7 +186,7 @@ func TestSnapshotChecks(t *testing.T) {
 		"pr/1": {"merged": false, "head": "`+checksHead+`", "checks": "red", "unresolved_threads": 2, "review": "none"},
 		"pr/2": {"merged": true, "merge_commit_sha": "abc123", "head": "`+checksHead+`", "checks": "green", "review": "approved"},
 		"pr/3": {"merged": false}}}`), 0o644)
-	obs := SnapshotObserver{Path: path}
+	obs := Snapshot{Path: path}
 	got, err := obs.Checks("pr/1")
 	if err != nil || got.Head != checksHead || got.Checks != "red" || got.UnresolvedThreads == nil || *got.UnresolvedThreads != 2 || got.Review != "none" {
 		t.Fatalf("the snapshot answers the observation: %+v %v", got, err)
@@ -204,7 +204,7 @@ func TestSnapshotChecks(t *testing.T) {
 	if _, err := obs.Checks("pr/9"); err == nil {
 		t.Error("an unknown pull request is an error")
 	}
-	if _, err := (SnapshotObserver{Path: filepath.Join(t.TempDir(), "missing.json")}).Checks("pr/1"); err == nil {
+	if _, err := (Snapshot{Path: filepath.Join(t.TempDir(), "missing.json")}).Checks("pr/1"); err == nil {
 		t.Error("a missing snapshot is an error")
 	}
 }

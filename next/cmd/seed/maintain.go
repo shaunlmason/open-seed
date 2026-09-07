@@ -28,12 +28,12 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/checkpoint"
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
+	"github.com/shaunlmason/open-seed/next/internal/externalfact"
 	"github.com/shaunlmason/open-seed/next/internal/genesis"
 	"github.com/shaunlmason/open-seed/next/internal/maintain"
 	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/project"
-	"github.com/shaunlmason/open-seed/next/internal/protections"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
@@ -73,7 +73,7 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
 			"maintain run requires --ledger <dir> --repo <dir> --key <path> --obs <dir> [--out <dir>] [--artifacts <dir>] [--as-of <ts>] [--stale-after <duration>] [--forge <kind> ...] [--return-ceiling <n>]"), stdout, stderr)
 	}
-	var observe func(pr string) (protections.Observation, error)
+	var observe func(pr string) (externalfact.Observation, error)
 	if *forgeKind != "" {
 		reader, failEnv := mergeObserver(*forgeKind, *github, *api, *tokenEnv, *prSnapshot)
 		if failEnv != nil {
