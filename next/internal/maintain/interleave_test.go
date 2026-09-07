@@ -32,14 +32,16 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/ledger"
 	"github.com/shaunlmason/open-seed/next/internal/maintain"
 	"github.com/shaunlmason/open-seed/next/internal/posture"
+	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
 // raceDepth is the fast gate's size (plans/os-873b5153.md D7): 7 steps
-// per trace is 2,007 terminal states, 70 of them settled, in about 2.2s.
-// perf-scale.yml runs 9 (about 27s) weekly, which is where the model
-// found the settlement property's first counterexample.
+// per trace is 2,007 terminal states, 70 of them settled, in about 2.5s.
+// perf-scale.yml runs 9 (22,599 terminal states, 1,162 settled, about
+// 33s) weekly, which is where the model found the settlement property's
+// first counterexample.
 var raceDepth = flag.Int("race-depth", 7, "steps per racing trace (plans/os-873b5153.md D7)")
 
 const (
@@ -179,6 +181,9 @@ func rstage(t *testing.T, depth int) *rharness {
 		{racerName(1), keyring.CapClaim},
 		{"verifier", keyring.CapVerdict},
 		{"observer", keyring.CapObserver},
+		// The reaper: dispatch-granted, as the maintenance lane is what
+		// reaps a settled-out claim (internal/admit's racing drills).
+		{"maint", keyring.CapDispatch},
 	}
 	for i, l := range lanes {
 		h.keys[l.name] = rfixtureKey(byte(i + 2))
@@ -303,18 +308,24 @@ func (h *rharness) draft(s *rcstate, st rstep) (*event.Record, bool) {
 	default:
 		return nil, false
 	}
-	tip, err := s.records[len(s.records)-1].Event.Hash()
+	return h.sign(lane, verb, payload, s.records), true
+}
+
+// sign builds one signed record on the tip of the records given.
+func (h *rharness) sign(lane, verb, payload string, records []*event.Record) *event.Record {
+	h.t.Helper()
+	tip, err := records[len(records)-1].Event.Hash()
 	if err != nil {
 		h.t.Fatal(err)
 	}
 	rec, err := event.Sign(event.Event{
-		V: h.active(), TS: h.ts(len(s.records)), Actor: h.fps[lane], Verb: verb,
+		V: h.active(), TS: h.ts(len(records)), Actor: h.fps[lane], Verb: verb,
 		Subject: raceSubject, Payload: json.RawMessage(payload), Prev: tip,
 	}, h.keys[lane])
 	if err != nil {
 		h.t.Fatal(err)
 	}
-	return rec, true
+	return rec
 }
 
 // submissionOf finds the submission a racer made in the current window.
@@ -456,11 +467,38 @@ func TestRacingInterleavings(t *testing.T) {
 						cited.Event.Verb, pos, rtraceText(path))
 				}
 			}
+			// P5: an authentic settlement is no anomaly. What the fold
+			// and the classifier read as the chain's verdict must be the
+			// position the request cited, exactly as admission and P2
+			// read it: a settlement the boundary took, counted as an
+			// anomaly or reported as a divergence, is the two halves of
+			// one rule disagreeing (charter §II.10).
+			if n == 1 && sub.Anomalies != 0 {
+				t.Fatalf("P5: an admitted settlement counted %d anomalies\n%s", sub.Anomalies, rtraceText(path))
+			}
+			if n == 1 {
+				for _, f := range reconcile.Subject(raceSubject, sub) {
+					switch f.Class {
+					case reconcile.ClassMergeWithoutVerdict, reconcile.ClassChainSkipped:
+						t.Fatalf("P5: an admitted settlement is classified %s: %s\n%s",
+							f.Class, f.Detail, rtraceText(path))
+					}
+				}
+			}
 			// P4: the reaper leaves no active claim of a settled race,
-			// and the packet it writes names the settlement.
+			// and the packet it writes names the settlement. The reap is
+			// TAKEN here, not imagined: each record goes through the real
+			// admission and onto the chain, and the refold is what says
+			// the claims are gone (review on #370: composing a packet and
+			// calling it a reap would leave an interleaving-specific
+			// failure in the reaper's admission path invisible). It runs
+			// from the terminal state rather than as a step in the
+			// alphabet, which keeps the enumeration exhaustive at a
+			// usable depth while still exercising every settled trace.
 			if sub.RaceSettled == nil {
 				return
 			}
+			records := s.records
 			for _, c := range sub.Claims {
 				payload, err := maintain.RaceReapPacket(sub, c.Fence, *sub.RaceSettled)
 				if err != nil {
@@ -471,7 +509,26 @@ func TestRacingInterleavings(t *testing.T) {
 					t.Fatalf("P4: the reap packet for fence %d does not name the settlement at position %d\n%s",
 						c.Fence, *sub.RaceSettled, rtraceText(path))
 				}
+				rec := h.sign("maint", "claim.reaped", string(payload), records)
+				ctx, err := admit.ContextOver(records, admit.WithDeclaration(h.decl))
+				if err != nil {
+					t.Fatalf("P4: %v\n%s", err, rtraceText(path))
+				}
+				if err := admit.Check(ctx, rec); err != nil {
+					t.Fatalf("P4: the reap of the settled-out claim at fence %d was refused: %v\n%s",
+						c.Fence, err, rtraceText(path))
+				}
+				records = append(records, rec)
 				sawReap = true
+			}
+			reaped, _ := h.table.FoldRecords(records).State(raceSubject)
+			if len(reaped.Claims) != 0 {
+				t.Fatalf("P4: %d claims of a settled race survived the reaper\n%s",
+					len(reaped.Claims), rtraceText(path))
+			}
+			if reaped.State != sub.State {
+				t.Fatalf("P4: the reap moved the subject from %s to %s\n%s",
+					sub.State, reaped.State, rtraceText(path))
 			}
 		},
 	})
@@ -501,4 +558,57 @@ func TestRacingInterleavings(t *testing.T) {
 
 func asRaceSettled(err error, target **admit.RaceSettledError) bool {
 	return errors.As(err, target)
+}
+
+// conformance: charter §II.6 and §II.10 (one rule, two consumers), the
+// named regression for the enumeration's second finding
+// (plans/os-873b5153.md D8). Two racers submit; the winner's pass is
+// requested and settled, and the loser's fail lands in between. Every
+// step is admitted, so nothing here is a divergence: the fold's
+// anomaly counter and the classifier must both read the verdict the
+// request CITED rather than whichever landed last. The racing model
+// reaches this trace at race-depth 9, past the fast gate's 7, which is
+// why it is pinned by hand as well.
+func TestSettlementSurvivesTheLosersLateFail(t *testing.T) {
+	h := rstage(t, 32)
+	s := &rcstate{h: h, records: h.prefix}
+	for _, st := range []rstep{
+		{"claim", 0}, {"claim", 1}, {"submit", 0}, {"verdict.pass", 0},
+		{"submit", 1}, {"request", -1}, {"verdict.fail", 1}, {"settle", -1},
+	} {
+		before := len(s.records)
+		s = s.Apply(st)
+		if len(s.records) == before {
+			rec, ok := h.draft(s, st)
+			if !ok {
+				t.Fatalf("%v: the step drafted nothing", st)
+			}
+			ctx, err := admit.ContextOver(s.records, admit.WithDeclaration(h.decl))
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Fatalf("%v refused: %v", st, admit.Check(ctx, rec))
+		}
+	}
+	sub := s.subject()
+	// Both racers submitted, so no claim was active when the settlement
+	// landed and nobody is settled out: the subject simply reaches done.
+	if sub.State != "done" || len(sub.Claims) != 0 {
+		t.Fatalf("the subject reached done with no claim left standing: %s %+v", sub.State, sub.Claims)
+	}
+	if sub.Verdict == nil || sub.Verdict.Verdict != "fail" {
+		t.Fatalf("the loser's fail is the standing verdict fact: %+v", sub.Verdict)
+	}
+	if !sub.CitedPass() {
+		t.Fatalf("the request cites the winner's pass: %+v", sub.Requested)
+	}
+	if sub.Anomalies != 0 {
+		t.Fatalf("an admitted chain counted %d anomalies", sub.Anomalies)
+	}
+	for _, f := range reconcile.Subject(raceSubject, sub) {
+		switch f.Class {
+		case reconcile.ClassMergeWithoutVerdict, reconcile.ClassChainSkipped:
+			t.Fatalf("an admitted chain is classified %s: %s", f.Class, f.Detail)
+		}
+	}
 }

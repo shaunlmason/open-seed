@@ -48,10 +48,10 @@ import (
 // appears twice on purpose: VerifyVerdicts emits it from records, and
 // EvidenceAt emits it separately for a non-reproducing L3 receipt.
 // depth is the fast gate's size (plans/os-873b5153.md D7): 4 steps per
-// trace is 698 terminal states across the two variants in about 1.6s,
+// trace is 852 terminal states across the two variants in about 1.9s,
 // which keeps this model and the racing one beside it inside the five
 // seconds the plan budgets for the pair. perf-scale.yml runs depth 6
-// (5,690 terminal states, about 15s) weekly.
+// (7,068 terminal states, about 20s) weekly.
 var depth = flag.Int("depth", 4, "steps per reconciliation trace (plans/os-873b5153.md D7)")
 
 var (
@@ -189,6 +189,7 @@ func (s *rstate) Enabled() []step {
 			step{name: "verdict.pass.byholder", raw: true},
 			step{name: transition.CheckSealedVerb, raw: true},
 			step{name: transition.MergeOverriddenVerb, raw: true},
+			step{name: "verdict.pass.overdeclared", raw: true},
 		)
 	}
 	return out
@@ -408,6 +409,18 @@ func (h *harness) draft(s *rstate, st step) (*event.Record, bool) {
 		lane, verb = "verifier", transition.VerdictRenderedVerb
 		payload = fmt.Sprintf(`{"verdict": %q, "receipt": %q, "submission": "%d", "independence": "L1"}`,
 			outcome, zeros64, sub.Submission.Pos)
+	case "verdict.pass.overdeclared":
+		// The record half of independence_unverified: a pass by the
+		// verifier declaring a level the records do not support. The
+		// boundary requires the declared level to equal the achieved
+		// one, so this only ever reaches the chain raw, and
+		// VerifyVerdicts re-judges it from the same facts.
+		if sub.Submission == nil {
+			return nil, false
+		}
+		lane, verb = "verifier", transition.VerdictRenderedVerb
+		payload = fmt.Sprintf(`{"verdict": "pass", "receipt": %q, "submission": "%d", "independence": "L2"}`,
+			zeros64, sub.Submission.Pos)
 	case "verdict.pass.byholder":
 		// The raw-push laundering setup: a pass verdict signed by the
 		// implementing key, which admission refuses and which
@@ -553,18 +566,15 @@ func TestReconciliationInterleavings(t *testing.T) {
 	// P1: reachability by path. The failure names which set it expected,
 	// because "unreachable" means something different in each.
 	for _, c := range admittedReachable {
-		if !seenAdmitted[c] && !seenRaw[c] {
-			t.Errorf("P1: %q is admitted-reachable by the partition but no trace produced it", c)
+		// A raw trace reaching the class is no substitute (review on
+		// #370): the claim is that admission itself can produce it, and
+		// accepting seenRaw here would hide a front-door regression that
+		// left the class reachable only by forgery.
+		if !seenAdmitted[c] {
+			t.Errorf("P1: %q is admitted-reachable by the partition but no fully admitted trace produced it", c)
 		}
 	}
 	for _, c := range rawPushReachable {
-		if c == reconcile.ClassIndependenceUnverified {
-			// Its record half needs a verdict declaring a level the
-			// records do not support, which this alphabet does not draft
-			// (every verdict declares L1 and achieves it). Named here so
-			// the omission is deliberate and visible rather than silent.
-			continue
-		}
 		if !seenRaw[c] {
 			t.Errorf("P1: %q is raw-push-reachable by the partition but no raw trace produced it", c)
 		}
@@ -699,7 +709,7 @@ func runVariant(t *testing.T, name string, plantSeal bool, seenAdmitted, seenRaw
 			if !s.usedRaw {
 				sub, ok := fold.State(contractID)
 				if ok && sub.State == "done" {
-					pass := sub.Verdict != nil && sub.Verdict.Verdict == "pass"
+					pass := sub.CitedPass()
 					override := sub.Override != nil && sub.Requested != nil && sub.Requested.CitedOverride == sub.Override.Pos
 					if !pass && !override {
 						t.Fatalf("P4: an admitted trace reached done with neither an authentic pass verdict nor a cited override\n%s", traceText(path))
@@ -708,9 +718,6 @@ func runVariant(t *testing.T, name string, plantSeal bool, seenAdmitted, seenRaw
 			}
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err != nil {
 		t.Fatal(err)
 	}

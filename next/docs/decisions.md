@@ -4737,11 +4737,12 @@ each inside the plan's autonomy contract:
   package's `Class*` constant declarations out of its source and checks
   the three sets cover them exactly. The trust surface stays as it was.
 - **Sizes (D7).** The fast gate runs the reconciliation model at depth 4
-  (698 terminal states across its two staging variants, about 1.6s) and
+  (852 terminal states across its two staging variants, about 1.9s) and
   the racing model at depth 7 (2,007 terminal states, 70 of them
-  settled, about 2.2s): 3.8s for the pair, inside the plan's five-second
-  budget. `perf-scale.yml` runs depth 6 (5,690 terminal states, about
-  15s) and race-depth 9 (about 27s) weekly.
+  settled, about 2.5s): 4.4s for the pair, inside the plan's five-second
+  budget. `perf-scale.yml` runs depth 6 (7,068 terminal states, about
+  20s) and race-depth 9 (22,599 terminal states, 1,162 settled, about
+  33s) weekly.
 - **A real divergence, fixed under D8: the settlement was unreachable on
   a racing subject.** The racing enumeration could not settle a race at
   all. On a racing subject a rival racer is still holding when the
@@ -4770,6 +4771,46 @@ each inside the plan's autonomy contract:
   Reading the subject's singular verdict fact calls that trace
   unverified. The property now reads the position the `merge.requested`
   cited, which is what admission itself enforces.
+- **The fold counted the same fence the boundary had stopped counting
+  (review on #370).** Exempting the merge chain in admission alone left
+  the tolerant fold's own fence-anomaly counter demanding the rival
+  racer's citation, so every admitted settlement on a racing subject
+  folded with an anomaly and `reconcile.Classify` reported
+  `merge_without_verdict` on a chain the boundary had just taken: one
+  rule, two consumers, disagreeing (§II.10). The predicate is now
+  `transition.IsMergeChain`, read by both.
+- **What the chain rests on is the verdict its request CITED, in the
+  fold and the classifier too (review on #370).** `FoldRecords`'
+  `passChain` and `reconcile.Subject` both read the singular latest
+  verdict, so the racing trace the racing model's P2 already accounts
+  for (a fail on the loser's submission after the winner's pass was
+  requested) reached `done` with an anomaly and a false finding.
+  `SubjectState.CitedPass` resolves the cited position against the
+  verdicts the fold kept, and the classifier splits `anyPass` from
+  `citedPass` so its two findings keep the meanings they had: no pass at
+  all is a merge without a verdict, a pass the chain did not run through
+  is a skipped link. `VerdictFacts` reads the singular fact when the
+  list is empty, so a hand-built state (a classifier table test) is
+  judged as it was before the list existed.
+  `TestSettlementSurvivesTheLosersLateFail` pins the trace by hand,
+  since the fast gate's race-depth 7 does not reach a nine-step trace.
+- **P1's admitted arm requires an admitted trace (review on #370).** It
+  accepted `seenRaw` as a substitute, which would have hidden a
+  front-door regression that left an admitted-reachable class reachable
+  only by forgery.
+- **`independence_unverified`'s record half is reached rather than
+  excepted (review on #370).** A fifth raw step drafts the verifier's
+  pass declaring `L2` where the records support `L1`; admission requires
+  the declared level to equal the achieved one, so it only ever lands
+  raw, and `VerifyVerdicts` re-judges it from the same facts. All nine
+  classes in the two ledger-reachable sets are now produced by a trace.
+- **The reap is taken, not composed (review on #370).** P4 built a
+  packet and called it a reap. Each settled terminal state now signs the
+  maintenance lane's `claim.reaped`, puts it through the real admission,
+  appends it, and refolds: the claims are gone because the reaper
+  removed them, and the subject stayed `done`. It runs from the terminal
+  state rather than as a step in the alphabet, which keeps the
+  enumeration exhaustive at a usable depth.
 - **P3's non-exit probe is `progress.milestone`, not `submission.made`.**
   `transition.IsExit` counts a submission as an exit, since it closes
   the window, and the `race_settled` rule lets a settled-out racer take

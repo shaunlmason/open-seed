@@ -886,7 +886,7 @@ func coreRules() []Rule {
 				// per plans/os-0f718b4e.md).
 				return nil
 			}
-			if verb == transition.MergeRequestedVerb || verb == transition.MergeObservedVerb {
+			if transition.IsMergeChain(verb) {
 				// The merge chain is subject-scoped, never claim-scoped:
 				// both payloads are strict objects the chain rule pins
 				// ({verdict} or {override}, and {merged, pr}), so neither
