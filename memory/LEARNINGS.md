@@ -2298,3 +2298,11 @@ failed step skips the rest of the job.
   Revert the body, watch it fail at exactly the cases the defect
   predicts, restore. Cheap, and it is the difference between a
   regression test and a tautology.
+- 2026-09-07 (os-f11601e0): a test that restates a list living elsewhere
+  in the tree fails the documentation, not the code, the first time the
+  real list grows. `cmd/seed/handbook_test.go` kept its own copy of the
+  dispatchable top-level verbs and rejected a handbook section for
+  documenting `seed boundary`, a verb the CLI has dispatched since
+  Phase 13. Derive the set from the table that owns it
+  (`catalog(...).Groups()`); the drill keeps its teeth and loses the
+  staleness.

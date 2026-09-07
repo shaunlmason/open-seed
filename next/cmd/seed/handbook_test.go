@@ -15,17 +15,17 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 )
 
-// knownGroups is the top-level verb set the dispatch switch routes.
-var knownGroups = map[string]bool{
-	"version": true, "init": true, "ledger": true, "project": true,
-	"situation": true, "obs": true, "plan": true, "verdict": true,
-	"seal": true, "offer": true, "budget": true, "claim": true,
-	"escalation": true, "decision": true, "submission": true, "merge": true, "check": true,
-	"reconcile": true, "maintain": true, "lane": true, "message": true,
-	"doctor": true, "protections": true, "perf": true, "import": true,
-	"preseed": true, "run": true, "eval": true, "knowledge": true,
-	"flywheel": true, "trajectory": true, "docs": true, "simulate": true,
-	"request": true,
+// knownGroups is the top-level verb set the CLI dispatches, read from
+// the verb table rather than restated here. A hand-maintained copy of a
+// list that lives somewhere else falls behind the moment a verb is
+// added, and fails the handbook for documenting a command that works
+// (os-f11601e0: `boundary` was dispatchable and missing from the copy).
+func knownGroups() map[string]bool {
+	known := map[string]bool{}
+	for _, g := range catalog(strings.NewReader("")).Groups() {
+		known[g.Name] = true
+	}
+	return known
 }
 
 // handbookCommands extracts the token lists of every `seed` command in a
@@ -60,12 +60,13 @@ func handbookCommands(t *testing.T) [][]string {
 }
 
 func TestHandbookCommandsAreDispatchable(t *testing.T) {
+	known := knownGroups()
 	for _, toks := range handbookCommands(t) {
 		if len(toks) == 0 {
 			continue
 		}
 		group := toks[0]
-		if !knownGroups[group] {
+		if !known[group] {
 			t.Errorf("handbook uses unknown top-level verb %q", group)
 			continue
 		}
