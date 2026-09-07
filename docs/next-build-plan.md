@@ -561,28 +561,42 @@ its own rather than JCS; and its verifier proves that each link's issuer signed 
 that the leaf subject holds its key, so a pass is a bearer credential in practice and the
 harness must bind it.
 
-- **Tool-edge authority passes derived from admitted facts** (§II.5 capability scoping,
+- **Tool-edge authority passes over a declared policy map** (§II.5 capability scoping,
   §II.9 executor adapters, §II.10 least standing capability). At wake, the executor
-  adapter mints a short-lived pass for the run from what the ledger already admitted and
-  nothing else: capabilities from the lane's tool policy, resources from the contract's
-  routing (repository, branch, declared paths, environments), `count` from the budget
-  reservation, expiry at the lease's end, subject the run's key. A tool proxy the adapter
-  runs outside the agent process (the container and cloud adapters; the local adapter
-  declares it cannot, as it does for the tuple) verifies before each side effect and
-  refuses on denial; a harness that spawns subagents hands each an attenuated child, so a
-  spawned worker holds a subset of its parent's edge authority by construction. Three
-  rules keep the ledger the one authority (§I.3, §II.18): the pass is a projection,
-  rebuildable from the chain and never presented at admission, so `actor.granted` stays
-  the only capability data admission reads; `count` is a derived cap on a reservation the
-  ledger owns, never a second budget, and exhausting it is a refusal the run observes, not
-  a settlement; and denials are metered onto the observation stream as `tool.refused`
-  (§II.9 telemetry, never an escalation), joined to the receipt as evidence of what the
-  run was refused. Format: pigeon's SPEC §4 to §9 in Go under `next/internal/pass`, with
-  its `fixtures/` as the conformance corpus, so a pass minted here verifies under its MCP
-  middleware unchanged; the credential never enters the ledger, so the JCS default (§1)
-  governs nothing it touches, recorded as one decision-log line. Mock-total like every
-  adapter (§II.13): a harness with no proxy loses the bound and nothing else, which is the
-  honest v0 and the reason this is a backlog extra.
+  adapter mints a short-lived pass for the run and a tool proxy it runs outside the agent
+  process (the container and cloud adapters; the local adapter declares it cannot, as it
+  does for the tuple) verifies before each side effect and refuses on denial; a harness
+  that spawns subagents hands each an attenuated child, so a spawned worker holds a subset
+  of its parent's edge authority by construction. **The card's first item is the mapping,
+  because the pass's inputs do not exist yet.** `tool_policy` is an opaque tuple string;
+  a contract's `routing` is one squad name (`internal/transition`); branch names are forge
+  state the ledger cannot see (`next/spec/verdicts.md`); and Seed holds no lease at all —
+  a claim stands until a deliberate exit or a reap (`next/spec/observations.md`). So the
+  capability set, the resource set and the TTL come from a **declared tool-policy map**
+  keyed by the tuple's `tool_policy` value, beside the lane manifest's grants, read the
+  way the claim ceiling and the routing rule already read the declaration: **admission
+  policy, not chain validity** (`next/spec/postures.md`), by the cooperative client from
+  its working tree and by the hook at the default branch's tip. The subject is the run's
+  key and the contract, squad and tuple it was minted for; the adapter re-mints once per
+  metering/poll cycle (`next/spec/executors.md`), so the pass dies with the run's silence
+  rather than pretending to a deadline the ledger does not record. Three rules keep the
+  ledger the one authority (§I.3, §II.18): the pass is a projection of the declaration
+  plus the chain, never presented at admission, so `actor.granted` stays the only
+  capability data admission reads; the pass's operation cap is a **declared number, not
+  the budget reservation** — reservation units are abstract until Phase 7.3 metering gives
+  them adapter meaning (`next/spec/budgets.md`), so converting one to the other would deny
+  a run with budget left or spend past it, and the two stay separate until units mean
+  something; and denials are metered onto the observation stream as `tool.refused` (§II.9
+  telemetry, never an escalation) and surface in the packet and the supervisor's report,
+  **never in a receipt** — a verifier's inputs are exclusively self-executed or self-read
+  and reproducible from the submission head (`next/spec/verdicts.md`), and a proxy refusal
+  during implementation is an implementer claim on a channel declared lossy. Format:
+  pigeon's SPEC §4 to §9 in Go under `next/internal/pass`, with its `fixtures/` as the
+  conformance corpus, so a pass minted here verifies under its MCP middleware unchanged;
+  the credential never enters the ledger, so the JCS default (§1) governs nothing it
+  touches, recorded as one decision-log line. Mock-total like every adapter (§II.13): a
+  harness with no proxy loses the bound and nothing else, which is the honest v0 and the
+  reason this is a backlog extra.
 
 Two uses the survey considered and does not file. A pass as the cross-organization
 ingress credential: `next/spec/requests.md` enrolls the ingress key as a service holding
