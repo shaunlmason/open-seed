@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/shaunlmason/open-seed/next/internal/admit"
@@ -66,8 +67,9 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	fs.Var(&tiers, "tier", "contract tier the offer covers (repeatable; none = any tier)")
 	fs.Var(&tuples, "tuple", "runtime tuple a qualified taker's claim grant must cite, as the strict JSON object (repeatable; none = any configuration)")
 	strongest := fs.Int("strongest", 0, "fill the tuples scope with the top n of the ranking for the one --capability (next/spec/ranking.md); refuses when nothing ranks")
+	resume := fs.Bool("resume", false, "add the prior submitter's tuple to the tuples scope, derived from the subject's latest return by observation (next/spec/ranking.md \"Resume\"); refuses when none derives")
 	if err := fs.Parse(args); err != nil || *dir == "" || *subject == "" || *keyPath == "" || *expires == "" || fs.NArg() != 0 || *strongest < 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer publish requires --ledger <dir> --subject <id> --key <path> --expires <RFC3339> [--capability c]... [--tier t]... [--tuple <json>]..."), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "offer publish requires --ledger <dir> --subject <id> --key <path> --expires <RFC3339> [--capability c]... [--tier t]... [--tuple <json>]... [--strongest <n>] [--resume]"), stdout, stderr)
 	}
 	// Each --tuple is parsed at the door with the same strict parser
 	// admission applies, so a malformed one refuses as usage here and
@@ -128,6 +130,26 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 			return render(envelope.Fail(envelope.ExitNotFound, "ranking_empty", fmt.Sprintf("no qualified %s tuple ranks at %s: publish without --strongest to offer unscoped, or qualify a configuration first (next/spec/ranking.md)", capabilities[0], ts)), stdout, stderr)
 		}
 	}
+	// --resume is the per-subject preference beside the per-capability
+	// ranking (plans/os-29e2fef2.md D2): the prior submitter's tuple
+	// leads the scope, alone or beside what --strongest and --tuple
+	// wrote, and an empty resumption refuses in the ranking_empty
+	// posture rather than widening the offer.
+	var resumption map[string]any
+	if *resume {
+		r, ok := ranking.Resume(ctx.Records, ctx.Lifecycle, *subject)
+		if !ok {
+			return render(envelope.Fail(envelope.ExitNotFound, "resume_empty", fmt.Sprintf("no configuration to resume on %s: %s (publish without --resume to scope by hand or unscoped; next/spec/ranking.md)", *subject, r.Because)), stdout, stderr)
+		}
+		lead := []tuple.Tuple{*r.Tuple}
+		for _, t := range scoped {
+			if !t.Equal(*r.Tuple) {
+				lead = append(lead, t)
+			}
+		}
+		scoped = lead
+		resumption = map[string]any{"tuple": *r.Tuple, "holder": r.Holder, "return": strconv.Itoa(r.Return)}
+	}
 	payload, err := json.Marshal(struct {
 		Eligibility offerEligibility `json:"eligibility"`
 		Expires     string           `json:"expires"`
@@ -158,10 +180,14 @@ func runOfferPublish(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return render(stampAffordances(envelope.Fail(envelope.ExitChainInvalid, "chain_invalid", err.Error()), *dir, signer, *subject), stdout, stderr)
 	}
-	return render(journalAttempt(stampTip(stampAffordances(envelope.OK(map[string]any{
+	result := map[string]any{
 		"subject": *subject,
 		"expires": *expires,
-	}), *dir, signer, *subject), pos+1), *dir, signer, "offer.published", *subject, []byte(payload)), stdout, stderr)
+	}
+	if resumption != nil {
+		result["resumption"] = resumption
+	}
+	return render(journalAttempt(stampTip(stampAffordances(envelope.OK(result), *dir, signer, *subject), pos+1), *dir, signer, "offer.published", *subject, []byte(payload)), stdout, stderr)
 }
 
 func runOfferList(args []string, stdout, stderr io.Writer) int {

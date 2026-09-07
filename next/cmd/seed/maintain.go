@@ -69,9 +69,10 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 	tokenEnv := fs.String("token-env", "GITHUB_TOKEN", "environment variable holding the forge token")
 	prSnapshot := fs.String("snapshot", "", "pull-request snapshot file (snapshot forge)")
 	ceiling := fs.Int("return-ceiling", maintain.DefaultReturnCeiling, "observation-cited returns one subject may carry before the pass escalates instead")
-	if err := fs.Parse(args); err != nil || *dir == "" || *repo == "" || *keyPath == "" || *obsDir == "" || fs.NArg() != 0 || *staleAfter < 0 || *ceiling <= 0 {
+	reofferTTL := fs.Duration("reoffer-ttl", maintain.DefaultReofferTTL, "how long a re-offer the pass publishes on a returned subject stays live, from the append's own instant")
+	if err := fs.Parse(args); err != nil || *dir == "" || *repo == "" || *keyPath == "" || *obsDir == "" || fs.NArg() != 0 || *staleAfter < 0 || *ceiling <= 0 || *reofferTTL <= 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage",
-			"maintain run requires --ledger <dir> --repo <dir> --key <path> --obs <dir> [--out <dir>] [--artifacts <dir>] [--as-of <ts>] [--stale-after <duration>] [--forge <kind> ...] [--return-ceiling <n>]"), stdout, stderr)
+			"maintain run requires --ledger <dir> --repo <dir> --key <path> --obs <dir> [--out <dir>] [--artifacts <dir>] [--as-of <ts>] [--stale-after <duration>] [--forge <kind> ...] [--return-ceiling <n>] [--reoffer-ttl <duration>]"), stdout, stderr)
 	}
 	var observe func(pr string) (externalfact.Observation, error)
 	if *forgeKind != "" {
@@ -155,16 +156,21 @@ func runMaintainRun(args []string, stdout, stderr io.Writer) int {
 		// observe step skipped, never passed over silently.
 		Observe:       observe,
 		ReturnCeiling: *ceiling,
-		Refresh: func() (*transition.Fold, []obligation.Row, error) {
+		// The re-offer's seam (plans/os-29e2fef2.md D3): the pass
+		// chooses the instant once and the record is signed at it, so
+		// the offer's expires and its ts derive from one reading.
+		AppendAt:   sess.appendAt,
+		ReofferTTL: *reofferTTL,
+		Refresh: func() ([]*event.Record, *transition.Fold, []obligation.Row, error) {
 			fresh, failEnv := loadVerdictState(*dir)
 			if failEnv != nil {
-				return nil, nil, errors.New(failEnv.Error.Message)
+				return nil, nil, nil, errors.New(failEnv.Error.Message)
 			}
 			rows, err := project.DeriveObligations(fresh.records)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
-			return fresh.fold, rows, nil
+			return fresh.records, fresh.fold, rows, nil
 		},
 	}
 	if *out != "" {
@@ -205,6 +211,14 @@ func (m *maintainSession) count() int { return m.st.count }
 // bypass, which is what "audited as an ordinary actor" has to mean:
 // a refusal here is reported, never retried and never worked around.
 func (m *maintainSession) append(verb, subject string, payload []byte) error {
+	return m.appendAt(time.Now().UTC(), verb, subject, payload)
+}
+
+// appendAt is append at a named instant: the re-offer step chooses
+// the instant once and hands it to the payload and the record alike
+// (plans/os-29e2fef2.md D3), so an offer whose expires is the instant
+// plus the ttl can never be born dead against its own ts.
+func (m *maintainSession) appendAt(at time.Time, verb, subject string, payload []byte) error {
 	store, failEnv := openStore(m.dir)
 	if failEnv != nil {
 		return fmt.Errorf("%s", failEnv.Error.Message)
@@ -222,7 +236,7 @@ func (m *maintainSession) append(verb, subject string, payload []byte) error {
 		return err
 	}
 	rec, err := event.Sign(event.Event{
-		V: ctx.Active, TS: time.Now().UTC().Format(time.RFC3339), Actor: fp,
+		V: ctx.Active, TS: at.UTC().Format(time.RFC3339), Actor: fp,
 		Verb: verb, Subject: subject, Payload: json.RawMessage(payload), Prev: ctx.Tip,
 	}, m.signer)
 	if err != nil {

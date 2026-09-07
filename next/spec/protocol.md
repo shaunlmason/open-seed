@@ -146,6 +146,23 @@
     stays unknown-and-refused under a `seed/8` validator too, a return
     cites a verdict only, the `pr` field is not read, no table row
     changes, and every existing chain verifies byte for byte.
+  - `seed/9`: restores the runtime-tuple semantics
+    ([`ranking.md`](ranking.md) "Resume"; plans/os-29e2fef2.md). The
+    named list behind `seed/2`'s semantics was not extended when
+    `seed/5` through `seed/8` were registered, so the binaries that
+    shipped those versions admitted a tupleless grant, start and offer
+    at those positions, and a tuple-bearing one refused; those
+    positions keep that recorded judgment. From `seed/9` `actor.granted`
+    may cite a `tuple`, `run.started` must declare one and an offer may
+    scope by `tuples` again, which the resumption the forge loop
+    re-offers by needs. A `seed/8` validator strictly decodes a
+    `seed/9` tuple-bearing grant as `{capability}` and fails it, so the
+    two judge a `seed/9` record differently, hence the bump, which makes
+    a `seed/8`-only validator refuse an upgraded chain at the first
+    `seed/9` record by version rather than as corruption. At `seed/8`
+    positions the field stays unknown-and-refused under a `seed/9`
+    validator too, no new verb, no table row changes, and every
+    existing chain verifies byte for byte.
 
 ## The machine surface
 

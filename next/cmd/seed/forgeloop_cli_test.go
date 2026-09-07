@@ -24,7 +24,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/version"
 )
 
-// forgeStand is a seed/8 ledger with an observer, a dispatcher and a
+// forgeStand is a seed/9 ledger with an observer, a dispatcher and a
 // maintenance actor beside the offer ledger's supervisor, workers and
 // verifier, one contract offered, and a repository whose head the
 // submission names.
@@ -46,7 +46,7 @@ func forgeLedger(t *testing.T) *forgeStand {
 			t.Fatalf("%s %s: %d %+v", verb, subject, code, e)
 		}
 	}
-	for _, v := range []string{version.Seed2, version.Seed3, version.Seed4, version.Seed5, version.Seed6, version.Seed7, version.Seed8} {
+	for _, v := range []string{version.Seed2, version.Seed3, version.Seed4, version.Seed5, version.Seed6, version.Seed7, version.Seed8, version.Seed9} {
 		appendRoot("system.protocol.upgraded", "system", `{"to": "`+v+`"}`)
 	}
 	for name, id := range map[string]struct {

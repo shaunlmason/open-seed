@@ -4654,3 +4654,62 @@ projection boundary. What landed (`next/spec/projections.md`
 - **Named follow-ups, not built here.** A `seed-mirror` build in the
   release workflow (a protected path); an `Observation` field on the
   contracts view, should the mirror ever need check state in a label.
+## os-29e2fef2: prefer the prior submitter's tuple when re-offering a contract returned on the forge's word
+
+Plan: `plans/os-29e2fef2.md` (#358). Decisions taken while implementing,
+each inside the plan's autonomy contract:
+
+- **The predicates the plan lifted already lived in `internal/offers`.**
+  D3 named `ranking.OfferAuthorized` and `ranking.Eligible` as lifts of
+  the two private copies; #352 had lifted them to `offers.Authorized`
+  and `offers.Eligible` before this task started, and `offer list`, the
+  report and the bridge already read them. `ranking.Resume` reads those
+  two rather than adding a third copy; `internal/project/report.go`
+  and `cmd/seed/offer.go` are untouched on that account.
+- **`seed/9` restores the runtime-tuple semantics.** `tuple.Applies`
+  names seed/2 through seed/4 and was not extended when seed/5 through
+  seed/8 were registered, so on the forge loop's seed/8 chain no grant
+  could cite a tuple, no `run.started` could declare one and no offer
+  could scope by one: the resumption could never derive there. The
+  first cut extended the list in place; the review found (correctly)
+  that this re-judges records the shipped binaries already admitted
+  tupleless at seed/5 through seed/8, which the protocol forbids, and
+  exceeds D6. So seed/5 through seed/8 keep their recorded judgment
+  and `seed/9` restores the semantics, registered in `version` and the
+  protocol register with the usual two-validators-disagree trigger,
+  every later gate (evals, levels, import, racing, requests, forge
+  checks) naming it too. This is a protocol change D6 did not
+  foresee, taken here rather than escalated because the plan's purpose
+  is unmet without it and the bump is the tree's routine shape for a
+  change in judgment; the forge stand and the resumption drills run
+  at seed/9. `next/internal/tuple/` and `next/internal/version/` are
+  the files outside the plan's scope list, for that reason.
+- **The window derives even when the tuple does not.** `Resume`
+  returns the fence, holder and consumed offer whenever a return by
+  observation stands, and `ok` only when the tuple also derives, so
+  the re-offer's capabilities and tiers come from the consumed offer
+  in the undeclared case too, as D3 asks.
+- **No tuple derived keeps the consumed offer's own tuple scope.** D3
+  says both "unscoped by tuple otherwise" and "never wider than the
+  consumed offer's"; where the consumed offer was tuple-scoped and the
+  prior tuple does not derive, the re-offer carries the consumed
+  offer's tuple set unchanged, so the second rule holds and the first
+  applies to an unscoped consumed offer.
+- **`Refresh` returns the records too.** The re-offer reads the return
+  the pass just appended, and the resumption reads records as well as
+  the fold; the one refresh seam now yields both, rather than a second
+  seam.
+- **The run's signer is not matched.** `run.started` is the
+  supervisor's act on the holder's window (the set rule reads the
+  holder's grants, never the signer's), so the resumption takes the
+  first start at the fence, the admitted once-per-fence one.
+- **The maintenance-only-key clause of AC3 is drilled at the effect
+  seam.** A key holding `maintenance` alone is refused on the return
+  first, so the pass never reaches a re-offer to have refused; the
+  refusal-is-reported posture is drilled in `internal/maintain` with an
+  `AppendAt` that refuses, and the CLI drill keeps the return's
+  refusal.
+- **The reclaim in AC4 is the admitted `claim.taken`.** `claim take`
+  is remote-only by design; the forge stand is a local ledger, so the
+  loop drill reclaims through the same admitted append the existing
+  forge drills use, the claim boundary unchanged.

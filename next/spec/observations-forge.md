@@ -174,6 +174,23 @@ and the refusals are reported, the pass's existing posture. Wakeless
 as before: a forge webhook is an advisory wake adapter (§II.9) and out
 of this spec's scope; the pass on its schedule is the correctness path.
 
+## The re-offer
+
+A return re-readies the subject with no live offer on it, and a
+worker's poll lists nothing for a subject with no live offer, so the
+loop above would stall after its first return until a supervisor
+noticed. The pass therefore **re-offers what it returned**
+(plans/os-29e2fef2.md D3; [`maintenance.md`](maintenance.md)
+"Re-offer"): one `offer.published` per return, in the pass that
+returned it, scoped to the prior submitter's tuple where the chain
+derives one the holder can still take ([`ranking.md`](ranking.md)
+"Resume"; a chain at `seed/9`, where a start declares its tuple
+again) and carrying the capabilities and tiers of the offer the
+returned claim consumed. The prior submitter's poll lists it and takes
+it through the unchanged claim; another configuration's does not. A
+window that declared no tuple re-offers unscoped by tuple. Nothing in
+the return, the ceiling or the merge chain changes.
+
 ## The return ceiling
 
 `--return-ceiling <n>` (default 3, a declared threshold in the
@@ -221,7 +238,11 @@ cites a verdict only, and `submission.made`'s `pr` is not read.
 - III.G rows 1 and 2 retained: the merge chain is unchanged and
   `merge.requested`'s new refusal is one more link it holds;
   `TestMaintainObservesAndReturnsTheRedSubmission` completes the chain
-  to `done` after a return.
+  to `done` after a return, and
+  `TestMaintainReoffersWhatItReturnedToThePriorConfiguration` closes
+  the loop unattended: red, returned, re-offered, retaken by the prior
+  configuration, green, merged, with no offer published by hand after
+  the first.
 - §II.13 "checks (CI green + zero unresolved threads via forge
   adapters)" on the contract loop: `TestGitHubChecks`,
   `TestForgejoChecks`, `TestSnapshotChecks`, and the pass's drills

@@ -2028,6 +2028,24 @@ written by the two implementing sessions, one voice.
   and `returned-c6` stations; III.D row 7 met by construction and left
   for the exit record to flip; the ranking follow-up D8 names filed as
   os-29e2fef2)
+- prefer the prior submitter's tuple when re-offering a contract
+  returned on the forge's word (ranking policy, Phase 13 item 7;
+  charter II.9, II.11), os-29e2fef2, **in review** (task PR against
+  plan #358: `ranking.Resume` deriving the returned window's declared
+  tuple, holder and consumed offer from the chain, refusing by name
+  after a verdict return, with no return, no admitted start, no
+  declared tuple, a suspended or revoked holder, or a tuple the
+  holder's admissible claim grant no longer cites; `seed offer publish
+  --resume` beside `--strongest` and `--tuple`, `resume_empty` on exit
+  4; the maintenance pass's re-offer step after the return, one per
+  return, scoped to the prior tuple with the consumed offer's
+  capabilities and tiers, its expiry and its record's `ts` from one
+  instant through `Deps.Instant` and `Deps.AppendAt`, `--reoffer-ttl`;
+  `seed/9` restoring the runtime-tuple semantics that seed/5 through
+  seed/8 lost by omission, which the resumption on the forge loop's
+  chain needs; the "Resume" section of `next/spec/ranking.md`, the
+  re-offer sections of `observations-forge.md` and `maintenance.md`,
+  the maintenance fragment's clause)
 - sharded admission intake (III.B row 6, MAY) — os-7953612b —
   **backlog** (filed; a true extra whose absence conforms: the row is
   a permission, and os-9ef9ab34 marks it met by abstention, since the

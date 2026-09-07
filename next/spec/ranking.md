@@ -92,6 +92,55 @@ offer is unscoped, the bootstrap a first eval needs, and the report
 notes `ranking_empty` so the choice is visible. Nothing else `Due`
 owes changes.
 
+## Resume: the prior submitter's tuple
+
+The ranking is per capability and never reads a subject's history.
+One subject-shaped question sits beside it (plans/os-29e2fef2.md;
+[`observations-forge.md`](observations-forge.md)): a contract returned
+on the forge's word records no lockout, so the prior submitter is the
+natural next claimant, and it already holds the branch, the threads
+and the context. `internal/ranking.Resume` derives its configuration
+from the chain: the subject's latest applied `contract.returned`; when
+it cited an observation, the submission it returned, the claim window
+that submission's `fence` names, the tuple the window's admitted
+`run.started` declared, and the holder that took the window. It yields
+the tuple, the holder, the positions and the **consumed offer**: the
+latest offer before the claim whose signer held the supervise boundary
+at its own position and whose scopes the holder met there, the two
+predicates the listing applies ([`offers.md`](offers.md) "Foreign
+offers are inert"), so a raw-pushed offer nobody granted never lends
+its scope. The start read is the first at the fence that the run rule's own
+derivation (`admit.RunStartValid`) accepts, since the tolerant fold
+keeps a raw-pushed start too. Record-derived like the ranking, never
+a clock; no admission rule reads it; the policy table above is
+unchanged, because the preference is per subject, not a ranking rule.
+A declared tuple needs a chain where tuple semantics apply: `seed/2`
+through `seed/4`, and again from `seed/9`
+([`protocol.md`](protocol.md)); a window opened at `seed/5` through
+`seed/8` declared none, and the resumption says so.
+
+It **refuses by name** when any link is missing: the latest return was
+the verifier's (a fail verdict routes to whoever is strongest, not to
+whoever failed), no return stands, the window carried no admitted
+`run.started` or one that declared no tuple, the holder is suspended
+or revoked, or the holder's admissible `claim` grant no longer cites
+the tuple. The last is the listing's own test, `Eligible` against an
+offer scoped `{capabilities: [claim], tuples: [tuple]}` at the
+subject's tier: `actor.disqualified` removes a tuple while the actor
+stays active, and a preference for such a tuple would be an offer its
+worker cannot see, the stall this derivation exists to remove.
+
+`seed offer publish --resume` fills the `tuples` scope with the
+resumption's tuple, alone or beside `--strongest <n>` and `--tuple`
+(a set, the prior tuple first in the payload, a duplicate folded), and
+refuses `resume_empty` (exit 4, the `ranking_empty` posture) naming
+the missing link when nothing derives: an unscoped offer stays the
+supervisor's explicit choice. The result names the resumption
+(`tuple`, `holder`, `return`). The payload is unchanged from
+[`offers.md`](offers.md); admission judges it by the existing scope
+rule. The maintenance pass publishes by the same derivation on every
+subject it returned ([`maintenance.md`](maintenance.md) "Re-offer").
+
 ## The projection, the doctor, the report
 
 - **`ranking`** (`ranking.json`, version 1): the derivation at the

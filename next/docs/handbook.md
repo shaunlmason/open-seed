@@ -184,6 +184,16 @@ instead of returning a fourth time:
 seed maintain run --ledger ./ledger --key ./maintenance_ed25519 --as-of 2026-09-03T00:00:00Z --forge github --github owner/name --return-ceiling 3
 ```
 
+What it returns it re-offers in the same pass, scoped to the prior
+submitter's configuration where the chain derives one it can still
+take, expiring `--reoffer-ttl` (default 24h) after the append; a
+supervisor can publish the same preference by hand:
+
+```sh
+seed maintain run --ledger ./ledger --key ./maintenance_ed25519 --forge github --github owner/name --reoffer-ttl 12h
+seed offer publish --ledger ./ledger --subject c-1 --key ./supervisor_ed25519 --expires 2026-09-04T00:00:00Z --capability claim --resume
+```
+
 ## 9. Migration from open-seed
 
 Import the predecessor's export against its source clone and seed-anchor

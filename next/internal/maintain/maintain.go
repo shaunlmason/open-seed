@@ -26,11 +26,14 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/curation"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/externalfact"
+	"github.com/shaunlmason/open-seed/next/internal/keyring"
 	"github.com/shaunlmason/open-seed/next/internal/obligation"
 	"github.com/shaunlmason/open-seed/next/internal/obs"
 	"github.com/shaunlmason/open-seed/next/internal/packet"
+	"github.com/shaunlmason/open-seed/next/internal/ranking"
 	"github.com/shaunlmason/open-seed/next/internal/reconcile"
 	"github.com/shaunlmason/open-seed/next/internal/transition"
+	"github.com/shaunlmason/open-seed/next/internal/tuple"
 	"github.com/shaunlmason/open-seed/next/internal/verdict"
 )
 
@@ -173,12 +176,24 @@ type Escalated struct {
 	Ceiling int    `json:"ceiling"`
 }
 
+// Reoffered is one subject the pass re-offered after returning it
+// (plans/os-29e2fef2.md D3): the tuple the re-offer is scoped to and
+// the holder it was declared by, absent where the window declared
+// none the holder can still take, and the expiry the offer carries.
+type Reoffered struct {
+	Subject string       `json:"subject"`
+	Tuple   *tuple.Tuple `json:"tuple,omitempty"`
+	Holder  string       `json:"holder,omitempty"`
+	Expires string       `json:"expires"`
+}
+
 // Report is what one pass did.
 type Report struct {
 	Reaped     []Reap                 `json:"reaped"`
 	Observed   []Observed             `json:"observed"`
 	Returned   []Returned             `json:"returned"`
 	Escalated  []Escalated            `json:"escalated"`
+	Reoffered  []Reoffered            `json:"reoffered"`
 	Skipped    []Skip                 `json:"skipped"`
 	Findings   []reconcile.Finding    `json:"findings"`
 	Filed      []Filing               `json:"filed"`
@@ -192,6 +207,12 @@ type Report struct {
 // (plans/os-0cd18799.md D7): SEED-NEXT.md §II.13's "max revisions" on
 // the contract loop.
 const DefaultReturnCeiling = 3
+
+// DefaultReofferTTL is how long a re-offer the pass publishes stays
+// live (plans/os-29e2fef2.md D3): a declared duration added to the
+// append's own instant. An expired re-offer is the supervisor's to
+// renew, because the pass returns work and does not run the queue.
+const DefaultReofferTTL = 24 * time.Hour
 
 // Deps is everything the pass reads and everything it does. The
 // effects are injected so the rules above are drillable without a
@@ -230,15 +251,30 @@ type Deps struct {
 	// observe step then reports every observable submission skipped
 	// with that reason, never silently, and CI runs that way.
 	Observe func(pr string) (externalfact.Observation, error)
-	// Refresh re-reads the ledger between the observe step and the
-	// return step, so the return cites the observation the pass just
-	// recorded rather than the opening view's. Nil means the opening
-	// fold and obligations stand for both.
-	Refresh func() (*transition.Fold, []obligation.Row, error)
+	// Refresh re-reads the ledger between steps that append and steps
+	// that read what was appended: the return cites the observation
+	// the pass just recorded, and the re-offer reads the return the
+	// pass just appended (plans/os-29e2fef2.md D3), rather than the
+	// opening view's. Nil means the opening records, fold and
+	// obligations stand throughout.
+	Refresh func() ([]*event.Record, *transition.Fold, []obligation.Row, error)
 	// ReturnCeiling bounds the observation-cited returns one subject
 	// may carry before the pass escalates instead (D7); zero means
 	// DefaultReturnCeiling.
 	ReturnCeiling int
+	// ReofferTTL is how long past its own instant a re-offer stays
+	// live (plans/os-29e2fef2.md D3); zero means DefaultReofferTTL.
+	ReofferTTL time.Duration
+	// Instant is the effect that chooses a re-offer's instant, read
+	// once per re-offer and handed to both the payload and the record
+	// through AppendAt, so the offer's expires and the record's ts
+	// derive from one reading and the offer cannot be born dead. Nil
+	// means the wall clock, at second precision.
+	Instant func() time.Time
+	// AppendAt signs and appends one act at the instant given, the
+	// re-offer's seam (plans/os-29e2fef2.md D3). Nil means the
+	// re-offer step is skipped and reported.
+	AppendAt func(at time.Time, verb, subject string, payload []byte) error
 
 	// Corroborate answers the ledger half of the reap rule for one
 	// subject's active fence. Injected because the derivation belongs
@@ -259,20 +295,25 @@ type Deps struct {
 }
 
 // Run executes one pass in the fixed order: reap, observe, return,
-// lint, file, rebuild, checkpoint. The observations come before the
-// lints so the lints read fresh facts, the return before the filing so
-// a returned subject is not also filed as a finding, and the
-// checkpoint is last, because it attests to the state the rest of the
-// pass produced (plans/os-0cd18799.md D6).
+// reoffer, lint, file, rebuild, checkpoint. The observations come
+// before the lints so the lints read fresh facts, the return before
+// the filing so a returned subject is not also filed as a finding,
+// the re-offer right after the return so what the pass returned is
+// claimable again before the pass ends (plans/os-29e2fef2.md D3), and
+// the checkpoint is last, because it attests to the state the rest of
+// the pass produced (plans/os-0cd18799.md D6).
 func Run(d Deps) (Report, error) {
 	rep := Report{
 		Reaped: []Reap{}, Observed: []Observed{}, Returned: []Returned{}, Escalated: []Escalated{},
-		Skipped: []Skip{}, Findings: []reconcile.Finding{},
+		Reoffered: []Reoffered{}, Skipped: []Skip{}, Findings: []reconcile.Finding{},
 		Filed: []Filing{}, Rebuilt: []string{}, Refusals: []Refusal{},
 	}
 	d.reap(&rep)
 	d.observe(&rep)
 	if err := d.returnRed(&rep); err != nil {
+		return rep, err
+	}
+	if err := d.reoffer(&rep); err != nil {
 		return rep, err
 	}
 	rep.Findings = append(rep.Findings, d.lint(&rep)...)
@@ -425,7 +466,7 @@ func ObservationPayload(pr string, o externalfact.Observation) ([]byte, error) {
 func (d Deps) returnRed(rep *Report) error {
 	fold, rows := d.Fold, d.Obligations
 	if d.Refresh != nil {
-		fresh, freshRows, err := d.Refresh()
+		_, fresh, freshRows, err := d.Refresh()
 		if err != nil {
 			return err
 		}
@@ -470,6 +511,123 @@ func (d Deps) returnRed(rep *Report) error {
 		rep.Returned = append(rep.Returned, Returned{Subject: row.Subject, Observation: s.Observation.Pos, Head: s.Observation.Head, Returns: ReturnsByObservation(s) + 1})
 	}
 	return nil
+}
+
+// reoffer publishes a fresh offer on every subject the pass returned
+// in this pass (plans/os-29e2fef2.md D3), so the unattended loop does
+// not stall on a subject no worker's poll can see: after a return the
+// subject is ready with no live offer, and the poll lists nothing.
+// The scope is the resumption's (internal/ranking.Resume): the prior
+// submitter's tuple where the holder can still take it, the consumed
+// offer's capabilities and tiers, one instant for the payload and the
+// record. One re-offer per return, in the pass that returned it: a
+// second pass over the same subject returns nothing and so re-offers
+// nothing, and an expired re-offer is the supervisor's to renew.
+func (d Deps) reoffer(rep *Report) error {
+	if len(rep.Returned) == 0 {
+		return nil
+	}
+	records, fold := d.Records, d.Fold
+	if d.Refresh != nil {
+		freshRecords, fresh, _, err := d.Refresh()
+		if err != nil {
+			return err
+		}
+		records, fold = freshRecords, fresh
+	}
+	if fold == nil {
+		return nil
+	}
+	ttl := d.ReofferTTL
+	if ttl <= 0 {
+		ttl = DefaultReofferTTL
+	}
+	for _, ret := range rep.Returned {
+		s, ok := fold.State(ret.Subject)
+		if !ok || s.State != "ready" {
+			rep.Skipped = append(rep.Skipped, Skip{Subject: ret.Subject, State: s.State,
+				Because: "the returned subject is no longer ready, so the pass does not re-offer it"})
+			continue
+		}
+		r, _ := ranking.Resume(records, fold, ret.Subject)
+		if r.Observation != ret.Observation {
+			// The latest return on the chain is not the one this pass
+			// appended: the re-offer is one per return, never a
+			// re-offer of someone else's.
+			rep.Skipped = append(rep.Skipped, Skip{Subject: ret.Subject, State: s.State,
+				Because: fmt.Sprintf("the latest return on the chain does not cite the observation at position %d this pass returned on, so the pass does not re-offer it", ret.Observation)})
+			continue
+		}
+		if d.AppendAt == nil {
+			rep.Skipped = append(rep.Skipped, Skip{Subject: ret.Subject, State: s.State,
+				Because: "no append-at effect is wired, so the returned subject is not re-offered"})
+			continue
+		}
+		at := time.Now().UTC().Truncate(time.Second)
+		if d.Instant != nil {
+			at = d.Instant().UTC().Truncate(time.Second)
+		}
+		payload, row, err := Reoffer(ret.Subject, s, r, ttl, at)
+		if err != nil {
+			rep.Refusals = append(rep.Refusals, Refusal{Verb: transition.OfferPublishedVerb, Subject: ret.Subject, Reason: err.Error()})
+			continue
+		}
+		if err := d.AppendAt(at, transition.OfferPublishedVerb, ret.Subject, payload); err != nil {
+			rep.Refusals = append(rep.Refusals, Refusal{Verb: transition.OfferPublishedVerb, Subject: ret.Subject, Reason: err.Error()})
+			continue
+		}
+		rep.Reoffered = append(rep.Reoffered, row)
+	}
+	return nil
+}
+
+// Reoffer renders the offer.published payload the pass publishes on a
+// returned subject (plans/os-29e2fef2.md D3), purely from the
+// subject's state, its resumption and the instant it is handed: the
+// consumed offer's capabilities and tiers, or `[claim]` and the
+// subject's filed tier where no offer stood; the prior submitter's
+// tuple alone where it derived, else the consumed offer's own tuple
+// scope, so the re-offer is never wider than what the claim consumed;
+// expires at the instant plus the ttl, the same instant the record is
+// signed at. Refused: a non-positive ttl (a born-dead offer invites
+// nothing) and a subject that is not ready.
+func Reoffer(subject string, s transition.SubjectState, r ranking.Resumption, ttl time.Duration, at time.Time) ([]byte, Reoffered, error) {
+	if ttl <= 0 {
+		return nil, Reoffered{}, fmt.Errorf("a re-offer needs a positive ttl, got %s: an offer must expire strictly after its own instant", ttl)
+	}
+	if s.State != "ready" {
+		return nil, Reoffered{}, fmt.Errorf("a re-offer invites claims on a ready subject, and this one folds to %q", s.State)
+	}
+	capabilities := []string{keyring.CapClaim}
+	var tiers []string
+	if s.Tier != "" {
+		tiers = []string{s.Tier}
+	}
+	var tuples []tuple.Tuple
+	if r.Offer != nil {
+		capabilities = append([]string(nil), r.Offer.Capabilities...)
+		tiers = append([]string(nil), r.Offer.Tiers...)
+		tuples = append([]tuple.Tuple(nil), r.Offer.Tuples...)
+	}
+	row := Reoffered{Subject: subject, Expires: at.Add(ttl).UTC().Format(time.RFC3339)}
+	if r.Tuple != nil {
+		t := *r.Tuple
+		tuples = []tuple.Tuple{t}
+		row.Tuple, row.Holder = &t, r.Holder
+	}
+	type eligibility struct {
+		Capabilities []string      `json:"capabilities,omitempty"`
+		Tiers        []string      `json:"tiers,omitempty"`
+		Tuples       []tuple.Tuple `json:"tuples,omitempty"`
+	}
+	payload, err := json.Marshal(struct {
+		Eligibility eligibility `json:"eligibility"`
+		Expires     string      `json:"expires"`
+	}{eligibility{Capabilities: capabilities, Tiers: tiers, Tuples: tuples}, row.Expires})
+	if err != nil {
+		return nil, Reoffered{}, err
+	}
+	return payload, row, nil
 }
 
 // ReturnsByObservation counts the subject's applied returns that

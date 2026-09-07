@@ -120,7 +120,7 @@ func TestEachRuleRefusesItsCase(t *testing.T) {
 		{"unresolvable actor", draft(t, stranger, "message.sent", "c-0001", `{"n": 1}`, ctx.Tip),
 			"actor", func(err error) bool { return errors.Is(err, ledger.ErrUnknownActor) }},
 		{"forged signature", forged, "actor", func(err error) bool { return err != nil }},
-		{"wrong version", draftV(t, signer, "seed/9", "message.sent", "c-0001", `{"n": 1}`, ctx.Tip),
+		{"wrong version", draftV(t, signer, "seed/10", "message.sent", "c-0001", `{"n": 1}`, ctx.Tip),
 			"version", func(err error) bool {
 				var f *ledger.Failure
 				return errors.As(err, &f) && f.Reason == ledger.ReasonVersionMismatch
@@ -190,7 +190,7 @@ func TestHaltRulesUnderHalt(t *testing.T) {
 // before anything is written.
 func TestVersionDisciplineFollowsUpgrade(t *testing.T) {
 	store, resolve, signer := seededStore(t)
-	appendSigned(t, store, resolve, signer, ledger.UpgradeVerb, "system", `{"to": "seed/9"}`)
+	appendSigned(t, store, resolve, signer, ledger.UpgradeVerb, "system", `{"to": "seed/10"}`)
 
 	// Default supported set: the upgraded chain verifies (the trailing
 	// upgrade is history) but its tip is not appendable by this build.
@@ -198,7 +198,7 @@ func TestVersionDisciplineFollowsUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	next := draftV(t, signer, "seed/9", "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
+	next := draftV(t, signer, "seed/10", "message.sent", "c-0001", `{"n": 1}`, ctx.Tip)
 	err = Check(ctx, next)
 	var f *ledger.Failure
 	if !errors.As(err, &f) || f.Reason != ledger.ReasonVersionUnsupported {
@@ -206,11 +206,11 @@ func TestVersionDisciplineFollowsUpgrade(t *testing.T) {
 	}
 
 	// A build supporting the new version admits it and refuses the old.
-	ctx, err = ContextAt(store, WithSupportedVersions("seed/0", "seed/9"))
+	ctx, err = ContextAt(store, WithSupportedVersions("seed/0", "seed/10"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ctx.Active != "seed/9" {
+	if ctx.Active != "seed/10" {
 		t.Fatalf("active version must follow the upgrade, got %q", ctx.Active)
 	}
 	if err := Check(ctx, next); err != nil {

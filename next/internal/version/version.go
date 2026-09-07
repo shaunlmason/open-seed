@@ -89,13 +89,26 @@ const Seed7 = "seed/7"
 // records at earlier positions keep their earlier judgment.
 const Seed8 = "seed/8"
 
+// Seed9 is the protocol version that restores the runtime-tuple
+// semantics (plans/os-29e2fef2.md; next/spec/ranking.md "Resume"):
+// tuple.Applies names seed/2 through seed/4 and was not extended when
+// seed/5 through seed/8 were registered, so the binaries that shipped
+// those versions admitted a tupleless grant, start and offer there.
+// Those positions keep that judgment; from seed/9 a grant may cite a
+// tuple, a start must declare one and an offer may scope by one again,
+// which the resumption on the forge loop's chain needs. A seed/8
+// validator strictly decodes a seed/9 tuple-bearing grant as
+// {capability} and fails it, so the two judge a seed/9 record
+// differently, which is the bump trigger.
+const Seed9 = "seed/9"
+
 // Supported lists the protocol versions this build verifies and appends:
 // the genesis default plus every later version it implements. Verifiers
 // and admission points seed their default supported sets from it, so a
 // chain that upgrades to a version this build implements keeps verifying
 // without per-caller configuration.
 func Supported() []string {
-	return []string{Protocol, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8}
+	return []string{Protocol, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, Seed9}
 }
 
 // Activated reports whether the semantics seed/1 introduced (the actor
@@ -106,7 +119,7 @@ func Supported() []string {
 // (plans/os-8e53ffd9.md D8). tuple.Applies is the narrower gate for
 // what seed/2 added on top.
 func Activated(v string) bool {
-	return v == Seed1 || v == Seed2 || v == Seed3 || v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7 || v == Seed8
+	return v == Seed1 || v == Seed2 || v == Seed3 || v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7 || v == Seed8 || v == Seed9
 }
 
 // EvalApplies reports whether the qualification verbs and the eval
@@ -119,7 +132,7 @@ func Activated(v string) bool {
 // rather than beside the eval package because the keyring and the fold
 // gate on it and the eval derivation reads both.
 func EvalApplies(v string) bool {
-	return v == Seed3 || v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7 || v == Seed8
+	return v == Seed3 || v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7 || v == Seed8 || v == Seed9
 }
 
 // LevelsApply reports whether the independence levels and the verdict's
@@ -132,26 +145,28 @@ func EvalApplies(v string) bool {
 // verbs' content digest (plans/os-6bd9ffff.md D4, D5, D7), each a
 // row or field a seed/3 validator judges differently.
 func LevelsApply(v string) bool {
-	return v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7 || v == Seed8
+	return v == Seed4 || v == Seed5 || v == Seed6 || v == Seed7 || v == Seed8 || v == Seed9
 }
 
 // ImportApplies reports whether system.imported is defined at a record
 // carrying version v: seed/5 exactly today, a named list of one
 // (plans/os-cf13fb51.md D2), so a version this build has not registered
 // activates nothing however it would sort.
-func ImportApplies(v string) bool { return v == Seed5 || v == Seed6 || v == Seed7 || v == Seed8 }
+func ImportApplies(v string) bool {
+	return v == Seed5 || v == Seed6 || v == Seed7 || v == Seed8 || v == Seed9
+}
 
 // RacingApplies reports whether racing mode's widened origins
 // (claim.taken from in_progress, submission.made from review) are
 // defined at a record carrying version v: seed/6, as a named list.
-func RacingApplies(v string) bool { return v == Seed6 || v == Seed7 || v == Seed8 }
+func RacingApplies(v string) bool { return v == Seed6 || v == Seed7 || v == Seed8 || v == Seed9 }
 
 // RequestsApply reports whether the request ingress verbs are defined
 // at a record carrying version v: seed/7 and later, as a named list.
-func RequestsApply(v string) bool { return v == Seed7 || v == Seed8 }
+func RequestsApply(v string) bool { return v == Seed7 || v == Seed8 || v == Seed9 }
 
 // ForgeChecksApply reports whether the forge observation is defined at
 // a record carrying version v: check.observed, the pr field on
 // submission.made, and contract.returned's observation citation
 // (plans/os-0cd18799.md D9). seed/8 exactly today, a named list of one.
-func ForgeChecksApply(v string) bool { return v == Seed8 }
+func ForgeChecksApply(v string) bool { return v == Seed8 || v == Seed9 }
