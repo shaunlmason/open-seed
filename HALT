@@ -1,4 +1,0 @@
-conformance lint failed:
-- os-0dba8c6a: done without a resolvable plan at plans/os-0dba8c6a.md and without the no-PR exemption (D3/D7)
-- os-405d3b20: done without a resolvable plan at plans/os-405d3b20.md and without the no-PR exemption (D3/D7)
-- os-5fe43832: done without a resolvable plan at plans/os-5fe43832.md and without the no-PR exemption (D3/D7)
