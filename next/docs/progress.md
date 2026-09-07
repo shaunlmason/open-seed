@@ -2090,8 +2090,21 @@ written by the two implementing sessions, one voice.
   trace on the weekly `perf-scale` job)
 - the same explorer over the verdict-then-merge reconciliation and over
   racing mode (the follow-on plans/os-07e6e76c.md D7 names, filable
-  once that explorer's shape was known) — os-873b5153 — **backlog**
-  (filed; charter §II.8 and §II.6 racing, no Part III row)
+  once that explorer's shape was known) — os-873b5153 — **review**
+  (#370 against plan #366; charter §II.8 and §II.6 racing, no Part III
+  row: the walker extracted into `next/internal/explore` with the
+  append-loop model moved onto it unchanged, a reconciliation model in
+  `next/internal/reconcile` whose alphabet includes an operator
+  override and a raw-push adversary, and a racing model in
+  `next/internal/maintain`; both enumerate over real records through
+  the real admission, so the replay is the model. Two findings, each
+  from a step the walk could not take: the settlement was unreachable
+  on a racing subject, the fence rule demanding a rival racer's fence
+  from two payloads with no slot to carry one, fixed here with one
+  exemption and the trace kept as a named regression; and a settlement
+  rests on the position its request cited, not on the subject's last
+  verdict. depth 4 and race-depth 7 under `make check-next`, depth 6
+  and race-depth 9 on the weekly `perf-scale` job)
 
 ## A fixture that escaped the hardening guard (os-222189a3)
 
@@ -2751,8 +2764,8 @@ filed two backlog cards, listed in the backlog section above:
 both are done and closed: os-21bf939f, the admission random walk
 (#353), and os-07e6e76c, the append-loop interleaving check (#359).
 The follow-on the second card's plan names, the same explorer over the
-verdict-then-merge reconciliation and over racing mode, is filed as
-os-873b5153 and stays in backlog under the same filable-now rule.
+verdict-then-merge reconciliation and over racing mode, is os-873b5153,
+in review as #370 against plan #366.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
