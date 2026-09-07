@@ -68,11 +68,14 @@ func TestMergeRequestedCitesThePassVerdict(t *testing.T) {
 		t.Fatalf("an unknown key refuses strict, got %v", err)
 	}
 
-	// A fence citation refuses: review carries no fence.
-	var fe *FenceError
+	// A fence citation refuses, as the strict shape rather than as a
+	// fence complaint: the merge chain is subject-scoped and its
+	// payload has no citation slot, so "fence" is an unknown key like
+	// any other and the fence rule leaves the chain alone
+	// (plans/os-873b5153.md D8).
 	err = Check(ctx, draftV(t, k.worker, version.Seed1, "merge.requested", "c-1", fmt.Sprintf(`{"verdict": "%d", "fence": "9"}`, passPos), ctx.Tip))
-	if !errors.As(err, &fe) {
-		t.Fatalf("a fence citation outside a claim window refuses fenced, got %v", err)
+	if !errors.As(err, &ce) || !strings.Contains(ce.Reason, "strict") {
+		t.Fatalf("a fence citation outside a claim window refuses strict, got %v", err)
 	}
 
 	// The work lane requests; a verdict-only key holds no claim

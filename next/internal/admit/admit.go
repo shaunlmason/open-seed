@@ -886,6 +886,20 @@ func coreRules() []Rule {
 				// per plans/os-0f718b4e.md).
 				return nil
 			}
+			if verb == transition.MergeRequestedVerb || verb == transition.MergeObservedVerb {
+				// The merge chain is subject-scoped, never claim-scoped:
+				// both payloads are strict objects the chain rule pins
+				// ({verdict} or {override}, and {merged, pr}), so neither
+				// carries a citation slot to satisfy this rule with, and
+				// what each rests on is the subject's verdict rather than
+				// anyone's window. On an exclusive subject the window is
+				// already closed by the submission that reached review,
+				// so the rule never met them; on a racing one a rival
+				// racer is still holding, and demanding its fence would
+				// refuse every settlement, taking the settled-out facts
+				// §II.6 rests on with it (plans/os-873b5153.md D8).
+				return nil
+			}
 			if c.Table.Exclusive(verb) {
 				if s, ok := c.Lifecycle.State(rec.Event.Subject); ok && s.Claim != nil {
 					// A rival claim is contention, the lifecycle
