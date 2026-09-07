@@ -46,22 +46,43 @@ const DefaultCardPath = "boundary/card.json"
 // because the key never comes from the card: a card that carried the
 // key that signed it would prove nothing.
 func readPublicKey(hexKey, path string) (ed25519.PublicKey, *envelope.Envelope) {
+	if env := refuseTwoKeys(hexKey, path); env != nil {
+		return nil, env
+	}
 	text := hexKey
 	if path != "" {
-		if text != "" {
-			return nil, envelope.Fail(envelope.ExitUsage, "usage", "give --pubkey or --pubkey-file, not both")
-		}
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			return nil, envelope.Fail(envelope.ExitUsage, "usage", fmt.Sprintf("cannot read --pubkey-file: %v", err))
 		}
 		text = string(raw)
 	}
+	// The operator's key is whatever the operator already has. An
+	// OpenSSH authorized-keys line is what `ssh-keygen -y` writes and
+	// what next/spec/protocol.md accepts at key load, so it is tried
+	// first; a bare hex key is accepted too, because that is the form
+	// the card's own `signer` and this build's fingerprints speak.
+	if key, err := event.ParsePublicKey([]byte(text)); err == nil {
+		return key, nil
+	}
 	key, err := hex.DecodeString(strings.TrimSpace(text))
 	if err != nil || len(key) != ed25519.PublicKeySize {
-		return nil, envelope.Fail(envelope.ExitUsage, "usage", "the operator key is an ed25519 public key in hex")
+		return nil, envelope.Fail(envelope.ExitUsage, "usage",
+			"the operator key is an ed25519 public key, in OpenSSH authorized-keys form or in hex")
 	}
 	return ed25519.PublicKey(key), nil
+}
+
+// refuseTwoKeys is checked before anything is read, by every verb that
+// takes a key. Naming two keys is a usage error rather than a
+// precedence rule, and a reader who learned which one wins would have
+// learned the wrong thing; refusing it ahead of the card and the
+// declaration keeps a malformed invocation from coming back as drift.
+func refuseTwoKeys(hexKey, path string) *envelope.Envelope {
+	if hexKey != "" && path != "" {
+		return envelope.Fail(envelope.ExitUsage, "usage", "give --pubkey or --pubkey-file, not both")
+	}
+	return nil
 }
 
 // runBoundaryVerify is the reader's half of the boundary
@@ -196,6 +217,9 @@ func runBoundaryCheck(args []string, stdout, stderr io.Writer) int {
 	pubFile := fs.String("pubkey-file", "", "a file holding that key")
 	if err := fs.Parse(args); err != nil || *config == "" || *name == "" || fs.NArg() != 0 {
 		return render(envelope.Fail(envelope.ExitUsage, "usage", "boundary check requires --config <file> --name <name> [--card <file>] [--pubkey <hex> | --pubkey-file <path>]"), stdout, stderr)
+	}
+	if env := refuseTwoKeys(*pub, *pubFile); env != nil {
+		return render(env, stdout, stderr)
 	}
 	cfg, err := posture.Load(*config)
 	if err != nil {

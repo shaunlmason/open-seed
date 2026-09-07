@@ -16,6 +16,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/boundary"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"golang.org/x/crypto/ssh"
 )
 
 func pubHexOf(t *testing.T, privPath string) string {
@@ -417,9 +418,39 @@ func TestBoundaryVerifyReadsACardWithNoDeclaration(t *testing.T) {
 	if e, code := runEnv(t, "boundary", "verify", "--card", card, "--pubkey-file", keyFile); code != 0 || !e.OK || e.Result["verified"] != true {
 		t.Fatalf("the key from a file verifies the card: %d %+v", code, e)
 	}
-	// Two ways to name one key is a usage error, not a precedence rule.
+	// The key arrives in whatever form the operator holds it: the
+	// OpenSSH authorized-keys line ssh-keygen -y writes is accepted
+	// wherever the hex is (next/spec/protocol.md "Algorithms").
+	sshFile := filepath.Join(dir, "acme.pub")
+	rawKey, err := hex.DecodeString(operator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sshKey, err := ssh.NewPublicKey(ed25519.PublicKey(rawKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sshFile, ssh.MarshalAuthorizedKey(sshKey), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if e, code := runEnv(t, "boundary", "verify", "--card", card, "--pubkey-file", sshFile); code != 0 || !e.OK || e.Result["verified"] != true {
+		t.Fatalf("an OpenSSH public key file verifies the card: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", card, "--pubkey-file", sshFile); code != 0 || e.Result["verified"] != true {
+		t.Fatalf("check reads the same key file: %d %+v", code, e)
+	}
+	// Two ways to name one key is a usage error, not a precedence rule,
+	// and it is refused before anything is read: a bad invocation that
+	// also names a missing declaration comes back as usage, never as
+	// drift.
 	if e, code := runEnv(t, "boundary", "verify", "--card", card, "--pubkey", operator, "--pubkey-file", keyFile); code != 64 || e.Error == nil || e.Error.Code != "usage" {
 		t.Fatalf("--pubkey and --pubkey-file together: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", card, "--pubkey", operator, "--pubkey-file", keyFile); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("check refuses two keys: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", filepath.Join(dir, "gone.json"), "--pubkey", operator, "--pubkey-file", keyFile); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("two keys outrank a card that is not there: %d %+v", code, e)
 	}
 	// No key at all is a usage error: verify without one would check nothing.
 	if e, code := runEnv(t, "boundary", "verify", "--card", card); code != 64 || e.Error == nil || e.Error.Code != "usage" {

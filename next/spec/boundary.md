@@ -90,6 +90,15 @@ own card is stale, and a reader is not in a position to make it. The
 key never comes from the card, and no flag lets it: a card that carried
 the key that signed it would prove nothing.
 
+**The key is in whatever form the operator already has.** Both verbs
+read `--pubkey` and `--pubkey-file` as either an OpenSSH ed25519
+authorized-keys line, the form `ssh-keygen -y` writes and the one
+[`protocol.md`](protocol.md) accepts at key load, or the bare hex the
+card's own `signer` speaks. Naming both flags at once is a usage error
+rather than a precedence rule, refused before the card or the
+declaration is read, so a malformed invocation never comes back as
+drift.
+
 **The card's word binds the ingress.** A deployment that declares a
 `boundary` block accepts the request kinds it names and no other: the
 `boundary` admission rule refuses `request.filed` with any other kind

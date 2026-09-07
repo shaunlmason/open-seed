@@ -336,6 +336,10 @@ uses the other verb:
 seed boundary verify --card ./their-card.json --pubkey-file ./acme.pub
 ```
 
+Either flag takes the key in the form you were handed it: an OpenSSH
+`ssh-ed25519 AAAA…` line, or the bare hex the card's `signer` speaks.
+Naming both flags at once is refused.
+
 The key never comes from the card: a card carrying the key that signed
 it would prove nothing. A card that does not verify is `card_refused`,
 never `card_drift`, because drift is the publisher's finding that its

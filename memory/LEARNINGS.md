@@ -2306,3 +2306,24 @@ failed step skips the rest of the job.
   Phase 13. Derive the set from the table that owns it
   (`catalog(...).Groups()`); the drill keeps its teeth and loses the
   staleness.
+- 2026-09-07 (os-f11601e0): a plan's validation commands are executed by
+  the receipt runner and every one must exit 0, so a command whose
+  point is a refusal has to assert the refusal, never inherit it. Two
+  traps in one line: `go run` reports a refusing program as exit 1
+  whatever the envelope's own exit code, so checking `$?` against the
+  documented code is wrong too. Match the refusal in the envelope
+  (`| grep -q '"code":"card_refused"'`): it exits 0 on the refusal and
+  fails if the verb ever starts succeeding, crashing, or refusing for
+  another reason.
+- 2026-09-07 (os-f11601e0): a key flag that accepts only hex refuses the
+  file operators actually have. `ssh-keygen -y` writes the OpenSSH
+  authorized-keys line, and the protocol spec accepts OpenSSH ed25519
+  keys at load precisely so existing keys can be reused; a new flag
+  that reads a key file inherits that contract rather than inventing a
+  dialect.
+- 2026-09-07 (os-f11601e0): a mutual-exclusivity check buried in the
+  helper that consumes the flags runs after the data is read, so a
+  doubly-named key on a missing card comes back as drift rather than
+  usage. Refuse a malformed invocation in the flag validation, before
+  anything is opened: a data error reported for a usage error sends the
+  reader looking in the wrong place.
