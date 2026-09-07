@@ -47,7 +47,12 @@ import (
 // rather than class names (review on #366). independence_unverified
 // appears twice on purpose: VerifyVerdicts emits it from records, and
 // EvidenceAt emits it separately for a non-reproducing L3 receipt.
-var depth = flag.Int("depth", 5, "steps per reconciliation trace (plans/os-873b5153.md D7)")
+// depth is the fast gate's size (plans/os-873b5153.md D7): 4 steps per
+// trace is 698 terminal states across the two variants in about 1.6s,
+// which keeps this model and the racing one beside it inside the five
+// seconds the plan budgets for the pair. perf-scale.yml runs depth 6
+// (5,690 terminal states, about 15s) weekly.
+var depth = flag.Int("depth", 4, "steps per reconciliation trace (plans/os-873b5153.md D7)")
 
 var (
 	// admittedReachable: a fully admitted interleaving produces these.

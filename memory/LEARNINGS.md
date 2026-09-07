@@ -2266,3 +2266,27 @@ failed step skips the rest of the job.
   `Deps.AppendAt`); an offer whose `expires` is computed from another
   clock than the record's `ts` can be born dead under admission's
   strictly-after rule.
+- 2026-09-07 (os-873b5153): a fixture that appends its chain straight
+  to the store proves the FOLD's behaviour, never the boundary's. The
+  racing tests asserted a settled race with a rival still holding, and
+  yet no `merge.observed` could be admitted into that state at all: the
+  fence rule demanded the rival's fence and the payload had no slot to
+  carry it. Where a test steps past admission for setup, something must
+  still `Check` the steps it stepped past, or a whole feature can be
+  unreachable through the front door while its tests are green.
+- An enumeration that admits every step through the real boundary is
+  worth more than an abstract model plus a replay: there is no second
+  implementation of the rules to drift, and the model's own inability
+  to reach a state IS the finding. Both divergences on this card came
+  from a step the walk could not take, not from a property that failed.
+- A memoization key must carry every field the walk's own control flow
+  reads, not only the ones the properties read. A key omitting the
+  depth counter collapses refused steps (no-ops on the records) back
+  onto their predecessor and silently loses every trace whose tail is
+  refusals; a key omitting the payload hash makes a pass and a fail
+  verdict the same state and prunes half the tree.
+- "The subject's verdict" is not "the verdict this merge rests on".
+  With two racers a later fail on the loser's submission follows the
+  winner's pass without unseating it, so a property about a settlement
+  must read the position the `merge.requested` cited, which is what
+  admission enforces.

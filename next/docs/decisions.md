@@ -4713,3 +4713,65 @@ each inside the plan's autonomy contract:
   is remote-only by design; the forge stand is a local ledger, so the
   loop drill reclaims through the same admitted append the existing
   forge drills use, the claim boundary unchanged.
+## os-873b5153: the interleaving explorer over reconciliation and racing
+
+Plan: `plans/os-873b5153.md` (#366). Decisions taken while implementing,
+each inside the plan's autonomy contract:
+
+- **The models enumerate over real records, so the replay is the model.**
+  D2 and D5 describe an abstract model plus a separate replay of its
+  terminal traces through `admit.Check`. Both models here take the
+  shorter road: every step drafts a real signed record, offers it to the
+  real `admit.Check` against a real staged ledger, and applies it only
+  if admission takes it, with every fact a property reads coming from
+  the real fold and, in the reconciliation model, from the real
+  `reconcile.Classify`. A refused step is a no-op that still consumes
+  depth, so the walk explores what the boundary allows. This removes the
+  gap D5's replay exists to close rather than closing it after the fact:
+  there is no second implementation of the rules to drift. The forge
+  steps keep D5's stated asymmetry, having no ledger counterpart.
+- **The class partition is pinned by parsing the package's own source.**
+  D3 asks that a class added to `internal/reconcile` and to no set fail
+  the test. Rather than adding an exported `AllClasses()` to production
+  for a test's benefit, `TestClassPartitionIsExhaustive` reads the
+  package's `Class*` constant declarations out of its source and checks
+  the three sets cover them exactly. The trust surface stays as it was.
+- **Sizes (D7).** The fast gate runs the reconciliation model at depth 4
+  (698 terminal states across its two staging variants, about 1.6s) and
+  the racing model at depth 7 (2,007 terminal states, 70 of them
+  settled, about 2.2s): 3.8s for the pair, inside the plan's five-second
+  budget. `perf-scale.yml` runs depth 6 (5,690 terminal states, about
+  15s) and race-depth 9 (about 27s) weekly.
+- **A real divergence, fixed under D8: the settlement was unreachable on
+  a racing subject.** The racing enumeration could not settle a race at
+  all. On a racing subject a rival racer is still holding when the
+  winner's submission reaches review, so the fence rule required both
+  `merge.requested` and `merge.observed` to cite that rival's fence,
+  and the chain rule pins both payloads as strict objects with no slot
+  to carry one in. Every settled-out fact §II.6 rests on was therefore
+  unreachable through the front door; the existing racing tests missed
+  it because their fixtures append their chains straight to the store
+  and only `Check` the assertions they name. The fix is one exemption in
+  the fence rule, beside the run facts' existing one: the merge chain is
+  subject-scoped, never claim-scoped, so the fence rule leaves it to the
+  chain rule. On an exclusive subject nothing changes, the submission
+  that reaches review having already closed the only window.
+  `TestSettlementAdmitsWhileARivalRacerHolds` keeps the enumeration's
+  trace as the named regression, and asserts that a holder's own
+  unfenced act still refuses, so the exemption stays the chain's alone.
+  One existing assertion moved with it: a `fence` key on a
+  `merge.requested` payload now refuses as the strict shape rather than
+  as a fence complaint, which is what it is.
+- **A second finding, in the model rather than the code: what a
+  settlement rests on is the position its request cited.** At race-depth
+  9 the enumeration produced `claim(r0) claim(r1) submit(r0)
+  verdict.pass(r0) submit(r1) request verdict.fail(r1) settle`: an
+  authentic settlement followed by a fail on the LOSER's submission.
+  Reading the subject's singular verdict fact calls that trace
+  unverified. The property now reads the position the `merge.requested`
+  cited, which is what admission itself enforces.
+- **P3's non-exit probe is `progress.milestone`, not `submission.made`.**
+  `transition.IsExit` counts a submission as an exit, since it closes
+  the window, and the `race_settled` rule lets a settled-out racer take
+  its own exits. The arm that checks what a settled-out racer may no
+  longer do needs a plainly non-exit act.
