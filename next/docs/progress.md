@@ -785,7 +785,7 @@ administrative card, not a Phase 8 item).
   verbs across the three capabilities — three more than the card had
   found.
 - out-of-item: a reservation outlives its window — os-d6963652 —
-  **review** (task PR against plan #175: admission gated all three
+  **done** (#182, merged, against plan #175: admission gated all three
   budget verbs on `in_progress`, so a reservation whose claim window
   ended could never be settled or released while `BudgetViewAt` kept
   counting it against capacity; the gate moves to `budget.reserve`
@@ -1426,7 +1426,7 @@ record's own position through one derivation, `curation.AuthenticPass`
 ## Phase 13 — Conformance completion (docs/next-build-plan.md Phase 13; deps: 12)
 
 - 13.1 racing mode as the per-squad opt-in with first-verified
-  settlement (III.F row 7) — os-56bee171 — **in review** (task PR
+  settlement (III.F row 7) — os-56bee171 — **done** (#269, merged,
   against plan #256, stacked on Phase 12 item 5, a draft until the
   Phase 12 exit record merges: the `racing` block on a squad's
   guardrails (`racers` two or more, `cost` in the operator's words,
@@ -1451,13 +1451,13 @@ record's own position through one derivation, `curation.AuthenticPass`
   (`seed/6`) following)
 - routed gap: the cache carries the event's `ts`, so evidence is
   queryable by time (charter III.G row 10, recorded UNMET at the Phase
-  10 exit) — os-74ce2261 — **in review** (task PR against plan #260:
+  10 exit) — os-74ce2261 — **done** (#266, merged, against plan #260:
   `ts` verbatim and `ts_unix` parsed on every per-event table at cache
   generation 14, ranges over the integer since RFC 3339 mixes
   fractional precision, an unparseable `ts` NULL and counted, the
   time-range drill with the four names of the row in one query)
 - routed gap: `ledger show`'s `chain_invalid` stamps the position it
-  was computed at — os-37fcf7c6 — **in review** (task PR against plan
+  was computed at — os-37fcf7c6 — **done** (#265, merged, against plan
   #259: the scan's failing position stamped, the same stamp verify
   gives one corrupted chain, the D3 tripwire inverted on purpose, the
   envelope spec's null sentence sharpened to "before any position was
@@ -1474,7 +1474,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   disposability/preemption drills in cmd/seed, docs receipt. Awaits #274
   merge + a make-check window)
 - 13.3 a non-primary forge adapter (Forgejo) for the forge extras (III.N
-  row 2) — os-ad610334 — **draft in review** (draft PR #281 against plan
+  row 2) — os-ad610334 — **done** (#281, merged, against plan
   #275 per decisions/0003: internal/protections/forgejo.go over Forgejo's
   Gitea-compatible branch/tag-protection API, held to the one Desired
   table; the Observer filling merge.observed's sha from either forge;
@@ -1485,7 +1485,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   #275 merge + a make-check window for the receipt)
 - 13.4 mirrors and dashboards propose, federation as uniform read
   remotes, cross-repo work as a proposal (III.J row 2, III.N row 4,
-  §II.15) — os-48df10a2 — **in review** (task PR against plan #257,
+  §II.15) — os-48df10a2 — **done** (#270, merged, against plan #257,
   stacked on 13.1: `request.filed`, the one door a surface's proposal
   enters by, strict `{origin, kind, reference, summary ≤ 200 bytes,
   about?}` on the contract `about` names or on `system`, a fact that
@@ -1513,7 +1513,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   `lanes.md`, `obligations.md`, `projections.md`, `postures.md`,
   `envelope.md`, `actors.md` following)
 - 13.5 the A2A-shaped cross-organization boundary (III.N) —
-  os-40ed0ca0 — **in review** (task PR against plan #258, stacked on
+  os-40ed0ca0 — **done** (#271, merged, against plan #258, stacked on
   13.4: `internal/boundary` — the capability card rendered from the
   declaration's new `boundary` block (the kinds accepted and the
   ingress), the squads and tiers by name, the artifact kinds, signed
@@ -1540,7 +1540,7 @@ record's own position through one derivation, `curation.AuthenticPass`
 ## Phase 13 — Conformance completion (docs/next-build-plan.md Phase 13; deps: 12)
 
 - 13.6 the machine-protocol surface and platform parity (III.I rows
-  3–4) — os-b55e5647 — **in review** (task PR against plan #261:
+  3–4) — os-b55e5647 — **done** (#273, merged, against plan #261:
   `cmd/seed/registry`, the one table both surfaces are drawn from, and
   `catalog.go` registering every verb with its subverbs in the usage
   line's own words, the CLI's `run` dispatching through it alone;
@@ -1560,8 +1560,8 @@ record's own position through one derivation, `curation.AuthenticPass`
   following)
 - 13.7 tuple ranking as supervisor policy: eval results rank
   qualified tuples and the planner lane's offers carry the strongest
-  (III.J row 3's policy clause, §II.9) — os-c7554f18 — **in review**
-  (task PR against plan #276: `internal/ranking`, the record-derived
+  (III.J row 3's policy clause, §II.9) — os-c7554f18 — **done**
+  (#286, merged, against plan #276: `internal/ranking`, the record-derived
   policy table (score by qualifying evidence since the tuple last
   held, ties by the latest pass then the canonical JSON, disqualified
   and holder-less tuples absent, agreement refining the verdict
@@ -1581,7 +1581,7 @@ record's own position through one derivation, `curation.AuthenticPass`
 - the promotion evidence packet (build plan §5: the seven self-hosting
   criteria mapped to evidence on `main`, the shadow run and the two
   cutovers named as the reserved decisions they are; feeds the Phase
-  13 exit record) — os-98ce6f8a — **in review** (task PR against plan
+  13 exit record) — os-98ce6f8a — **done** (#294, merged, against plan
   #291: `next/docs/promotion.md`, one section per criterion with a
   status from a closed vocabulary (`met`, `partial`, `not started`,
   `reserved`) and its evidence as drill, file and PR rows; criteria 1,
@@ -1601,7 +1601,7 @@ record's own position through one derivation, `curation.AuthenticPass`
 - the conformance report (Phase 13's exit line: "the conformance report
   shows Part III complete at the enforced self-hosted posture"; the
   preamble's "the doctor reports which Phase 13 criteria remain open")
-  — os-83bc3d84 — **in review** (task PR against plan #287:
+  — os-83bc3d84 — **done** (#289, merged, against plan #287:
   `next/spec/conformance.json`, the charter's 128 Part III rows
   verbatim with the status the exit records gave each (`met` with
   evidence, `partial` or `routed` with a note, `open`), the posture
@@ -1618,7 +1618,7 @@ record's own position through one derivation, `curation.AuthenticPass`
   handbook following)
 - 13.8 projection integration boundaries: mirror exporter conformance,
   no bidirectional component, and governed external-fact observations
-  (III.D rows 5–7) — os-b45c308d — **in review** (task PR against plan
+  (III.D rows 5–7) — os-b45c308d — **done** (#361, merged, against plan
   #350: `next/mirror`, the projection-only issue mirror with its
   base64 marker, deterministic planner, sealed registry of GitHub,
   Forgejo and snapshot exporters, and `seed-mirror plan|apply` over
@@ -2013,7 +2013,7 @@ written by the two implementing sessions, one voice.
   defect, not a regression)
 - the forge says the submission is not mergeable (charter §II.4's
   `check.observed`, §II.13's checks gate on the contract loop, III.D
-  row 7) — os-0cd18799 — **in review** (task PR against plan #344:
+  row 7) — os-0cd18799 — **done** (#351, merged, against plan #344:
   `check.observed` at `seed/8`, the observer's fact on the head under
   review bound to the submission's packet head and admitted only when
   it changes; `submission.made --pr`; the `submission.unmergeable`
@@ -2030,8 +2030,8 @@ written by the two implementing sessions, one voice.
   os-29e2fef2)
 - prefer the prior submitter's tuple when re-offering a contract
   returned on the forge's word (ranking policy, Phase 13 item 7;
-  charter II.9, II.11), os-29e2fef2, **in review** (task PR against
-  plan #358: `ranking.Resume` deriving the returned window's declared
+  charter II.9, II.11), os-29e2fef2, **review** (task PR #363
+  merged, card not yet closed; against plan #358: `ranking.Resume` deriving the returned window's declared
   tuple, holder and consumed offer from the chain, refusing by name
   after a verdict return, with no return, no admitted start, no
   declared tuple, a suspended or revoked holder, or a tuple the
@@ -2178,7 +2178,7 @@ written by the two implementing sessions, one voice.
   makes chain-visible; found while implementing os-88df7ab2, #311)
 - the bar carries neither clause `plans/os-16e55c11.md` D5 contracted
   for it: no ceiling arm, no blind-retry arm — os-b5051f2e —
-  **in review** (task PR against plan #322: filed from review on #312,
+  **done** (#323, merged, against plan #322: filed from review on #312,
   which read the offer rule's removal as losing ceiling coverage. The
   bar never had any: the ceiling is admission policy, read from
   `seed.json` through `Context.Declaration`, so a claim above it folds
@@ -2205,7 +2205,7 @@ written by the two implementing sessions, one voice.
 ## The machine surface's policy, drilled (os-8ecef90f)
 
 - III.L row 4, per-verb policy on the machine-protocol surface with
-  attributable approvals — os-8ecef90f — **in review** (task PR against
+  attributable approvals — os-8ecef90f — **done** (#321, merged, against
   plan #320: tests only. The row was routed because #273's three
   `serve` tests are parity assertions, which is III.I row 3, and the
   card's determination was that the row is structurally true and needs
@@ -2226,7 +2226,7 @@ written by the two implementing sessions, one voice.
 ## The erasure verb: erasure is an attributable event (os-db5cd353)
 
 - III.A row 7, erasure obligations honorable and the erasure itself an
-  attributable event — os-db5cd353 — **in review** (task PR against
+  attributable event — os-db5cd353 — **done** (#325, merged, against
   plan #324: the row's first clause was structural and undrilled, its
   second absent by construction, since the protocol defined no erasure
   verb and a deleted ciphertext left only a `seal_evidence_missing`
@@ -2258,7 +2258,7 @@ written by the two implementing sessions, one voice.
 
 - the distribution step's precondition, a released Seed binary with
   checksums and provenance (charter III.P row 1's residual) —
-  os-2e46aa2f — **in review** (task PR against plan #328:
+  os-2e46aa2f — **done** (#329, merged, against plan #328:
   `.github/workflows/seed-release.yml`, dispatch-only so a release stays
   the operator's act and the CI-identity lint's scheduled-writer rule
   is untouched; the tag `seed/v<version>` minted at HEAD in-runner, in a
@@ -2626,10 +2626,12 @@ exit record merged (#284), and every numbered item has a merged PR: 1
 in #269, 2 in #282, 3 in #281, 4 in #270, 5 in #279 (its
 canonicalization follow-up os-1c284ba8 merged, #290), 6 in #273, 7
 in #286, and item 8, added by plan #350 for III.D rows 5–7, is
-os-b45c308d's task PR in review; the two routed gaps (#265, #266) are merged. The conformance report
-(os-83bc3d84, #289) is merged, so the doctor reports the open rows;
-the promotion evidence packet (os-98ce6f8a, plan #291 open, task PR
-#294 in review) is the other thing the phase's exit line needs. The exit record (os-d63c7441, plan #288 merged) is parked
+os-b45c308d's task PR #361, merged; the two routed gaps (#265, #266)
+are merged. The conformance report (os-83bc3d84, #289) is merged, so
+the doctor reports the open rows; the promotion evidence packet
+(os-98ce6f8a, plan #291 and task PR #294 both merged) is the other
+thing the phase's exit line needs. The exit record (os-d63c7441, plan
+#288 merged) is parked
 on the packet: its plan writes the record only when the doctor
 reports complete, which III.R's rows make reachable after the shadow
 run and the cutovers, not before. The build plan's §3 backlog is
@@ -2640,8 +2642,8 @@ readings and the defect it found carded as os-5063e8ba), sharded
 intake (os-7953612b) and dashboard tiers (os-f17567a6); the shadow
 run's tooling, `seed ledger audit` (os-7599c27d, merged as #296
 against plan #295; its reservation-verb defect carded as os-b86dab4c,
-plan #304); the coverage floor card (os-f262585a) is in review
-against plan #292, the tree measured cold at the reading its section
+plan #304); the coverage floor card (os-f262585a) is merged (#314
+against plan #292), the tree measured cold at the reading its section
 above records; the macOS cleanup race in the flywheel drill's skip path is
 merged (#301, then #302; os-222189a3); the citation stage of `docs
 check` (os-5fe43832) holds every relative markdown link in the tree to
@@ -2679,8 +2681,9 @@ agent-side cards at the gate merged: os-8ecef90f (#321) drilled III.L
 row 4 on the machine-protocol surface; os-b5051f2e (#323) gave the
 five-bar audit's guardrail bar its ceiling arm; os-db5cd353 (#325)
 added `artifact.erased` and flipped III.A row 7. One agent-side card
-remains in review at the gate, and it is not a criterion: os-0f924157
-(plan #334) closes #323's review finding, the enforced `seed-admit`
+stood in review at the gate and has since merged, and it is not a
+criterion: os-0f924157 (#335 against plan #334) closes #323's review
+finding, the enforced `seed-admit`
 hook reading the declaration at the default branch's tip, so the
 ceiling refuses at the boundary and not only at the cooperative
 client. The doctor reads 24 outstanding rows (III.F row 12, the
