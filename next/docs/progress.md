@@ -2070,7 +2070,8 @@ written by the two implementing sessions, one voice.
 - a random-walk property test over admission (III.I over random
   positions, the §I.2 ceiling as oracles; the 2026-09-06
   formal-methods survey's first card, docs/next-build-plan.md §3) —
-  os-21bf939f — **review** (task PR against plan #349:
+  os-21bf939f — **done** (#353 against plan #349, merged; card
+  closed:
   `TestAdmissionRandomWalk` in `next/internal/admit`, a seeded walker
   from the shared scenario with four oracles a step and the five-bar
   audit plus a ceiling coverage map at the end of every walk; found
@@ -2078,8 +2079,8 @@ written by the two implementing sessions, one voice.
   the copy; eight walks of twenty-four steps under `make check-next`,
   two hundred of ninety-six on the weekly `perf-scale` job)
 - an exhaustive interleaving check of the append loop and halt (the
-  survey's second card) — os-07e6e76c — **review** (task PR against
-  plan #356: `TestAppendInterleavings` and
+  survey's second card) — os-07e6e76c — **done** (#359 against plan
+  #356, merged; card closed: `TestAppendInterleavings` and
   `TestAppendInterleavingReplay` in `next/internal/gitref`, a
   Go-native model of fetch, attempt and the cooperative rollback walked
   over every interleaving for small N with five properties, and its
@@ -2087,6 +2088,10 @@ written by the two implementing sessions, one voice.
   acceptance by ancestry per the plan review; four configurations and
   eight replayed traces under `make check-next`, four by four and every
   trace on the weekly `perf-scale` job)
+- the same explorer over the verdict-then-merge reconciliation and over
+  racing mode (the follow-on plans/os-07e6e76c.md D7 names, filable
+  once that explorer's shape was known) — os-873b5153 — **backlog**
+  (filed; charter §II.8 and §II.6 racing, no Part III row)
 
 ## A fixture that escaped the hardening guard (os-222189a3)
 
@@ -2740,9 +2745,11 @@ catch-all's one row, and the count reads 27.
 
 The 2026-09-06 formal-methods survey (docs/next-build-plan.md §3)
 filed two backlog cards, listed in the backlog section above:
-os-21bf939f, the admission random walk, is done (#353, card closed);
-os-07e6e76c, the append-loop interleaving check, is in review against
-plan #356.
+both are done and closed: os-21bf939f, the admission random walk
+(#353), and os-07e6e76c, the append-loop interleaving check (#359).
+The follow-on the second card's plan names, the same explorer over the
+verdict-then-merge reconciliation and over racing mode, is filed as
+os-873b5153 and stays in backlog under the same filable-now rule.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
