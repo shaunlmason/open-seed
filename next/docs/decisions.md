@@ -4502,6 +4502,93 @@ holds row and line equal in both directions, and
 posture of the verb changed, and no spec text: the method set is
 derived from the catalog, never listed.
 
+## The append loop enumerated, and the model kept honest by replay (os-07e6e76c)
+
+The append protocol's evidence was executions: two appenders in the
+race drill, twenty-four in the perf gate, three rollback drills. The
+model (plans/os-07e6e76c.md) enumerates instead: the loop's own steps
+as an alphabet, every interleaving for small N walked depth-first and
+memoized, five properties at every state, and the model's traces
+replayed through the real client so the model is evidence about the
+tree rather than about itself. What was decided and found:
+
+- **Acceptance is by ancestry, not equality (review finding on the
+  plan PR, #356).** The plan's first land rule required the remote to
+  still stand at the fetched tip. A plain `git push` and the hook's ref
+  rule both test `merge-base --is-ancestor old new`, and `Client.Push`
+  uses no force-with-lease, so the client lands whenever the fetched
+  tip descends from the current one. Under an enforced remote the rules
+  coincide; under a cooperative rollback they differ, and the model
+  carries the difference: an in-flight push on a pre-rollback tip lands
+  and heals the truncated line (the healing shape), and a fresh writer
+  landing on the rolled-back tip first forks the remote (the fork
+  shape). Both shapes are reachable in the cooperative configuration
+  and both are replayed by name.
+- **The named shapes are classified by role, not by the chain's shape
+  (review finding on the task PR, #359).** The first fork predicate
+  accepted any terminal chain that left the old line behind, and in a
+  two-writer configuration the first such trace had no in-flight
+  writer at all: one writer had landed and finished before the
+  rollback, the other was the fresh writer, and the replayed "fork"
+  exercised neither the lost race nor the regression refusal the plan
+  describes. The plan's sentence names three roles (the writer whose
+  landing the rollback erases, the in-flight writer on that line, the
+  fresh writer on the rolled-back tip), so the cooperative
+  configuration carries three writers with two attempts, a deviation
+  from D5's "two writers with two attempts" forced by D3's own P3, and
+  the predicates read the roles: healing is a writer that fetched the
+  old line before the rollback and landed on it after; the fork is a
+  writer that lost a race after the rollback and then ended in head
+  regression, with the terminal chain off its persisted head. The
+  model marks post-rollback landings and post-rollback lost races per
+  writer for that purpose. In the three-writer configuration 108 of
+  312 terminal states heal and 12 fork, and the replayed fork trace
+  carries the `ErrNonFastForward` then `ErrHeadRegression` sequence.
+- **The first terminal P3 check was wrong, and the enumeration said
+  so.** It read "a writer whose persisted head is off the terminal
+  chain cannot have landed" and fired on the fork trace, where the
+  first writer landed before the rollback and its line was abandoned
+  by it. The property is about landings after the rollback: those must
+  sit on the terminal chain, and a writer whose pre-rollback line was
+  healed must be on it too. The model now marks post-rollback landings
+  and checks exactly that. A model-side finding, fixed in the model.
+- **Outcomes are the loop's errors.** The model's vocabulary is landed,
+  `ErrNonFastForward` for a lost race (a stale tree folded in, since
+  the loop retries both alike), `ErrRetriesSpent`, `halt.HaltedError`
+  from re-validation, `ErrHeadRegression` from the fetch; the replay
+  asserts each with `errors.Is` or `errors.As`.
+- **The replay reaches `attempt` in-package.** No production seam was
+  added: the replay drives `Fetch` and the unexported `attempt`, the
+  function `AppendLoop` iterates, one real client per writer against a
+  private copy of one staged bare remote (genesis plus the upgrade to
+  seed/1), the rollback as `git update-ref` as the existing drills do
+  it. Every step's outcome class, every landed record's `prev` against
+  the tip its client fetched, and the final chain's order matched the
+  model on every trace.
+- **The A >= N lemma holds and races.** With one draft per writer, no
+  halt and an enforced remote, a writer loses at most one race to each
+  rival, so A = N never spends a writer: none of 4 (2x2), 36 (3x3) or
+  576 (4x4) terminal states does. At A = N-1 the counterexample exists:
+  2 of 4 terminal states at 2x1, 12 of 36 at 3x2.
+- **Sizes.** The four fast-gate configurations walk 18, 251, 223 and
+  1,151 states (4, 36, 32 and 312 terminal) in under fifty
+  milliseconds; the scheduled 4x4 walks 7,020 states (576 terminal) in
+  a third of a second, so enumeration is never the cost. The replay
+  is: eight sampled traces, the healing and fork among them and the
+  rest dealt round-robin across the three replay configurations and
+  spread evenly within each, take about two seconds locally; every
+  trace (348) takes about 133, which is the scheduled size on the
+  weekly `perf-scale` job. On the task PR's CI the Windows leg that
+  carries `internal/gitref` ran the whole package in 98.5 seconds
+  (the platform matrix runs packages without `-v`, so the replay's own
+  share is not separable there; the package was already the
+  git-heaviest in the tree before this card); the Ubuntu and macOS
+  legs finished the package inside their usual bounds.
+- **Nothing in production moved.** No interleaving lost an update,
+  landed a record off the fetched tip, moved a head backward, landed a
+  normal record after a halt, or failed to terminate, and no replayed
+  step disagreed with the loop.
+
 ## The projection boundary has three sides (os-b45c308d)
 
 Plan #350 charters Phase 13 item 8: III.D rows 5, 6 and 7 at the

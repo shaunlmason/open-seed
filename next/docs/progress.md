@@ -2060,8 +2060,15 @@ written by the two implementing sessions, one voice.
   the copy; eight walks of twenty-four steps under `make check-next`,
   two hundred of ninety-six on the weekly `perf-scale` job)
 - an exhaustive interleaving check of the append loop and halt (the
-  survey's second card) — os-07e6e76c — **backlog** (blocked on
-  os-21bf939f for its generator and predicates)
+  survey's second card) — os-07e6e76c — **review** (task PR against
+  plan #356: `TestAppendInterleavings` and
+  `TestAppendInterleavingReplay` in `next/internal/gitref`, a
+  Go-native model of fetch, attempt and the cooperative rollback walked
+  over every interleaving for small N with five properties, and its
+  traces replayed through real clients over `Fetch` and `attempt`;
+  acceptance by ancestry per the plan review; four configurations and
+  eight replayed traces under `make check-next`, four by four and every
+  trace on the weekly `perf-scale` job)
 
 ## A fixture that escaped the hardening guard (os-222189a3)
 
@@ -2715,9 +2722,9 @@ catch-all's one row, and the count reads 27.
 
 The 2026-09-06 formal-methods survey (docs/next-build-plan.md §3)
 filed two backlog cards, listed in the backlog section above:
-os-21bf939f, the admission random walk, is in review against plan
-#349; os-07e6e76c, the append-loop interleaving check, is blocked on
-it.
+os-21bf939f, the admission random walk, is done (#353, card closed);
+os-07e6e76c, the append-loop interleaving check, is in review against
+plan #356.
 
 If an open task PR is red or carries review feedback, drive it green
 first — nothing merges out of order.
