@@ -3367,7 +3367,10 @@ what the declaration says.
 **Canonical bytes without a JCS library.** The card's value domain is
 strings and arrays, so a compact encoding with sorted members and no
 HTML escaping is JCS-canonical for it; the event canonicalizer stays
-the events' own.
+the events' own. **Corrected by os-f11601e0** (see "The card's
+canonical form is RFC 8785" below): the premise is false, Go escapes
+U+2028 and U+2029 where JCS emits them literally, and `Card.check`
+admits both in a name.
 
 **The task view carries no contract id.** The plan's field list is
 the request's position, its answer's, the state and the artifact
@@ -4816,3 +4819,73 @@ each inside the plan's autonomy contract:
   the window, and the `race_settled` rule lets a settled-out racer take
   its own exits. The arm that checks what a settled-out racer may no
   longer do needs a plainly non-exit act.
+
+
+## The card's canonical form is RFC 8785, and the gate is a content gate (os-f11601e0)
+
+Plan #368 closes two gaps a read-only review found in the boundary that
+landed with Phase 13 item 5 (#279, `plans/os-40ed0ca0.md`). What
+landed (`next/spec/boundary.md` "The capability card"):
+
+- **The hand-rolled canonicalizer is retired, correcting a recorded
+  decision.** "Canonical bytes without a JCS library" reasoned that a
+  compact encoding with sorted members and no HTML escaping is
+  JCS-canonical for a value domain of strings and arrays. It is not:
+  Go's `encoding/json` escapes U+2028 and U+2029 unconditionally, JCS
+  emits them literally, and `Card.check` constrains `Name` only to be
+  non-empty, so a deployment name carrying either character was signed
+  over bytes no independent JCS verifier reconstructs. `Canonical()`
+  now routes through `jcs.Transform`, the same transform
+  `event.Canonical` signs over: one canonicalizer for the tree, and a
+  dependency already in `go.mod`. The correction is written beside the
+  original entry rather than replacing it, because the reasoning is
+  worth keeping visible next to why it was wrong.
+- **The regression class is "two canonicalizers disagree", so the
+  drill is a property.** `TestCanonicalIsRFC8785` compares
+  `Card.Canonical()` against an independent JCS transform over a corpus
+  that includes the two separators in a name, in the ingress and in a
+  squad name, plus HTML-significant runes, non-ASCII, and an emoji
+  outside the BMP. A future hand-rolled optimization fails there by
+  name. The property was run against the old body first and fails at
+  exactly the separator cases, so it is not vacuous.
+- **The switch is proven byte-for-byte, not assumed.** The checked-in
+  `boundary/card.json` canonicalizes to an unchanged 323 bytes
+  (sha256 `b9ba3490…`), pinned as a fixed vector, so no signature
+  anywhere is invalidated. The test asserts *bytes*, not that the
+  signature verifies, and says why in the file: that card's key is a
+  throwaway kept out of the tree, so nothing here can verify it.
+- **The reader's half is its own verb.** `boundary check` requires
+  `--config` and `--name`: it is the publisher's verb, comparing a card
+  against the declaration that renders it. A stranger who fetched a
+  card from someone else's `/card` has neither, so the spec's "a reader
+  verifies against the operator key it was given out of band" was
+  reachable by no verb this build shipped. `seed boundary verify --card
+  <file> --pubkey <hex> | --pubkey-file <path>` takes no declaration
+  and no name, and reports the signer. Its refusals are `card_refused`,
+  never `card_drift`: drift is the publisher's finding that its own
+  card is stale, and a reader is not in a position to make it.
+- **The key never comes from the card, and no flag lets it.** A card
+  carrying the key that signed it would prove nothing, so both verbs
+  take the key only from `--pubkey` or `--pubkey-file`, and naming both
+  at once is a usage error rather than a precedence rule.
+- **The Makefile gate is unchanged, and the envelope stops implying
+  otherwise.** An earlier draft proposed pinning a public key beside
+  the card so the gate could verify a signature. It is unexecutable:
+  the fixture card's key is gone and cannot be derived from a
+  fingerprint or a signature, so no agent can make that card
+  verifiable. `make check` therefore keeps proving what it can prove
+  with no key, that the card says what the declaration renders, and the
+  success envelope now carries a note saying exactly that beside its
+  `"verified": false`.
+- **A key pinned in-tree is a trust anchor or it is nothing.**
+  `next/boundary/` is on neither the declaration's `protected` list nor
+  `CODEOWNERS`, so a key checked in there could be swapped together
+  with the card in one non-owner change and a gate reading it would
+  still pass. The constraint is recorded in the spec for whoever
+  rotates: the key file joins both lists in the change that introduces
+  it.
+- **Rotation is the operator's act, filed not performed.** Minting this
+  deployment's operator identity, re-signing the card and checking in
+  the public half is an operator decision, not an implementer's. It is
+  filed as its own card with the D1 constraint attached rather than
+  done on the operator's behalf.

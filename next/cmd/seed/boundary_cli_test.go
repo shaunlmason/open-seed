@@ -16,6 +16,7 @@ import (
 	"github.com/shaunlmason/open-seed/next/internal/boundary"
 	"github.com/shaunlmason/open-seed/next/internal/event"
 	"github.com/shaunlmason/open-seed/next/internal/keyring"
+	"golang.org/x/crypto/ssh"
 )
 
 func pubHexOf(t *testing.T, privPath string) string {
@@ -378,5 +379,149 @@ func TestBoundaryRefusals(t *testing.T) {
 	}
 	if resp, err := http.Get(srv.URL + "/tasks"); err != nil || resp.StatusCode != 200 {
 		t.Fatal("the task states are credential-free")
+	}
+}
+
+// conformance: plans/os-f11601e0.md AC3, AC4 — the reader's half of the
+// boundary. A stranger holds a card it fetched and, out of band, the
+// operator key that is supposed to have signed it; `boundary verify`
+// checks one against the other with no declaration and no name,
+// because a stranger has neither. Every way the pair can fail to match
+// is a boundary refusal, which is what makes it distinct from
+// `card_drift`: drift is the publisher's finding that its own card is
+// stale, and a reader is not in a position to make it.
+func TestBoundaryVerifyReadsACardWithNoDeclaration(t *testing.T) {
+	ld, root, dispatcher, _, _ := requestLedger(t)
+	dir := t.TempDir()
+	cfg := writeDeclaration(t, `{"posture": "cooperative", `+federationBase+`, "boundary": {"accepts": ["cross-repo"], "ingress": `+jsonString(ld)+`}}`)
+	card := filepath.Join(dir, "card.json")
+	rendered, code := runEnv(t, "boundary", "card", "--config", cfg, "--key", root, "--name", "acme", "--out", card)
+	if code != 0 || !rendered.OK {
+		t.Fatalf("the card renders: %d %+v", code, rendered)
+	}
+	signer, _ := rendered.Result["signer"].(string)
+	operator := pubHexOf(t, root)
+
+	// AC3: the key alone reads the card, and the verdict names who signed it.
+	e, code := runEnv(t, "boundary", "verify", "--card", card, "--pubkey", operator)
+	if code != 0 || !e.OK || e.Result["verified"] != true {
+		t.Fatalf("the operator key verifies the card: %d %+v", code, e)
+	}
+	if e.Result["signer"] != signer || e.Result["name"] != "acme" {
+		t.Fatalf("the verdict reports the signer and the name: %+v", e.Result)
+	}
+	// The same key out of a file, which is how one arrives out of band.
+	keyFile := filepath.Join(dir, "acme.pub")
+	if err := os.WriteFile(keyFile, []byte(operator+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if e, code := runEnv(t, "boundary", "verify", "--card", card, "--pubkey-file", keyFile); code != 0 || !e.OK || e.Result["verified"] != true {
+		t.Fatalf("the key from a file verifies the card: %d %+v", code, e)
+	}
+	// The key arrives in whatever form the operator holds it: the
+	// OpenSSH authorized-keys line ssh-keygen -y writes is accepted
+	// wherever the hex is (next/spec/protocol.md "Algorithms").
+	sshFile := filepath.Join(dir, "acme.pub")
+	rawKey, err := hex.DecodeString(operator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sshKey, err := ssh.NewPublicKey(ed25519.PublicKey(rawKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sshFile, ssh.MarshalAuthorizedKey(sshKey), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if e, code := runEnv(t, "boundary", "verify", "--card", card, "--pubkey-file", sshFile); code != 0 || !e.OK || e.Result["verified"] != true {
+		t.Fatalf("an OpenSSH public key file verifies the card: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", card, "--pubkey-file", sshFile); code != 0 || e.Result["verified"] != true {
+		t.Fatalf("check reads the same key file: %d %+v", code, e)
+	}
+	// Two ways to name one key is a usage error, not a precedence rule,
+	// and it is refused before anything is read: a bad invocation that
+	// also names a missing declaration comes back as usage, never as
+	// drift.
+	if e, code := runEnv(t, "boundary", "verify", "--card", card, "--pubkey", operator, "--pubkey-file", keyFile); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("--pubkey and --pubkey-file together: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", card, "--pubkey", operator, "--pubkey-file", keyFile); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("check refuses two keys: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", filepath.Join(dir, "gone.json"), "--pubkey", operator, "--pubkey-file", keyFile); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("two keys outrank a card that is not there: %d %+v", code, e)
+	}
+	// No key at all is a usage error: verify without one would check nothing.
+	if e, code := runEnv(t, "boundary", "verify", "--card", card); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("verify without a key: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "verify", "--card", card, "--pubkey", "not-a-key"); code != 64 || e.Error == nil || e.Error.Code != "usage" {
+		t.Fatalf("a key that is not an ed25519 public key in hex: %d %+v", code, e)
+	}
+	if e, code := runEnv(t, "boundary", "verify", "--card", filepath.Join(dir, "absent.json"), "--pubkey", operator); code != 4 || e.Error == nil || e.Error.Code != "not_found" {
+		t.Fatalf("no card at that path: %d %+v", code, e)
+	}
+
+	// AC4: the four ways the signature can fail, each a boundary refusal.
+	raw, err := os.ReadFile(card)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name string, mutate func(map[string]any)) string {
+		c := map[string]any{}
+		for k, v := range doc {
+			c[k] = v
+		}
+		mutate(c)
+		b, err := json.Marshal(c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	sig, _ := doc["signature"].(string)
+	truncated := write("truncated.json", func(c map[string]any) { c["signature"] = sig[:len(sig)-2] })
+	absent := write("absent-signature.json", func(c map[string]any) { c["signature"] = "" })
+	edited := write("edited.json", func(c map[string]any) { c["name"] = "acme-evil" })
+	for name, args := range map[string][]string{
+		"a key that signed nothing here": {"--card", card, "--pubkey", pubHexOf(t, dispatcher)},
+		"a truncated signature":          {"--card", truncated, "--pubkey", operator},
+		"no signature at all":            {"--card", absent, "--pubkey", operator},
+		"a field edited after signing":   {"--card", edited, "--pubkey", operator},
+	} {
+		e, code := runEnv(t, append([]string{"boundary", "verify"}, args...)...)
+		if code != 3 || e.Error == nil || e.Error.Code != "card_refused" {
+			t.Fatalf("%s refuses at the boundary: %d %+v", name, code, e)
+		}
+	}
+	// The publisher's verb reads the edited card as drift, because it
+	// has the declaration to compare against. The reader's verb cannot,
+	// and says so with the refusal instead: the two are not the same
+	// finding wearing different exit codes.
+	if e, code := runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", edited); code != 28 || e.Error == nil || e.Error.Code != "card_drift" {
+		t.Fatalf("the publisher reads the edited card as drift: %d %+v", code, e)
+	}
+	// AC5: the content gate says what it is. Passing with no key is not
+	// a signature check, and the envelope does not let a reader mistake
+	// it for one.
+	e, code = runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", card)
+	if code != 0 || !e.OK || e.Result["verified"] != false {
+		t.Fatalf("the keyless gate passes on content: %d %+v", code, e)
+	}
+	note, _ := e.Result["note"].(string)
+	if !strings.Contains(note, "content only") || !strings.Contains(note, "boundary verify") {
+		t.Fatalf("the keyless gate names itself a content gate: %q", note)
+	}
+	if e, code := runEnv(t, "boundary", "check", "--config", cfg, "--name", "acme", "--card", card, "--pubkey", operator); code != 0 || e.Result["verified"] != true || e.Result["note"] != nil {
+		t.Fatalf("with a key it is a signature gate and drops the note: %d %+v", code, e)
 	}
 }

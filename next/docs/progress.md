@@ -2591,6 +2591,44 @@ and usage line, so `serve --list` carries `verdict.defer` and the
 registry resolves it (III.I); `TestVerdictDeferExposed` holds it. No
 verb behavior, spec or conformance change.
 
+## The card's canonical form, and the reader's half of the boundary (os-f11601e0)
+
+Not a plan item: two gaps a read-only review found in the
+cross-organization boundary that landed with Phase 13 item 5 (#279,
+os-40ed0ca0). Plan #368.
+
+`Card.Canonical()` claimed JCS-canonical bytes and was `encoding/json`
+with `SetEscapeHTML(false)`. Go escapes U+2028 and U+2029
+unconditionally, JCS emits them literally, and `Card.check` constrains
+a card's `name` only to be non-empty, so a deployment name carrying
+either character was signed over bytes no independent verifier
+reconstructs. It now routes through `jcs.Transform`, the transform
+`internal/event` already signs over, pinned by a property test over a
+corpus that includes both separators in a name, in the ingress and in a
+squad name (`TestCanonicalIsRFC8785`) and by a fixed vector holding the
+checked-in card's canonical bytes at an unchanged 323 bytes, sha256
+`b9ba3490…` (`TestCheckedInCardCanonicalizesUnchanged`). The recorded
+decision "Canonical bytes without a JCS library" is corrected in place
+rather than quietly replaced.
+
+`boundary.Verify` existed with no caller but an optional flag, and
+`boundary check` requires the declaration that renders the card, which
+a stranger does not have: the spec's reader was reachable by no verb.
+`seed boundary verify --card <file> --pubkey <hex> | --pubkey-file
+<path>` is that verb, taking no declaration and no name, refusing with
+`card_refused` rather than `card_drift`
+(`TestBoundaryVerifyReadsACardWithNoDeclaration`, over a
+test-generated keypair, so the mechanism is proven without the
+repository's absent key).
+
+`Makefile` is unchanged and no conformance row moves. The fixture
+card's signing key is a throwaway kept out of the tree, so nothing here
+can verify it and no agent can make it verifiable; `make check` stays a
+content gate and now says so, in the success envelope's note and in
+`next/spec/boundary.md`. Minting the operator identity, re-signing, and
+pinning the public half beside `protected` and `CODEOWNERS` is the
+operator's act, filed as os-b3eeeabb.
+
 ## Frontier
 
 

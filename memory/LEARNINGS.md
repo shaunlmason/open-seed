@@ -2290,3 +2290,64 @@ failed step skips the rest of the job.
   winner's pass without unseating it, so a property about a settlement
   must read the position the `merge.requested` cited, which is what
   admission enforces.
+- 2026-09-07 (os-f11601e0): "the value domain is only strings and
+  arrays, so a compact sorted encoding is JCS-canonical" is false. Go's
+  `encoding/json` escapes U+2028 and U+2029 unconditionally, even with
+  `SetEscapeHTML(false)`; RFC 8785 emits them literally. Any
+  hand-rolled canonicalizer over a string domain diverges the moment an
+  input carries either character, and a validator that constrains a
+  field only to be non-empty admits both. One canonicalizer per tree,
+  through the library, is the only version of this that stays true.
+- 2026-09-07 (os-f11601e0): a signature-verifying function with no
+  caller but an optional flag is an unenforced capability wearing the
+  shape of a gate. The tell is the success envelope: an OK carrying
+  `"verified": false` is a gate reporting that it checked nothing. Say
+  so in the envelope and in the spec, or someone reads the exit code
+  and believes the signature was checked.
+- 2026-09-07 (os-f11601e0): a public key checked in beside the artifact
+  it authenticates, on neither the `protected` list nor `CODEOWNERS`,
+  is worse than no key: both files move in one non-owner change and the
+  gate still passes, having verified only that the card matches
+  whichever key the last committer supplied. Pin the key and the
+  protection in the same change, or pin neither.
+- 2026-09-07 (os-f11601e0): to prove a canonicalization swap invalidates
+  no signature, assert the bytes, not the verification. The fixture
+  card's signing key is a throwaway kept out of the tree, so nothing in
+  the repository can verify that card; a test that tried would have had
+  to skip, and a skipped test in place of a measurement reads as
+  coverage. Capture the byte length and digest before touching the
+  code, and let the test say in its comment why it stops there.
+- 2026-09-07 (os-f11601e0): a property test written after the fix is
+  worth nothing until it is run against the code the fix replaced.
+  Revert the body, watch it fail at exactly the cases the defect
+  predicts, restore. Cheap, and it is the difference between a
+  regression test and a tautology.
+- 2026-09-07 (os-f11601e0): a test that restates a list living elsewhere
+  in the tree fails the documentation, not the code, the first time the
+  real list grows. `cmd/seed/handbook_test.go` kept its own copy of the
+  dispatchable top-level verbs and rejected a handbook section for
+  documenting `seed boundary`, a verb the CLI has dispatched since
+  Phase 13. Derive the set from the table that owns it
+  (`catalog(...).Groups()`); the drill keeps its teeth and loses the
+  staleness.
+- 2026-09-07 (os-f11601e0): a plan's validation commands are executed by
+  the receipt runner and every one must exit 0, so a command whose
+  point is a refusal has to assert the refusal, never inherit it. Two
+  traps in one line: `go run` reports a refusing program as exit 1
+  whatever the envelope's own exit code, so checking `$?` against the
+  documented code is wrong too. Match the refusal in the envelope
+  (`| grep -q '"code":"card_refused"'`): it exits 0 on the refusal and
+  fails if the verb ever starts succeeding, crashing, or refusing for
+  another reason.
+- 2026-09-07 (os-f11601e0): a key flag that accepts only hex refuses the
+  file operators actually have. `ssh-keygen -y` writes the OpenSSH
+  authorized-keys line, and the protocol spec accepts OpenSSH ed25519
+  keys at load precisely so existing keys can be reused; a new flag
+  that reads a key file inherits that contract rather than inventing a
+  dialect.
+- 2026-09-07 (os-f11601e0): a mutual-exclusivity check buried in the
+  helper that consumes the flags runs after the data is read, so a
+  doubly-named key on a missing card comes back as drift rather than
+  usage. Refuse a malformed invocation in the flag validation, before
+  anything is opened: a data error reported for a usage error sends the
+  reader looking in the wrong place.

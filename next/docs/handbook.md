@@ -303,3 +303,49 @@ sources for GitHub, Forgejo and the snapshot file; nothing they run can
 merge, rerun, label or protect, and `next/spec/external-facts.md` is
 the closed list of what an observation may record.
 
+
+## 14. Publishing a capability card
+
+Two organizations that share no forge, no key and no ledger hand work
+across through a capability card: a signed statement of what a
+deployment accepts and what it returns
+([`next/spec/boundary.md`](../spec/boundary.md)). The operator renders
+and signs it from the declaration, and checks it in:
+
+```sh
+seed boundary card --config ./seed.json --key ./operator_ed25519 --name acme --out ./boundary/card.json
+seed boundary check --config ./seed.json --name acme --card ./boundary/card.json
+```
+
+`boundary check` is the publisher's verb, and with no key it is a
+**content gate**: it proves the card says what the declaration renders,
+so a declaration that moved without its card fails, and it reports
+`"verified": false` with a note saying that nothing there checked who
+signed the card. Give it the operator's public key and it verifies the
+signature too:
+
+```sh
+seed boundary check --config ./seed.json --name acme --card ./boundary/card.json --pubkey <hex>
+```
+
+A reader has neither the declaration nor the name, only the card it
+fetched from `GET /card` and a key it was given out of band, so it
+uses the other verb:
+
+```sh
+seed boundary verify --card ./their-card.json --pubkey-file ./acme.pub
+```
+
+Either flag takes the key in the form you were handed it: an OpenSSH
+`ssh-ed25519 AAAA…` line, or the bare hex the card's `signer` speaks.
+Naming both flags at once is refused.
+
+The key never comes from the card: a card carrying the key that signed
+it would prove nothing. A card that does not verify is `card_refused`,
+never `card_drift`, because drift is the publisher's finding that its
+own card is stale.
+
+Should you ever check a public key in beside a card, put the key file
+on the declaration's `protected` list and in `CODEOWNERS` in the same
+change. A key on neither can be swapped together with the card in one
+non-owner change, and the gate reading it would still pass.
