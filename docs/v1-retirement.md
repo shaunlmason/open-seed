@@ -25,7 +25,10 @@ after the flip.
 Retirement is not a rollback path. Once stage 5 merges, the packet's "The path
 back" no longer applies: unfreezing the `seed-state` ref would restore the
 history but not the shim that reads it. **The rollback window closes when stage
-5 merges, and stage 5 is gated on the day-7 audit for exactly that reason.**
+5 merges. [`decisions/0007`](../decisions/0007-no-day-7-wait.md) dropped the
+seven-day wait that once separated the flip from stage 4, keeping the audit and
+removing the delay, so what stands between authority moving and v1 going is one
+clean audit reading rather than a week.**
 
 ## 2. The posture this repository retires at
 
@@ -176,7 +179,7 @@ sees live drift.
 final anchor and the rehearsal reads clean end to end (import, preseed, preseed
 check, enrolment, `ledger verify` from genesis, five-bar `ledger audit`).
 
-### Stage 4 — the deletion  *(after the day-7 audit reads clean)*
+### Stage 4 — the deletion  *(after the audit reads clean; no waiting period)*
 
 One pull request removes the inventory in §4. It touches no `next/**` code: by
 this stage nothing under `next/**` reads a v1 path except the import fixture,

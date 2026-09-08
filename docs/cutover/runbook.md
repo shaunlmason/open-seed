@@ -182,23 +182,29 @@ again.
 
 ---
 
-## Part 3 — day 7
+## Part 3 — the audit, immediately after the flip
 
 [`decisions/0004`](../../decisions/0004-shadow-run-substitution.md) binds one act
-after the flip, and the operator confirmed on 2026-09-08 that this gate stays:
+after the flip. It was to run at day 7;
+[`decisions/0007`](../../decisions/0007-no-day-7-wait.md) dropped the wait and
+kept the check, so this runs as the last step of the flip rather than a return
+visit a week later:
 
 ```sh
 seed ledger audit --ledger /srv/seed-ledger
 ```
 
 Append the reading to the packet's divergence log. **A red bar is a defect card
-and a candidate for the rollback, not a note.** The rollback path is the
-packet's "The path back", and it is still open until stage 4 merges.
+and blocks stage 4, not a note.** Read minutes after the flip this catches a
+broken import, a bad linkage or an unreserved spend in the imported history,
+which is the bulk of what the flip risks; it cannot catch a defect that only
+appears under real load, because there has been none. `0007` records that trade.
 
 ## Part 4 — retirement
 
-Only once day 7 reads clean: [`docs/v1-retirement.md`](../v1-retirement.md)
+Only once the audit reads clean: [`docs/v1-retirement.md`](../v1-retirement.md)
 stages 4 and 5. Stage 4 deletes the inventory that
 `next/internal/retirement` holds to the tree; stage 5 archives
-`open-seed-engine`, read-only, never deleted. **Stage 4's merge closes the
-rollback window**, which is why it waits for the audit.
+`open-seed-engine`, read-only, never deleted. Stage 4 is one commit and is
+revertible, and the frozen `seed-state` ref and its anchor tags are kept
+permanently, so the history survives the deletion either way.

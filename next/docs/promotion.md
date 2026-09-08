@@ -225,8 +225,12 @@ reconciliation, files no card of this repository, does not run
 unattended for a week on a real backlog, and raises no escalation.
 The criterion's original words asked for those; the amended text
 accepts their absence for this cutover and moves the five-bar audit
-over the real chain to day 7 after the flip, its reading appended to
-the divergence log at the end of this packet. The decision does not
+over the real chain to after the flip, its reading appended to
+the divergence log at the end of this packet.
+`decisions/0007-no-day-7-wait.md` (2026-09-08) then dropped the
+seven-day wait 0004 had set and kept the audit, so it runs as the
+flip's last step; that record names what the earlier reading gives up,
+chiefly a defect that only appears under real load. The decision does not
 touch charter III.R: the simulation measures none of its rows, so the
 measurement ledger below is unchanged by it.
 
@@ -240,8 +244,8 @@ The live-shadow-run protocol the build plan originally named is
 preserved in the section "The shadow run, as a protocol" below, as the
 protocol the operator substituted; the protocol text stands as the
 record of what was proposed and what was traded away, and remains
-available to run on the deployment after the cutover if the day-7
-audit warrants it.
+available to run on the deployment after the cutover if the audit
+warrants it.
 
 ## 5. Cutover and rollback written down
 
@@ -620,8 +624,10 @@ preseed check green, the lane keys enrolled and granted, the ledger
 pushed once to the remote), and its merge is the escalated decision
 build plan §5 reserves. The decision binds one act after the flip
 that this packet records rather than waives: the five-bar audit over
-the real chain at day 7, appended to the divergence log below, a red
-bar a defect card and a candidate for the rollback.
+the real chain, appended to the divergence log below, a red bar a
+defect card that blocks retirement stage 4. It ran at day 7 as 0004
+wrote it; `decisions/0007-no-day-7-wait.md` moved it to immediately
+after the flip, keeping the check and dropping the wait.
 
 **Distribution.** Question: does Seed become what new users clone, and from which repository?
 
@@ -662,7 +668,8 @@ toward promotion, not an omission in it.
 ## The divergence log
 
 Empty until the first entry decision 0004 binds: the five-bar audit
-over the real chain at day 7 after the cutover, and any entry a live
-shadow window run after the cutover would add. Each entry: date,
-position, card, v1 state, ledger state, the reconciliation; for the
-day-7 audit, date, position, the five bars and their counts.
+over the real chain after the cutover, taken as the flip's last step
+per `decisions/0007-no-day-7-wait.md` rather than at day 7, and any
+entry a live shadow window run after the cutover would add. Each entry:
+date, position, card, v1 state, ledger state, the reconciliation; for
+the audit, date, position, the five bars and their counts.

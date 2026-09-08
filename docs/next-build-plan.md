@@ -627,7 +627,8 @@ new users clone. *A third step, the retirement of v1 itself, was outside this pl
 until the operator added it on 2026-09-08 by
 [`decisions/0006-v1-retirement.md`](../decisions/0006-v1-retirement.md); its plan is
 [`docs/v1-retirement.md`](v1-retirement.md), gated on the self-hosting cutover and on
-0004's day-7 audit, and independent of distribution.* **Neither cutover is
+0004's audit, which [`decisions/0007-no-day-7-wait.md`](../decisions/0007-no-day-7-wait.md)
+moved from day 7 to immediately after the flip, and independent of distribution.* **Neither cutover is
 autonomously decidable.** Spin-out *is* the
 entry-point switch, so the self-hosting cutover is itself the reserved escalation —
 renaming the later publish does not authorize the earlier authority switch. Agents
@@ -661,9 +662,12 @@ recorded deviation, larger than 0004's, and not a reading of the original words.
    simulation (`seed simulate --days 7 --intents 24 --posture enforced-self-hosted`,
    five-bar audit clean) in this criterion's place. The decision names what the
    substitution trades away, carries its risk statement, and moves the five-bar audit
-   over the real chain to day 7 after the cutover. The live protocol stays written
+   over the real chain to after the cutover. The live protocol stays written
    down in the packet; this is a recorded deviation, not a reading of the original
-   words.*
+   words. Further amended 2026-09-08 by
+   [`decisions/0007-no-day-7-wait.md`](../decisions/0007-no-day-7-wait.md): that
+   audit was to run at day 7, and now runs as the flip's last step. The check is
+   kept, the wait is dropped, and 0007 names what the earlier reading gives up.*
 5. **Cutover and rollback written down.** Which entry point flips when, what stays
    authoritative where during the window, and the documented path back.
 6. **Core conformance.** Phases 0 through 12 complete, so every pillar's mechanisms

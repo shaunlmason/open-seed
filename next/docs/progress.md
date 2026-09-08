@@ -2731,7 +2731,9 @@ block, still held by `TestPacketDeclarationLints`,
 passes all three.
 `decisions/0006-v1-retirement.md` adds a third step after the two
 cutovers: v1 is retired, per `docs/v1-retirement.md`, in five stages
-gated on the self-hosting cutover and on 0004's day-7 audit, and
+gated on the self-hosting cutover and on 0004's audit, which
+`decisions/0007-no-day-7-wait.md` (2026-09-08) moved from day 7 to
+immediately after the flip, keeping the check and dropping the wait, and
 independent of distribution. Stages 1 and 2 are claimable before the
 cutover and are the only frontier lines that do not wait on the
 operator; stages 3 through 5 follow the flip. Stage 1 moved the pull
@@ -2828,9 +2830,10 @@ which `TestPacketDeclarationLints` holds to `seed preseed check` and
 real key. After the deployment: the operator's answer to the
 Self-hosting question at the position they record; then the flip,
 which no longer waits on a shadow window, because decision 0004
-supplies criterion 4 and moves the audit to day 7 after the cutover
-(a red bar then is a defect card and a candidate for the rollback the
-packet writes down). At the flip, in the order
+supplies criterion 4 and moves the audit to after the cutover, taken
+as the flip's last step since `decisions/0007-no-day-7-wait.md` dropped
+the seven-day wait (a red bar then is a defect card that blocks
+retirement stage 4). At the flip, in the order
 the packet's "The deployment" gives and `TestPacketProcedureReachesTheFlip`
 follows: the v1 state anchored and imported into the deployment's
 empty ledger (the import is the genesis transform and refuses a ledger
