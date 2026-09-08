@@ -90,8 +90,9 @@ CI-invocable check (args or newline-separated stdin, the shape a
 forge's changed-files list provides), exit 9 on mixed. Making the
 check **forge-required** for self-hosted deployments is the Phase 12
 protections desired-state reconciler's item; the SEED-NEXT
-development loop in this repository is enforced today by v1's own
-classifier in the verify workflow.
+development loop in this repository is enforced by this classifier in
+the verify workflow, which moved off v1's own at the retirement plan's
+stage 1 (`docs/v1-retirement.md`).
 
 ## Conformance mapping
 

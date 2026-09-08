@@ -104,20 +104,47 @@ authority on the ledger, `seed-state` frozen at its final anchor, and
 `scripts/seed task` already retired from every role file and workflow by the
 cutover pull request itself.
 
-After it merges, port the four gate steps stage 1 left on v1:
+After it merges, resolve the four gate steps stage 1 left on v1. Two are ports,
+one is a migration, and **one is a deletion rather than a port**, which matters
+because reimplementing it in CI would duplicate a rule admission already
+enforces:
 
-- `receipt verify` to the verdict pipeline's receipts.
-- `scripts/seed-review-identity` to the verdict pipeline's independence rule.
-- `pr classify <branch>` to whatever branch convention the cutover pull request
-  establishes; it derives a class and a task id from a branch name, which is a
-  convention rather than a verb.
-- `plan lint` to `seed plan lint`, which is the plan-grammar migration stage 1
-  measures and defers. Every plan the gate will lint from here must carry a
-  boundary set, a retention check, `Boundary:` and `Retention:` command lines and
-  an expected diff shape. Existing plans are not rewritten: the gate lints the
-  plan of the pull request at hand, so the corpus stays as merged evidence.
+- **`receipt verify` becomes `seed verdict check`.** A strict superset on the
+  recompute side (`next/spec/verdicts.md`, "The receipt"): `merge_base` and
+  `head` resolve to full SHAs with a descent check before checkout, the approved
+  plan is hashed **at the merge-base** exactly as D3 requires, `diff_sha256`,
+  `files` and the command transcripts recompute from the submission head, and a
+  mismatch refuses **exit 21 `receipt_mismatch`**. It runs in every
+  post-submission state, not only `review`.
+- **The reviewer-identity check is deleted, not ported.** v1 reads GitHub reviews
+  in CI to prove the reviewer differs from the implementer. Seed enforces the
+  same property *at admission*: a `verdict.rendered` whose signer is in the
+  contract's implementing-key set (every fingerprint that ever signed a
+  `claim.taken` on it, plus the bound submission's signer) refuses **exit 17
+  `not_independent`**, per contract and independent of any forge fact. Adding a
+  CI step for it would re-derive on the forge what the ledger already refuses.
+- **`pr classify <branch>` follows the cutover's conventions.** It derives a
+  class and a task id from a branch name, which is a convention rather than a
+  verb, and the cutover pull request rewrites those conventions.
+- **`plan lint` is the grammar migration stage 1 measured and deferred.** Every
+  plan the gate lints from here must carry a boundary set, a retention check,
+  `Boundary:` and `Retention:` command lines and an expected diff shape. Existing
+  plans are not rewritten: the gate lints the plan of the pull request at hand,
+  so the corpus stays as merged evidence.
 
 Drop `state lint`: the ref it lints is v1's.
+
+**One v1 rule has no Seed counterpart by design, and stage 3 must not
+reimplement it.** v1's stale-plan check fails a task PR whose merge-base plan
+blob differs from the plan blob at the current default-branch head, forcing a
+rebase so a revoked plan cannot be replayed forever. Seed reaches the same
+property by a different route: a submission above the trivial tier refuses **exit
+16 `plan_required`** unless it cites the approved plan anchor (`<path @ commit>`)
+*exactly*, because an approval admits one revision, and the ancestry binding is
+the receipt's plan hash at the merge-base (`next/spec/plans.md`, "The gate bites
+at `submission.made`"). An amended plan is a new approved anchor, so the old
+submission's citation stops matching and refuses. Porting v1's comparison on top
+of this would add a second, weaker check of a property admission already holds.
 
 *Exit:* no workflow invokes `scripts/seed`; `make fixture-import` has been run
 once at the final anchor, so the import fixture records the whole v1 history.
