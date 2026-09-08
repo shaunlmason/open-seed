@@ -1899,3 +1899,4 @@
 {"actor":"shaunlmason","data":{"reason":"Merged as PR 342 with no plan of its own; the work was not above L1, so D3 owed none."},"task":"os-405d3b20","ts":"2026-09-08T01:12:38Z","verb":"exempt-plan"}
 {"actor":"shaunlmason","data":{"reason":"Merged as PR 305, a docs change with no plan of its own; the work was not above L1, so D3 owed none."},"task":"os-5fe43832","ts":"2026-09-08T01:12:42Z","verb":"exempt-plan"}
 {"actor":"shaunlmason","data":{"to":"done","transitioned":true},"task":"os-873b5153","ts":"2026-09-08T01:12:48Z","verb":"close"}
+{"actor":"seed-maintenance","data":{"to":"done","transitioned":true},"task":"os-f11601e0","ts":"2026-09-08T02:34:49Z","verb":"close"}
