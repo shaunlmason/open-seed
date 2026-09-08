@@ -2713,6 +2713,38 @@ as os-0dba8c6a for a plan PR. The guardrail bar's blind-retry clause,
 which no surface could measure, is measured by the report over the
 attempts journal (os-a9e715dc, plan #332; the section above).
 
+**Two operator decisions on 2026-09-08 changed what the deployment
+is and what follows it.**
+`decisions/0005-cooperative-posture.md` amends build plan §5's posture
+clause: the self-hosting cutover is made at the `cooperative` posture,
+so the deployment is the declaration at the root, the root key, one
+enrolled key per acting lane and the ledger ref on the existing remote,
+with no server, no `pre-receive` hook and no admission service. The
+seven criteria are unchanged and are read at that posture; the decision
+names what it trades away (the enforced-only guarantees of III.B rows 1,
+4 and 5, and with them criterion 7's live protection as opposed to its
+implementation claim) and carries its risk statement. No conformance row
+is edited. The packet is restated at that posture, and its declaration
+block, still held by `TestPacketDeclarationLints`,
+`TestPacketDeclarationInitializesUnderTheRootKey` and
+`TestPacketProcedureReachesTheFlip`, now declares `cooperative` and
+passes all three.
+`decisions/0006-v1-retirement.md` adds a third step after the two
+cutovers: v1 is retired, per `docs/v1-retirement.md`, in five stages
+gated on the self-hosting cutover and on 0004's day-7 audit, and
+independent of distribution. Stages 1 and 2 are claimable before the
+cutover and are the only frontier lines that do not wait on the
+operator; stages 3 through 5 follow the flip. Stage 1 moved the pull
+request gate's purity check to `seed plan classify` and dropped the
+skills step, and **measured that `seed plan lint` is not a drop-in
+replacement**: Seed's plan grammar is stricter and 100 of 166 plans in
+`plans/`, including seven of the twelve most recently added, fail it, so
+the plan lint port is a grammar migration deferred to stage 3 with the
+conventions the cutover pull request rewrites. Stage 2 pinned the
+deletion inventory to the tree (`internal/retirement`, under `make
+check`), which caught four abbreviated workflow paths in the inventory's
+first draft.
+
 **Next action: the operator's deployment, then the operator's
 answer.** `next/docs/promotion.md` presents the seven criteria of
 build plan §5, all `met`. Criterion 4 is met on §5's amended text: the
@@ -2743,11 +2775,13 @@ Phase 13 item 8, os-b45c308d): the 17 remaining Phase 13 rows the exit
 record flips, C.4 and Q.7 routed to the backlog's scale run and to
 promotion, and III.R's seven, none of which an agent act can supply.
 What stands between the packet and the Self-hosting question is the
-deployment, which the autonomy contract reserves to the operator: a
-ledger remote whose `pre-receive` is the `seed-admit` binary (the
-criteria name the self-hosted posture, so the forge-hosted service
-would be a second recorded deviation, not an alternative), the
-operator's key as the governance root, one enrolled key per lane,
+deployment, which the autonomy contract reserves to the operator: at
+the `cooperative` posture decision 0005 records, the ledger ref on the
+existing remote with no hook and no service to stand up (the enforced
+postures stay available, and moving to one later is a change of
+`posture` in `seed.json` plus that posture's infrastructure, since the
+three differ only in where one rule set runs), the operator's key as the
+governance root, one enrolled key per lane,
 declared in the block the packet's "The deployment" carries, with
 `governance.root` the one substitution (the root key's fingerprint),
 which `TestPacketDeclarationLints` holds to `seed preseed check` and
