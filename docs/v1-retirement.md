@@ -146,6 +146,14 @@ at `submission.made`"). An amended plan is a new approved anchor, so the old
 submission's citation stops matching and refuses. Porting v1's comparison on top
 of this would add a second, weaker check of a property admission already holds.
 
+**The rewritten `AGENTS.md` is already written.**
+[`docs/cutover/AGENTS.md`](cutover/AGENTS.md) is the root file as this stage
+installs it, staged out of the way so that merging the branch that wrote it is
+not the flip. It names the closed Seed verb set (the last open question,
+mail's verb, was settled by adding `seed message send`), cites the exit codes
+the loop refuses with, and records the cooperative posture. The cutover pull
+request `git mv`s it to the root and deletes its staging comment.
+
 **Regenerate the import fixture at the final anchor, and re-run the rehearsal.**
 This is a hard precondition, not hygiene. CI proves the migration against a
 snapshot, so it is structurally blind to a v1 run-log verb added after that
