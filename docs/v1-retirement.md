@@ -146,6 +146,13 @@ at `submission.made`"). An amended plan is a new approved anchor, so the old
 submission's citation stops matching and refuses. Porting v1's comparison on top
 of this would add a second, weaker check of a property admission already holds.
 
+**The operator's steps are written out.**
+[`docs/cutover/runbook.md`](cutover/runbook.md) is the step-by-step: which part
+is the operator's alone (minting the keys, which never enter an agent session),
+which an agent can drive from the fingerprints, and the exact commands, each one
+already run against real state in the rehearsal. It carries the three
+corrections the rehearsal produced.
+
 **The rewritten `AGENTS.md` is already written.**
 [`docs/cutover/AGENTS.md`](cutover/AGENTS.md) is the root file as this stage
 installs it, staged out of the way so that merging the branch that wrote it is
