@@ -549,10 +549,7 @@ and the decision binds the five-bar audit over the real chain at day
 happens" is rewritten
 around the Seed loop verbs (`seed situation`, `seed claim take`,
 `seed submission make`, `seed claim release|park`, `seed escalation
-raise`, `seed message read`, and mail sent as a `message.sent` append
-through `seed ledger append --verb message.sent`, the one loop act
-without a verb of its own today: the cutover pull request names that
-form or adds the verb, and this packet assumes neither) and the lane
+raise`, `seed message read` and `seed message send`) and the lane
 fragments under
 `next/lanes/`, the Seed binary built into `next/bin/seed` becomes the
 verb every role file names, and `scripts/seed task` is retired from

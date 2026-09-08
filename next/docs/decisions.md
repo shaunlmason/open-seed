@@ -4889,3 +4889,33 @@ landed (`next/spec/boundary.md` "The capability card"):
   the public half is an operator decision, not an implementer's. It is
   filed as its own card with the D1 constraint attached rather than
   done on the operator's behalf.
+
+## `seed message send`: mail gets a verb rather than a documented append form
+
+The promotion packet's cutover left one gap open by name: mail was "the
+one loop act without a verb of its own", and the cutover pull request
+was to settle it either by naming the `seed ledger append --verb
+message.sent` form or by adding the verb. This adds the verb, and the
+reason is the addressing contract rather than convenience.
+
+- **`to` has three states at the reading end, and the third is a trap.**
+  `project.AddressedTo` resolves an absent `to` to everyone, a string or
+  all-string array to those actors, and a `to` that is present and does
+  not parse to **nobody**, deliberately, because every other reading
+  invents intent. A hand-assembled payload can land in that third state
+  by mistyping JSON, and the failure is silent: the message admits, and
+  reaches no one. The verb writes an all-string array or omits `to`
+  entirely, so a sender cannot reach the undeliverable state at all.
+- **A recipient that could not be a fingerprint is refused before the
+  append.** Addressing resolves against fingerprints, so `--to
+  shaunlmason` would admit and deliver to nobody. It refuses `usage`
+  instead, naming the form, and the tip does not move.
+- **Nothing else is duplicated.** The verb assembles a payload and
+  delegates to `ledger append`, so the classification lint that bounds
+  the body's size, both postures, the declaration and the persisted
+  verified head are the same code. A second append path would be a
+  second place for those to drift.
+
+No read-state is introduced: this is the sending half only, and
+`message.acked` stays unimplemented for the reason `obligations.md`
+gives, that the position a lane carries forward is already its cursor.

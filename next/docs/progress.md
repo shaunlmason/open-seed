@@ -2768,6 +2768,22 @@ they fail when followed literally: `--ledger` must name a path that
 does not exist, and `actor.enrolled` takes the fingerprint as subject
 with the raw public key in the payload.
 
+**The cutover's one open design question is settled.** The packet left
+mail as "the one loop act without a verb of its own", to be resolved by
+the cutover pull request either naming the `seed ledger append --verb
+message.sent` form or adding the verb. `seed message send` adds it
+(`next/docs/decisions.md`), because the addressing contract is the part
+a hand-assembled payload gets wrong: `to` has three states at the
+reading end and the malformed one delivers to nobody, silently, so the
+verb writes an all-string array or omits `to` entirely and refuses a
+recipient that could not be a fingerprint before appending anything.
+Everything else delegates to `ledger append`, so the classification
+lint, both postures, the declaration and the persisted head stay one
+code path. The subverb is registered on the machine-protocol surface
+too, which `TestRegistryMirrorsTheCLIVocabulary` enforces in both
+directions. The cutover's `AGENTS.md` rewrite now names a closed verb
+set.
+
 **Next action: the operator's deployment, then the operator's
 answer.** `next/docs/promotion.md` presents the seven criteria of
 build plan §5, all `met`. Criterion 4 is met on §5's amended text: the

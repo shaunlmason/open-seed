@@ -280,3 +280,154 @@ func TestMessageReadGivesTheBodyToRecipientsOnly(t *testing.T) {
 
 // envelopeNotFoundExit is next/spec/envelope.md row 4.
 const envelopeNotFoundExit = 4
+
+// mailPositionAfter returns the tip ordinal, the position the append
+// that just ran landed at, read back rather than counted by hand.
+func mailPositionAfter(t *testing.T, ld, key string) int {
+	t.Helper()
+	e, code := runEnv(t, "situation", "--ledger", ld, "--key", key)
+	if code != 0 || e.Position == nil {
+		t.Fatalf("situation after send: %d %+v", code, e)
+	}
+	pos, err := strconv.Atoi(*e.Position)
+	if err != nil {
+		t.Fatalf("the stamped position must be a number: %q", *e.Position)
+	}
+	return pos
+}
+
+// conformance: the loop's relaying act has a verb of its own
+// (next/docs/promotion.md, "The cutover and the rollback": mail was
+// "the one loop act without a verb of its own", to be settled by
+// naming the ledger-append form or adding the verb). An addressed send
+// reaches its recipient and nobody else; an unaddressed one is a
+// broadcast every reader can open.
+func TestMessageSendRoundTrips(t *testing.T) {
+	ld, keys, fps, _ := mailLedger(t)
+
+	if e, code := runEnv(t, "message", "send", "--ledger", ld, "--key", keys["supervisor"],
+		"--subject", "c-1", "--to", fps["workerA"], "--body", "rerun the explorer"); code != 0 {
+		t.Fatalf("an addressed send: %d %+v", code, e)
+	}
+	at := mailPositionAfter(t, ld, keys["workerA"])
+
+	e, code := runEnv(t, "message", "read", "--ledger", ld, "--key", keys["workerA"], "--at", strconv.Itoa(at))
+	if code != 0 {
+		t.Fatalf("the recipient reads the body: %d %+v", code, e)
+	}
+	body, _ := e.Result["body"].(string)
+	if !strings.Contains(body, "rerun the explorer") {
+		t.Fatalf("the body carries what was sent: %q", body)
+	}
+	if !strings.Contains(body, fps["workerA"]) {
+		t.Fatalf("the payload addresses the recipient: %q", body)
+	}
+	if e.Result["subject"] != "c-1" || e.Result["from"] != fps["supervisor"] {
+		t.Fatalf("the read names the contract and the sender: %+v", e.Result)
+	}
+	// A non-recipient gets the one refusal this surface gives.
+	if _, code := runEnv(t, "message", "read", "--ledger", ld, "--key", keys["workerB"], "--at", strconv.Itoa(at)); code != envelopeNotFoundExit {
+		t.Fatalf("a non-recipient gets not_found, not a body: %d", code)
+	}
+
+	// No --to at all is a broadcast, which every reader can open.
+	if e, code := runEnv(t, "message", "send", "--ledger", ld, "--key", keys["supervisor"],
+		"--subject", "c-1", "--body", "standup in ten"); code != 0 {
+		t.Fatalf("a broadcast send: %d %+v", code, e)
+	}
+	bat := mailPositionAfter(t, ld, keys["workerA"])
+	for _, who := range []string{"workerA", "workerB"} {
+		if _, code := runEnv(t, "message", "read", "--ledger", ld, "--key", keys[who], "--at", strconv.Itoa(bat)); code != 0 {
+			t.Fatalf("%s opens the broadcast: %d", who, code)
+		}
+	}
+}
+
+// The reason the verb exists rather than a documented `ledger append`
+// form: `to` has three states at the reading end and the malformed one
+// delivers to nobody, so a sender must not be able to reach it by
+// mistyping JSON. The verb writes `to` or omits it, never anything
+// else, and refuses a recipient that could not be a fingerprint.
+func TestMessageSendCannotLandUndeliverable(t *testing.T) {
+	ld, keys, fps, _ := mailLedger(t)
+
+	// A recipient that could not be a fingerprint is refused before
+	// anything is appended, so the tip does not move.
+	before := mailPositionAfter(t, ld, keys["workerA"])
+	for _, bad := range []string{
+		"shaunlmason",
+		strings.ToUpper(fps["workerA"]),
+		fps["workerA"] + "extra",
+		fps["workerA"][:63],
+		"0x" + fps["workerA"][2:],
+	} {
+		e, code := runEnv(t, "message", "send", "--ledger", ld, "--key", keys["supervisor"],
+			"--subject", "c-1", "--to", bad, "--body", "x")
+		if code != envelopeUsageExit || e.Error == nil || !strings.Contains(e.Error.Message, "fingerprint") {
+			t.Fatalf("--to %q must refuse by name: %d %+v", bad, code, e)
+		}
+	}
+	if after := mailPositionAfter(t, ld, keys["workerA"]); after != before {
+		t.Fatalf("a refused send appends nothing: tip moved %d -> %d", before, after)
+	}
+
+	// Every send this verb does write carries `to` as an all-string
+	// array or omits it, which are exactly the two states that resolve
+	// to somebody. The malformed third state is unreachable from here.
+	for _, tc := range []struct {
+		name string
+		args []string
+	}{
+		{"addressed", []string{"--to", fps["workerA"]}},
+		{"two recipients", []string{"--to", fps["workerA"], "--to", fps["workerB"]}},
+		{"broadcast", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string{"message", "send", "--ledger", ld, "--key", keys["supervisor"],
+				"--subject", "c-1", "--body", "x"}, tc.args...)
+			if e, code := runEnv(t, args...); code != 0 {
+				t.Fatalf("send: %d %+v", code, e)
+			}
+			at := mailPositionAfter(t, ld, keys["workerA"])
+			e, code := runEnv(t, "message", "read", "--ledger", ld, "--key", keys["workerA"], "--at", strconv.Itoa(at))
+			if code != 0 {
+				t.Fatalf("workerA is addressed in every case here: %d %+v", code, e)
+			}
+			body, _ := e.Result["body"].(string)
+			if len(tc.args) == 0 {
+				if strings.Contains(body, `"to"`) {
+					t.Fatalf("a broadcast omits `to` entirely rather than writing an empty one: %q", body)
+				}
+				return
+			}
+			if !strings.Contains(body, `"to":[`) {
+				t.Fatalf("an addressed send writes `to` as an array: %q", body)
+			}
+		})
+	}
+}
+
+func TestMessageSendUsage(t *testing.T) {
+	ld, keys, fps, _ := mailLedger(t)
+	for _, tc := range []struct {
+		name string
+		args []string
+	}{
+		{"no ledger and no remote", []string{"message", "send", "--key", keys["supervisor"], "--subject", "c-1", "--body", "x"}},
+		{"both ledger and remote", []string{"message", "send", "--ledger", ld, "--remote", ld, "--key", keys["supervisor"], "--subject", "c-1", "--body", "x"}},
+		{"no key", []string{"message", "send", "--ledger", ld, "--subject", "c-1", "--body", "x"}},
+		{"no subject", []string{"message", "send", "--ledger", ld, "--key", keys["supervisor"], "--body", "x"}},
+		{"no body", []string{"message", "send", "--ledger", ld, "--key", keys["supervisor"], "--subject", "c-1"}},
+		{"a positional argument", []string{"message", "send", "--ledger", ld, "--key", keys["supervisor"], "--subject", "c-1", "--body", "x", "stray"}},
+		{"an unknown flag", []string{"message", "send", "--ledger", ld, "--key", keys["supervisor"], "--subject", "c-1", "--body", "x", "--cc", fps["workerA"]}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if e, code := runEnv(t, tc.args...); code != envelopeUsageExit || e.Error == nil {
+				t.Fatalf("want a usage refusal, got %d %+v", code, e)
+			}
+		})
+	}
+	if e, code := runEnv(t, "message", "post"); code != envelopeUsageExit || e.Error == nil || !strings.Contains(e.Error.Message, "send") {
+		t.Fatalf("an unknown subverb names the real ones: %d %+v", code, e)
+	}
+}

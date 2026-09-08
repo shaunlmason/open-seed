@@ -41,11 +41,14 @@ package main
 
 import (
 	"crypto/ed25519"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/shaunlmason/open-seed/next/internal/envelope"
 	"github.com/shaunlmason/open-seed/next/internal/event"
@@ -54,13 +57,108 @@ import (
 
 func runMessage(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return render(envelope.Fail(envelope.ExitUsage, "usage", "message requires a subverb: read"), stdout, stderr)
+		return render(envelope.Fail(envelope.ExitUsage, "usage", "message requires a subverb: read or send"), stdout, stderr)
 	}
-	if args[0] == "read" {
+	switch args[0] {
+	case "read":
 		return runMessageRead(args[1:], stdout, stderr)
+	case "send":
+		return runMessageSend(args[1:], stdout, stderr)
 	}
 	return render(envelope.Fail(envelope.ExitUsage, "usage",
-		fmt.Sprintf("unknown message subverb %q — read", args[0])), stdout, stderr)
+		fmt.Sprintf("unknown message subverb %q — read or send", args[0])), stdout, stderr)
+}
+
+// recipientList collects a repeatable --to.
+type recipientList []string
+
+func (r *recipientList) String() string { return strings.Join(*r, ",") }
+
+func (r *recipientList) Set(v string) error {
+	*r = append(*r, v)
+	return nil
+}
+
+// fingerprintRE is the recipient form: addressing resolves against an
+// actor's fingerprint (project.MessageNotice.Addresses), so a recipient
+// that cannot be one is a typo that would otherwise admit and deliver
+// to nobody, silently and un-notified: `to` parsed fine, it simply
+// named no one who exists.
+var fingerprintRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// runMessageSend appends one message.sent, the loop's relaying act.
+//
+// The verb exists so the cutover has one form to name rather than a
+// hand-assembled payload: `next/docs/promotion.md` left mail as "the
+// one loop act without a verb of its own", to be settled by naming the
+// `ledger append` form or by adding the verb. This adds it, because the
+// addressing contract is the part a hand-written payload gets wrong.
+// Absent, present-and-parseable, and present-and-malformed are three
+// different facts at the reading end (`project.AddressedTo`), and only
+// the first two are reachable from here: this either omits `to`
+// entirely (a broadcast) or writes an all-string array, so a sender
+// cannot land in the undeliverable case by mistyping JSON.
+//
+// Everything else delegates to `ledger append`: the classification
+// lint that bounds the body's size, both postures, the declaration and
+// the persisted head. A second append path would be a second place for
+// those to drift.
+func runMessageSend(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("message send", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	var to recipientList
+	fs.Var(&to, "to", "recipient fingerprint; repeatable; omitted addresses everyone")
+	body := fs.String("body", "", "the message text")
+	subject := fs.String("subject", "", "the contract the message concerns")
+	// Passed through to `ledger append` untouched, so the two verbs
+	// take one vocabulary and no flag means something different here.
+	dir := fs.String("ledger", "", "ledger directory")
+	remote := fs.String("remote", "", "remote ledger repository (cooperative posture)")
+	keyPath := fs.String("key", "", "OpenSSH ed25519 private key of the sending actor")
+	refName := fs.String("ref", DefaultRemoteRef, "remote ledger ref")
+	stateDir := fs.String("state", "", "client state dir for the persisted verified head")
+	config := fs.String("config", "", "deployment declaration")
+	supported := fs.String("supported", "", "comma-separated supported protocol versions")
+	if err := fs.Parse(args); err != nil || (*dir == "") == (*remote == "") || *keyPath == "" || *subject == "" || *body == "" || fs.NArg() != 0 {
+		return render(envelope.Fail(envelope.ExitUsage, "usage",
+			"message send requires --ledger <dir> or --remote <repo> (not both), --key, --subject and --body, with --to <fingerprint> repeatable"), stdout, stderr)
+	}
+	for _, r := range to {
+		if !fingerprintRE.MatchString(r) {
+			return render(envelope.Fail(envelope.ExitUsage, "usage",
+				fmt.Sprintf("--to takes an actor fingerprint (64 lowercase hex), got %q: addressing resolves against fingerprints, so any other string admits and reaches nobody", r)), stdout, stderr)
+		}
+	}
+	payload := map[string]any{"body": *body}
+	if len(to) > 0 {
+		payload["to"] = []string(to)
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return render(envelope.Fail(envelope.ExitUnavailable, "unavailable", err.Error()), stdout, stderr)
+	}
+	forward := []string{
+		"--key", *keyPath,
+		"--verb", project.MessageSentVerb,
+		"--subject", *subject,
+		"--payload", string(encoded),
+		"--ref", *refName,
+	}
+	if *dir != "" {
+		forward = append(forward, "--ledger", *dir)
+	} else {
+		forward = append(forward, "--remote", *remote)
+	}
+	if *stateDir != "" {
+		forward = append(forward, "--state", *stateDir)
+	}
+	if *config != "" {
+		forward = append(forward, "--config", *config)
+	}
+	if *supported != "" {
+		forward = append(forward, "--supported", *supported)
+	}
+	return runLedgerAppend(forward, stdout, stderr)
 }
 
 // messageNotFound is the ONE refusal this verb gives for every reason a
