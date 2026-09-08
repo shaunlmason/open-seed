@@ -52,17 +52,23 @@ them and stops.
 
 What stands between this packet and the Self-hosting question is not
 agent work. No Seed deployment for this repository exists: no
-`seed.json` at the root, no `refs/seed/ledger` on the remote, no
-`seed-admit` hook on a git server, no root key at a genesis. Standing
-one up is the operator's, because the autonomy contract reserves
-credentials and infrastructure to a human: the ledger remote whose
-`pre-receive` is the `seed-admit` binary, the operator's key as the
-governance root, one enrolled key per lane, as "The deployment" below
-spells out and as the declaration block there, linted under `make
-check`, declares. The forge-hosted posture is not an alternative here:
-the criteria name the self-hosted posture, and running `seed-admit
-serve` behind a forge's rulesets instead would be a second deviation
-the operator would have to record beside the first. Nothing agent-side
+`seed.json` at the root, no `refs/seed/ledger` on the remote, no root
+key at a genesis. Standing one up is the operator's, because the
+autonomy contract reserves credentials and infrastructure to a human:
+the declaration at the root, the operator's key as the governance root,
+one enrolled key per lane, and the ledger ref on the existing remote, as
+"The deployment" below spells out and as the declaration block there,
+linted under `make check`, declares. The posture is the operator's
+recorded choice, not the criteria's default:
+`decisions/0005-cooperative-posture.md` (2026-09-08) amends build plan
+§5's posture clause to `cooperative`, so the deployment needs no server,
+no `pre-receive` hook and no admission service. That decision names what
+the substitution trades away, chiefly the enforced-only guarantees of
+III.B rows 1, 4 and 5 and with them criterion 7's live protection as
+opposed to its implementation claim, and carries its risk statement. The
+enforced postures stay available: moving to one later is a change of
+`posture` in `seed.json` plus that posture's infrastructure, since the
+three differ only in where one rule set runs. Nothing agent-side
 remains open at this gate: every criterion's evidence is on `main`
 (the last three cards, os-8ecef90f for III.L row 4, os-b5051f2e for
 the audit's ceiling arm and os-db5cd353 for III.A row 7, merged as
@@ -352,8 +358,9 @@ re-declared from the cards open on the day a window opened.
 **The deployment.** What the cutover needs whether or not a window
 runs, since the ledger authority moves to is this deployment either
 way: a declaration for this repository at the root (`seed.json`,
-`posture.DeclarationPath`, the file the doctor, the remote verbs and
-the hook read), in the shape `seed init --preseed` reads
+`posture.DeclarationPath`, the file the doctor and the remote verbs
+read, and the hook too where a posture installs one), in the shape
+`seed init --preseed` reads
 (`next/spec/postures.md`, "The preseed"). The proposed content, with
 one required substitution: `governance.root` is the fingerprint of the
 operator's root key, because `seed init --preseed` refuses
@@ -370,7 +377,7 @@ copies is one `make check` has both linted and initialized:
 
 ```json
 {
-  "posture": "enforced-self-hosted",
+  "posture": "cooperative",
   "protocol": "seed/7",
   "governance": {
     "root": "<the root key's fingerprint>",
@@ -398,9 +405,13 @@ copies is one `make check` has both linted and initialized:
 }
 ```
 
-The ledger remote is a bare repository on the server the operator
-names, its `pre-receive` hook the `seed-admit` binary built from this
-tree, the ledger ref `refs/seed/ledger`; the code stays on GitHub. The
+The ledger ref `refs/seed/ledger` lives on the remote the code already
+lives on: at the cooperative posture decision 0005 records, every writer
+self-validates through `internal/admit` before pushing and no
+server-side component exists, so there is no bare repository to stand up
+and no hook to install. `seed doctor` prints `posture.Consequence`
+verbatim against this deployment, which is the intended standing
+reminder and is not to be suppressed. The
 genesis names the operator's key as the governance root; one key per
 lane is enrolled for the identities that will act (the implementer
 lane for the sessions that work cards, the dispatcher lane for the
@@ -415,8 +426,10 @@ transform and refuses every ledger that holds a record
 `next/spec/import.md`), so a ledger `seed init --preseed` has already
 initialized cannot be imported into, and the declaration is applied
 over the imported chain, never under it. A deployment standing before
-the flip is therefore the remote with its hook, the declaration at the
-root, the root key and the lane keys, with `refs/seed/ledger` empty;
+the flip is therefore the declaration at the root, the root key and the
+lane keys, with `refs/seed/ledger` empty on the existing remote: at the
+cooperative posture decision 0005 records there is no hook to stand up
+beside them;
 at the flip, in this order: `scripts/seed state anchor` and
 `scripts/seed state export` on v1; `seed import --from-open-seed
 export.json --source <clone> --repo <checkout> --ledger <empty dir>
@@ -432,9 +445,12 @@ dir>`, green with nothing pending; the lane keys enrolled and granted
 by the root (`seed ledger append --verb actor.enrolled`, then
 `actor.granted`); and the ledger directory (`HEAD` and
 `segments/*.jsonl`, the layout the guarded ref carries) committed as
-the tree of `refs/seed/ledger` and pushed once, the hook verifying the
-pushed chain from genesis at that push and admitting every append
-after it (`next/spec/admission.md`, "The ledger half"). A ledger a
+the tree of `refs/seed/ledger` and pushed once. Under an enforced
+posture the hook verifies the pushed chain from genesis at that push and
+admits every append after it (`next/spec/admission.md`, "The ledger
+half"); at the cooperative posture each writer runs that same
+`internal/admit` rule set itself before pushing, and `seed ledger
+verify` over the ref is what reads the chain back. A ledger a
 shadow window wrote, had one run, is a shadow and not the target of
 the import: it is kept for its record beside v1's frozen ref.
 `TestPacketProcedureReachesTheFlip` runs that order through the CLI
@@ -563,7 +579,7 @@ each gate, present this packet, and stop.
 Its preconditions, for putting the question, are seven criteria `met`
 (the fourth on build plan §5's amended text, by the operator's
 recorded decision `decisions/0004-shadow-run-substitution.md`), a
-deployment standing at the enforced self-hosted posture ("The
+deployment standing at the cooperative posture decision 0005 records ("The
 deployment"), the v1 state anchored and imported into that
 deployment's ledger at the flip, and the compromised-actor drill green
 on the commit that carries the cutover. The criteria are met on
@@ -573,7 +589,7 @@ pull request, merged in the order "The deployment" gives (the v1
 state anchored and exported, imported into the empty ledger under the
 root key, the declaration applied by `seed init --preseed`, the
 preseed check green, the lane keys enrolled and granted, the ledger
-pushed once to the hook), and its merge is the escalated decision
+pushed once to the remote), and its merge is the escalated decision
 build plan §5 reserves. The decision binds one act after the flip
 that this packet records rather than waives: the five-bar audit over
 the real chain at day 7, appended to the divergence log below, a red

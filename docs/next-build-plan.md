@@ -623,13 +623,26 @@ what must be true first, and who decides.
 
 **Two steps.** *Self-hosting*: this repository's own development coordinates on
 Seed, with v1 retained read-only for its history. *Distribution*: Seed becomes what
-new users clone. **Neither cutover is autonomously decidable.** Spin-out *is* the
+new users clone. *A third step, the retirement of v1 itself, was outside this plan
+until the operator added it on 2026-09-08 by
+[`decisions/0006-v1-retirement.md`](../decisions/0006-v1-retirement.md); its plan is
+[`docs/v1-retirement.md`](v1-retirement.md), gated on the self-hosting cutover and on
+0004's day-7 audit, and independent of distribution.* **Neither cutover is
+autonomously decidable.** Spin-out *is* the
 entry-point switch, so the self-hosting cutover is itself the reserved escalation —
 renaming the later publish does not authorize the earlier authority switch. Agents
 drive the work up to each gate, present the evidence, and stop.
 
 **Criteria.** Promotion to self-hosting is met when, at the enforced self-hosted
 posture:
+*Amended 2026-09-08 by
+[`decisions/0005-cooperative-posture.md`](../decisions/0005-cooperative-posture.md):
+the self-hosting cutover is made at the `cooperative` posture instead. The seven
+criteria below are unchanged and are read at that posture. The decision names what
+the substitution trades away (the enforced-only guarantees of III.B rows 1, 4 and 5,
+and with them criterion 7's live protection as opposed to its implementation claim),
+carries its risk statement, and records that no conformance row is edited. This is a
+recorded deviation, larger than 0004's, and not a reading of the original words.*
 
 1. **Loop-completeness.** A lane runs poll → claim → plan-gate → work → meter →
    submit → verdict → merge-observe → deliberate exit, plus escalation and messages,
