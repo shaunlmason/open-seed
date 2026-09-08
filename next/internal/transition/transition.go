@@ -1694,7 +1694,7 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 		// skipping it would wedge the subject on a dead holder) and
 		// counts the violation visibly, never silently
 		// (plans/os-5dc16a7c.md, plans/os-b07b0f59.md).
-		if s.Claim != nil && t.Allows(current, e.Verb) {
+		if s.Claim != nil && t.Allows(current, e.Verb) && !IsMergeChain(e.Verb) {
 			cited, _ := fenceCited(e.Payload)
 			citedOK := false
 			for _, c := range s.Claims {
@@ -1812,8 +1812,13 @@ func (t *Table) FoldRecords(records []*event.Record) *Fold {
 				settled := pos
 				s.RaceSettled = &settled
 			}
-			passChain := s.Verdict != nil && s.Verdict.Verdict == "pass" &&
-				s.Requested != nil && s.Requested.CitedVerdict == s.Verdict.Pos
+			// The verdict the chain rests on is the one the request
+			// CITED, never whichever landed last: on a racing subject a
+			// fail on the loser's submission follows the winner's pass
+			// without unseating it, and reading the singular fact counts
+			// an admitted settlement as an anomaly (the racing
+			// enumeration's second finding, plans/os-873b5153.md D8).
+			passChain := s.Requested != nil && s.CitedPass()
 			overrideChain := s.Override != nil && s.Requested != nil &&
 				s.Requested.CitedOverride == s.Override.Pos
 			if !passChain && !overrideChain {
@@ -2736,6 +2741,44 @@ func (s SubjectState) ClaimScopedExit(verb string, fence int) bool {
 		return s.Submission != nil
 	}
 	return len(s.Claims) > 1 || s.Submission != nil
+}
+
+// VerdictFacts is every verdict the fold applied to this subject, oldest
+// first. A state carrying the singular fact alone reads as that fact: a
+// hand-built state (a classifier's table test) is judged as it was
+// before the list existed, and a folded one always carries both.
+func (s *SubjectState) VerdictFacts() []VerdictFact {
+	if len(s.Verdicts) == 0 && s.Verdict != nil {
+		return []VerdictFact{*s.Verdict}
+	}
+	return s.Verdicts
+}
+
+// CitedPass reports whether the request standing on this subject cites a
+// pass verdict. The fold keeps every verdict it applied, so the position
+// the request named is the one to judge, whatever landed after it.
+func (s *SubjectState) CitedPass() bool {
+	if s.Requested == nil {
+		return false
+	}
+	for _, v := range s.VerdictFacts() {
+		if v.Pos == s.Requested.CitedVerdict && v.Verdict == "pass" {
+			return true
+		}
+	}
+	return false
+}
+
+// IsMergeChain reports whether the verb is one of the two reconciliation
+// chain steps. Both are subject-scoped rather than claim-scoped: their
+// payloads are strict objects with no fence slot
+// (next/spec/reconciliation.md), so what they rest on is the subject's
+// verdict, never anyone's window. Admission's fence rule exempts them and
+// the fence-anomaly counter below does too, or the one rule's two
+// consumers disagree on a racing subject where a rival racer is still
+// holding at review (plans/os-873b5153.md D8).
+func IsMergeChain(verb string) bool {
+	return verb == MergeRequestedVerb || verb == MergeObservedVerb
 }
 
 // IsExit reports the four deliberate exits from a claim.

@@ -287,3 +287,45 @@ func TestSettledOutClaimIsReapableAtTheBoundary(t *testing.T) {
 		t.Fatalf("the reap closed the settled-out claim and left done alone: %s %+v", s.State, s.Claims)
 	}
 }
+
+// conformance: charter §II.6 (settlement while a rival racer holds),
+// the named regression for the divergence the racing enumeration found
+// (plans/os-873b5153.md D8). The fixtures around it append their chains
+// straight to the store, so nothing was checking that the settlement
+// chain ADMITS on a racing subject: a rival's claim is still active at
+// review, and until this landed the fence rule demanded that rival's
+// fence from both merge steps, neither of whose strict payloads has a
+// slot to carry one in. Every settled-out fact §II.6 rests on was
+// therefore unreachable through the front door. The trace is the
+// enumeration's own: claim(A) claim(B) submit(A) verdict.pass(A)
+// request settle.
+func TestSettlementAdmitsWhileARivalRacerHolds(t *testing.T) {
+	f := newRaceFixture(t)
+	f.ctx = f.step(f.a, version.Seed6, "claim.taken", "c-1", `{}`)
+	f.fenceA = f.state(t).Claim.Fence
+	f.ctx = f.step(f.b, version.Seed6, "claim.taken", "c-1", `{}`)
+	f.fenceB = f.state(t).Claims[1].Fence
+	f.ctx = f.step(f.a, version.Seed6, "submission.made", "c-1", fmt.Sprintf(`{"fence": "%d", "packet": %s}`, f.fenceA, minPacket))
+	subPos := f.state(t).Submission.Pos
+	f.ctx = f.step(f.verifier, version.Seed6, "verdict.rendered", "c-1", fmt.Sprintf(`{"verdict": "pass", "receipt": "%s", "submission": "%d", "independence": "L1"}`, zeros64, subPos))
+	passPos := f.ctx.Count - 1
+	// The requester is A, whose own claim closed on its submission while
+	// B still holds: a prior claimant of a racing subject, which the
+	// fence rule's free-event arm would have required to cite B's fence.
+	req := fmt.Sprintf(`{"verdict": "%d"}`, passPos)
+	if err := Check(f.under(), draftV(t, f.a, version.Seed6, "merge.requested", "c-1", req, f.ctx.Tip)); err != nil {
+		t.Fatalf("the submitted racer's merge request admits with a rival holding: %v", err)
+	}
+	f.ctx = f.step(f.a, version.Seed6, "merge.requested", "c-1", req)
+	obs := `{"merged": "` + zeros40 + `", "pr": "pr/1"}`
+	if err := Check(f.under(), draftV(t, f.signer, version.Seed6, "merge.observed", "c-1", obs, f.ctx.Tip)); err != nil {
+		t.Fatalf("the settlement admits with a rival racer holding: %v", err)
+	}
+	// The exemption is the merge chain's alone: B's own claim-scoped
+	// acts still answer to the fence rule.
+	var fe *FenceError
+	late := `{"count": 1, "step": "late"}`
+	if err := Check(f.under(), draftV(t, f.b, version.Seed6, "progress.milestone", "c-1", late, f.ctx.Tip)); !errors.As(err, &fe) {
+		t.Fatalf("a holder's unfenced milestone still refuses: %v", err)
+	}
+}
