@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/shaunlmason/open-seed/next/internal/explore"
 )
 
 var (
@@ -129,7 +131,7 @@ func (s *state) clone() *state {
 	return &c
 }
 
-func (s *state) key() string {
+func (s *state) Key() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "t%d r%v %d>%d|", s.tip, s.rolledBack, s.rollbackFrom, s.rollbackTo)
 	for _, n := range s.nodes {
@@ -190,7 +192,7 @@ func (s *state) haltedAt(n int) bool {
 	return halted
 }
 
-func (s *state) terminal() bool {
+func (s *state) Terminal() bool {
 	for _, w := range s.writers {
 		if w.phase != done {
 			return false
@@ -200,7 +202,7 @@ func (s *state) terminal() bool {
 }
 
 // enabled lists the steps the model can take from s.
-func (s *state) enabled() []step {
+func (s *state) Enabled() []step {
 	var out []step
 	for i, w := range s.writers {
 		switch w.phase {
@@ -222,7 +224,7 @@ func (s *state) enabled() []step {
 
 // apply returns the successor state. It is the model's whole semantics,
 // and every rule in it cites the loop it models.
-func (s *state) apply(st step) *state {
+func (s *state) Apply(st step) *state {
 	n := s.clone()
 	switch st.action {
 	case "fetch":
@@ -315,23 +317,14 @@ type exploration struct {
 // explore walks every interleaving from the configuration's initial
 // state, memoized on state, checking the properties at every state and
 // every terminal state (plan D3). A property failure names the trace.
-func explore(t *testing.T, c config) *exploration {
+func walkModel(t *testing.T, c config) *exploration {
 	t.Helper()
 	ex := &exploration{}
-	seen := map[string]bool{}
-	var walk func(s *state, path []step)
-	walk = func(s *state, path []step) {
-		k := s.key()
-		if seen[k] {
-			return
-		}
-		seen[k] = true
-		ex.states++
-		checkInvariants(t, c, s, path)
-		if s.terminal() {
-			ex.terminals++
+	res, err := explore.Walk[*state, step](c.initial(), explore.Hooks[*state, step]{
+		AtState: func(s *state, path []step) { checkInvariants(t, c, s, path) },
+		AtTerminal: func(s *state, path []step) {
 			checkTerminal(t, c, s, path)
-			ex.traces = append(ex.traces, append([]step(nil), path...))
+			ex.traces = append(ex.traces, path)
 			ex.finals = append(ex.finals, s)
 			idx := len(ex.traces) - 1
 			if s.isHealing() {
@@ -346,17 +339,13 @@ func explore(t *testing.T, c config) *exploration {
 					break
 				}
 			}
-			return
-		}
-		steps := s.enabled()
-		if len(steps) == 0 {
-			t.Fatalf("%s: a non-terminal state with no enabled step (the explorer cannot terminate this path)\n%s", c.name, traceText(path))
-		}
-		for _, st := range steps {
-			walk(s.apply(st), append(path, st))
-		}
+		},
+	})
+	if err != nil {
+		t.Fatalf("%s: %v", c.name, err)
 	}
-	walk(c.initial(), nil)
+	ex.states = res.States
+	ex.terminals = res.Terminals()
 	return ex
 }
 
@@ -506,7 +495,7 @@ func TestAppendInterleavings(t *testing.T) {
 		configs = append(configs, uniformConfig(*modelWriters, *modelAttempts))
 	}
 	for _, c := range configs {
-		ex := explore(t, c)
+		ex := walkModel(t, c)
 		t.Logf("%s: %d states, %d terminal states, %d healing, %d fork, %d spent", c.name, ex.states, ex.terminals, len(ex.healing), len(ex.fork), ex.spent)
 		if ex.terminals == 0 {
 			t.Fatalf("%s: no terminal state", c.name)
@@ -535,7 +524,7 @@ func TestAppendInterleavings(t *testing.T) {
 	// writer, or the model races nothing.
 	for _, n := range []int{2, 3} {
 		c := uniformConfig(n, n-1)
-		ex := explore(t, c)
+		ex := walkModel(t, c)
 		t.Logf("%s: %d states, %d terminal states, %d spent", c.name, ex.states, ex.terminals, ex.spent)
 		if ex.spent == 0 {
 			t.Fatalf("%s: no interleaving spends a writer's retries at A = N-1; the model is not racing anything", c.name)

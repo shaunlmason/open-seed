@@ -131,26 +131,43 @@ type Finding struct {
 func Subject(id string, s transition.SubjectState) []Finding {
 	var out []Finding
 	merged := s.Merged != nil || s.State == "done"
-	passVerdict := s.Verdict != nil && s.Verdict.Verdict == "pass"
+	// What the chain rests on is the verdict the request CITED, not
+	// whichever verdict landed last: on a racing subject a fail on the
+	// loser's submission follows the winner's pass without unseating it,
+	// and reading the singular fact reports an admitted settlement as a
+	// divergence (plans/os-873b5153.md D8). anyPass keeps the two
+	// findings apart as they always were: no pass at all is a merge
+	// without a verdict, a pass the chain did not run through is a
+	// skipped link.
+	citedPass := s.CitedPass()
+	anyPass, passPos := false, -1
+	for _, v := range s.VerdictFacts() {
+		if v.Verdict == "pass" {
+			anyPass, passPos = true, v.Pos
+		}
+	}
 	// An override is the sanctioned cover only when the chain actually
 	// ran through it: the request must cite it (review finding on the
 	// task PR — a raw override beside a skipped chain is divergence,
 	// not the sanctioned path). Authenticity stays VerifyOverrides'
 	// separate finding.
 	overrideBacked := s.Override != nil && s.Requested != nil && s.Requested.CitedOverride == s.Override.Pos
-	if merged && !passVerdict && !overrideBacked {
+	if merged && !anyPass && !overrideBacked {
 		detail := "the subject reached done with no admitted pass verdict"
 		if s.Verdict != nil {
 			detail = fmt.Sprintf("the subject reached done and the admitted verdict at position %d is %q", s.Verdict.Pos, s.Verdict.Verdict)
 		}
 		out = append(out, Finding{Subject: id, Class: ClassMergeWithoutVerdict, Detail: detail})
 	}
-	if merged && passVerdict && (s.Requested == nil || s.Requested.CitedVerdict != s.Verdict.Pos) {
+	if merged && anyPass && !citedPass {
 		out = append(out, Finding{Subject: id, Class: ClassChainSkipped,
-			Detail: fmt.Sprintf("the merge was observed with no merge.requested citing the pass verdict at position %d — each chain step is its own event", s.Verdict.Pos)})
+			Detail: fmt.Sprintf("the merge was observed with no merge.requested citing the pass verdict at position %d — each chain step is its own event", passPos)})
 	}
 	// A judged eval is complete, never unreconciled: its verdict is its
 	// terminal fact and no merge is owed (plans/os-03e47abb.md D10).
+	// Unmerged, the subject has no chain to rest on, so this arm reads
+	// the standing verdict as it always did.
+	passVerdict := s.Verdict != nil && s.Verdict.Verdict == "pass"
 	if !merged && passVerdict && s.Eval == nil {
 		out = append(out, Finding{Subject: id, Class: ClassUnreconciled,
 			Detail: fmt.Sprintf("the pass verdict at position %d has no observed merge yet — pending or diverged is an age judgment for maintenance, not this classifier", s.Verdict.Pos)})

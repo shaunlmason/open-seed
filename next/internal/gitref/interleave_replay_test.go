@@ -57,7 +57,7 @@ func sampleTraces(t *testing.T, n int) []sampledTrace {
 	var named []sampledTrace
 	var perConfig [][]sampledTrace
 	for _, c := range replayConfigs() {
-		ex := explore(t, c)
+		ex := walkModel(t, c)
 		taken := map[int]bool{}
 		if len(ex.healing) > 0 {
 			i := ex.healing[0]
@@ -195,7 +195,7 @@ func replayTrace(t *testing.T, remote string, resolve ledger.Resolver, sign Sign
 	}
 	s := st.cfg.initial()
 	for i, step := range st.trace {
-		n := s.apply(step)
+		n := s.Apply(step)
 		where := fmt.Sprintf("step %d %s of %s", i, step, trace)
 		switch step.action {
 		case "fetch":

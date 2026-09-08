@@ -46,6 +46,17 @@ jobs:
       - name: 'The append-loop interleaving check at the scheduled size'
         run: go test ./internal/gitref -run 'TestAppendInterleavings|TestAppendInterleavingReplay' -count=1 -args -writers=4 -attempts=4 -replay=0
         working-directory: next
+      # The reconciliation and racing interleaving checks at the
+      # scheduled size (plans/os-873b5153.md D7): the fast gate runs them
+      # at depth 4 (852 terminal states, ~1.9s) and race-depth 7 (2,007
+      # terminal states, ~2.5s), here at depth 6 (7,068 terminal states,
+      # ~20s) and race-depth 9 (22,599 terminal states, ~33s). A red run
+      # names the trace that broke the property.
+      - name: 'The reconciliation and racing interleaving checks at the scheduled size'
+        run: |
+          go test ./internal/reconcile -run TestReconciliationInterleavings -count=1 -args -depth=6
+          go test ./internal/maintain -run TestRacingInterleavings -count=1 -args -race-depth=9
+        working-directory: next
       - name: 'Attach the reading, pass or fail'
         if: always()
         uses: actions/upload-artifact@v4
