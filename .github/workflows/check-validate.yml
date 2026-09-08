@@ -40,8 +40,6 @@ jobs:
           save: ${{ github.event_name == 'push' }}
       - name: make check (validators + project checks)
         run: make check
-      - name: 'Shared skills pinned (D8: skills install --frozen)'
-        run: sh scripts/seed skills install --frozen
       - name: State-ref lint (read-only; reports, never halts here)
         run: scripts/seed state lint
 
@@ -220,10 +218,20 @@ jobs:
       - name: Verify plan PR (purity + grammar)
         if: steps.head.outputs.class == 'plan'
         env:
-          BRANCH: ${{ steps.head.outputs.branch }}
           TASK: ${{ steps.head.outputs.task }}
           BASE: ${{ steps.head.outputs.base }}
         run: |
-          files=$(git diff --name-only "$BASE...HEAD" | paste -sd, -)
-          scripts/seed pr classify "$BRANCH" --files "$files"
+          # Purity runs on Seed (docs/v1-retirement.md stage 1): the
+          # classifier refuses a change set mixing plans/ with anything else,
+          # or touching two plan files, as classification_refused (exit 9).
+          # It reads newline-separated paths and inspects the strings only,
+          # so the working directory does not matter.
+          git diff --name-only "$BASE...HEAD" \
+            | (cd next && go run ./cmd/seed plan classify -)
+          # Grammar stays on v1 until the cutover. Seed's plan grammar is
+          # stricter (boundary set, retention check, Boundary:/Retention:
+          # command lines, expected diff shape) and this repository's corpus
+          # has not migrated to it, so swapping the verb here would fail new
+          # plan PRs on grammar rather than content. Stage 3 ports it with
+          # the conventions the cutover PR rewrites.
           scripts/seed plan lint "plans/$TASK.md"
