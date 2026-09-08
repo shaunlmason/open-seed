@@ -154,13 +154,39 @@ Status: met
 `seed import --from-open-seed` (Phase 12 item 5, #255) is drilled
 against a real export of this repository's v1 state, not only a
 synthetic one: `next/fixtures/import/open-seed/` is this repository's
-export at `seed-anchor/20260903T014125Z` (251 files, 1214 run-log
-entries, imported as 1345 records), and `TestRealFixtureImports` folds
+export at `seed-anchor/20260908T083455Z` (2264 records, 1923 events,
+620 artifacts, 188 named drops), and `TestRealFixtureImports` folds
 every one of its contracts to the state its card holds. `make
 fixture-import` regenerates the fixture from the live repository at
 the newest anchor, so the drill stays real as the v1 history grows,
 and the cutover procedure below re-imports at the final anchor rather
 than trusting a snapshot. The four refusals precede every write.
+
+**A snapshot cannot see live drift, and one rehearsal proved it.** On
+2026-09-08 the whole procedure was run against this repository's *live*
+export under a throwaway key, and the import refused
+`import_unmapped` on three verbs the previous fixture predated:
+`exempt-plan` (the operator's `plan_exempt` reason), `mail-send` and
+`mail-ack`. All three are rare, three, one and one occurrences in the
+whole run log, which is why an older snapshot missed them while CI
+stayed green. The rows are added (`next/spec/import-open-seed.json` and
+the embedded table, in parity) and the fixture is regenerated at the
+anchor above, so the drills exercise them. The lesson generalizes past
+this fix: **CI proves the migration against a snapshot and is
+structurally blind to a v1 verb added after it**, so the regeneration
+in the cutover order below is not hygiene, it is the only thing that
+catches this class, and the rehearsal is worth repeating on the day.
+
+The same rehearsal carried the procedure to the end and read clean:
+preseed applied over the imported chain (`seed/6`, `seed/7`) and was
+idempotent on a second run, `preseed check` reported nothing pending,
+a lane key enrolled and was granted, `seed ledger verify` verified
+1978 records from genesis, and `seed ledger audit` read all five bars
+empty. It also corrected two steps of the written order that fail when
+followed literally: `--ledger` must name a path that does **not**
+exist, since a pre-created empty directory refuses `unavailable`; and
+`actor.enrolled` takes the fingerprint as its subject with the raw
+public key in the payload, which are different values.
 
 | drill | file | PR |
 |---|---|---|
@@ -442,8 +468,13 @@ the chain to the declaration (the root is the importing key, or
 names beyond the import's, `seed/6` and `seed/7` today, and nothing on
 a second run; `seed preseed check --config seed.json --ledger <that
 dir>`, green with nothing pending; the lane keys enrolled and granted
-by the root (`seed ledger append --verb actor.enrolled`, then
-`actor.granted`); and the ledger directory (`HEAD` and
+by the root (`seed ledger append --verb actor.enrolled --subject <the
+key's fingerprint> --payload '{"key": "<the raw 32-byte public key in
+hex>", "kind": "agent", "name": "<lane>"}'`, then `actor.granted` with
+`{"capability": "<grant>"}` on the same subject: the subject is the
+fingerprint and the public key rides in the payload, and the two are
+different values, so a run passing the fingerprint as the key, or the
+key as the subject, refuses `chain_invalid`); and the ledger directory (`HEAD` and
 `segments/*.jsonl`, the layout the guarded ref carries) committed as
 the tree of `refs/seed/ledger` and pushed once. Under an enforced
 posture the hook verifies the pushed chain from genesis at that push and

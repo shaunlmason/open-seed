@@ -2745,6 +2745,29 @@ deletion inventory to the tree (`internal/retirement`, under `make
 check`), which caught four abbreviated workflow paths in the inventory's
 first draft.
 
+**The flip was rehearsed end to end on 2026-09-08 against this
+repository's live v1 state, under a throwaway key, and it found a
+defect that would have struck mid-flip.** The import refused
+`import_unmapped` on `exempt-plan`, `mail-send` and `mail-ack`: three
+run-log verbs postdating the fixture's 2026-09-03 anchor, with three,
+one and one occurrences in the whole log, so every drill stayed green
+while the live import could not run. Rows are added to
+`next/spec/import-open-seed.json` and the embedded table in parity, and
+the fixture is regenerated at `seed-anchor/20260908T083455Z` (2264
+records, 1923 events, 620 artifacts, 188 named drops), so the drills
+exercise them. The general lesson is recorded in the packet and in the
+retirement plan's stage 3: CI proves the migration against a snapshot
+and is structurally blind to a v1 verb added after it, so regenerating
+and rehearsing before the flip is the only check that sees live drift.
+The rest of the procedure read clean: preseed over the imported chain
+appended `seed/6` and `seed/7` and was idempotent, `preseed check`
+reported nothing pending, a lane key enrolled and was granted, `ledger
+verify` verified 1978 records from genesis, and `ledger audit` read all
+five bars empty. Two steps of the written order were corrected because
+they fail when followed literally: `--ledger` must name a path that
+does not exist, and `actor.enrolled` takes the fingerprint as subject
+with the raw public key in the payload.
+
 **Next action: the operator's deployment, then the operator's
 answer.** `next/docs/promotion.md` presents the seven criteria of
 build plan §5, all `met`. Criterion 4 is met on §5's amended text: the

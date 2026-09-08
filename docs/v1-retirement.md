@@ -146,8 +146,20 @@ at `submission.made`"). An amended plan is a new approved anchor, so the old
 submission's citation stops matching and refuses. Porting v1's comparison on top
 of this would add a second, weaker check of a property admission already holds.
 
-*Exit:* no workflow invokes `scripts/seed`; `make fixture-import` has been run
-once at the final anchor, so the import fixture records the whole v1 history.
+**Regenerate the import fixture at the final anchor, and re-run the rehearsal.**
+This is a hard precondition, not hygiene. CI proves the migration against a
+snapshot, so it is structurally blind to a v1 run-log verb added after that
+snapshot was taken: the table refuses an unmapped verb at import, but only for
+verbs the fixture contains. A rehearsal on 2026-09-08 against the *live* export
+hit exactly this, refusing `import_unmapped` on `exempt-plan`, `mail-send` and
+`mail-ack`, three verbs with three, one and one occurrences in the whole run log,
+while every drill was green. Rehearsing the full procedure under a throwaway key
+before the operator spends the real one costs minutes and is the only check that
+sees live drift.
+
+*Exit:* no workflow invokes `scripts/seed`; the fixture is regenerated at the
+final anchor and the rehearsal reads clean end to end (import, preseed, preseed
+check, enrolment, `ledger verify` from genesis, five-bar `ledger audit`).
 
 ### Stage 4 — the deletion  *(after the day-7 audit reads clean)*
 
