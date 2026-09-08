@@ -1897,3 +1897,4 @@
 {"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-c4f25e13","ts":"2026-09-07T13:29:12Z","verb":"transition"}
 {"actor":"shaunlmason","data":{"reason":"Its whole deliverable was another card's plan, plans/os-2e34f66a.md, merged as PR 319. A plan-PR card owes no plan of its own."},"task":"os-0dba8c6a","ts":"2026-09-08T01:12:35Z","verb":"exempt-plan"}
 {"actor":"shaunlmason","data":{"reason":"Merged as PR 342 with no plan of its own; the work was not above L1, so D3 owed none."},"task":"os-405d3b20","ts":"2026-09-08T01:12:38Z","verb":"exempt-plan"}
+{"actor":"shaunlmason","data":{"reason":"Merged as PR 305, a docs change with no plan of its own; the work was not above L1, so D3 owed none."},"task":"os-5fe43832","ts":"2026-09-08T01:12:42Z","verb":"exempt-plan"}
