@@ -170,3 +170,18 @@ rather than guessed.
   GraphQL query helper, POST allowed there alone, the helper refusing a
   non-query at runtime) is the version that holds.
 
+- 2026-09-07 (os-c4f25e13): **a second repair verb for plan-less done
+  cards.** The plan's first draft relaxed `record-evidence` so an operator
+  could add the `no-pr:` marker to an already-done card, mirroring how that
+  verb was itself added as the repair half of the empty-resolution fix.
+  Dropped twice over. Engine v0.17.0 had already shipped `exempt-plan` for
+  exactly this, so it would have duplicated an upstream verb; and #365 had
+  already recovered every live instance by authoring retrospective plan
+  files, so it would have shipped with nothing to repair. A repair path for
+  a case that cannot recur is dead code that still widens what can rewrite
+  a terminal card's evidence.
+- 2026-09-07 (os-c4f25e13): **"the only route is a state-ref edit."** Stated
+  in an earlier report and wrong. The done-consistency lint resolves the
+  plan by file, so authoring `plans/<id>.md` after the fact satisfies it
+  without touching the ref, which is what #365 did. Before calling a
+  recovery impossible, read what the checker actually reads.

@@ -1,0 +1,13 @@
+{
+  "schema_version": "2.0",
+  "task": "os-c4f25e13",
+  "plan_path": "plans/os-c4f25e13.md",
+  "plan_sha256": "7e4b4e11e9359c76c3904d442ffff924fbe5a41aa35b70e3678336cf39a6f2d0",
+  "validation_commands": [
+    "test \"$(jq -r '[.transitions[] | select(.verb==\"accept\") | .preconditions[].name] | index(\"plan_or_exemption\")' .seed/port-schema/transitions.json)\" != \"null\"",
+    "scripts/seed version | grep -q 'seed 0.18.0'",
+    "scripts/seed spec lint",
+    "make check"
+  ],
+  "generated_by": "local"
+}
