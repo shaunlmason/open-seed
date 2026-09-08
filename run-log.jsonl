@@ -1895,3 +1895,4 @@
 {"actor":"seed-next-implementer","data":{"evidence_id":"ev-c4cf1ac8","kind":"receipt"},"task":"os-f11601e0","ts":"2026-09-07T13:14:10Z","verb":"attach-evidence"}
 {"actor":"seed-next-implementer","data":{"to":"review","transitioned":true},"task":"os-f11601e0","ts":"2026-09-07T13:14:17Z","verb":"transition"}
 {"actor":"seed-maintenance","data":{"override":"reap","to":"ready","transitioned":true},"task":"os-c4f25e13","ts":"2026-09-07T13:29:12Z","verb":"transition"}
+{"actor":"shaunlmason","data":{"reason":"Its whole deliverable was another card's plan, plans/os-2e34f66a.md, merged as PR 319. A plan-PR card owes no plan of its own."},"task":"os-0dba8c6a","ts":"2026-09-08T01:12:35Z","verb":"exempt-plan"}

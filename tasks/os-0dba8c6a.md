@@ -10,8 +10,9 @@ review:
     reviewed_at: "2026-09-07T06:26:03Z"
     outcome: accepted
     evidence: https://github.com/shaunlmason/open-seed/pull/319 merged as e848631
+    plan_exempt: Its whole deliverable was another card's plan, plans/os-2e34f66a.md, merged as PR 319. A plan-PR card owes no plan of its own.
 created_at: "2026-09-04T13:15:10Z"
-updated_at: "2026-09-07T06:26:03Z"
+updated_at: "2026-09-08T01:12:35Z"
 ---
 
 plans/os-2e34f66a.md line 130 writes ([`obligations.md`](obligations.md)) inside a plan file, so the target resolves against plans/, where no such file is. The document it means is next/spec/obligations.md, and the correction is one link target: `](obligations.md)` becomes `](../next/spec/obligations.md)`. The plan's substance does not change.
