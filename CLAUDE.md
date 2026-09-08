@@ -1,7 +1,7 @@
+# CLAUDE.md
+
 @AGENTS.md
 
-Claude-specific notes: none yet. All instructions live in AGENTS.md (and, for
-open-seed contributors, docs/CONTRIBUTING-AGENTS.md). Implementing the next
-version (Seed / SEED-NEXT)? AGENTS.md's "Implementing the next version" section
-is your entry point: charter → build plan → progress file, then work the normal
-loop without waiting on a human.
+This repository is retired; the successor is
+[shaunlmason/open-seed-v2](https://github.com/shaunlmason/open-seed-v2).
+Nothing is built or coordinated here. `AGENTS.md` says what remains and why.
